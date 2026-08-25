@@ -230,7 +230,7 @@ static int countNonBlackPixels(const unsigned char* buf, int w, int h, int nc)
 /* Test runner                                                              */
 /* ----------------------------------------------------------------------- */
 
-int main(int argc, char** argv)
+static int obol_run_render_render_basic_context(int argc, char** argv)
 {
     /* ------------------------------------------------------------------ */
     /* Initialise with BasicFLTKContextManager (FLTK-window-only context). */
@@ -345,4 +345,10 @@ int main(int argc, char** argv)
 
     printf("render_basic_context: overall %s\n", all_ok ? "PASS" : "FAIL");
     return all_ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_basic_context) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_basic_context, "render_basic_context"), 0);
 }

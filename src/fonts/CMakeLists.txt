@@ -14,7 +14,7 @@ set(OBOL_FONTS_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_FONTS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} fonts/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES fonts/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

@@ -83,7 +83,7 @@
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // SoCallback test: capture flag
@@ -107,10 +107,10 @@ static void eventCbFn(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-int main()
+static int obol_run_upstream_test_nodes_extended()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallback: setCallback fires when SoCallbackAction traverses node
@@ -364,4 +364,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodes_extended) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_extended), 0);
 }

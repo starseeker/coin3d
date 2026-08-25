@@ -90,12 +90,12 @@
 
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_field_containers()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =======================================================================
     // SoField
@@ -429,4 +429,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_field_containers) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_containers), 0);
 }

@@ -56,7 +56,7 @@
 #include <cstdlib>
 #include <string>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Write helpers (mirrors test_sodb.cpp helpers)
@@ -101,10 +101,10 @@ static void writeNodeBinary(SoNode * root, char ** outBuf, size_t * outSize)
 // Silent callback used to suppress error output during negative tests
 static void silentErrCb(const SoError * /*err*/, void * /*data*/) {}
 
-int main()
+static int obol_run_upstream_test_io_edge_cases()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // Build a simple scene: Separator > Cube
     SoSeparator * root = new SoSeparator;
@@ -248,4 +248,10 @@ int main()
 
     root->unref();
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_io_edge_cases) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_edge_cases), 0);
 }

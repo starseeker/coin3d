@@ -306,7 +306,7 @@ static bool testIndexedLineSet(int matbind, int tex,
 /* ==========================================================================
  * main
  * ======================================================================== */
-int main(int argc, char **argv)
+static int obol_run_render_render_sogl_bindings(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
         (argc > 1) ? argv[1] : "render_sogl_bindings";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
     {
         SoSeparator *root = ObolTest::Scenes::createSOGLBindings(W, H);
         SbViewportRegion vp(W, H);
@@ -367,4 +367,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_sogl_bindings) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_sogl_bindings, "render_sogl_bindings"), 0);
 }

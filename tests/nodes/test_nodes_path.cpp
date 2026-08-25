@@ -50,12 +50,12 @@
 #include <Inventor/nodes/SoSphere.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_nodes_path()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoPath::getClassTypeId() != SoType::badType()
@@ -445,4 +445,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodes_path) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_path), 0);
 }

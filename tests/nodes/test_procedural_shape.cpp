@@ -72,7 +72,7 @@
 #include <cstring>
 #include <string>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ============================================================================
 // Helper
@@ -157,10 +157,10 @@ static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWi
 // main
 // ============================================================================
 
-int main()
+static int obol_run_upstream_test_procedural_shape()
 {
     TestFixture fixture;
-    TestRunner  runner;
+    GTestResultRecorder  runner;
 
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
@@ -777,14 +777,15 @@ int main()
         SoSeparator* selDisp = shape->buildSelectionDisplay();
         // Top-level separator has 3 children (one per handle)
         bool topOK  = selDisp && (selDisp->getNumChildren() == 3);
-        // Each child separator has 3 children: SoTranslation, SoSphere, SoText2
+    // Each child separator has 4 children: SoTranslation, SoSphere, SoFont,
+    // and SoText2.
         bool childOK = false;
         if (topOK) {
             childOK = true;
             for (int i = 0; i < 3 && childOK; ++i) {
                 SoNode* child = selDisp->getChild(i);
                 SoSeparator* sub = dynamic_cast<SoSeparator*>(child);
-                if (!sub || sub->getNumChildren() != 3) childOK = false;
+                if (!sub || sub->getNumChildren() != 4) childOK = false;
             }
         }
         if (selDisp) { selDisp->ref(); selDisp->unref(); }
@@ -1030,4 +1031,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_procedural_shape) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_procedural_shape), 0);
 }

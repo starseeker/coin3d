@@ -9,7 +9,7 @@ set(OBOL_BUNDLES_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_BUNDLES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} bundles/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES bundles/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

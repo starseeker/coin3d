@@ -59,7 +59,7 @@
 #include <string>
 #include <vector>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Silence error output during negative tests
 static void silentErrCb(const SoError * /*e*/, void * /*data*/) {}
@@ -124,10 +124,10 @@ static void writeAscii(SoNode * node, char ** outBuf, size_t * outSize)
 }
 
 // =========================================================================
-int main()
+static int obol_run_upstream_test_io_input_binary()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // Build a simple scene for round-trip tests
     SoSeparator * root = new SoSeparator;
@@ -370,4 +370,10 @@ int main()
 
     root->unref();
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_io_input_binary) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_input_binary), 0);
 }

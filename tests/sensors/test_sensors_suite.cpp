@@ -59,7 +59,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoPath.h>
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static int s_fieldFired = 0;
 static void onFieldChange(void*, SoSensor*) { ++s_fieldFired; }
@@ -70,10 +70,10 @@ static void onNodeChange(void*, SoSensor*) { ++s_nodeFired; }
 static int s_timerFired = 0;
 static void onTimer(void*, SoSensor*) { ++s_timerFired; }
 
-int main()
+static int obol_run_upstream_test_sensors_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFieldSensor: fires when the watched field changes
@@ -249,4 +249,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sensors_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sensors_suite), 0);
 }

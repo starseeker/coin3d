@@ -57,7 +57,7 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec3f.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Track selection/deselection callbacks
 static int g_selectionCount   = 0;
@@ -73,10 +73,10 @@ static void onDeselected(void * /*userdata*/, SoPath * /*path*/)
     ++g_deselectionCount;
 }
 
-int main()
+static int obol_run_upstream_test_selection_nodes()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =========================================================================
     // SoSelection
@@ -337,4 +337,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_selection_nodes) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_selection_nodes), 0);
 }

@@ -59,7 +59,7 @@
 #include <cmath>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float tol = 1e-5f) {
     return fabsf(a - b) <= tol;
@@ -69,10 +69,10 @@ static bool doubleNear(double a, double b, double tol = 1e-10) {
     return fabs(a - b) <= tol;
 }
 
-int main()
+static int obol_run_upstream_test_base_advanced()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbVec2f: construction, setValue/getValue round-trip
@@ -359,4 +359,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_base_advanced) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_base_advanced), 0);
 }

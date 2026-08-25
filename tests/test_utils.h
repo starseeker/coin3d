@@ -1,5 +1,5 @@
-#ifndef SIMPLE_TEST_UTILS_H
-#define SIMPLE_TEST_UTILS_H
+#ifndef OBOL_TEST_UTILS_H
+#define OBOL_TEST_UTILS_H
 
 /**************************************************************************\
 * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,88 +35,46 @@
 
 /**
  * @file test_utils.h
- * @brief Simple test utilities without external frameworks
+ * @brief Shared GTest support for the upstream-derived test cases
  *
- * This provides basic test infrastructure to replace Catch2 for simpler,
- * more direct testing. Each test executable returns 0 for success, 
- * non-zero for failure.
+ * The upstream-derived cases use this small recorder while they are being
+ * expressed as GTest cases.  It preserves the original per-check messages
+ * and lets a source keep running after one check fails, while each failure is
+ * also reported through GTest's normal result stream.
  */
 
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <gtest/gtest.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
 
-namespace SimpleTest {
+namespace ObolTest {
 
-// Test result tracking
-struct TestResult {
-    std::string test_name;
-    bool passed;
-    std::string error_message;
-};
-
-class TestRunner {
+class GTestResultRecorder {
 private:
-    std::vector<TestResult> results;
     std::string current_test_name;
+    int failed_tests = 0;
     
 public:
     void startTest(const std::string& name) {
         current_test_name = name;
-        std::cout << "Running: " << name << "..." << std::flush;
     }
     
     void endTest(bool passed, const std::string& error_msg = "") {
-        TestResult result;
-        result.test_name = current_test_name;
-        result.passed = passed;
-        result.error_message = error_msg;
-        results.push_back(result);
-        
-        if (passed) {
-            std::cout << " PASSED" << std::endl;
-        } else {
-            std::cout << " FAILED";
-            if (!error_msg.empty()) {
-                std::cout << " - " << error_msg;
-            }
-            std::cout << std::endl;
+        if (!passed) {
+            ++failed_tests;
+            ADD_FAILURE() << current_test_name
+                          << (error_msg.empty() ? "" : ": ")
+                          << error_msg;
         }
     }
     
-    int getSummary() {
-        int passed = 0, failed = 0;
-        for (const auto& result : results) {
-            if (result.passed) passed++;
-            else failed++;
-        }
-        
-        std::cout << "\nTest Summary: " << passed << " passed, " << failed << " failed";
-        if (results.size() > 0) {
-            std::cout << " (total: " << results.size() << ")";
-        }
-        std::cout << std::endl;
-        
-        return failed; // Return number of failures
-    }
+    int getSummary() const { return failed_tests; }
 };
-
-// Simple assertion macro
-#define SIMPLE_ASSERT(condition, message) \
-    if (!(condition)) { \
-        runner.endTest(false, message); \
-        continue; \
-    }
-
-#define SIMPLE_CHECK(condition, message) \
-    if (!(condition)) { \
-        runner.endTest(false, message); \
-        return 1; \
-    }
 
 // Test fixture base class for initialization
 class TestFixture {
@@ -171,6 +129,6 @@ std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer,
 
 } // namespace RGBOutput
 
-} // namespace SimpleTest
+} // namespace ObolTest
 
-#endif // SIMPLE_TEST_UTILS_H
+#endif // OBOL_TEST_UTILS_H

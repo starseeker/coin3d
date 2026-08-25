@@ -17,7 +17,7 @@ set(OBOL_MANIPS_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_MANIPS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} manips/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES manips/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

@@ -56,7 +56,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static void silentErrCb(const SoError *, void *) {}
 
@@ -81,10 +81,10 @@ static std::string writeTempIV(const char * suffix)
     return std::string(path);
 }
 
-int main()
+static int obol_run_upstream_test_io_file_ops()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInput::openFile / closeFile
@@ -257,4 +257,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_io_file_ops) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_file_ops), 0);
 }

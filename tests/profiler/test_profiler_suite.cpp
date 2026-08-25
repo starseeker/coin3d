@@ -54,12 +54,12 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/misc/SoState.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_profiler_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProfiler::init can be called without crashing
@@ -96,9 +96,17 @@ int main()
     runner.startTest("SoProfiler::enable(TRUE) makes isEnabled return TRUE");
     {
         SoProfiler::enable(TRUE);
+        // Profiling is an optional compile-time feature.  In a normal
+        // library build enable(TRUE) is intentionally a no-op from the
+        // public isEnabled() contract's perspective.
+#ifdef OBOL_PROFILING
         bool pass = (SoProfiler::isEnabled() == TRUE);
+#else
+        bool pass = (SoProfiler::isEnabled() == FALSE);
+#endif
         SoProfiler::enable(FALSE); // restore
-        runner.endTest(pass, pass ? "" : "SoProfiler::isEnabled did not return TRUE after enable(TRUE)");
+        runner.endTest(pass, pass ? "" :
+            "SoProfiler::enable(TRUE) did not match the build configuration");
     }
 
     // -----------------------------------------------------------------------
@@ -208,7 +216,11 @@ int main()
         SoProfiler::enable(FALSE);
         bool disabledOk = (SoProfiler::isEnabled() == FALSE);
         SoProfiler::enable(TRUE);
+#ifdef OBOL_PROFILING
         bool enabledOk = (SoProfiler::isEnabled() == TRUE);
+#else
+        bool enabledOk = (SoProfiler::isEnabled() == FALSE);
+#endif
         // Restore original state
         SoProfiler::enable(originalState);
         bool pass = disabledOk && enabledOk;
@@ -263,4 +275,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_profiler_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_profiler_suite), 0);
 }

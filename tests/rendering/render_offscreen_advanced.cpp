@@ -337,14 +337,14 @@ static bool test8_multipleRenders(const char *basepath)
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+static int obol_run_render_render_offscreen_advanced(int argc, char **argv)
 {
     initCoinHeadless();
 
     const char *basepath = (argc > 1) ? argv[1] : "render_offscreen_advanced";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createOffscreenAdvanced(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -373,4 +373,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_offscreen_advanced) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_offscreen_advanced, "render_offscreen_advanced"), 0);
 }

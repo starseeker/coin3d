@@ -72,7 +72,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/SbViewportRegion.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Traversal callback — simply records that it was called
@@ -87,10 +87,10 @@ static SoCallbackAction::Response nodeCallback(void * /*data*/,
     return SoCallbackAction::CONTINUE;
 }
 
-int main()
+static int obol_run_upstream_test_elements_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoDrawStyleElement::getClassTypeId
@@ -375,4 +375,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_elements_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_elements_suite), 0);
 }

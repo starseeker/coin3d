@@ -59,12 +59,12 @@
 #include <Inventor/SbName.h>
 #include <Inventor/SoType.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_field_extras()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoField::getDirty / setDirty
@@ -256,4 +256,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_field_extras) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_extras), 0);
 }

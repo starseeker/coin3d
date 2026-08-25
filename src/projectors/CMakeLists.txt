@@ -15,7 +15,7 @@ set(OBOL_PROJECTORS_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_PROJECTORS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} projectors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES projectors/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

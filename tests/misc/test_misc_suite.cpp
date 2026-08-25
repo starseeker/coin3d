@@ -66,12 +66,12 @@
 
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_misc_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =======================================================================
     // SoType
@@ -462,4 +462,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_misc_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_misc_suite), 0);
 }

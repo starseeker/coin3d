@@ -107,7 +107,7 @@ set(OBOL_FIELDS_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_FIELDS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} fields/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES fields/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

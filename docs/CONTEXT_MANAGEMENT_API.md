@@ -277,7 +277,7 @@ switching.
 ## Built-in OSMesa Factory
 
 When the library is built with OSMesa support
-(`OBOL_USE_OSMESA=ON` or `OBOL_BUILD_DUAL_GL=ON`), the factory function
+(`OBOL_USE_SWRAST=ON`), the factory function
 `SoDB::createOSMesaContextManager()` creates a ready-to-use OSMesa context
 manager without requiring the application to include OSMesa headers:
 

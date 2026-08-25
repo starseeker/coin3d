@@ -17,7 +17,7 @@ set(OBOL_HARDCOPY_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_HARDCOPY_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} hardcopy/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES hardcopy/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

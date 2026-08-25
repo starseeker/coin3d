@@ -1,7 +1,7 @@
 /*
  * Modern GTest coverage for SbModernUtils.
  *
- * This replaces the legacy SimpleTest executable.  The tests are individual
+ * This replaces the legacy ObolTest executable.  The tests are individual
  * discoverable cases, so a failure identifies the exact RAII/lookup contract
  * rather than an opaque hand-written subtest name.
  */

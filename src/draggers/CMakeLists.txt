@@ -25,9 +25,6 @@ endforeach()
 file(GLOB_RECURSE COMMON_DRAGGER_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/defaults/*.iv)
 set(COMMON_RESOURCES ${COMMON_DRAGGER_RESOURCES} PARENT_SCOPE)
 
-# Add binary directory to include path for generated headers
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 # source files
 set(OBOL_DRAGGERS_FILES
 	SoDragger.cpp
@@ -56,7 +53,7 @@ set(OBOL_DRAGGERS_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES draggers/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

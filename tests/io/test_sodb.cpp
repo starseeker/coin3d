@@ -61,7 +61,7 @@
 #include <cstdlib>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Growable write buffer helper
@@ -110,10 +110,10 @@ static void writeNodeBinary(SoNode* root, char** outBuf, size_t* outSize)
     *outSize = nbytes;
 }
 
-int main()
+static int obol_run_upstream_test_sodb()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoDB: realTime global field is set and close to wall-clock time
@@ -380,4 +380,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sodb) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sodb), 0);
 }

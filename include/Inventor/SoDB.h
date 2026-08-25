@@ -67,32 +67,46 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
 
   \section thread_safety Thread Safety
 
-  Obol is thread safe for the following usage scenarios:
+  Obol supports the following concurrent usage scenarios after one thread has
+  completed library initialization:
 
   - **Concurrent render** — Multiple threads, each owning an independent GL
-    context and traversing its own independent scene graph, may render
-    simultaneously without any application-level locking.  Each thread must
-    call SoDB::init() once before its first traversal; after that the global
-    infrastructure (name interning, type system, reference counts, auditor
-    lists) is safe for concurrent access.  GL contexts must \e not be shared
-    between threads without explicit platform re-binding (glXMakeCurrent etc.);
-    Obol will emit a SoDebugError warning if cross-thread GL context use is
-    detected.
+    context and action/state, may render independent scene graphs
+    simultaneously.  Call SoDB::init() once, from a quiescent startup thread,
+    before starting worker threads.  The global registries and counters used by
+    traversal are protected by their internal synchronization.  GL contexts
+    must \e not be used by two threads at the same time; platform rebinding
+    (glXMakeCurrent, wglMakeCurrent, or the equivalent) remains the
+    application's responsibility.
 
-  - **Init-then-read** — SoDB::init() is called once on one thread; afterwards
-    multiple threads may read (traverse) the scene graph simultaneously without
-    any further locking.
+  - **Init-then-read** — After initialization, multiple threads may traverse
+    the same scene graph concurrently while no thread mutates it.  Each thread
+    must own its action and state objects.
 
   - **Mixed read/write** — When one or more threads mutate the scene graph
-    while others traverse it, the application must bracket mutations with
-    SoDB::writelock() / SoDB::writeunlock() and may bracket concurrent traversals
-    with SoDB::readlock() / SoDB::readunlock().  All SoAction::apply() calls
-    already acquire the global read lock internally.
+    while others traverse it, the application must bracket every mutation,
+    route change, or connection change with SoDB::writelock() /
+    SoDB::writeunlock().  SoAction::apply() acquires the global read lock
+    internally.  Explicit read locking is only needed for traversal-like code
+    that does not go through SoAction.
 
-  The following scenario is \b not supported without additional application-level
-  synchronisation:
+  The following operations are not concurrent operations and require a
+  quiescent application:
+
+  - SoDB::init(), SoDB::finish(), and SoDB::cleanup().  Do not initialize,
+    shut down, or reinitialize the database while worker threads use Obol.
+  - SoDB::setContextManager().  The pointer update is synchronized, but the
+    caller must keep the old manager alive and ensure that no render is using
+    it.  Prefer per-renderer context managers for independent workers.
+
+  The following scenario is not supported without additional application-level
+  synchronization:
+
   - Sharing a single \c SoAction or \c SoState between multiple threads.
     Each thread must create and own its own action objects.
+
+  Do not call SoAction::apply() while holding SoDB::writelock(); apply() takes
+  the read lock internally and the write lock is not reentrant.
 
   \sa SoDB::ContextManager, SoOffscreenRenderer, SoDB::readlock(), SoDB::writelock()
 */

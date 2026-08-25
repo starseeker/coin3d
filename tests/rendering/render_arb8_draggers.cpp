@@ -137,12 +137,12 @@ static const char* kArb8SchemaR = R"({
   ]
 })";
 
-int main(int argc, char** argv)
+static int obol_run_render_render_arb8_draggers(int argc, char** argv)
 {
   initCoinHeadless();
 
   /* Render the canonical factory scene as the primary output image.
-   * This ensures obol_viewer and obol_render produce identical scenes. */
+   * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
   {
       const char *primaryBase = (argc > 1) ? argv[1] : "render_arb8_draggers";
       SoSeparator *fRoot = ObolTest::Scenes::createArb8Draggers(256, 256);
@@ -238,4 +238,10 @@ int main(int argc, char** argv)
   bool ok=renderToFile(root,outpath);
   root->unref();
   return ok?0:1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_arb8_draggers) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_arb8_draggers, "render_arb8_draggers"), 0);
 }

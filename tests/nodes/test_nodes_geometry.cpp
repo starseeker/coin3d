@@ -69,17 +69,17 @@
 
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 0.01f)
 {
     return std::fabs(a - b) < eps;
 }
 
-int main()
+static int obol_run_upstream_test_nodes_geometry()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFaceSet
@@ -334,4 +334,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodes_geometry) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_geometry), 0);
 }

@@ -78,7 +78,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Helper: callback that accumulates node names
@@ -104,10 +104,10 @@ static void* bufferRealloc(void* ptr, size_t size)
     return s_buffer;
 }
 
-int main()
+static int obol_run_upstream_test_actions_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallbackAction: default traversal skips switch children
@@ -626,4 +626,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_actions_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_actions_suite), 0);
 }

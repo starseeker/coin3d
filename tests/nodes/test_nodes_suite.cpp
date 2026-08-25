@@ -126,15 +126,15 @@
 #include <Inventor/draggers/SoTranslate1Dragger.h>
 #include <Inventor/draggers/SoTranslate2Dragger.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Factory function needed by SoType::createType
-static void* createDummyInstance(void) { return reinterpret_cast<void*>(0x1); }
+static void* createDummyInstance(void*) { return reinterpret_cast<void*>(0x1); }
 
-int main()
+static int obol_run_upstream_test_nodes_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAnnotation: class initialized (ref/unref, getTypeId)
@@ -1119,4 +1119,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodes_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_suite), 0);
 }

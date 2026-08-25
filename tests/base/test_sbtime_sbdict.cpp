@@ -55,7 +55,7 @@
 #include <cmath>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -78,10 +78,10 @@ static void countApplyData(uintptr_t /*key*/, void * /*val*/, void * data)
     static_cast<ApplyDataCtx *>(data)->count++;
 }
 
-int main()
+static int obol_run_upstream_test_sbtime_sbdict()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =======================================================================
     // SbTime tests
@@ -412,4 +412,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sbtime_sbdict) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sbtime_sbdict), 0);
 }

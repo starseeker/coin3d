@@ -281,7 +281,7 @@ static bool test6_manipSwap(const char *basepath)
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+static int obol_run_render_render_manip_sequences(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -299,4 +299,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_manip_sequences) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_manip_sequences, "render_manip_sequences"), 0);
 }

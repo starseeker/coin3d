@@ -54,7 +54,7 @@ count_triangles(void * /*ud*/,
     ++s_triangle_count;
 }
 
-int main()
+static int obol_run_render_nogl_scenegraph_test()
 {
     /* --- Initialise ---------------------------------------------------- */
     /* NULL context manager = no OpenGL; custom context drivers are set up
@@ -131,4 +131,10 @@ int main()
 
     printf("PASS: nogl_scenegraph_test (%d triangles)\n", s_triangle_count);
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, nogl_scenegraph_test) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_nogl_scenegraph_test, "nogl_scenegraph_test"), 0);
 }

@@ -76,17 +76,17 @@
 #include <Inventor/SoType.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 1e-4f)
 {
     return std::fabs(a - b) < eps;
 }
 
-int main()
+static int obol_run_upstream_test_engines_advanced()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInterpolateFloat: alpha=0.5 produces the midpoint
@@ -543,4 +543,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_engines_advanced) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_advanced), 0);
 }

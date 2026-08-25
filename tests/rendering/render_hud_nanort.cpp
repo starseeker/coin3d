@@ -116,7 +116,7 @@ static bool validateHUDButtons(const unsigned char * buf, int w, int h)
 
 static const int MAX_PATH_LEN = 1024;
 
-int main(int argc, char ** argv)
+static int obol_run_render_render_hud_nanort(int argc, char ** argv)
 {
     initCoinHeadless();
 
@@ -180,4 +180,10 @@ int main(int argc, char ** argv)
 
     printf("render_hud_nanort: PASS\n");
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_hud_nanort) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_hud_nanort, "render_hud_nanort"), 0);
 }

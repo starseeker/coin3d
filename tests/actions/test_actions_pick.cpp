@@ -60,7 +60,7 @@
 #include <Inventor/SoType.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 1e-4f)
 {
@@ -83,10 +83,10 @@ static SoSeparator * buildPickScene()
     return root;
 }
 
-int main()
+static int obol_run_upstream_test_actions_pick()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRayPickAction class type
@@ -328,4 +328,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_actions_pick) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_actions_pick), 0);
 }

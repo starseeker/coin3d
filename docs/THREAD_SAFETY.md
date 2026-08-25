@@ -2,16 +2,15 @@
 
 ## Overview
 
-Obol inherits its scene-graph architecture from Coin3D, which was historically
-documented as not thread safe for general use.  This document provides a deep
-analysis of *why* Obol is not thread safe today, categorises every blocker,
-assesses whether thread safety is theoretically achievable, and outlines the
-work required to reach that goal.
+Obol's current thread-safety model has two layers: internal synchronization for
+shared global registries and counters, and an application-visible global
+read/write lock for scene-graph mutation.  The old Coin-era claim that
+thread-safe support must be enabled at build time is no longer true;
+`OBOL_THREADSAFE` is retained only as a compatibility option and has no effect.
 
-The short answer is: **complete thread safety is achievable, but it requires
-significant and carefully sequenced work across several independent subsystems.**
-A number of subsystems already carry locking scaffolding (guarded by
-`OBOL_THREADSAFE`) — the remaining gaps are well-defined and fixable.
+This document describes the contract implemented by the current source tree.
+The historical race audit is retained below as an implementation record, but
+its old “Fix required” statements are not current findings.
 
 ---
 
@@ -26,24 +25,37 @@ The analysis uses the following threat model:
 | **Concurrent mutation** | Multiple threads create, modify, or connect scene-graph nodes and fields simultaneously. |
 | **Mixed read/write** | One or more threads traverse while others mutate. |
 
-The strongest guarantee Obol should eventually offer is *Mixed read/write* with
-`SoDB::readlock()` / `SoDB::writelock()` protecting mutations, and *Concurrent
-render* without any application-level locking when each thread owns its own GL
-context.
+The supported contract is:
+
+- Call `SoDB::init()` once from a quiescent startup thread before starting
+  worker threads.
+- Read-only traversals may run concurrently.  Each thread owns its own
+  `SoAction` and `SoState`.
+- Every scene-graph mutation, route change, or field connection change that
+  can overlap a traversal is bracketed by `SoDB::writelock()` and
+  `SoDB::writeunlock()`.
+- `SoAction::apply()` acquires the global read lock internally.  Do not call it
+  while holding the write lock; the custom `SbRWMutex` is not reentrant from a
+  writer into a reader.
+- `SoDB::finish()` / `SoDB::cleanup()` are shutdown operations.  They require
+  all worker threads and traversals to have stopped.
+- OpenGL context ownership and the thread-safety of an application-supplied
+  `ContextManager` remain application responsibilities.
 
 ---
 
-## Current State: What Obol Already Does
+## Current implementation inventory
 
-Several subsystems already have correct or near-correct locking, always compiled
-in when `OBOL_THREADSAFE` is defined (the default, per `CMakeLists.txt`).
+The following protections are unconditional in the current implementation.
 
 ### 1. Scene-graph traversal — `SoDB` read/write mutex
 
 `src/misc/SoDBP.h` declares a global `SbRWMutex * globalmutex` that is
-allocated in `SoDB::init()` when `OBOL_THREADSAFE` is set.  `SoAction::apply()`
-always calls `SoDB::readlock()` before traversing and `SoDB::readunlock()`
-afterward.  Write-locking is left to the application when mutating the graph.
+allocated during `SoDB::init()`.  `SoAction::apply()` calls `SoDB::readlock()`
+before traversing and `SoDB::readunlock()` afterward.  Applications must use
+the write side when mutating a graph concurrently with traversal.  Lifecycle
+operations are serialized separately, and the initialized flag and global
+context-manager pointer are atomic.
 
 *Status:* Correct for the single-scene-graph case; does **not** protect other
 global state described below.
@@ -116,18 +128,21 @@ structures.
 
 ### 9. Debug thread check — `OBOL_CHECK_THREAD`
 
-When the CMake option `OBOL_DEBUG_CHECK_THREAD` is enabled, `OBOL_CHECK_THREAD()`
-compares `std::this_thread::get_id()` against the thread that called
-`SoDB::init()` and logs a `SoDebugError` if they differ.  This is a diagnostic
-tool, not a safety mechanism; it emits a warning but does not prevent the race.
+When the build-internal `OBOL_DEBUG_CHECK_THREAD` definition is enabled,
+`OBOL_CHECK_THREAD()` compares `std::this_thread::get_id()` against the thread
+that most recently called `SoDB::init()` and logs a `SoDebugError` if they
+differ.  This is a diagnostic tool, not synchronization and not a concurrency
+restriction enforced by the library.
 
 *Status:* Useful for development; not a fix.
 
 ---
 
-## Current State: What Is Still Broken
+## Historical race audit
 
-The following subsystems have either no locking or insufficient locking.
+The following sections document the race audit that motivated the current
+locks.  They describe the pre-fix failure modes; the status table below is the
+authoritative current state.
 
 ### Blocker 1 — `SbName` / `namemap`: unprotected string interning *(CRITICAL)*
 
@@ -358,7 +373,7 @@ not required but would improve scalability.
 
 ---
 
-## Design-level Issues: Not Easily Fixed by Locking Alone
+## Design-level boundaries
 
 The following problems require design changes, not just added mutexes.
 
@@ -421,7 +436,7 @@ while `cleanupThread()` is still iterating with the shared lock held.
 
 ---
 
-## Summary Table
+## Current status of the audited areas
 
 | # | Subsystem | File(s) | Severity | Existing Lock | Gap |
 |---|---|---|---|---|---|
@@ -442,7 +457,7 @@ while `cleanupThread()` is still iterating with the shared lock held.
 
 ---
 
-## Recommended Migration Strategy
+## Historical migration record
 
 The blockers fall into three natural phases, ordered by dependency and risk.
 
@@ -546,8 +561,8 @@ The blockers fall into three natural phases, ordered by dependency and risk.
 
 - **Public API documentation** — The `SoDB` class documentation now contains
   a *Thread Safety* section stating the supported scenarios (*Concurrent render*,
-  *Init-then-read*, *Mixed read/write*) and the single caveat (no sharing of
-  `SoAction`/`SoState` between threads).  Doxygen comments for
+  *Init-then-read*, *Mixed read/write*) and the explicit lifecycle, scene-write,
+  action/state, context-manager, and GL-context caveats.  Doxygen comments for
   `SoDB::isMultiThread()`, `readlock()`, `readunlock()`, `writelock()`, and
   `writeunlock()` have been rewritten to remove stale Coin references and
   accurately describe current behaviour.
@@ -556,23 +571,32 @@ The blockers fall into three natural phases, ordered by dependency and risk.
 
 ## Conclusion
 
-As of Phase 4, **all known blocking data races have been fixed and the thread-safety
-work is complete**.  The remaining caveats are:
+The audited global infrastructure fixes are present and covered by the stress
+tests, but this does not make every Obol object or application callback
+implicitly thread-safe.  The remaining boundaries are:
 
-- `SoState` must not be shared between threads (each `SoAction` owns its own
-  `SoState`; this is documented behaviour and stated in the `SoDB` class doxygen).
+- `SoState` must not be shared between threads; each `SoAction` owns its own
+  state.
+- Scene-graph writes must use the global write lock when they can overlap
+  traversal.  Internal locks do not make arbitrary object graphs safe for
+  unsynchronized mutation.
+- `SoDB::init()`, `SoDB::setContextManager()`, and shutdown must be coordinated
+  with application worker lifetimes.  The lifecycle lock prevents races among
+  those operations; it does not keep a destroyed application-owned context
+  manager alive.
 - GL contexts must not migrate between threads without explicit platform API
-  calls (`glXMakeCurrent` etc.); the `SoGLCacheContextElement` thread
-  affinity check will emit a `SoDebugError` warning if this is detected.
+  calls (`glXMakeCurrent`, `wglMakeCurrent`, etc.).  The context-affinity check
+  emits a warning but does not make migration safe.
 
-The infrastructure for thread safety (mutex wrappers, thread-local storage,
-recursive mutexes for notification, atomic counters) is uniformly active
-across the library.  All `#ifdef OBOL_THREADSAFE` conditional guards have been
-removed; locking is unconditional.  The `SoDB` public API documentation
-states the supported concurrency scenarios and the locking protocol.
+The infrastructure for the audited global state (mutex wrappers, thread-local
+storage, recursive notification locks, atomic counters, and lifecycle state) is
+unconditionally active across the library.  The `SoDB` public API documentation
+states the supported scenarios and locking protocol.
 
 **Ongoing maintenance:**
 
 1. Run the thread-safety tests under `OBOL_TSAN=ON` in CI to catch regressions.
-2. Profile contention on the field recursive mutex in rendering-heavy workloads
-   and consider lock-free alternatives if needed.
+2. Keep any new global registry or cache behind an explicit lock or atomic and
+   add a focused stress test before documenting it as thread-safe.
+3. Profile contention on the field recursive mutex in rendering-heavy workloads
+   before considering lock-free alternatives.

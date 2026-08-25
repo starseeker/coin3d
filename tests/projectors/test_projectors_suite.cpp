@@ -54,17 +54,17 @@
 #include <Inventor/SbVec2f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool isFiniteVec(const SbVec3f & v)
 {
     return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
 }
 
-int main()
+static int obol_run_upstream_test_projectors_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // Build a perspective view volume used by all projector tests
     SbViewVolume vv;
@@ -169,4 +169,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_projectors_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_projectors_suite), 0);
 }

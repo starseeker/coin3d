@@ -44,7 +44,7 @@ set(OBOL_SHAPENODES_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_SHAPENODES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES shapenodes/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

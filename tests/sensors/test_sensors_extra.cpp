@@ -65,7 +65,7 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/SoPath.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static void countCB(void * data, SoSensor *)
 {
@@ -73,10 +73,10 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-int main()
+static int obol_run_upstream_test_sensors_extra()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAlarmSensor: construction / destruction (class type valid)
@@ -289,4 +289,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sensors_extra) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sensors_extra), 0);
 }

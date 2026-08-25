@@ -157,12 +157,12 @@ static int dominantChannel(const unsigned char *buf, int cx, int cy, int radius)
     return 2;
 }
 
-int main(int argc, char **argv)
+static int obol_run_render_render_hud_interaction(int argc, char **argv)
 {
     initCoinHeadless();
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
     {
         const char *primaryBase = (argc > 1) ? argv[1] : "render_hud_interaction";
         SoSeparator *fRoot = ObolTest::Scenes::createHUDInteraction(256, 256);
@@ -430,4 +430,10 @@ int main(int argc, char **argv)
 
     root->unref();
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_hud_interaction) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_hud_interaction, "render_hud_interaction"), 0);
 }

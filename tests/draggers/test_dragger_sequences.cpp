@@ -88,7 +88,7 @@
 
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Helper: wrap a dragger in a separator and apply SoGetBoundingBoxAction.
 // Returns true if the action doesn't crash.
@@ -119,10 +119,10 @@ static bool searchDragger(SoDragger * d, SoType t)
     return found;
 }
 
-int main()
+static int obol_run_upstream_test_dragger_sequences()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRotateCylindricalDragger
@@ -593,4 +593,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_dragger_sequences) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_dragger_sequences), 0);
 }

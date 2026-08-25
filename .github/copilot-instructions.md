@@ -96,7 +96,9 @@ cmake --build build -- -j$(nproc)
 For headless/CI testing with OSMesa:
 
 ```bash
-cmake -S . -B build -DOBOL_USE_OSMESA=ON -DOBOL_BUILD_TESTS=ON
+cmake -S . -B build \
+    -DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=ON \
+    -DOBOL_BUILD_TESTS=ON
 ```
 
 ### Running Tests
@@ -115,8 +117,9 @@ xvfb-run -a ctest --output-on-failure
 obol/
 ├── src/          Core Obol library (Open Inventor subset)
 ├── include/      Public headers
-├── tests/        Test runners and visual regression tests
-│   ├── testlib/  libObolEx: shared scene catalog + test registry
+├── tests/        GTest/CTest tests and visual regression sources
+│   ├── framework/ GTest support, fixtures, and target registration
+│   ├── testlib/  Shared scene catalogue retained during rendering migration
 │   ├── utils/    Context managers and test utilities
 │   ├── rendering/ Visual regression tests
 │   └── tools/    Unit tests for utility subsystems
@@ -135,7 +138,7 @@ obol/
 
 - C++17 required; use standard library features (e.g. `std::optional`, `std::string_view`)
 - CMake 3.16+ with modern target-based builds (`target_link_libraries`, `target_include_directories`)
-- All shared scene/test utilities go in `libObolEx` (`tests/testlib/`) so both tests and examples can link against them
+- Shared test lifecycle/image helpers go in `tests/framework/`; reusable scene factories retained during the rendering migration live in `tests/testlib/`
 - GUI viewers belong in `examples/` (not `tests/`)
 - Headless/CLI test runners belong in `tests/`
 - utf8 support lives in `src/base/utf8/` (implementation) — do not use `external/utf8` (removed)

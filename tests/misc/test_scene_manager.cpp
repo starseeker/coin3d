@@ -64,7 +64,7 @@
 #include <Inventor/SbVec2s.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Render callback capture
 struct RenderCap {
@@ -77,10 +77,10 @@ static void renderCb(void * data, SoSceneManager * /*mgr*/)
     static_cast<RenderCap *>(data)->count++;
 }
 
-int main()
+static int obol_run_upstream_test_scene_manager()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // Construction / destruction
@@ -348,4 +348,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_scene_manager) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_scene_manager), 0);
 }

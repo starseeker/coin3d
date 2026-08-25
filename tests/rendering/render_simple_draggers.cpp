@@ -150,7 +150,7 @@ static bool testDragger(SoDragger *dragger,
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+static int obol_run_render_render_simple_draggers(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -203,4 +203,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_simple_draggers) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_simple_draggers, "render_simple_draggers"), 0);
 }

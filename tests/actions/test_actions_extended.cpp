@@ -89,17 +89,17 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 0.01f)
 {
     return std::fabs(a - b) < eps;
 }
 
-int main()
+static int obol_run_upstream_test_actions_extended()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =======================================================================
     // SoGetPrimitiveCountAction
@@ -422,4 +422,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_actions_extended) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_actions_extended), 0);
 }

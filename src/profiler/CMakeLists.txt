@@ -20,7 +20,7 @@ set(OBOL_PROFILER_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_PROFILER_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} profiler/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES profiler/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

@@ -14,7 +14,8 @@ namespace ObolTestSupport {
 
 RenderFixture::RenderFixture(const int width, const int height,
                              const SbColor & background)
-    : width_(width), height_(height), background_(background)
+    : width_(width), height_(height), background_(background),
+      gradient_bottom_(background), gradient_top_(background)
 {
     initializeObol();
     manager_.reset(SoDB::createOSMesaContextManager());
@@ -40,7 +41,24 @@ bool RenderFixture::render(SoNode * scene)
     renderer_->setViewportRegion(SbViewportRegion(width_, height_));
     renderer_->setComponents(SoOffscreenRenderer::RGB);
     renderer_->setBackgroundColor(background_);
+    if (gradient_enabled_) {
+        renderer_->setBackgroundGradient(gradient_bottom_, gradient_top_);
+    } else {
+        renderer_->clearBackgroundGradient();
+    }
     if (!renderer_->render(scene)) return false;
+
+    return capture();
+}
+
+SoOffscreenRenderer * RenderFixture::renderer() const
+{
+    return renderer_.get();
+}
+
+bool RenderFixture::capture()
+{
+    if (!renderer_) return false;
 
     const unsigned char * source = renderer_->getBuffer();
     if (!source) return false;
@@ -54,6 +72,20 @@ bool RenderFixture::render(SoNode * scene)
 SoGLRenderAction * RenderFixture::renderAction() const
 {
     return renderer_ ? renderer_->getGLRenderAction() : nullptr;
+}
+
+void RenderFixture::setBackgroundGradient(const SbColor & bottom,
+                                          const SbColor & top)
+{
+    gradient_bottom_ = bottom;
+    gradient_top_ = top;
+    gradient_enabled_ = true;
+}
+
+void RenderFixture::clearBackgroundGradient()
+{
+    gradient_enabled_ = false;
+    if (renderer_) renderer_->clearBackgroundGradient();
 }
 
 std::size_t RenderFixture::nonBackgroundPixels(const unsigned char tolerance) const

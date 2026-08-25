@@ -1,74 +1,34 @@
-/*
- * render_transparency.cpp - Integration test: SoTransparencyType rendering
- *
- * Scene built by ObolTest::Scenes::createTransparency.
- *
- * Pixel validation confirms that the semi-transparent sphere is visible
- * (non-background pixels are present in the viewport centre).
- *
- * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
- */
-
-#include "headless_utils.h"
+#include "framework/scene_test_utils.h"
 #include "testlib/test_scenes.h"
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/SoOffscreenRenderer.h>
-#include <cstdio>
+#include <gtest/gtest.h>
 
-static const int W = 256;
-static const int H = 256;
+namespace {
 
-static bool validateTransparency(const unsigned char *buf)
+int countVisibleCenter(const ObolTestSupport::RenderFixture & fixture)
 {
-    int visiblePixels = 0;
-
-    int cx = W / 2, cy = H / 2;
-    int radius = W / 4;
-
-    for (int y = cy - radius; y <= cy + radius; y += 2) {
-        for (int x = cx - radius; x <= cx + radius; x += 2) {
+    constexpr int W = 256;
+    constexpr int H = 256;
+    constexpr int radius = W / 4;
+    int visible = 0;
+    const auto & pixels = fixture.pixels();
+    for (int y = H / 2 - radius; y <= H / 2 + radius; y += 2) {
+        for (int x = W / 2 - radius; x <= W / 2 + radius; x += 2) {
             if (x < 0 || x >= W || y < 0 || y >= H) continue;
-            const unsigned char *p = buf + (y * W + x) * 3;
-            if (p[0] > 20 || p[1] > 20 || p[2] > 20)
-                ++visiblePixels;
+            const unsigned char * p = pixels.data() + (y * W + x) * 3;
+            if (p[0] > 20 || p[1] > 20 || p[2] > 20) ++visible;
         }
     }
-
-    printf("render_transparency: visiblePixels=%d\n", visiblePixels);
-    if (visiblePixels < 5) {
-        fprintf(stderr, "render_transparency: FAIL - no visible pixels (transparency scene empty)\n");
-        return false;
-    }
-    printf("render_transparency: PASS\n");
-    return true;
+    return visible;
 }
 
-int main(int argc, char **argv)
+} // namespace
+
+TEST(RenderSceneFactories, TransparencyScenePreservesVisiblePixels)
 {
-    initCoinHeadless();
-
-    SoSeparator *root = ObolTest::Scenes::createTransparency(W, H);
-
-    SbViewportRegion vp(W, H);
-    SoOffscreenRenderer renderer(vp);
-    renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
-    char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
-    else
-        snprintf(outpath, sizeof(outpath), "render_transparency.rgb");
-
-    bool ok = false;
-    if (renderer.render(root)) {
-        const unsigned char *buf = renderer.getBuffer();
-        bool pixOk = (buf != nullptr) && validateTransparency(buf);
-        ok = pixOk && renderer.writeToRGB(outpath);
-    } else {
-        fprintf(stderr, "render_transparency: render() failed\n");
-    }
-
-    root->unref();
-    return ok ? 0 : 1;
+    ObolTestSupport::RenderFixture fixture(256, 256);
+    ASSERT_TRUE(fixture.available());
+    auto scene = ObolTestSupport::makeScene(
+        ObolTest::Scenes::createTransparency, fixture);
+    ASSERT_TRUE(fixture.render(scene.root()));
+    EXPECT_GE(countVisibleCenter(fixture), 5);
 }

@@ -87,7 +87,7 @@ public:
   static SoTimerSensor * globaltimersensor;
   static UInt32ToInt16Map * converters;
   static std::atomic<int> notificationcounter;
-  static SbBool isinitialized;
+  static std::atomic<SbBool> isinitialized;
 
   static SbBool is3dsFile(SoInput * in);
   static SoSeparator * read3DSFile(SoInput * in);

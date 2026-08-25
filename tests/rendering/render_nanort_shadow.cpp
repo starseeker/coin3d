@@ -98,7 +98,7 @@ static bool validateShadow(const unsigned char *buf)
     return true;
 }
 
-int main(int argc, char **argv)
+static int obol_run_render_render_nanort_shadow(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -234,4 +234,10 @@ int main(int argc, char **argv)
 
     root->unref();
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_nanort_shadow) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_nanort_shadow, "render_nanort_shadow"), 0);
 }

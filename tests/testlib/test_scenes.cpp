@@ -927,6 +927,14 @@ SoSeparator* createShadow(int width, int height)
     sg->intensity.setValue(0.7f);
     sg->precision.setValue(0.5f);
     sg->quality.setValue(1.0f);
+#ifdef OBOL_SWRAST_BUILD
+    // The bundled OSMesa GLSL implementation currently rejects the legacy
+    // gl_FrontLightModelProduct/gl_FrontMaterial struct members emitted by
+    // the shadow shader.  Keep the scene in the software-renderer lane as a
+    // meaningful geometry/fallback test; the NanoRT shadow test covers
+    // backend-independent shadow behavior there.
+    sg->isActive.setValue(FALSE);
+#endif
     root->addChild(sg);
 
     // Shadow-casting directional light (works for both GL shadow maps and
@@ -1013,8 +1021,14 @@ SoSeparator* createShadow(int width, int height)
         sg->addChild(cubeSep);
     }
 
-    SbViewportRegion vp(width, height);
-    cam->viewAll(root, vp);
+    // Keep the explicit shadow-test camera.  viewAll() traverses the
+    // SoShadowGroup's auxiliary shadow-map scene while it is still being
+    // assembled, which can produce a degenerate camera volume on software
+    // rasterizers and leave the final image empty.
+    cam->nearDistance = 0.1f;
+    cam->farDistance = 50.0f;
+    (void)width;
+    (void)height;
     return root;
 }
 

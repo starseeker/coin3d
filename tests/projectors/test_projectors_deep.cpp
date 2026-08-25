@@ -62,7 +62,7 @@
 #include <Inventor/SbRotation.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Check all components are finite
 static bool isFiniteVec(const SbVec3f & v)
@@ -79,10 +79,10 @@ static SbViewVolume makeViewVolume()
     return vv;
 }
 
-int main()
+static int obol_run_upstream_test_projectors_deep()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     SbViewVolume vv = makeViewVolume();
 
@@ -242,4 +242,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_projectors_deep) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_projectors_deep), 0);
 }

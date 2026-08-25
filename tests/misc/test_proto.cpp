@@ -56,12 +56,12 @@
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_proto()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProto class type system
@@ -120,4 +120,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_proto) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_proto), 0);
 }

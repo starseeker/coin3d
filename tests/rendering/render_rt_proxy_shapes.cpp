@@ -218,12 +218,12 @@ static bool validateScaleCompensation(const char * outpath)
 }
 #endif // OBOL_NANORT_BUILD
 
-int main(int argc, char **argv)
+static int obol_run_render_render_rt_proxy_shapes(int argc, char **argv)
 {
     initCoinHeadless();
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
     {
         const char *primaryBase = (argc > 1) ? argv[1] : "render_rt_proxy_shapes";
         SoSeparator *fRoot = ObolTest::Scenes::createRTProxyShapes(256, 256);
@@ -376,4 +376,10 @@ int main(int argc, char **argv)
 
     root->unref();
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_rt_proxy_shapes) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_rt_proxy_shapes, "render_rt_proxy_shapes"), 0);
 }

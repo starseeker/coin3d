@@ -88,7 +88,7 @@
 #include <Inventor/SbColor.h>
 #include <Inventor/SbString.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Macro mirroring each vanilla "initialized" test block:
 //   BOOST_CHECK that getTypeId() != badType() and getNum() == 0
@@ -102,10 +102,10 @@ using namespace SimpleTest;
             TestName " not initialized or initial count != 0"); \
     }
 
-int main()
+static int obol_run_upstream_test_mf_fields()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // All SoMF* types: class initialized with zero elements
@@ -245,4 +245,10 @@ int main()
     TEST_MF_INITIALIZED("SoMFEngine",   SoMFEngine)
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_mf_fields) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_mf_fields), 0);
 }

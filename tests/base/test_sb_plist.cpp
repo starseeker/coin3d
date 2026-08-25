@@ -54,12 +54,12 @@
 #include <Inventor/SbString.h>
 #include <Inventor/SbVec3f.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_sb_plist()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // =======================================================================
     // SbPList tests
@@ -338,4 +338,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sb_plist) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sb_plist), 0);
 }

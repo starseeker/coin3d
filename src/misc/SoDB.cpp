@@ -65,6 +65,7 @@
 #include "config.h"
 
 #include <atomic>
+#include <mutex>
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
@@ -130,7 +131,11 @@
 
 // Static storage for the global context manager
 namespace {
-  SoDB::ContextManager * global_context_manager = nullptr;
+  // SoDB lifecycle operations are process-wide.  Serialize initialization,
+  // reconfiguration, and shutdown; rendering itself is protected by the
+  // scene-graph lock and does not take this mutex.
+  std::recursive_mutex lifecycle_mutex;
+  std::atomic<SoDB::ContextManager *> global_context_manager{nullptr};
 }
 
 // *************************************************************************
@@ -196,7 +201,9 @@ static uint32_t a_static_variable = 0xdeadbeef;
   please see the class documentation of SoDB for a description of how to
   work around this problem.
 
-  It's safe to call this function multiple times with the same context manager.
+  Repeated calls after initialization may replace the context manager, but
+  must be made while the application is quiescent.  The context manager must
+  remain alive until it is replaced or the library is finished.
 
   Make sure you call SoDB::cleanup() before application termination, for
   the Coin library to be able to clean up internal static data structures.
@@ -211,6 +218,7 @@ static uint32_t a_static_variable = 0xdeadbeef;
 void
 SoDB::init(ContextManager * context_manager)
 {
+  std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   OBOL_INIT_CHECK_THREAD();
 
   // Require a valid context manager
@@ -224,7 +232,7 @@ SoDB::init(ContextManager * context_manager)
     // Applications should always provide a proper context manager
   } else {
     // Set the global context manager
-    global_context_manager = context_manager;
+    global_context_manager.store(context_manager, std::memory_order_release);
   }
 
   // Allow re-initialization if a context manager is provided, even if already initialized
@@ -235,7 +243,7 @@ SoDB::init(ContextManager * context_manager)
 
   // If already initialized and context manager is provided, just update the context manager
   if (SoDB::isInitialized() && context_manager) {
-    global_context_manager = context_manager;
+    global_context_manager.store(context_manager, std::memory_order_release);
     return; // Context manager updated, no need to re-initialize everything else
   }
 
@@ -401,7 +409,7 @@ SoDB::init(ContextManager * context_manager)
   auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_LISTMODULES");
   if (env.has_value() && (std::atoi(env->c_str()) > 0)) { SoDBP::listWin32ProcessModules(); }
 
-  SoDBP::isinitialized = TRUE;
+  SoDBP::isinitialized.store(TRUE, std::memory_order_release);
 
   // NOTE: SoDBP::isinitialized must be set to TRUE before this block,
   // or you will get a "mysterious" crash on a mutex. Logically, it should
@@ -445,8 +453,14 @@ SoDB::init(ContextManager * context_manager)
 void
 SoDB::finish(void)
 {
+  std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   coin_atexit_cleanup();
-  SoDBP::isinitialized = FALSE;
+  // Do not leave a pointer to an application-owned manager visible after the
+  // library has released its global state.  Callers may legitimately query
+  // the manager while coordinating shutdown, and a stale pointer here would
+  // turn that query into use-after-lifetime once the manager is destroyed.
+  global_context_manager.store(nullptr, std::memory_order_release);
+  SoDBP::isinitialized.store(FALSE, std::memory_order_release);
 }
 
 /*!
@@ -1033,7 +1047,7 @@ SoDB::getConverter(SoType from, SoType to)
 SbBool
 SoDB::isInitialized(void)
 {
-  return SoDBP::isinitialized;
+  return SoDBP::isinitialized.load(std::memory_order_acquire);
 }
 
 /*!
@@ -1576,7 +1590,7 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
 SoDB::ContextManager *
 SoDB::getContextManager(void)
 {
-  return global_context_manager;
+  return global_context_manager.load(std::memory_order_acquire);
 }
 
 /*!
@@ -1590,7 +1604,8 @@ void
 SoDB::setContextManager(ContextManager * manager)
 {
   if (manager) {
-    global_context_manager = manager;
+    std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
+    global_context_manager.store(manager, std::memory_order_release);
   }
 }
 

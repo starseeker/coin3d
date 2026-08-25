@@ -73,7 +73,6 @@
 #include "nanort.h"
 
 // ---- stb_image_write (header-only PNG writer) --------------------------------
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 // ---- Standard library --------------------------------------------------------
@@ -462,7 +461,7 @@ static bool renderToPNG(const RtScene& scene,
 // main
 // =============================================================================
 
-int main(int argc, char** argv)
+static int obol_run_render_render_nanort(int argc, char** argv)
 {
     const int W = 512, H = 512;
     const char* outpath = (argc > 1) ? argv[1] : "render_nanort_out.png";
@@ -685,4 +684,10 @@ int main(int argc, char** argv)
 
     root->unref();
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_nanort) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_nanort, "render_nanort"), 0);
 }

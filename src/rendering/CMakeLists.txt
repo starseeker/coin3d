@@ -29,7 +29,7 @@ set(OBOL_RENDERING_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_RENDERING_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} rendering/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES rendering/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

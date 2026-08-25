@@ -108,7 +108,7 @@
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Macro to reduce boilerplate for "class initialized" tests that mirror
 // the vanilla OBOL_TEST_SUITE pattern.
@@ -122,10 +122,10 @@ using namespace SimpleTest;
             TestName " class not initialized or instance has bad type"); \
     }
 
-int main()
+static int obol_run_upstream_test_sf_fields()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSFBool: class initialized
@@ -309,4 +309,10 @@ int main()
     TEST_SF_INITIALIZED("SoSFBox3s",    SoSFBox3s)
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sf_fields) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sf_fields), 0);
 }

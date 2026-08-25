@@ -53,7 +53,7 @@
 #include <Inventor/SbVec2f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // SbTesselator callback: count triangles
@@ -65,10 +65,10 @@ static void triCb(void * /*v0*/, void * /*v1*/, void * /*v2*/, void * /*data*/)
     ++g_triCount;
 }
 
-int main()
+static int obol_run_upstream_test_base_extras()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbClip: add 4 vertices of a unit quad, clip against z>=0 plane —
@@ -223,4 +223,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_base_extras) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_base_extras), 0);
 }

@@ -21,14 +21,6 @@ ctest --test-dir .build -L integration --output-on-failure
 ctest --test-dir .build -L render --output-on-failure
 ```
 
-These commands run the modern default suite.  The historical standalone GL
-render probes and Mentor image checks are deliberately opt-in:
-
-```sh
-cmake -S . -B .build-legacy -DOBOL_BUILD_LEGACY_TESTS=ON \
-  -DOBOL_BUILD_EXAMPLE_TESTS=ON
-```
-
 The modern suite uses GTest's CTest discovery.  A test process receives an
 explicit `SoDB::ContextManager`; non-rendering tests use a no-op manager and
 render tests own a per-fixture OSMesa manager.  Tests must not change the
@@ -41,15 +33,6 @@ run stays fast and repeatable:
 cmake -S . -B .build-stress -DOBOL_BUILD_STRESS_TESTS=ON
 cmake --build .build-stress --target obol_stress_tests
 ctest --test-dir .build-stress -L stress --output-on-failure
-```
-
-Performance characterization is a separate opt-in executable with no test
-registry dependency:
-
-```sh
-cmake -S . -B .build-bench -DOBOL_BUILD_BENCHMARKS=ON
-cmake --build .build-bench --target obol_scalability_benchmark
-./.build-bench/bin/obol_scalability_benchmark
 ```
 
 ## Adding a test
@@ -72,15 +55,6 @@ maximum channel error, and RMS error; there is no suite-wide hidden threshold.
 Keep references beneath `tests/rendering/golden/<backend>/` and update them
 only through a reviewed, intentional render change.
 
-## Compatibility lane
-
-`OBOL_BUILD_LEGACY_TESTS=ON` builds the historical standalone GL render
-probes and their shared scene factories.  They are labelled `legacy;visual`
-and are useful for backend bring-up or image-control maintenance, but they
-are not the authoritative unit or conformance suite.  The old registry-based
-unit wrapper and `obol_unittest` executable have been removed; new coverage
-belongs in GTest.
-
 The CAD IDs, assembly records, resolved-draw oracle, CPU-picking tests, base
 math, geometry, value types, and base utilities, fields, core engines, nodes,
 actions (including ray picking), scene management, paths, events, in-memory
@@ -90,11 +64,20 @@ materials, transforms, and offscreen-rendering wrappers are now fixture-backed
 OSMesa feature contracts; their viewer scenes live only in
 `examples/demo_scenes`.
 
-Legacy screenshot and backend programs are labelled `legacy;visual` rather
-than `render`.  Consequently `ctest -L render` is a portable modern
-conformance lane; select legacy visual coverage explicitly with
-`ctest -L legacy` or `ctest -L visual` in an environment that provides its
-declared GL backend.
+The former standalone rendering sources now register GTest cases directly in
+`obol_render_tests`; their original scene construction, rendering, picking,
+interaction, and return-code checks remain covered.  The upstream-derived
+non-rendering sources likewise register directly in `obol_unit_tests`, so all
+of the preserved coverage uses the same GTest/CTest discovery and support
+library as the focused suites.  There are no per-source executables or
+generated test-main adapters in the active test graph.
+
+Run the complete modern lanes explicitly when needed:
+
+```sh
+cmake --build .build --target obol_unit_tests obol_render_tests
+ctest --test-dir .build -L 'unit|render' --output-on-failure
+```
 
 ## Demos
 

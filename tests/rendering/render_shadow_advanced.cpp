@@ -2,7 +2,7 @@
  * render_shadow_advanced.cpp — Extended SoShadowGroup coverage test
  *
  * Uses the shared ObolTest::Scenes::createShadowAdvanced scene factory so that
- * the CLI image-generation path (obol_render) and the interactive viewer
+ * the CLI image-generation path (the migrated render adapter) and the interactive viewer
  * (obol_viewer) render an identical scene.
  *
  * The scene exercises:
@@ -81,7 +81,7 @@ static void reportShadowContrast(const unsigned char *buf)
                "(GLSL shadow maps may not be active on this driver)\n");
 }
 
-int main(int argc, char **argv)
+static int obol_run_render_render_shadow_advanced(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -118,4 +118,10 @@ int main(int argc, char **argv)
 
     root->unref();
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_shadow_advanced) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_shadow_advanced, "render_shadow_advanced"), 0);
 }

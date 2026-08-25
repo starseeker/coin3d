@@ -1,9 +1,3 @@
-add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-add_definitions(-DUNICODE -D_UNICODE)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utf8/include)
-
 # source files
 set(OBOL_BASE_FILES
 	dict.cpp
@@ -100,7 +94,7 @@ set(OBOL_BASE_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_BASE_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} base/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES base/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

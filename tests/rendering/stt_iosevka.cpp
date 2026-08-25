@@ -23,7 +23,6 @@
 
 #include <Inventor/SbFont.h>
 #include <Inventor/SbVec2s.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include <cstdio>
 #include <cstring>
@@ -82,7 +81,7 @@ static const TextRow k_rows[] = {
     {  0.0f, NULL,             0,   0,   0,   0,   0 }
 };
 
-int main(int argc, char **argv)
+static int obol_run_render_stt_iosevka(int argc, char **argv)
 {
     const char *outpath = (argc > 1) ? argv[1] : "/tmp/stt_iosevka.png";
 
@@ -150,4 +149,10 @@ int main(int argc, char **argv)
     }
     fprintf(stderr, "stt_iosevka: failed to write %s\n", outpath);
     return 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, stt_iosevka) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_stt_iosevka, "stt_iosevka"), 0);
 }

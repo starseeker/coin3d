@@ -22,10 +22,10 @@ set(OBOL_GLUE_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_GLUE_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} glue/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES glue/${SRCFILE})
 endforeach(SRCFILE)
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-	set(OBOL_SOURCE ${OBOL_SOURCE} glue/gl_osmesa.cpp CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES glue/gl_osmesa.cpp)
 endif()
 
 # define documentation

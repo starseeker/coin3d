@@ -47,7 +47,7 @@
 #endif
 #include <Inventor/gl.h>
 
-namespace SimpleTest {
+namespace ObolTest {
 
 // StandardScenes implementations
 SoSeparator* StandardScenes::createMinimalScene() {
@@ -310,4 +310,4 @@ bool ActionUtils::testActionTraversal(SoNode* scene) {
     }
 }
 
-} // namespace SimpleTest
+} // namespace ObolTest

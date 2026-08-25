@@ -22,7 +22,7 @@
  *   argv[1]+"_step3.rgb"   — step 3: edited solid (v0 moved; v0_h highlighted)
  *
  * The primary output for CTest is argv[1]+".rgb" (combined three-panel view).
- * All four images are generated so that generate_controls.sh can capture
+ * All four images are generated so that the migrated render adapter can capture
  * them as individual control PNGs for visual inspection.
  *
  * Output: argv[1]+".rgb"  (and _step1/_step2/_step3)  — 800×600 SGI RGB
@@ -228,7 +228,7 @@ static const SbColor kBgColor(0.12f, 0.12f, 0.14f);
 // main
 // ============================================================================
 
-int main(int argc, char** argv)
+static int obol_run_render_render_arb8_edit_cycle(int argc, char** argv)
 {
     initCoinHeadless();
 
@@ -247,7 +247,7 @@ int main(int argc, char** argv)
     const char* base = (argc > 1) ? argv[1] : "render_arb8_edit_cycle";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes.
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes.
      * Use the same dimensions and background as the step renders. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createArb8EditCycle(DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -516,4 +516,10 @@ int main(int argc, char** argv)
         root->unref();
         return ok ? 0 : 1;
     }
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_arb8_edit_cycle) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_arb8_edit_cycle, "render_arb8_edit_cycle"), 0);
 }

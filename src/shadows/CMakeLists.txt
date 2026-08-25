@@ -36,7 +36,7 @@ set(OBOL_SHADOWS_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_SHADOWS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} shadows/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES shadows/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

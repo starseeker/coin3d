@@ -58,7 +58,7 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoType.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Callback data for dispatch tests
 struct EventCapture {
@@ -72,10 +72,10 @@ static void keyboardEventCb(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-int main()
+static int obol_run_upstream_test_events_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoKeyboardEvent: set/get key, state, position, shift modifier
@@ -248,4 +248,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_events_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_events_suite), 0);
 }

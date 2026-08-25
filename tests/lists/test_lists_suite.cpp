@@ -57,12 +57,12 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoMFFloat.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_lists_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbPList
@@ -395,4 +395,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_lists_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_lists_suite), 0);
 }

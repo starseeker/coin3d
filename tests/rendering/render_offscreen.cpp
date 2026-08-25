@@ -59,7 +59,7 @@ static int countRedPixels(const unsigned char *buf, int w, int h)
 
 // ---------------------------------------------------------------------------
 
-int main(int argc, char **argv)
+static int obol_run_render_render_offscreen(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -266,4 +266,10 @@ int main(int argc, char **argv)
         fprintf(stderr, "render_offscreen: SOME TESTS FAILED\n");
     }
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_offscreen) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_offscreen, "render_offscreen"), 0);
 }

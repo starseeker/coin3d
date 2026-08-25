@@ -156,7 +156,7 @@ static const int ORANGE_MIN_GREEN =  30;  // G moderate
 static const int ORANGE_MAX_BLUE  =  80;  // B low
 #endif
 
-int main(int argc, char** argv)
+static int obol_run_render_render_procedural_shape(int argc, char** argv)
 {
   initCoinHeadless();
 
@@ -222,7 +222,7 @@ int main(int argc, char** argv)
 
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createProceduralShape(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -270,4 +270,10 @@ int main(int argc, char** argv)
 
   root->unref();
   return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_procedural_shape) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_procedural_shape, "render_procedural_shape"), 0);
 }

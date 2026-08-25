@@ -32,7 +32,15 @@ public:
 
     bool available() const;
     bool render(SoNode * scene);
+    /** The fixture-owned renderer for APIs such as SoViewport::render(). */
+    SoOffscreenRenderer * renderer() const;
+    /** Copy the most recent renderer buffer into pixels(). */
+    bool capture();
     SoGLRenderAction * renderAction() const;
+
+    /** Configure the renderer's vertical background gradient for later renders. */
+    void setBackgroundGradient(const SbColor & bottom, const SbColor & top);
+    void clearBackgroundGradient();
 
     int width() const { return width_; }
     int height() const { return height_; }
@@ -45,6 +53,9 @@ private:
     int width_;
     int height_;
     SbColor background_;
+    SbColor gradient_bottom_;
+    SbColor gradient_top_;
+    bool gradient_enabled_ = false;
     std::unique_ptr<SoDB::ContextManager> manager_;
     std::unique_ptr<SoOffscreenRenderer> renderer_;
     std::vector<unsigned char> pixels_;

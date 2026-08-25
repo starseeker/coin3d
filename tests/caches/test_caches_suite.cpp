@@ -49,12 +49,12 @@
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbVec3f.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_caches_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBoundingBoxCache: construct, set, getBox, isCenterSet
@@ -169,4 +169,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_caches_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_caches_suite), 0);
 }

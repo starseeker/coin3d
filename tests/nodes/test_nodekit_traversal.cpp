@@ -61,12 +61,12 @@
 #include <Inventor/SbVec3f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_nodekit_traversal()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoShapeKit: basic instantiation and type check
@@ -227,4 +227,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodekit_traversal) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodekit_traversal), 0);
 }

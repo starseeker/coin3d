@@ -17,7 +17,7 @@ endif()
 
 # build library
 foreach(SRCFILE ${OBOL_DETAILS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} details/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES details/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

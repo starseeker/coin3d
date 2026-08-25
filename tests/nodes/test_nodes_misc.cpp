@@ -80,12 +80,12 @@
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbRotation.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_nodes_misc()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAnnotation
@@ -435,4 +435,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodes_misc) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_misc), 0);
 }

@@ -177,11 +177,11 @@ endif()
 
 # build library
 foreach(SRCFILE ${OBOL_ENGINES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} engines/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES engines/${SRCFILE})
 endforeach(SRCFILE)
 # evaluator_tab.cpp is kept out of OBOL_ENGINES_FILES so we can supply either
 # the source-tree copy or the freshly generated build-dir copy as appropriate.
-set(OBOL_SOURCE ${OBOL_SOURCE} "${EVALUATOR_TAB_SRC}" CACHE INTERNAL "OBOL_SOURCE")
+set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES "${EVALUATOR_TAB_SRC}")
 
 # define documentation
 foreach(SRCFILE ${OBOL_ENGINES_FILES})

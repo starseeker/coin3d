@@ -63,7 +63,7 @@
 #include <cstdlib>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Write/read helpers
@@ -91,10 +91,10 @@ static void writeNode(SoNode * root, char ** outBuf, size_t * outSize)
     *outSize = nbytes;
 }
 
-int main()
+static int obol_run_upstream_test_nodekit_deep()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCameraKit: getPart("camera", TRUE) returns a camera
@@ -211,4 +211,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_nodekit_deep) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodekit_deep), 0);
 }

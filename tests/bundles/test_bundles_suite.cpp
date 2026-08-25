@@ -68,7 +68,7 @@
 #include <Inventor/bundles/SoVertexAttributeBundle.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // -------------------------------------------------------------------------
 // Shared state captured by the SoCallbackAction callback
@@ -234,10 +234,10 @@ static SoSeparator * buildTriSceneWithNormals()
 }
 
 // =========================================================================
-int main()
+static int obol_run_upstream_test_bundles_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoNormalBundle: construction + generation path (no normals on state)
@@ -341,4 +341,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_bundles_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_bundles_suite), 0);
 }

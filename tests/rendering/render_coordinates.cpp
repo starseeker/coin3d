@@ -1,31 +1,13 @@
-/*
- * render_coordinates.cpp - Visual regression test: coordinate-system orientation
- *
- * Scene built by ObolTest::Scenes::createCoordinates.
- * Viewport: 800 x 600
- * Output: argv[1]+".rgb" (SGI RGB format)
- */
-
-#include "headless_utils.h"
+#include "framework/scene_test_utils.h"
 #include "testlib/test_scenes.h"
-#include <cstdio>
+#include <gtest/gtest.h>
 
-static const int W = 800;
-static const int H = 600;
-
-int main(int argc, char **argv)
+TEST(RenderSceneFactories, CoordinatesSceneRendersVisibleGeometry)
 {
-    initCoinHeadless();
-
-    SoSeparator *root = ObolTest::Scenes::createCoordinates(W, H);
-
-    char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
-    else
-        snprintf(outpath, sizeof(outpath), "render_coordinates.rgb");
-
-    bool ok = renderToFile(root, outpath, W, H);
-    root->unref();
-    return ok ? 0 : 1;
+    ObolTestSupport::RenderFixture fixture(800, 600);
+    ASSERT_TRUE(fixture.available());
+    auto scene = ObolTestSupport::makeScene(ObolTest::Scenes::createCoordinates,
+                                            fixture);
+    ASSERT_TRUE(fixture.render(scene.root()));
+    EXPECT_GT(fixture.nonBackgroundPixels(), 100u);
 }

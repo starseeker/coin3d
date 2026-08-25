@@ -89,7 +89,7 @@
 #include <cmath>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Floating-point comparison helper
@@ -101,10 +101,10 @@ static bool doubleNear(double a, double b, double tol = 1e-10) {
     return fabs(a - b) <= tol;
 }
 
-int main()
+static int obol_run_upstream_test_sb_types()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbVec3f: fromString valid/invalid
@@ -1087,4 +1087,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sb_types) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sb_types), 0);
 }

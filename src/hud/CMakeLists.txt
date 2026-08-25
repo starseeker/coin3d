@@ -8,7 +8,7 @@ set(OBOL_HUD_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_HUD_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} hud/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES hud/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

@@ -61,12 +61,12 @@
 
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_events_deeper()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoEvent base: time, position, modifiers
@@ -317,4 +317,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_events_deeper) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_events_deeper), 0);
 }

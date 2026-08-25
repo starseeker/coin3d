@@ -16,7 +16,7 @@ set(OBOL_ERRORS_INTERNAL_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_ERRORS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} errors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES errors/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

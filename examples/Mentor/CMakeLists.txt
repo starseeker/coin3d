@@ -248,9 +248,10 @@ add_headless_example(16.3.AttachEditor)
 # Chapter 17: OpenGL Integration
 add_headless_example(17.2.GLCallback)
 
-# Build image comparator utility using shared source from tests/utils/
-# When building as part of the main project, reuse the image_comparator target
-# that is already defined in the tests/ directory to avoid duplicate targets.
+# Build the Mentor image-comparison utility from the shared source in
+# tests/utils/.  The core GTest framework uses in-process image assertions;
+# these standalone tools remain because Mentor's example tests invoke them
+# through CTest.
 if(NOT TARGET image_comparator)
     add_executable(image_comparator "${_MENTOR_UTILS_DIR}/image_comparator.cpp")
     if(TARGET lodepng)

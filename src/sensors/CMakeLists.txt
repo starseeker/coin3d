@@ -16,7 +16,7 @@ set(OBOL_SENSORS_FILES
 
 # build library
 foreach(SRCFILE ${OBOL_SENSORS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} sensors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES sensors/${SRCFILE})
 endforeach(SRCFILE)
 
 # define documentation

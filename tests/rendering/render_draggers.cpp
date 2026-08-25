@@ -225,7 +225,7 @@ static bool testManipInteraction(SoTransformManip *manip,
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+static int obol_run_render_render_draggers(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -309,4 +309,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_draggers) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_draggers, "render_draggers"), 0);
 }

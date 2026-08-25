@@ -58,7 +58,7 @@
 #include <vector>
 #include <map>
 
-namespace SimpleTest {
+namespace ObolTest {
 
 /**
  * @brief Standard test scenes for comprehensive testing
@@ -182,6 +182,6 @@ public:
     static bool testActionTraversal(SoNode* scene);
 };
 
-} // namespace SimpleTest
+} // namespace ObolTest
 
 #endif // SCENE_GRAPH_UTILS_H

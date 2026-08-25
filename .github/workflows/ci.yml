@@ -43,6 +43,7 @@ jobs:
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
             libfltk1.3-dev \
+            libgtest-dev \
             xvfb
 
       - name: Configure
@@ -84,7 +85,8 @@ jobs:
             libxcursor-dev libxft-dev libxinerama-dev \
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
-            libfltk1.3-dev
+            libfltk1.3-dev \
+            libgtest-dev
 
       - name: Configure
         run: |
@@ -95,13 +97,14 @@ jobs:
             -DOBOL_BUILD_TESTS=ON \
             -DOBOL_TSAN=ON \
             -DOBOL_USE_UNITY_BUILD=OFF \
+            -DOBOL_BUILD_STRESS_TESTS=ON \
             -DOBOL_USE_SYSTEM_GL=ON \
             -DOBOL_USE_SWRAST=OFF
 
       - name: Build focused thread tests
         run: |
           cmake --build build-tsan --config RelWithDebInfo --parallel 2 \
-            --target test_threads test_thread_safety test_cad_instance_records
+            --target obol_unit_tests obol_integration_tests obol_stress_tests
 
       - name: Run focused thread tests
         env:
@@ -110,4 +113,4 @@ jobs:
           setarch "$(uname -m)" -R ctest --test-dir build-tsan \
             --output-on-failure \
             --timeout 180 \
-            -R '^(test_threads|test_thread_safety|test_cad_instance_records)$'
+            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords)\.'

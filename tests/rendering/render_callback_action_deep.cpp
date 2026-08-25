@@ -565,7 +565,7 @@ static bool test13_vertexProperty()
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+static int obol_run_render_render_callback_action_deep(int argc, char **argv)
 {
     initCoinHeadless();
     (void)argc; (void)argv;
@@ -590,4 +590,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_callback_action_deep) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_callback_action_deep, "render_callback_action_deep"), 0);
 }

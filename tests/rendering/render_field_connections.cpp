@@ -237,7 +237,7 @@ static bool test8_stringToFloat()
 /* -------------------------------------------------------------------------
  * main
  * ----------------------------------------------------------------------- */
-int main(int argc, char **argv)
+static int obol_run_render_render_field_connections(int argc, char **argv)
 {
     initCoinHeadless();
 
@@ -258,4 +258,10 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_field_connections) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_field_connections, "render_field_connections"), 0);
 }

@@ -61,17 +61,17 @@
 #include <cmath>
 #include <cstdio>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 1e-4f)
 {
     return std::fabs(a - b) < eps;
 }
 
-int main()
+static int obol_run_upstream_test_sb_matrix_box()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // ======================================================================
     // SbMatrix
@@ -475,4 +475,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sb_matrix_box) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sb_matrix_box), 0);
 }

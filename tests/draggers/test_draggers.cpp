@@ -82,7 +82,7 @@
 
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Callback tracking helpers
@@ -109,10 +109,10 @@ static bool matrixIsIdentity(const SbMatrix & m)
     return true;
 }
 
-int main()
+static int obol_run_upstream_test_draggers()
 {
     TestFixture fixture;
-    TestRunner  runner;
+    GTestResultRecorder  runner;
 
     // -----------------------------------------------------------------------
     // SoTranslate1Dragger: instantiation and type
@@ -892,4 +892,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_draggers) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_draggers), 0);
 }

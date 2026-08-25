@@ -49,7 +49,7 @@
 #include <string>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // ---------------------------------------------------------------------------
 // Callback infrastructure for capturing error messages
@@ -70,10 +70,10 @@ static void myErrorCb(const SoError * err, void * data)
 // Silent sink — used to suppress error output during negative tests
 [[maybe_unused]] static void silentCb(const SoError * /*err*/, void * /*data*/) {}
 
-int main()
+static int obol_run_upstream_test_errors_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // Class type IDs are valid
@@ -183,4 +183,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_errors_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_errors_suite), 0);
 }

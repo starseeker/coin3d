@@ -62,12 +62,12 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbLinear.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_details_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoPointDetail
@@ -501,4 +501,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_details_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_details_suite), 0);
 }

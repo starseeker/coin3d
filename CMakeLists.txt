@@ -782,15 +782,16 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 if(OBOL_BUILD_TESTS)
-  # Build lodepng from the bundled source so that rgb_to_png and
-  # image_comparator can write / compare PNG control images without
-  # requiring any system-installed PNG library.
+  # Build lodepng from the bundled source for the modern image assertion
+  # helpers; this keeps golden-image tests independent of system PNG packages.
   add_library(lodepng STATIC "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
   target_include_directories(lodepng PUBLIC "${PROJECT_SOURCE_DIR}/external")
   message(STATUS "Using bundled lodepng from external/lodepng.cpp")
 
   enable_testing()
-  add_subdirectory(tests)
+  # The GTest suite is the only supported test entry point.  The old
+  # registry-based test graph is intentionally not part of the build.
+  add_subdirectory(tests/framework)
 endif()
 
 # Examples are useful for standalone Obol development, but package builds do

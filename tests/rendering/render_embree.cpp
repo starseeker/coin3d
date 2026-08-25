@@ -56,7 +56,7 @@ static bool validatePixels(const unsigned char * buf, int w, int h)
     return pct >= 1.0;
 }
 
-int main(int argc, char ** argv)
+static int obol_run_render_render_embree(int argc, char ** argv)
 {
     initCoinHeadless();
 
@@ -209,4 +209,10 @@ int main(int argc, char ** argv)
 
     root->unref();
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingCoverage, render_embree) {
+    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_embree, "render_embree"), 0);
 }

@@ -73,7 +73,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static void silentErrCb(const SoError *, void *) {}
 
@@ -118,10 +118,10 @@ static SoSeparator * readFromBuffer(void * buf, size_t bufLen)
     return root;
 }
 
-int main()
+static int obol_run_upstream_test_io_write_action()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. ASCII round-trip: SoGroup { SoSphere SoCube } — type and child count
@@ -482,4 +482,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_io_write_action) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_write_action), 0);
 }

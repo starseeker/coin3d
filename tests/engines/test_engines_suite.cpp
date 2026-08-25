@@ -71,12 +71,12 @@
 #include <Inventor/SoType.h>
 #include <Inventor/SoDB.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_engines_suite()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCalculator: simple arithmetic via expression
@@ -336,4 +336,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_engines_suite) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_suite), 0);
 }

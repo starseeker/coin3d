@@ -66,12 +66,12 @@
 #include <cmath>
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_field_advanced()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSFRotation: setValue(axis, angle) / getValue(axis, angle) round-trip
@@ -391,4 +391,10 @@ int main()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_field_advanced) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_advanced), 0);
 }

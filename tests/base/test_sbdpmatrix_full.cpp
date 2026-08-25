@@ -51,12 +51,12 @@
 #include <Inventor/SbVec3f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_sbdpmatrix_full()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // det3(): identity matrix → 1.0
@@ -179,4 +179,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sbdpmatrix_full) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sbdpmatrix_full), 0);
 }

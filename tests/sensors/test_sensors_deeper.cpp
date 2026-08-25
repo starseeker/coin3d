@@ -72,7 +72,7 @@
 #include <cmath>
 #include <cstdio>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 // Simple callback that increments a counter
 static void countCB(void * data, SoSensor *)
@@ -81,10 +81,10 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-int main()
+static int obol_run_upstream_test_sensors_deeper()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSensor base: setFunction/getFunction, setData/getData
@@ -319,4 +319,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_sensors_deeper) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sensors_deeper), 0);
 }

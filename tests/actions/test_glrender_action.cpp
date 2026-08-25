@@ -59,12 +59,12 @@
 #include <Inventor/SbVec2f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+static int obol_run_upstream_test_glrender_action()
 {
     TestFixture fixture;
-    TestRunner runner;
+    GTestResultRecorder runner;
 
     const SbViewportRegion vp(512, 384);
 
@@ -359,4 +359,10 @@ int main()
     }
 
     return runner.getSummary();
+}
+
+#include "framework/upstream_test_registration.h"
+
+TEST(UpstreamCoverage, test_glrender_action) {
+    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_glrender_action), 0);
 }

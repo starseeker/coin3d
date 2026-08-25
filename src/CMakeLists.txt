@@ -14,43 +14,10 @@ file(GENERATE
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
 )
 
-add_compile_options(-DHAVE_CONFIG_H -DOBOL_INTERNAL -DOBOL_DEBUG=$<CONFIG:Debug>)
-
-if(OBOL_PROFILING)
-  add_compile_options(-DOBOL_PROFILING)
-endif()
-
-include_directories(BEFORE
-  "${PROJECT_BINARY_DIR}/include"
-  "${PROJECT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_BINARY_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/misc"
-  "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
-  "${PROJECT_BINARY_DIR}/src/shadows"
-  "${PROJECT_SOURCE_DIR}"
-  # Subdirectory-specific include paths (needed in single-lib mode where
-  # subdirectory include_directories() calls don't propagate to the parent)
-  "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
-  "${PROJECT_BINARY_DIR}/src/draggers"
-  # CAD subsystem internal headers
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
-)
-
-# add include dirs for non targets
-if(NOT "${OBOL_TARGET_INCLUDE_DIRECTORIES}" STREQUAL "")
-  include_directories(${OBOL_TARGET_INCLUDE_DIRECTORIES})
-endif()
-# add include dirs for targets
-foreach(_tgt ${OBOL_TARGET_LINK_LIBRARIES})
-  if(TARGET ${_tgt} )
-    include_directories($<TARGET_PROPERTY:${_tgt},INTERFACE_INCLUDE_DIRECTORIES>)
-  endif()
-endforeach()
-
-set(OBOL_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "OBOL_SOURCE")
+# Child module directories register sources through a global property.  This
+# keeps the source manifest out of the CMake cache and avoids relying on cache
+# variables leaking between directory scopes.
+set_property(GLOBAL PROPERTY OBOL_SOURCE_FILES misc/CoinTidbits.cpp)
 
 foreach(_subdir actions base bundles caches details draggers elements
                 engines errors events fields fonts glue io manips misc rendering lists
@@ -60,6 +27,8 @@ foreach(_subdir actions base bundles caches details draggers elements
 endforeach()
 add_subdirectory(doc)
 add_subdirectory(cad)
+
+get_property(OBOL_SOURCE GLOBAL PROPERTY OBOL_SOURCE_FILES)
 
 # Keep the high-responsibility CAD assembly and its direct software fallback
 # independently compiled.  Source properties are directory scoped, so set
@@ -101,7 +70,14 @@ if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
 endif()
 
 add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
-target_compile_definitions(${PROJECT_NAME} PRIVATE UTF8_NO_AUTOLINK)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    HAVE_CONFIG_H
+    OBOL_INTERNAL
+    OBOL_DEBUG=$<CONFIG:Debug>
+    UTF8_NO_AUTOLINK
+    UNICODE
+    _UNICODE
+)
 if(TARGET obol_parser_gen)
   add_dependencies(${PROJECT_NAME} obol_parser_gen)
 endif()
@@ -150,9 +126,6 @@ endif()
 # ============================================================================
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    HAVE_CONFIG_H
-    OBOL_INTERNAL
-    OBOL_DEBUG=$<CONFIG:Debug>
     # In swrast-only builds, all gl* calls in the library must be mangled to
     # mgl* so they resolve to the OSMesa library symbols.  This is scoped to
     # the library target so that test executables (which may include <GL/glx.h>)
@@ -161,10 +134,18 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<BOOL:${OBOL_USE_SWRAST}>:$<$<NOT:$<BOOL:${OBOL_USE_SYSTEM_GL}>>:USE_MGL_NAMESPACE>>
 )
 
+if(OBOL_PROFILING)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE OBOL_PROFILING)
+endif()
+
 # Apply warning flags (controlled by OBOL_WARNINGS option in the top-level CMakeLists.txt)
 if(OBOL_WARNING_FLAGS)
     target_compile_options(${PROJECT_NAME} PRIVATE ${OBOL_WARNING_FLAGS})
 endif()
+target_compile_options(${PROJECT_NAME} PRIVATE
+    "$<$<C_COMPILER_ID:MSVC>:/utf-8>"
+    "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>"
+)
 
 # Target-specific include directories (modern approach)
 target_include_directories(${PROJECT_NAME} 
@@ -187,8 +168,6 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        # obol/ public headers (CadIds, SoCADAssembly, SoCADDetail, DepthPolicy)
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
