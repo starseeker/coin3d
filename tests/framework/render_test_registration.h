@@ -1,5 +1,16 @@
 #pragma once
 
+// Legacy render cases include this adapter after their scene implementation.
+// A system-GL build may therefore have pulled in Xlib first.  Its generic
+// macros collide with identifiers in GoogleTest and are not needed by the
+// registration code below.
+#ifdef None
+#undef None
+#endif
+#ifdef Bool
+#undef Bool
+#endif
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -32,4 +43,3 @@ inline int runRenderingCase(int (*entry)(), const char * /*name*/)
 }
 
 } // namespace ObolTest
-

@@ -37,9 +37,10 @@
  * Mentor examples to headless, offscreen rendering tests that
  * produce reference images for validation.
  *
- * Backend selection (compile-time):
- *   OBOL_SWRAST_BUILD: use OSMesa for truly headless operation
- *   default:             use system OpenGL (GLX on Linux) with Xvfb
+ * Backend selection:
+ *   software-only builds use Obol's OSMesa context manager;
+ *   system-only builds use the native manager (GLX on Linux, under Xvfb);
+ *   dual builds select at runtime through OBOL_TEST_RENDER_BACKEND.
  *
  * Rendering paths use a SoDB::ContextManager.  Non-rendering/no-OpenGL paths
  * may call SoDB::init(nullptr) and continue with limited functionality.
@@ -65,9 +66,11 @@
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
+#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <memory>
 
 // Default image dimensions
 #define DEFAULT_WIDTH 800
@@ -228,149 +231,21 @@ inline bool renderToFile(
     return true;
 }
 
-#elif defined(OBOL_SWRAST_BUILD) && !defined(OBOL_TEST_WGL) && (!defined(OBOL_DUAL_GL_BUILD) || defined(_WIN32))
+#elif defined(OBOL_SWRAST_BUILD) && !defined(OBOL_TEST_WGL) && \
+      (!defined(OBOL_DUAL_GL_BUILD) || defined(_WIN32))
 // ============================================================================
 // Software-rasterizer (OSMesa) backend: for offscreen/headless rendering
 // without a display server.  Also used for Windows dual-GL tests because
 // Windows has no GLX/Xvfb context; the interactive viewer still uses WGL.
-// Headers come from the project's own submodule (external/osmesa/include/OSMesa/)
 // ============================================================================
-#include <OSMesa/osmesa.h>
-#include <Inventor/gl.h>
-#include <memory>
-
-// OSMesa context structure for offscreen rendering
-struct CoinOSMesaContext {
-    OSMesaContext context;
-    std::unique_ptr<unsigned char[]> buffer;
-    int width, height;
-    // Previous context/buffer saved at makeContextCurrent time so that
-    // restorePreviousContext() can reinstate it after temporary use.
-    OSMesaContext prev_context;
-    void         *prev_buffer;
-    GLsizei       prev_width, prev_height, prev_bytesPerRow;
-    GLenum        prev_format;
-
-    CoinOSMesaContext(int w, int h) : width(w), height(h),
-        prev_context(nullptr), prev_buffer(nullptr),
-        prev_width(0), prev_height(0), prev_bytesPerRow(0), prev_format(0)
-    {
-        context = OSMesaCreateContextExt(OSMESA_RGBA, 24, 0, 0, NULL);
-        if (context) {
-            buffer = std::make_unique<unsigned char[]>(width * height * 4);
-        }
-    }
-
-    ~CoinOSMesaContext() {
-        if (context) {
-            OSMesaDestroyContext(context);
-            context = nullptr;  /* defensive: zero out so any stale-ptr check is safe */
-        }
-    }
-
-    bool makeCurrent() {
-        if (!context) return false;
-        // Save the currently-active OSMesa context so restorePreviousContext
-        // can put it back.  OSMesaGetCurrentContext() returns NULL when none
-        // is active, which is a valid value to restore to.
-        prev_context = OSMesaGetCurrentContext();
-        prev_buffer  = nullptr;
-        prev_width   = prev_height = prev_bytesPerRow = 0;
-        prev_format  = 0;
-        if (prev_context) {
-            GLint fmt = 0;
-            OSMesaGetColorBuffer(prev_context, &prev_width, &prev_height,
-                                 &fmt, &prev_buffer);
-            prev_format = (GLenum)fmt;
-        }
-        return OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE,
-                                 width, height) != 0;
-    }
-
-    bool isValid() const { return context != nullptr; }
-};
-
-// OSMesa context manager for Coin
-class CoinHeadlessContextManager : public SoDB::ContextManager {
-public:
-    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
-        auto* ctx = new CoinOSMesaContext(width, height);
-        return ctx->isValid() ? ctx : (delete ctx, nullptr);
-    }
-
-    virtual SbBool isOSMesaContext(void* /*context*/) override {
-        /* All contexts created by this manager are OSMesa contexts.
-         * Returning TRUE lets CoinOffscreenGLCanvas call
-         * coingl_register_osmesa_context() so that SoGLContext_instance()
-         * routes to the osmesa_ GL dispatch path instead of the system GL path
-         * (which would crash on NULL glGetString results). */
-        return TRUE;
-    }
-    
-    virtual SbBool makeContextCurrent(void* context) override {
-        return context && static_cast<CoinOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
-    }
-    
-    virtual void restorePreviousContext(void* context) override {
-        CoinOSMesaContext *ctx = static_cast<CoinOSMesaContext*>(context);
-        if (!ctx) return;
-        if (ctx->prev_context && ctx->prev_buffer) {
-            // Reinstate the previously-active context with its buffer.
-            OSMesaMakeCurrent(ctx->prev_context, ctx->prev_buffer,
-                              GL_UNSIGNED_BYTE,
-                              ctx->prev_width, ctx->prev_height);
-        } else {
-            // No previous context was active; release the current binding.
-            OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
-        }
-    }
-    
-    virtual void destroyContext(void* context) override {
-        CoinOSMesaContext *ctx = static_cast<CoinOSMesaContext*>(context);
-        if (!ctx) return;
-        /* Unbind before destroying to avoid corrupting Mesa internal state
-         * if the context is still current (see also CoinOSMesaContextManagerImpl). */
-        if (ctx->context && OSMesaGetCurrentContext() == ctx->context)
-            OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
-        delete ctx;
-    }
-
-    virtual void * getProcAddress(const char * funcName) override {
-        return reinterpret_cast<void*>(OSMesaGetProcAddress(funcName));
-    }
-
-    virtual SbBool getCurrentSoftwareFramebuffer(
-        unsigned char *& pixels, unsigned int & width,
-        unsigned int & height, unsigned int & components) override {
-        OSMesaContext current = OSMesaGetCurrentContext();
-        GLsizei w = 0, h = 0;
-        GLint format = 0;
-        void *buffer = nullptr;
-        const GLboolean gotBuffer = current ?
-            OSMesaGetColorBuffer(current, &w, &h, &format, &buffer) : GL_FALSE;
-        if (!gotBuffer || !buffer || w <= 0 || h <= 0 ||
-                format != OSMESA_RGBA) {
-            pixels = nullptr;
-            width = height = components = 0;
-            return FALSE;
-        }
-        pixels = static_cast<unsigned char *>(buffer);
-        width = static_cast<unsigned int>(w);
-        height = static_cast<unsigned int>(h);
-        components = 4;
-        return TRUE;
-    }
-};
-
 namespace {
-    /* The single OSMesa context manager instance shared between initCoinHeadless()
-       and getCoinHeadlessContextManager().  Using a local-static (Meyer's singleton)
-       pattern ensures thread-safe initialisation (C++11 and later), a well-defined
-       construction order, and that the manager outlives every caller that holds a
-       pointer to it – all without touching SoDB::getContextManager(). */
-    inline CoinHeadlessContextManager & headless_context_manager_singleton() {
-        static CoinHeadlessContextManager instance;
-        return instance;
+    /* Use Obol's context manager so this helper exercises the same OSMesa
+       lifecycle and dual-dispatch path as applications. */
+    inline SoDB::ContextManager & headless_context_manager_singleton() {
+        static std::unique_ptr<SoDB::ContextManager> instance(
+            SoDB::createOSMesaContextManager());
+        assert(instance && "Obol was built without OSMesa context support");
+        return *instance;
     }
 } // anonymous namespace
 
@@ -754,32 +629,39 @@ private:
 #endif // __unix__
 
 /**
- * Initialize Coin database for headless operation (system OpenGL backend).
+ * Initialize the database and select the requested headless backend.
  *
  * On X11 systems, a non-exiting X error handler is installed to prevent
  * spurious BadMatch errors from Mesa/llvmpipe from aborting the process.
- * A GLXContextManager is provided so SoDB::init() gets a valid context manager.
+ * A dual build honors OBOL_TEST_RENDER_BACKEND=swrast; otherwise it uses the
+ * native context manager for this platform.
  */
 
 namespace {
-    /* Storage for the system-GL context manager set by initCoinHeadless().
-       Accessed via a Meyer's singleton so the same pointer is shared between
-       the setter (called once from initCoinHeadless) and all readers. */
-    inline SoDB::ContextManager *& sysgl_mgr_storage() {
-        static SoDB::ContextManager * ptr = nullptr;
-        return ptr;
+#if defined(OBOL_DUAL_GL_BUILD)
+    inline bool use_swrast_backend() {
+        const char * requested = getenv("OBOL_TEST_RENDER_BACKEND");
+        return requested && strcmp(requested, "swrast") == 0;
     }
-    /* Setter: only called from initCoinHeadless(). */
-    inline void set_sysgl_context_manager(SoDB::ContextManager * mgr) {
-        sysgl_mgr_storage() = mgr;
+
+    inline SoDB::ContextManager * dual_swrast_context_manager() {
+        static std::unique_ptr<SoDB::ContextManager> manager(
+            SoDB::createOSMesaContextManager());
+        return manager.get();
     }
-    /* Getter: returns the pointer set by initCoinHeadless(). */
-    inline SoDB::ContextManager * get_sysgl_context_manager() {
-        return sysgl_mgr_storage();
-    }
+#endif
 } // anonymous namespace
 
 inline void initCoinHeadless() {
+#if defined(OBOL_DUAL_GL_BUILD)
+    if (use_swrast_backend()) {
+        SoDB::ContextManager * manager = dual_swrast_context_manager();
+        SoDB::init(manager);
+        SoNodeKit::init();
+        SoInteraction::init();
+        return;
+    }
+#endif
 #ifdef __unix__
     XSetErrorHandler([](Display *, XErrorEvent *err) -> int {
         fprintf(stderr, "Coin headless: X error ignored (code=%d opcode=%d/%d)\n",
@@ -787,12 +669,10 @@ inline void initCoinHeadless() {
         return 0;
     });
     static GLXContextManager glx_context_manager;
-    set_sysgl_context_manager(&glx_context_manager);
     SoDB::init(&glx_context_manager);
 #else
 #ifdef OBOL_TEST_WGL
     static FLTKContextManager wgl_context_manager;
-    set_sysgl_context_manager(&wgl_context_manager);
     SoDB::init(&wgl_context_manager);
 #else
     // Other non-Unix builds without a native test manager use a stub.
@@ -804,7 +684,6 @@ inline void initCoinHeadless() {
         virtual void destroyContext(void*) override {}
     };
     static StubContextManager stub;
-    set_sysgl_context_manager(&stub);
     SoDB::init(&stub);
 #endif
 #endif
@@ -813,11 +692,11 @@ inline void initCoinHeadless() {
 }
 
 /**
- * Return the context manager installed by initCoinHeadless() (system GL backend).
+ * Return the context manager selected by initCoinHeadless().
  * Must be called after initCoinHeadless().
  */
 inline SoDB::ContextManager * getCoinHeadlessContextManager() {
-    SoDB::ContextManager * mgr = get_sysgl_context_manager();
+    SoDB::ContextManager * mgr = SoDB::getContextManager();
     assert(mgr && "getCoinHeadlessContextManager: call initCoinHeadless() first");
     return mgr;
 }
@@ -834,14 +713,14 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(get_sysgl_context_manager(), vp);
+        s_renderer = new SoOffscreenRenderer(getCoinHeadlessContextManager(), vp);
     }
     return s_renderer;
 }
 
 /**
- * Render a scene to an image file (system OpenGL backend).
- * Uses the shared renderer to avoid GLX context recreation issues.
+ * Render a scene to an image file using the selected backend.
+ * Uses the shared renderer to avoid repeated context creation.
  */
 inline bool renderToFile(
     SoNode *root,

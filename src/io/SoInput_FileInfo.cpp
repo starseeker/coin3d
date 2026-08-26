@@ -35,6 +35,10 @@
 #include <cstring>
 #include <cmath> // pow()
 #include <cstddef>
+#include <cerrno>
+#include <cstdlib>
+#include <limits>
+#include <cctype>
 
 #include "config.h"
 
@@ -440,10 +444,14 @@ SoInput_FileInfo::readUnsignedInteger(uint32_t & l)
   if (! this->readUnsignedIntegerString(str))
     return FALSE;
 
-  // FIXME: check man page of strtoul and exploit the functionality
-  // provided better -- it looks like we are duplicating some of the
-  // effort. 19990530 mortene.
-  l = strtoul(str, NULL, 0);
+  char * end = NULL;
+  errno = 0;
+  const unsigned long value = std::strtoul(str, &end, 0);
+  if (errno == ERANGE || end == str || *end != '\0' ||
+      value > static_cast<unsigned long>(std::numeric_limits<uint32_t>::max())) {
+    return FALSE;
+  }
+  l = static_cast<uint32_t>(value);
 
   return TRUE;
 }
@@ -463,43 +471,15 @@ SoInput_FileInfo::readInteger(int32_t & l)
   if (! this->readUnsignedIntegerString(s, remaining))
     return FALSE;
 
-  // FIXME: check man page of strtol and exploit the functionality
-  // provided better -- it looks like we are duplicating some of the
-  // effort. 19990530 mortene.
-#if 1 // old code
-  l = strtol(str, NULL, 0);
-#else // first version of replacement of strtol. Not activated yet
-  int i, n = strlen(s);
-  if (n >= 3 && s[0] == '0' && s[1] == 'x') {
-    int v = 0;
-    int mul = 1;
-    for (i = 2; i < n; i++) {
-      char c = s[(n-1)-i+2];
-      if (c >= '0' && c <= '9') {
-        v += (c-'0') * mul;
-      }
-      else if (c >= 'a' && c <= 'f') {
-        v += ((c-'a')+10) * mul;
-      }
-      else {
-        v += ((c-'A')+10) * mul;
-      }
-      mul <<= 4;
-    }
-    l = v;
+  char * end = NULL;
+  errno = 0;
+  const long value = std::strtol(str, &end, 0);
+  if (errno == ERANGE || end == str || *end != '\0' ||
+      value < static_cast<long>(std::numeric_limits<int32_t>::min()) ||
+      value > static_cast<long>(std::numeric_limits<int32_t>::max())) {
+    return FALSE;
   }
-  else {
-    int v = 0;
-    int mul = 1;
-    for (i = 0; i < n; i++) {
-      char c = s[(n-1)-i];
-      v += (c-'0') * mul;
-      mul *= 10;
-    }
-    l = v;
-  }
-  if (minus) l = -l;
-#endif // strtol replacement
+  l = static_cast<int32_t>(value);
   return TRUE;
 }
 
@@ -624,7 +604,7 @@ SoInput_FileInfo::readDigits(char * str, size_t capacity)
   char c, * s = str;
 
   while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
-    if (isdigit(c))
+    if (std::isdigit(static_cast<unsigned char>(c)))
       *s++ = c;
     else {
       this->putBack(c);
@@ -649,7 +629,7 @@ SoInput_FileInfo::readHexDigits(char * str, size_t capacity)
   char c, * s = str;
   while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
 
-    if (isxdigit(c)) *s++ = c;
+    if (std::isxdigit(static_cast<unsigned char>(c))) *s++ = c;
     else {
       this->putBack(c);
       break;

@@ -60,6 +60,7 @@
 #include <vector>
 #include <atomic>
 #include <sstream>
+#include <thread>
 
 // ---------------------------------------------------------------------------
 // Shared test state
@@ -72,6 +73,16 @@ static SbCondVar *g_condvar = nullptr;
 static SbRWMutex *g_rwmutex = nullptr;
 static SbBarrier *g_barrier = nullptr;
 static SbFifo *g_fifo = nullptr;
+static SbStorage *g_reentrant_storage = nullptr;
+static std::atomic<int> g_storage_destructor_calls{0};
+
+static void destroy_storage_from_tls_destructor(void *)
+{
+    SbStorage * storage = g_reentrant_storage;
+    g_reentrant_storage = nullptr;
+    delete storage;
+    g_storage_destructor_calls.fetch_add(1, std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // Thread functions
@@ -349,6 +360,26 @@ static bool test_typed_thread_local_storage() {
     return (**ptr2 == 123);
 }
 
+static bool test_reentrant_thread_local_storage_destruction() {
+    g_storage_destructor_calls.store(0, std::memory_order_relaxed);
+    g_reentrant_storage = new SbStorage(sizeof(int), nullptr,
+                                        destroy_storage_from_tls_destructor);
+
+    std::thread worker([] {
+        int * value = static_cast<int *>(g_reentrant_storage->get());
+        *value = 42;
+    });
+    worker.join();
+
+    const bool ok = g_reentrant_storage == nullptr &&
+                    g_storage_destructor_calls.load(std::memory_order_relaxed) == 1;
+    if (g_reentrant_storage) {
+        delete g_reentrant_storage;
+        g_reentrant_storage = nullptr;
+    }
+    return ok;
+}
+
 static bool test_auto_lock() {
     SbMutex mutex;
     {
@@ -403,6 +434,11 @@ TEST(ThreadPrimitives, StorageIsThreadLocal)
 TEST(ThreadPrimitives, TypedStorageIsThreadLocal)
 {
     EXPECT_TRUE(test_typed_thread_local_storage());
+}
+
+TEST(ThreadPrimitives, StorageDestructorMayDestroyItsOwnStorage)
+{
+    EXPECT_TRUE(test_reentrant_thread_local_storage_destruction());
 }
 
 TEST(ThreadPrimitives, AutoLockReleasesOnScopeExit)

@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <shared_mutex>
 
 // Forward declarations
 class SbString;
@@ -78,7 +79,6 @@ public:
   virtual const char* getLastError() const;
 
 protected:
-  mutable std::string lastError;
   void setError(const std::string& error) const;
 };
 
@@ -129,9 +129,10 @@ private:
   SbImageFormatRegistry& operator=(const SbImageFormatRegistry&) = delete;
   
   std::vector<std::unique_ptr<SbImageFormatHandler>> handlers;
-  mutable std::string lastError;
+  mutable std::shared_mutex handlersMutex;
   
   std::string getFileExtension(const char* filename) const;
+  std::vector<SbImageFormatHandler*> getHandlersSnapshot() const;
   void setError(const std::string& error) const;
 };
 

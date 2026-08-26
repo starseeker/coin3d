@@ -15,7 +15,7 @@ class SoOffscreenRenderer;
 namespace ObolTestSupport {
 
 /**
- * Per-test OSMesa renderer.
+ * Per-test renderer for the backend selected by OBOL_TEST_RENDER_BACKEND.
  *
  * A fixture owns both its context manager and renderer.  It never mutates the
  * global context manager, so independent tests cannot leak renderer state into
@@ -44,6 +44,7 @@ public:
 
     int width() const { return width_; }
     int height() const { return height_; }
+    const char * backendName() const { return backend_name_; }
     const std::vector<unsigned char> & pixels() const { return pixels_; }
 
     /** Number of pixels that differ from the configured background. */
@@ -56,6 +57,7 @@ private:
     SbColor gradient_bottom_;
     SbColor gradient_top_;
     bool gradient_enabled_ = false;
+    const char * backend_name_ = "unavailable";
     std::unique_ptr<SoDB::ContextManager> manager_;
     std::unique_ptr<SoOffscreenRenderer> renderer_;
     std::vector<unsigned char> pixels_;

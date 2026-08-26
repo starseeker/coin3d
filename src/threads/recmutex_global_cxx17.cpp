@@ -48,15 +48,16 @@
 #include <unordered_map>
 #include <mutex>
 #include <cassert>
+#include <atomic>
 
 #include "CoinTidbits.h"
 
 /* ********************************************************************** */
 
 // Global C++17 recursive mutexes replacing the C cc_recmutex implementation
-static std::unique_ptr<SbThreadMutex> field_mutex_cxx17;
-static std::unique_ptr<SbThreadMutex> notify_mutex_cxx17;
-static std::once_flag recmutex_init_once;
+static std::atomic<SbThreadMutex *> field_mutex_cxx17{nullptr};
+static std::atomic<SbThreadMutex *> notify_mutex_cxx17{nullptr};
+static std::mutex recmutex_lifecycle_mutex;
 
 // Thread-local nesting levels to track recursive lock counts
 // This maintains API compatibility with the original cc_recmutex_internal_* functions
@@ -66,32 +67,41 @@ static thread_local int notify_lock_level = 0;
 static void
 recmutex_cxx17_cleanup(void)
 {
-  field_mutex_cxx17.reset();
-  notify_mutex_cxx17.reset();
+  std::lock_guard<std::mutex> guard(recmutex_lifecycle_mutex);
+  delete field_mutex_cxx17.exchange(nullptr, std::memory_order_acq_rel);
+  delete notify_mutex_cxx17.exchange(nullptr, std::memory_order_acq_rel);
 }
 
 void 
 cc_recmutex_cxx17_init(void)
 {
-  std::call_once(recmutex_init_once, [] {
-    field_mutex_cxx17 = std::make_unique<SbThreadMutex>();
-    notify_mutex_cxx17 = std::make_unique<SbThreadMutex>();
+  if (field_mutex_cxx17.load(std::memory_order_acquire) == nullptr) {
+    std::lock_guard<std::mutex> guard(recmutex_lifecycle_mutex);
+    if (field_mutex_cxx17.load(std::memory_order_relaxed) == nullptr) {
+      std::unique_ptr<SbThreadMutex> field(new SbThreadMutex);
+      std::unique_ptr<SbThreadMutex> notify(new SbThreadMutex);
+      /* field_mutex_cxx17 is the initialization guard observed by the fast
+         path.  Publish the dependent notify mutex first so that an acquire
+         load of a non-null field mutex also makes the notify mutex visible. */
+      notify_mutex_cxx17.store(notify.release(), std::memory_order_release);
+      field_mutex_cxx17.store(field.release(), std::memory_order_release);
 
-    /* atexit priority makes this callback trigger after normal cleanup
-       functions which might still use these mutex instances */
-    coin_atexit((coin_atexit_f*) recmutex_cxx17_cleanup,
-                CC_ATEXIT_THREADING_SUBSYSTEM);
-  });
+      /* Register once per initialized generation. */
+      coin_atexit((coin_atexit_f*) recmutex_cxx17_cleanup,
+                  CC_ATEXIT_THREADING_SUBSYSTEM);
+    }
+  }
 }
 
 int 
 cc_recmutex_cxx17_field_lock(void)
 {
   cc_recmutex_cxx17_init();
-  assert(field_mutex_cxx17 != nullptr);
+  SbThreadMutex * mutex = field_mutex_cxx17.load(std::memory_order_acquire);
+  assert(mutex != nullptr);
   
   // SbThreadMutex::lock() returns 0 on success
-  field_mutex_cxx17->lock();
+  mutex->lock();
   
   // Increment thread-local nesting level
   field_lock_level++;
@@ -103,14 +113,15 @@ int
 cc_recmutex_cxx17_field_unlock(void)
 {
   cc_recmutex_cxx17_init();
-  assert(field_mutex_cxx17 != nullptr);
+  SbThreadMutex * mutex = field_mutex_cxx17.load(std::memory_order_acquire);
+  assert(mutex != nullptr);
   assert(field_lock_level > 0);
   
   // Decrement thread-local nesting level
   field_lock_level--;
   
   // SbThreadMutex::unlock() returns 0 on success
-  field_mutex_cxx17->unlock();
+  mutex->unlock();
   
   return field_lock_level;
 }
@@ -119,10 +130,11 @@ int
 cc_recmutex_cxx17_notify_lock(void)
 {
   cc_recmutex_cxx17_init();
-  assert(notify_mutex_cxx17 != nullptr);
+  SbThreadMutex * mutex = notify_mutex_cxx17.load(std::memory_order_acquire);
+  assert(mutex != nullptr);
   
   // SbThreadMutex::lock() returns 0 on success
-  notify_mutex_cxx17->lock();
+  mutex->lock();
   
   // Increment thread-local nesting level
   notify_lock_level++;
@@ -134,14 +146,15 @@ int
 cc_recmutex_cxx17_notify_unlock(void)
 {
   cc_recmutex_cxx17_init();
-  assert(notify_mutex_cxx17 != nullptr);
+  SbThreadMutex * mutex = notify_mutex_cxx17.load(std::memory_order_acquire);
+  assert(mutex != nullptr);
   assert(notify_lock_level > 0);
   
   // Decrement thread-local nesting level
   notify_lock_level--;
   
   // SbThreadMutex::unlock() returns 0 on success
-  notify_mutex_cxx17->unlock();
+  mutex->unlock();
   
   return notify_lock_level;
 }

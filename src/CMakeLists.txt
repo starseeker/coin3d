@@ -124,18 +124,6 @@ set(OBOL_ADDITIONAL_HDRS
     ${PROJECT_BINARY_DIR}/src/config.h
 )
 
-# In dual-GL builds, gl_osmesa.cpp and SoDBOSMesa.cpp need the OSMesa
-# include directories.  Apply them per-file so they don't pollute the rest
-# of the build (system GL headers and OSMesa headers can conflict).
-if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
-    foreach(_osmesa_src
-            "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
-        set_source_files_properties(${_osmesa_src} PROPERTIES
-            INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
-    endforeach()
-endif()
-
 set(_obol_object_sources)
 foreach(_module_target ${OBOL_SOURCE_MODULE_TARGETS})
     list(APPEND _obol_object_sources "$<TARGET_OBJECTS:${_module_target}>")

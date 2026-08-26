@@ -56,11 +56,8 @@
 
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
-#include <shared_mutex>
+#include <mutex>
 #include <condition_variable>
-#include <thread>
-#include <functional>
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,7 +112,7 @@ namespace CoinInternal {
  * objects, enabling comprehensive cleanup when threads exit.
  * 
  * Key features:
- * - Thread-safe registration/unregistration using shared_mutex
+ * - Stable lifetime records for registration and concurrent cleanup
  * - Automatic cleanup detection using thread_local destructors
  * - Exception-safe operations throughout
  * - Global singleton pattern for application-wide cleanup
@@ -153,15 +150,22 @@ public:
     static unsigned long getCurrentThreadId();
 
 private:
+    struct StorageRecord {
+        explicit StorageRecord(cc_storage * value) : storage(value) {}
+
+        cc_storage * storage;
+        bool registered = true;
+        unsigned int active_cleanups = 0;
+    };
+
     StorageRegistry() = default;
     ~StorageRegistry() = default;
     StorageRegistry(const StorageRegistry&) = delete;
     StorageRegistry& operator=(const StorageRegistry&) = delete;
 
-    mutable std::shared_mutex registry_mutex;
-    std::condition_variable_any registry_cv;
-    std::unordered_set<cc_storage*> registered_storages;
-    std::unordered_map<cc_storage*, unsigned int> active_cleanups;
+    std::mutex registry_mutex;
+    std::condition_variable registry_cv;
+    std::unordered_map<cc_storage*, std::shared_ptr<StorageRecord>> registered_storages;
 };
 
 /*!

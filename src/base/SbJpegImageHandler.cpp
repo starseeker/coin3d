@@ -74,6 +74,7 @@ unsigned char* SbJpegImageHandler::readImage([[maybe_unused]] const char* filena
 bool SbJpegImageHandler::saveImage(const char* filename, const unsigned char* imagedata,
                                   int width, int height, int components)
 {
+  setError("");
   if (!filename || !imagedata || width <= 0 || height <= 0 || components <= 0) {
     setError("Invalid parameters for JPEG save");
     return false;
@@ -129,7 +130,7 @@ bool SbJpegImageHandler::saveImage(const char* filename, const unsigned char* im
   fclose(file);
   
   if (!success) {
-    if (lastError.empty()) {
+    if (getLastError()[0] == '\0') {
       setError("JPEG encoding failed");
     }
   }

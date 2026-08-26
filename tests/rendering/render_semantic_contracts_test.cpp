@@ -146,7 +146,7 @@ TEST(RenderFeatureBasics, RendersEachCorePrimitiveInItsExpectedRegion)
     EXPECT_GT(countDominant(fixture, 96, 192, 0), 180u);
 }
 
-TEST(OSMesaRenderContracts, ClearsBackgroundAndRendersLitMaterialAtTheCameraTarget)
+TEST(RenderContracts, ClearsBackgroundAndRendersLitMaterialAtTheCameraTarget)
 {
     const SbColor background(0.05f, 0.10f, 0.20f);
     OwnedScene scene = makeLitSphere(SbColor(0.9f, 0.1f, 0.1f));
@@ -246,7 +246,7 @@ TEST(RenderFeatureBasics, VertexPropertiesAndShapeHintsRenderVisibleGeometry)
     EXPECT_GT(fixture.nonBackgroundPixels(), 100u);
 }
 
-TEST(OSMesaRenderContracts, TransparencyBlendsInsteadOfDiscardingVisibleGeometry)
+TEST(RenderContracts, TransparencyBlendsInsteadOfDiscardingVisibleGeometry)
 {
     OwnedScene opaque = makeLitSphere(SbColor(0.0f, 0.9f, 0.0f));
     OwnedScene transparent = makeLitSphere(SbColor(0.0f, 0.9f, 0.0f), 0.5f);
@@ -265,7 +265,7 @@ TEST(OSMesaRenderContracts, TransparencyBlendsInsteadOfDiscardingVisibleGeometry
     EXPECT_LT(transparent_center[1], opaque_center[1] - 20);
 }
 
-TEST(OSMesaRenderContracts, DirectionalPointAndSpotLightsIlluminateGeometry)
+TEST(RenderContracts, DirectionalPointAndSpotLightsIlluminateGeometry)
 {
     ObolTestSupport::RenderFixture fixture(128, 96);
     ASSERT_TRUE(fixture.available());
@@ -288,7 +288,7 @@ TEST(OSMesaRenderContracts, DirectionalPointAndSpotLightsIlluminateGeometry)
     render_light(spot);
 }
 
-TEST(OSMesaRenderContracts, ClipPlaneReducesVisibleGeometryWithoutDisablingScene)
+TEST(RenderContracts, ClipPlaneReducesVisibleGeometryWithoutDisablingScene)
 {
     auto make_scene = [](const bool clipped) {
         auto * root = new SoSeparator;
@@ -320,7 +320,7 @@ TEST(OSMesaRenderContracts, ClipPlaneReducesVisibleGeometryWithoutDisablingScene
     EXPECT_LT(clipped_pixels, whole_pixels);
 }
 
-TEST(OSMesaRenderContracts, RepeatedRendersReuseCacheAndMaterialChangesInvalidateIt)
+TEST(RenderContracts, RepeatedRendersReuseCacheAndMaterialChangesInvalidateIt)
 {
     auto * root = new SoSeparator;
     OwnedScene scene(root);

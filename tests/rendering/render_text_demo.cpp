@@ -6,7 +6,7 @@ TEST(RenderSceneFactories, TextDemoSceneRendersVisibleGeometry)
 {
     ObolTestSupport::RenderFixture fixture(800, 600);
     ASSERT_TRUE(fixture.available());
-    auto scene = ObolTestSupport::makeScene(ObolTest::Scenes::createText,
+    auto scene = ObolTestSupport::makeScene(ObolTest::Scenes::createTextDemo,
                                             fixture);
     ASSERT_TRUE(fixture.render(scene.root()));
     EXPECT_GT(fixture.nonBackgroundPixels(), 20u);

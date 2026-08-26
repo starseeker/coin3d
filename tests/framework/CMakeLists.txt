@@ -16,13 +16,22 @@ add_library(obol_test_support STATIC
     test_context.cpp
     render_fixture.cpp
 )
-if(OBOL_USE_SWRAST)
+if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
     # The scene catalogue is shared by fixture-backed render contracts.  Keep
     # it in the modern support target so converted cases do not need a second
     # renderer-specific library.
     target_sources(obol_test_support PRIVATE
         ${PROJECT_SOURCE_DIR}/tests/testlib/test_scenes.cpp
     )
+endif()
+if(OBOL_USE_SWRAST)
+    target_compile_definitions(obol_test_support PRIVATE OBOL_TEST_HAVE_SWRAST)
+endif()
+if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
+    target_compile_definitions(obol_test_support PRIVATE OBOL_TEST_HAVE_SYSTEM_GL)
+endif()
+if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(obol_test_support PRIVATE OBOL_DUAL_GL_BUILD)
 endif()
 target_link_libraries(obol_test_support
     PUBLIC
@@ -31,6 +40,20 @@ target_link_libraries(obol_test_support
         GTest::gtest
         lodepng
 )
+if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
+    # render_fixture.cpp owns the GLX context implementation, so the support
+    # library must carry its direct link dependency to every consumer.  This
+    # also keeps dual-backend executables linkable even when they select
+    # OSMesa at runtime.
+    if(TARGET OpenGL::GLX)
+        target_link_libraries(obol_test_support PUBLIC OpenGL::GLX)
+    elseif(OPENGL_glx_LIBRARY)
+        target_link_libraries(obol_test_support PUBLIC ${OPENGL_glx_LIBRARY})
+    else()
+        message(FATAL_ERROR
+            "System-GL tests require a GLX library on Unix")
+    endif()
+endif()
 target_include_directories(obol_test_support
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -55,7 +78,7 @@ if(USE_PTHREAD)
 endif()
 
 function(obol_add_gtest target label)
-    cmake_parse_arguments(OBOL_GTEST "" "TIMEOUT" "" ${ARGN})
+    cmake_parse_arguments(OBOL_GTEST "" "TIMEOUT;ENVIRONMENT;TEST_PREFIX" "" ${ARGN})
     if(OBOL_GTEST_TIMEOUT)
         set(_obol_gtest_timeout ${OBOL_GTEST_TIMEOUT})
     else()
@@ -70,13 +93,53 @@ function(obol_add_gtest target label)
     target_include_directories(${target} PRIVATE
         ${PROJECT_SOURCE_DIR}/tests
     )
+    # GoogleTest's discovery helper forwards PROPERTIES as a CMake list and
+    # cannot preserve a semicolon-containing LABELS value.  Normalize compound
+    # categories to one searchable label (for example render-osmesa) so later
+    # TIMEOUT and ENVIRONMENT pairs cannot be shifted and misinterpreted.
+    string(REPLACE ";" "-" _obol_gtest_labels "${label}")
+    set(_obol_gtest_properties
+        LABELS "${_obol_gtest_labels}"
+        TIMEOUT ${_obol_gtest_timeout})
+    if(OBOL_GTEST_ENVIRONMENT)
+        list(APPEND _obol_gtest_properties
+            ENVIRONMENT "${OBOL_GTEST_ENVIRONMENT}")
+    endif()
+    set(_obol_gtest_discovery_options)
+    if(OBOL_GTEST_TEST_PREFIX)
+        list(APPEND _obol_gtest_discovery_options
+            TEST_PREFIX "${OBOL_GTEST_TEST_PREFIX}")
+    endif()
     gtest_discover_tests(${target}
         DISCOVERY_MODE PRE_TEST
-        PROPERTIES
-            LABELS "${label}"
-            TIMEOUT ${_obol_gtest_timeout}
+        PROPERTIES ${_obol_gtest_properties}
+        ${_obol_gtest_discovery_options}
     )
 endfunction()
+
+# Lifecycle tests must begin before SoDB has been initialized and must be able
+# to call SoDB::finish().  Keep them in a dedicated GTest process instead of
+# sharing the normal test_main.cpp, which intentionally initializes Obol once.
+add_executable(obol_lifecycle_tests
+    ${PROJECT_SOURCE_DIR}/tests/unit/lifecycle_test.cpp
+)
+target_link_libraries(obol_lifecycle_tests
+    PRIVATE
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        GTest::gtest_main
+)
+target_include_directories(obol_lifecycle_tests PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+gtest_discover_tests(obol_lifecycle_tests
+    DISCOVERY_MODE PRE_TEST
+    PROPERTIES
+        LABELS "unit-lifecycle"
+        TIMEOUT 30
+)
 
 obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/base_math_test.cpp
@@ -89,6 +152,7 @@ obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/fields_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_assertions_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_fields_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/image_format_registry_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/interaction_kit_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/nodes_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/projectors_test.cpp
@@ -117,12 +181,15 @@ if(OBOL_USE_SWRAST)
     # These cover the former primitives/materials/transforms image wrappers
     # with feature-level contracts rather than backend-specific golden files.
     obol_add_gtest(obol_render_tests "render;osmesa"
+        ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=swrast"
         ${PROJECT_SOURCE_DIR}/tests/rendering/render_fixture_smoke_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/offscreen_renderer_api_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/render_semantic_contracts_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/interaction_contracts_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/portable_feature_contracts_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/demo_catalogue_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/subtexture_render_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/visual_regression_test.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/render_lighting.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/render_cameras.cpp
         ${PROJECT_SOURCE_DIR}/tests/rendering/render_colored_cube.cpp
@@ -181,8 +248,37 @@ if(OBOL_USE_SWRAST)
     target_include_directories(obol_render_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/examples/demo_scenes
     )
+    target_compile_definitions(obol_render_tests PRIVATE
+        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
 else()
-    message(STATUS "Modern render tests: skipped (OBOL_USE_SWRAST=OFF)")
+    message(STATUS "Software-rasterizer render lane: skipped (OBOL_USE_SWRAST=OFF)")
+endif()
+
+# Exercise the native OpenGL dispatch and GLX context path independently of
+# OSMesa.  The retained references were generated with GLX and use explicit
+# cross-driver tolerances; the focused semantic and visual contracts
+# deliberately share source with the software lane.
+if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
+    obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
+        ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
+        TEST_PREFIX "system-gl."
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_fixture_smoke_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/offscreen_renderer_api_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_semantic_contracts_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/portable_feature_contracts_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/subtexture_render_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/visual_regression_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lighting.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_cameras.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_colored_cube.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_coordinates.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture.cpp
+    )
+    target_compile_definitions(obol_system_gl_render_tests PRIVATE
+        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
+elseif(OBOL_USE_SYSTEM_GL)
+    message(STATUS
+        "System-GL render lane: skipped (the modern native fixture currently requires GLX)")
 endif()
 
 option(OBOL_BUILD_STRESS_TESTS

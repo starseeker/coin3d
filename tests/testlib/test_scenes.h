@@ -70,8 +70,11 @@ SoSeparator* createCameras(int width = 800, int height = 600);
 /** Checkerboard-textured cube. */
 SoSeparator* createTexture(int width = 800, int height = 600);
 
-/** SoText2 and SoText3 labels in the same scene. */
-SoSeparator* createText(int width = 800, int height = 600);
+/** Two lines of extruded SoText3 geometry. */
+SoSeparator* createText3(int width = 800, int height = 600);
+
+/** Historical mixed SoText3/SoText2 demo scene retained for regression tests. */
+SoSeparator* createTextDemo(int width = 800, int height = 600);
 
 /** Multiple SoText2 (2-D billboard) labels at different positions and sizes. */
 SoSeparator* createText2(int width = 800, int height = 600);

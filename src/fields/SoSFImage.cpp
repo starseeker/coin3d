@@ -123,6 +123,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include <cstring>
 
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
@@ -180,6 +181,34 @@ checked_image_size(const SbVec2s & size, int nc,
   // cannot be represented there instead of allowing signed overflow.
   return buffersize <= static_cast<size_t>(std::numeric_limits<int>::max()) &&
          pixelcount <= static_cast<size_t>(std::numeric_limits<int>::max());
+}
+
+static void
+apply_subtexture(SbImage * image,
+                 const SbVec2s & image_size,
+                 const int nc,
+                 const SoSFImageP::SubTexture & sub)
+{
+  SbVec2s current_size;
+  int current_nc = 0;
+  unsigned char * destination = image->getValue(current_size, current_nc);
+  assert(destination != NULL);
+  assert(current_size == image_size);
+  assert(current_nc == nc);
+
+  const size_t destination_stride = static_cast<size_t>(image_size[0]) *
+                                    static_cast<size_t>(nc);
+  const size_t source_stride = static_cast<size_t>(sub.dims[0]) *
+                               static_cast<size_t>(nc);
+  for (int row = 0; row < sub.dims[1]; ++row) {
+    unsigned char * destination_row =
+      destination +
+      (static_cast<size_t>(sub.offset[1] + row) * destination_stride) +
+      (static_cast<size_t>(sub.offset[0]) * static_cast<size_t>(nc));
+    const unsigned char * source_row =
+      sub.pixels.data() + static_cast<size_t>(row) * source_stride;
+    std::memcpy(destination_row, source_row, source_stride);
+  }
 }
 
 // *************************************************************************
@@ -265,6 +294,11 @@ SoSFImage::readValue(SoInput * in)
                       size[0], size[1], nc);
     return FALSE;
   }
+
+  // A syntactically valid image header begins a full replacement. Clear the
+  // old update history before changing the image so a truncated payload can
+  // never leave records that describe unrelated pixel storage.
+  PRIVATE(this)->subtextures.clear();
 
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSFImage::readValue", "image dimensions: %dx%dx%d",
@@ -525,12 +559,26 @@ SoSFImage::startEditing(SbVec2s & size, int & nc)
 void
 SoSFImage::finishEditing(void)
 {
+  SbVec2s size;
+  int nc = 0;
+  unsigned char * pixels = PRIVATE(this)->image->getValue(size, nc);
+  if (pixels && size[0] > 0 && size[1] > 0 && nc > 0) {
+    const size_t bytes = static_cast<size_t>(size[0]) *
+                         static_cast<size_t>(size[1]) *
+                         static_cast<size_t>(nc);
+    std::unique_ptr<SoSFImageP::SubTexture> sub(new SoSFImageP::SubTexture);
+    sub->dims = size;
+    sub->offset.setValue(0, 0);
+    sub->pixels.assign(pixels, pixels + bytes);
+    PRIVATE(this)->subtextures.push_back(std::move(sub));
+  }
   this->valueChanged();
 }
 
 /*!
-  Stores a copy of a sub-image and its location for applications that need
-  to retain texture updates alongside the main image.
+  Updates a rectangular region of the system-memory image and appends a copy
+  of that update to the pending subtexture list. Texture nodes use the retained
+  update to avoid recreating an existing OpenGL texture when possible.
 
   \since Coin 2.0
   \since TGS Inventor 3.0
@@ -566,13 +614,14 @@ SoSFImage::setSubValue(
   sub->dims = dims;
   sub->offset = offset;
   sub->pixels.assign(pixels, pixels + pixelcount * static_cast<size_t>(nc));
+  apply_subtexture(PRIVATE(this)->image, image_size, nc, *sub);
   PRIVATE(this)->subtextures.push_back(std::move(sub));
   this->valueChanged();
 }
 
 /*!
-  Replaces the retained sub-images with copies of the supplied sub-image
-  blocks.
+  Updates multiple rectangular regions and appends them to the pending
+  subtexture list.
 
   \since Coin 2.0
   \since TGS Inventor 3.0
@@ -622,7 +671,12 @@ SoSFImage::setSubValues(
                        pixelblocks[i] + pixelcount * static_cast<size_t>(nc));
     pending.push_back(std::move(sub));
   }
-  PRIVATE(this)->subtextures.swap(pending);
+  for (const auto & sub : pending) {
+    apply_subtexture(PRIVATE(this)->image, image_size, nc, *sub);
+  }
+  for (auto & sub : pending) {
+    PRIVATE(this)->subtextures.push_back(std::move(sub));
+  }
   this->valueChanged();
 }
 

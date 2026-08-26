@@ -32,6 +32,20 @@ std::string write_image_field(const SoSFImage & image)
     return std::string(static_cast<const char *>(buffer), size);
 }
 
+template <typename Integer>
+std::string write_binary_integer(const Integer value)
+{
+    SoOutput output;
+    output.setBuffer(nullptr, 1, grow_output_buffer);
+    output.setBinary(TRUE);
+    output.write(value);
+
+    void * buffer = nullptr;
+    size_t size = 0;
+    if (!output.getBuffer(buffer, size)) return {};
+    return std::string(static_cast<const char *>(buffer), size);
+}
+
 } // namespace
 
 TEST(ImageFields, TransparencyAndSubImagesPreserveUsefulImageSemantics)
@@ -69,6 +83,17 @@ TEST(ImageFields, TransparencyAndSubImagesPreserveUsefulImageSemantics)
     EXPECT_EQ(image.getSubTexture(-1, dims, offset), nullptr);
     EXPECT_EQ(dims, SbVec2s(0, 0));
 
+    SbVec2s image_size;
+    int components = 0;
+    const unsigned char * image_pixels = image.getValue(image_size, components);
+    ASSERT_NE(image_pixels, nullptr);
+    EXPECT_EQ(image_size, SbVec2s(4, 4));
+    EXPECT_EQ(components, 1);
+    EXPECT_EQ(image_pixels[5], 1);
+    EXPECT_EQ(image_pixels[6], 2);
+    EXPECT_EQ(image_pixels[9], 3);
+    EXPECT_EQ(image_pixels[10], 4);
+
     const SbVec2s sub_dims[] = {SbVec2s(1, 1), SbVec2s(1, 1)};
     const SbVec2s sub_offsets[] = {SbVec2s(0, 0), SbVec2s(3, 3)};
     unsigned char first_pixel[] = {9};
@@ -76,7 +101,35 @@ TEST(ImageFields, TransparencyAndSubImagesPreserveUsefulImageSemantics)
     unsigned char * blocks[] = {first_pixel, second_pixel};
     image.setSubValues(sub_dims, sub_offsets, 2, blocks);
     EXPECT_TRUE(image.hasSubTextures(count));
-    EXPECT_EQ(count, 2);
+    EXPECT_EQ(count, 3);
+    image_pixels = image.getValue(image_size, components);
+    EXPECT_EQ(image_pixels[0], 9);
+    EXPECT_EQ(image_pixels[15], 11);
+    EXPECT_EQ(image_pixels[5], 1);
+
+    unsigned char * editable = image.startEditing(image_size, components);
+    ASSERT_NE(editable, nullptr);
+    editable[5] = 77;
+    image.finishEditing();
+    EXPECT_TRUE(image.hasSubTextures(count));
+    EXPECT_EQ(count, 4);
+    stored = image.getSubTexture(3, dims, offset);
+    ASSERT_NE(stored, nullptr);
+    EXPECT_EQ(dims, SbVec2s(4, 4));
+    EXPECT_EQ(offset, SbVec2s(0, 0));
+    EXPECT_EQ(stored[5], 77);
+
+    EXPECT_FALSE(image.set("2 2 1 0x01"));
+    EXPECT_FALSE(image.hasSubTextures(count));
+    EXPECT_EQ(count, 0);
+
+    ASSERT_TRUE(image.set("1 1 1 0x2a"));
+    EXPECT_FALSE(image.hasSubTextures(count));
+    EXPECT_EQ(count, 0);
+    image_pixels = image.getValue(image_size, components);
+    ASSERT_NE(image_pixels, nullptr);
+    EXPECT_EQ(image_size, SbVec2s(1, 1));
+    EXPECT_EQ(image_pixels[0], 42);
 }
 
 TEST(ImageFields, InvalidDimensionsDoNotCorruptExistingImages)
@@ -152,4 +205,100 @@ TEST(ImageFields, ReadHexAcceptsUint32AndRejectsOverflow)
         uint32_t value = 0;
         EXPECT_FALSE(input.readHex(value));
     }
+}
+
+TEST(InputIntegers, AcceptsInt32BoundariesAndRejectsNarrowingOverflow)
+{
+    const auto read_unsigned = [](const char * text, unsigned int & value) {
+        SoInput input;
+        input.setBuffer(text, std::strlen(text));
+        return input.read(value) != FALSE;
+    };
+    const auto read_signed = [](const char * text, int & value) {
+        SoInput input;
+        input.setBuffer(text, std::strlen(text));
+        return input.read(value) != FALSE;
+    };
+
+    unsigned int unsigned_value = 17;
+    EXPECT_TRUE(read_unsigned("4294967295", unsigned_value));
+    EXPECT_EQ(unsigned_value, UINT32_MAX);
+    unsigned_value = 17;
+    EXPECT_FALSE(read_unsigned("4294967296", unsigned_value));
+    EXPECT_EQ(unsigned_value, 17u);
+    EXPECT_FALSE(read_unsigned("0x100000000", unsigned_value));
+    EXPECT_EQ(unsigned_value, 17u);
+    EXPECT_FALSE(read_unsigned("-1", unsigned_value));
+    EXPECT_EQ(unsigned_value, 17u);
+
+    int signed_value = 17;
+    EXPECT_TRUE(read_signed("2147483647", signed_value));
+    EXPECT_EQ(signed_value, INT32_MAX);
+    EXPECT_TRUE(read_signed("-2147483648", signed_value));
+    EXPECT_EQ(signed_value, INT32_MIN);
+    signed_value = 17;
+    EXPECT_FALSE(read_signed("2147483648", signed_value));
+    EXPECT_EQ(signed_value, 17);
+    EXPECT_FALSE(read_signed("-2147483649", signed_value));
+    EXPECT_EQ(signed_value, 17);
+
+    short short_value = 9;
+    {
+        SoInput input;
+        const char text[] = "32768";
+        input.setBuffer(text, sizeof(text) - 1);
+        EXPECT_FALSE(input.read(short_value));
+        EXPECT_EQ(short_value, 9);
+    }
+    unsigned short ushort_value = 9;
+    {
+        SoInput input;
+        const char text[] = "65536";
+        input.setBuffer(text, sizeof(text) - 1);
+        EXPECT_FALSE(input.read(ushort_value));
+        EXPECT_EQ(ushort_value, 9);
+    }
+    int8_t byte_value = 9;
+    {
+        SoInput input;
+        const char text[] = "128";
+        input.setBuffer(text, sizeof(text) - 1);
+        EXPECT_FALSE(input.readByte(byte_value));
+        EXPECT_EQ(byte_value, 9);
+    }
+    uint8_t ubyte_value = 9;
+    {
+        SoInput input;
+        const char text[] = "256";
+        input.setBuffer(text, sizeof(text) - 1);
+        EXPECT_FALSE(input.readByte(ubyte_value));
+        EXPECT_EQ(ubyte_value, 9);
+    }
+
+    const auto binary_short = write_binary_integer(32768);
+    ASSERT_FALSE(binary_short.empty());
+    SoInput binary_input;
+    binary_input.setBuffer(binary_short.data(), binary_short.size());
+    ASSERT_TRUE(binary_input.isBinary());
+    short_value = 9;
+    EXPECT_FALSE(binary_input.read(short_value));
+    EXPECT_EQ(short_value, 9);
+
+    const auto binary_ushort = write_binary_integer(65536u);
+    ASSERT_FALSE(binary_ushort.empty());
+    SoInput binary_unsigned_input;
+    binary_unsigned_input.setBuffer(binary_ushort.data(), binary_ushort.size());
+    ASSERT_TRUE(binary_unsigned_input.isBinary());
+    ushort_value = 9;
+    EXPECT_FALSE(binary_unsigned_input.read(ushort_value));
+    EXPECT_EQ(ushort_value, 9);
+
+    const auto binary_uint_max = write_binary_integer(UINT32_MAX);
+    ASSERT_FALSE(binary_uint_max.empty());
+    SoInput binary_uint_input;
+    binary_uint_input.setBuffer(binary_uint_max.data(), binary_uint_max.size());
+    ASSERT_TRUE(binary_uint_input.isBinary());
+    unsigned_value = 0;
+    EXPECT_TRUE(binary_uint_input.read(unsigned_value));
+    EXPECT_EQ(unsigned_value, UINT32_MAX);
 }

@@ -37,12 +37,12 @@ private:
     SoSeparator * root_;
 };
 
-TEST(OSMesaRenderFixture, RendersVisibleGeometryWithoutGlobalBackendMutation)
+TEST(RenderFixture, RendersVisibleGeometryWithoutGlobalBackendMutation)
 {
     Scene scene;
     ObolTestSupport::RenderFixture fixture(128, 96);
 
-    ASSERT_TRUE(fixture.available()) << "This build has no OSMesa test backend";
+    ASSERT_TRUE(fixture.available()) << "The requested render backend is unavailable";
     ASSERT_TRUE(fixture.render(scene.root()));
     ASSERT_EQ(fixture.pixels().size(), 128u * 96u * 3u);
     EXPECT_GT(fixture.nonBackgroundPixels(), 1000u);

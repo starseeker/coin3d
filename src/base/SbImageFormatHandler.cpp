@@ -36,6 +36,19 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
+#include <cctype>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
+
+namespace {
+
+thread_local std::unordered_map<const SbImageFormatHandler *, std::string>
+  handler_errors;
+thread_local std::unordered_map<const SbImageFormatRegistry *, std::string>
+  registry_errors;
+
+} // namespace
 
 //
 // SbImageFormatHandler implementation
@@ -45,7 +58,10 @@ bool SbImageFormatHandler::canHandleExtension(const std::string& extension) cons
 {
   auto exts = getExtensions();
   std::string lowerExt = extension;
-  std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(), ::tolower);
+  std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(),
+                 [](const unsigned char value) {
+                   return static_cast<char>(std::tolower(value));
+                 });
   
   return std::find(exts.begin(), exts.end(), lowerExt) != exts.end();
 }
@@ -83,12 +99,13 @@ void SbImageFormatHandler::getVersion(int* major, int* minor, int* micro) const
 
 const char* SbImageFormatHandler::getLastError() const
 {
-  return lastError.c_str();
+  const auto it = handler_errors.find(this);
+  return it == handler_errors.end() ? "" : it->second.c_str();
 }
 
 void SbImageFormatHandler::setError(const std::string& error) const
 {
-  lastError = error;
+  handler_errors[this] = error;
 }
 
 //
@@ -112,15 +129,16 @@ SbImageFormatRegistry::SbImageFormatRegistry()
 void SbImageFormatRegistry::registerHandler(std::unique_ptr<SbImageFormatHandler> handler)
 {
   if (handler) {
+    std::unique_lock<std::shared_mutex> lock(handlersMutex);
     handlers.push_back(std::move(handler));
   }
 }
 
 SbImageFormatHandler* SbImageFormatRegistry::getHandlerForExtension(const std::string& extension) const
 {
-  for (const auto& handler : handlers) {
+  for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
     if (handler->canHandleExtension(extension)) {
-      return handler.get();
+      return handler;
     }
   }
   return nullptr;
@@ -128,6 +146,7 @@ SbImageFormatHandler* SbImageFormatRegistry::getHandlerForExtension(const std::s
 
 SbImageFormatHandler* SbImageFormatRegistry::getHandlerForFile(const char* filename) const
 {
+  setError("");
   if (!filename) {
     setError("Null filename provided");
     return nullptr;
@@ -144,6 +163,7 @@ SbImageFormatHandler* SbImageFormatRegistry::getHandlerForFile(const char* filen
 
 unsigned char* SbImageFormatRegistry::readImage(const char* filename, int* width, int* height, int* components)
 {
+  setError("");
   SbImageFormatHandler* handler = getHandlerForFile(filename);
   if (!handler) {
     setError("No handler found for file: " + std::string(filename ? filename : "null"));
@@ -160,6 +180,7 @@ unsigned char* SbImageFormatRegistry::readImage(const char* filename, int* width
 bool SbImageFormatRegistry::saveImage(const char* filename, const unsigned char* imagedata,
                                     int width, int height, int components)
 {
+  setError("");
   SbImageFormatHandler* handler = getHandlerForFile(filename);
   if (!handler) {
     setError("No handler found for file: " + std::string(filename ? filename : "null"));
@@ -184,6 +205,7 @@ void SbImageFormatRegistry::freeImageData(unsigned char* imagedata)
 unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int width, int height, int components,
                                                  int newwidth, int newheight, bool highQuality)
 {
+  setError("");
   if (!imagedata) {
     setError("Null image data provided for resizing");
     return nullptr;
@@ -191,7 +213,7 @@ unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int 
   
   // Try to find a handler that supports high-quality resizing
   if (highQuality) {
-    for (const auto& handler : handlers) {
+    for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
       unsigned char* result = handler->resizeImage(imagedata, width, height, components, newwidth, newheight);
       if (result) {
         return result;
@@ -207,6 +229,7 @@ unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int 
 unsigned char* SbImageFormatRegistry::resize3DImage(unsigned char* imagedata, int width, int height, int depth, int components,
                                                    int newwidth, int newheight, int newdepth, bool highQuality)
 {
+  setError("");
   if (!imagedata) {
     setError("Null image data provided for 3D resizing");
     return nullptr;
@@ -214,7 +237,7 @@ unsigned char* SbImageFormatRegistry::resize3DImage(unsigned char* imagedata, in
   
   // Try to find a handler that supports high-quality 3D resizing
   if (highQuality) {
-    for (const auto& handler : handlers) {
+    for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
       unsigned char* result = handler->resize3DImage(imagedata, width, height, depth, components, 
                                                     newwidth, newheight, newdepth);
       if (result) {
@@ -242,7 +265,7 @@ bool SbImageFormatRegistry::isSaveSupported(const char* filename) const
 std::vector<std::string> SbImageFormatRegistry::getSupportedExtensions() const
 {
   std::vector<std::string> allExtensions;
-  for (const auto& handler : handlers) {
+  for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
     auto handlerExts = handler->getExtensions();
     allExtensions.insert(allExtensions.end(), handlerExts.begin(), handlerExts.end());
   }
@@ -256,11 +279,13 @@ std::vector<std::string> SbImageFormatRegistry::getSupportedExtensions() const
 
 int SbImageFormatRegistry::getNumHandlers() const
 {
+  std::shared_lock<std::shared_mutex> lock(handlersMutex);
   return static_cast<int>(handlers.size());
 }
 
 SbImageFormatHandler* SbImageFormatRegistry::getHandler(int index) const
 {
+  std::shared_lock<std::shared_mutex> lock(handlersMutex);
   if (index >= 0 && index < static_cast<int>(handlers.size())) {
     return handlers[index].get();
   }
@@ -269,7 +294,8 @@ SbImageFormatHandler* SbImageFormatRegistry::getHandler(int index) const
 
 const char* SbImageFormatRegistry::getLastError() const
 {
-  return lastError.c_str();
+  const auto it = registry_errors.find(this);
+  return it == registry_errors.end() ? "" : it->second.c_str();
 }
 
 std::string SbImageFormatRegistry::getFileExtension(const char* filename) const
@@ -280,11 +306,24 @@ std::string SbImageFormatRegistry::getFileExtension(const char* filename) const
   if (!lastDot || lastDot == filename) return "";
   
   std::string ext(lastDot + 1);
-  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+  std::transform(ext.begin(), ext.end(), ext.begin(),
+                 [](const unsigned char value) {
+                   return static_cast<char>(std::tolower(value));
+                 });
   return ext;
+}
+
+std::vector<SbImageFormatHandler*>
+SbImageFormatRegistry::getHandlersSnapshot() const
+{
+  std::shared_lock<std::shared_mutex> lock(handlersMutex);
+  std::vector<SbImageFormatHandler*> snapshot;
+  snapshot.reserve(handlers.size());
+  for (const auto & handler : handlers) snapshot.push_back(handler.get());
+  return snapshot;
 }
 
 void SbImageFormatRegistry::setError(const std::string& error) const
 {
-  lastError = error;
+  registry_errors[this] = error;
 }

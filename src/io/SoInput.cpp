@@ -92,8 +92,11 @@
 #include "config.h"
 
 #include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
+#include <type_traits>
 
 #include <sys/stat.h>
 #ifdef HAVE_UNISTD_H
@@ -1205,10 +1208,44 @@ SoInput::read(SbName & n, SbBool validIdent)
   return TRUE;
 }
 
-// FIXME: should we maybe do bounds-testing on the read-in data
-// to warn if the data doesn't fit in the storage type?
-// std::numeric_limits<type>::max() ought to be all the information
-// needed.  20070520 larsa
+template <typename Destination, typename Source>
+static SbBool
+soinput_checked_integer_assignment(const Source source,
+                                   Destination & destination)
+{
+  static_assert(std::is_integral<Destination>::value,
+                "integer destination required");
+  static_assert(std::is_integral<Source>::value,
+                "integer source required");
+
+  if constexpr (std::is_signed<Source>::value) {
+    const intmax_t value = static_cast<intmax_t>(source);
+    if constexpr (std::is_signed<Destination>::value) {
+      if (value < static_cast<intmax_t>(std::numeric_limits<Destination>::min()) ||
+          value > static_cast<intmax_t>(std::numeric_limits<Destination>::max())) {
+        return FALSE;
+      }
+    }
+    else {
+      if (value < 0 ||
+          static_cast<uintmax_t>(value) >
+            static_cast<uintmax_t>(std::numeric_limits<Destination>::max())) {
+        return FALSE;
+      }
+    }
+  }
+  else {
+    const uintmax_t value = static_cast<uintmax_t>(source);
+    if (value >
+        static_cast<uintmax_t>(std::numeric_limits<Destination>::max())) {
+      return FALSE;
+    }
+  }
+
+  destination = static_cast<Destination>(source);
+  return TRUE;
+}
+
 #define READ_NUM(reader, readType, num, type) \
   SoInput_FileInfo * rn_fi__ = this->getTopOfStack(); \
   assert(rn_fi__); \
@@ -1217,11 +1254,19 @@ SoInput::read(SbName & n, SbBool validIdent)
   if (!rn_fi__->reader(_tmp)) return FALSE; \
   num = (type) _tmp;
 
+#define READ_INTEGER_CHECKED(reader, readType, num) \
+  SoInput_FileInfo * rn_fi__ = this->getTopOfStack(); \
+  assert(rn_fi__); \
+  if (!rn_fi__->skipWhiteSpace()) return FALSE; \
+  readType _tmp; \
+  if (!rn_fi__->reader(_tmp)) return FALSE; \
+  if (!soinput_checked_integer_assignment(_tmp, num)) return FALSE;
+
 #define READ_INTEGER(num, type) \
-READ_NUM(readInteger, int32_t, num, type)
+READ_INTEGER_CHECKED(readInteger, int32_t, num)
 
 #define READ_UNSIGNED_INTEGER(num, type) \
-READ_NUM(readUnsignedInteger, uint32_t, num, type)
+READ_INTEGER_CHECKED(readUnsignedInteger, uint32_t, num)
 
 #define READ_REAL(num, type) \
 READ_NUM(readReal, double, num, type)
@@ -1239,8 +1284,7 @@ SoInput::read(int & i)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    i = tmp;
-    return TRUE;
+    return soinput_checked_integer_assignment(tmp, i);
   }
   else {
     READ_INTEGER(i, int);
@@ -1261,8 +1305,8 @@ SoInput::read(unsigned int & i)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    i = tmp;
-    return TRUE;
+    const uint32_t value = static_cast<uint32_t>(tmp);
+    return soinput_checked_integer_assignment(value, i);
   }
   else {
     READ_UNSIGNED_INTEGER(i, unsigned int);
@@ -1283,8 +1327,7 @@ SoInput::read(short & s)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    s = (short) tmp;
-    return TRUE;
+    return soinput_checked_integer_assignment(tmp, s);
   }
   else {
     READ_INTEGER(s, short);
@@ -1305,8 +1348,8 @@ SoInput::read(unsigned short & s)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    s = (unsigned short) tmp;
-    return TRUE;
+    const uint32_t value = static_cast<uint32_t>(tmp);
+    return soinput_checked_integer_assignment(value, s);
   }
   else {
     READ_UNSIGNED_INTEGER(s, unsigned short);
@@ -1327,8 +1370,7 @@ SoInput::readByte(int8_t & b)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    b = (int8_t) tmp;
-    return TRUE;
+    return soinput_checked_integer_assignment(tmp, b);
   }
   else {
     READ_INTEGER(b, int8_t);
@@ -1349,8 +1391,8 @@ SoInput::readByte(uint8_t & b)
   if (fi->isBinary()) { // Assume checkheader has been called
     int32_t tmp;
     if (!this->readBinaryArray(&tmp, 1)) return FALSE;
-    b = (uint8_t) tmp;
-    return TRUE;
+    const uint32_t value = static_cast<uint32_t>(tmp);
+    return soinput_checked_integer_assignment(value, b);
   }
   else {
     READ_UNSIGNED_INTEGER(b, uint8_t);
@@ -2484,6 +2526,7 @@ SoInput::findFile(const char * basename, SbString & fullname)
 }
 
 #undef READ_NUM
+#undef READ_INTEGER_CHECKED
 #undef READ_INTEGER
 #undef READ_UNSIGNED_INTEGER
 #undef READ_REAL

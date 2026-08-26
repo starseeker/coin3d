@@ -70,6 +70,7 @@
 // C++17 includes for modern threading
 #include <mutex>
 #include <memory>
+#include <atomic>
 
 // C++17 threading is the only supported implementation
 #include "mutex_cxx17.icc"
@@ -238,14 +239,21 @@ cc_mutex_unlock(cc_mutex * mutex)
   (void)ok; /* avoid unused variable warning in release builds */
 }
 
-static cc_mutex * cc_global_mutex = NULL;
-static std::once_flag cc_global_mutex_once;
+// This mutex participates in the explicit SoDB::finish()/init() lifecycle, so
+// a one-shot std::once_flag is not appropriate here.  Keep the published
+// pointer atomic for the hot lock path and serialize construction/destruction
+// separately.  SoDB requires finish() to run while the application is
+// quiescent; the lifecycle mutex protects concurrent first use and repeated
+// initialization, not lock users racing shutdown.
+static std::atomic<cc_mutex *> cc_global_mutex{NULL};
+static std::mutex cc_global_mutex_lifecycle_mutex;
 
 static void
 cc_mutex_cleanup(void)
 {
-  cc_mutex_destruct(cc_global_mutex);
-  cc_global_mutex = NULL;
+  std::lock_guard<std::mutex> guard(cc_global_mutex_lifecycle_mutex);
+  cc_mutex * mutex = cc_global_mutex.exchange(NULL, std::memory_order_acq_rel);
+  if (mutex != NULL) cc_mutex_destruct(mutex);
 }
 
 void
@@ -253,13 +261,17 @@ cc_mutex_init(void)
 {
   const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEXLOCK_MAXTIME");
 
-  std::call_once(cc_global_mutex_once, [] {
-    cc_global_mutex = cc_mutex_construct();
-    /* atexit priority makes this callback trigger after other cleanup
-       functions. */
-    coin_atexit((coin_atexit_f*) cc_mutex_cleanup,
-                CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY);
-  });
+  if (cc_global_mutex.load(std::memory_order_acquire) == NULL) {
+    std::lock_guard<std::mutex> guard(cc_global_mutex_lifecycle_mutex);
+    if (cc_global_mutex.load(std::memory_order_relaxed) == NULL) {
+      cc_mutex * mutex = cc_mutex_construct();
+      cc_global_mutex.store(mutex, std::memory_order_release);
+      /* Register once per initialized generation. coin_atexit_cleanup() clears
+         the callback list, allowing a later SoDB::init() to register again. */
+      coin_atexit((coin_atexit_f*) cc_mutex_cleanup,
+                  CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY);
+    }
+  }
 
   if (env) { maxmutexlocktime = atof(env); }
 
@@ -274,13 +286,19 @@ cc_mutex_global_lock(void)
      called (called from SoDB::init()). This is safe, since the
      application should not be multithreaded before SoDB::init() is
      called */
-  if (cc_global_mutex == NULL) cc_mutex_init();
-  
-  (void) cc_mutex_lock(cc_global_mutex);
+  cc_mutex * mutex = cc_global_mutex.load(std::memory_order_acquire);
+  if (mutex == NULL) {
+    cc_mutex_init();
+    mutex = cc_global_mutex.load(std::memory_order_acquire);
+  }
+
+  (void) cc_mutex_lock(mutex);
 }
 
 void 
 cc_mutex_global_unlock(void)
 {
-  (void) cc_mutex_unlock(cc_global_mutex);
+  cc_mutex * mutex = cc_global_mutex.load(std::memory_order_acquire);
+  assert(mutex != NULL);
+  (void) cc_mutex_unlock(mutex);
 }

@@ -101,7 +101,7 @@ TEST(SoGLRenderAction, ConfigurationApiRetainsTraversalSettings)
     EXPECT_EQ(action.getCacheContext(), 1);
 }
 
-TEST(OSMesaRenderContracts, RenderActionSettingsAndCallbacksSurviveContext)
+TEST(RenderContracts, RenderActionSettingsAndCallbacksSurviveContext)
 {
     auto * root = new SoSeparator;
     root->ref();
