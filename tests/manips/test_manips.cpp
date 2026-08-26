@@ -83,10 +83,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_manips()
+int obol_run_upstream_test_manips()
 {
     TestFixture fixture;
-    GTestResultRecorder  runner;
+    UpstreamCheckRecorder  runner;
 
     // -----------------------------------------------------------------------
     // SoTrackballManip: instantiation and type
@@ -617,10 +617,4 @@ static int obol_run_upstream_test_manips()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_manips) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_manips), 0);
 }

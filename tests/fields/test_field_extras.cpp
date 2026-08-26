@@ -61,10 +61,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_field_extras()
+int obol_run_upstream_test_field_extras()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoField::getDirty / setDirty
@@ -256,10 +256,4 @@ static int obol_run_upstream_test_field_extras()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_field_extras) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_extras), 0);
 }

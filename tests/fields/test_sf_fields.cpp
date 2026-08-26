@@ -122,10 +122,10 @@ using namespace ObolTest;
             TestName " class not initialized or instance has bad type"); \
     }
 
-static int obol_run_upstream_test_sf_fields()
+int obol_run_upstream_test_sf_fields()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSFBool: class initialized
@@ -309,10 +309,4 @@ static int obol_run_upstream_test_sf_fields()
     TEST_SF_INITIALIZED("SoSFBox3s",    SoSFBox3s)
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sf_fields) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sf_fields), 0);
 }

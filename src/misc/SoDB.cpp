@@ -113,7 +113,7 @@
 #include "rendering/SoVBO.h"
 
 // Threading support
-#include "threads/threadp.h"
+#include "threads/threads.h"
 
 #include <Inventor/threads/SbRWMutex.h>
 #include "threads/recmutexp.h"

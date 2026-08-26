@@ -83,10 +83,10 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-static int obol_run_upstream_test_engines_advanced()
+int obol_run_upstream_test_engines_advanced()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInterpolateFloat: alpha=0.5 produces the midpoint
@@ -543,10 +543,4 @@ static int obol_run_upstream_test_engines_advanced()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_engines_advanced) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_advanced), 0);
 }

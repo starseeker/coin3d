@@ -51,10 +51,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_caches_suite()
+int obol_run_upstream_test_caches_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBoundingBoxCache: construct, set, getBox, isCenterSet
@@ -169,10 +169,4 @@ static int obol_run_upstream_test_caches_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_caches_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_caches_suite), 0);
 }

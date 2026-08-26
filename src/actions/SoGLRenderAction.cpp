@@ -1788,9 +1788,10 @@ SoGLRenderActionP::render(SoNode * node)
       SoNode * profileroverlay = SoActionP::getProfilerOverlay();
       if (profileroverlay) {
         this->isrenderingoverlay = TRUE;
-        SoProfiler::enable(FALSE);
-        this->renderSingle(profileroverlay);
-        SoProfiler::enable(TRUE);
+        {
+          SoProfilerP::ScopedPause pause;
+          this->renderSingle(profileroverlay);
+        }
         this->isrenderingoverlay = FALSE;
       }
     } else {

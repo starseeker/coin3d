@@ -68,10 +68,10 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-static int obol_run_upstream_test_sb_matrix_box()
+int obol_run_upstream_test_sb_matrix_box()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // ======================================================================
     // SbMatrix
@@ -475,10 +475,4 @@ static int obol_run_upstream_test_sb_matrix_box()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sb_matrix_box) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sb_matrix_box), 0);
 }

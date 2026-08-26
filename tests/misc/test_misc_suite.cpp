@@ -68,10 +68,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_misc_suite()
+int obol_run_upstream_test_misc_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // =======================================================================
     // SoType
@@ -462,10 +462,4 @@ static int obol_run_upstream_test_misc_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_misc_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_misc_suite), 0);
 }

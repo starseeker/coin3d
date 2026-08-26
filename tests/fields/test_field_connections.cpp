@@ -60,10 +60,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_field_connections()
+int obol_run_upstream_test_field_connections()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // connectFrom / isConnectedFromField
@@ -246,10 +246,4 @@ static int obol_run_upstream_test_field_connections()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_field_connections) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_connections), 0);
 }

@@ -81,10 +81,10 @@ static std::string writeTempIV(const char * suffix)
     return std::string(path);
 }
 
-static int obol_run_upstream_test_io_file_ops()
+int obol_run_upstream_test_io_file_ops()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInput::openFile / closeFile
@@ -147,6 +147,7 @@ static int obol_run_upstream_test_io_file_ops()
             if (in.openFile(path.c_str())) {
                 SoSeparator * root = SoDB::readAll(&in);
                 if (root) {
+                    root->ref();
                     pass = (root->getNumChildren() > 0);
                     root->unref();
                 }
@@ -257,10 +258,4 @@ static int obol_run_upstream_test_io_file_ops()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_io_file_ops) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_file_ops), 0);
 }

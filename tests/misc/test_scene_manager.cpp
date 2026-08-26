@@ -77,10 +77,10 @@ static void renderCb(void * data, SoSceneManager * /*mgr*/)
     static_cast<RenderCap *>(data)->count++;
 }
 
-static int obol_run_upstream_test_scene_manager()
+int obol_run_upstream_test_scene_manager()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // Construction / destruction
@@ -348,10 +348,4 @@ static int obol_run_upstream_test_scene_manager()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_scene_manager) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_scene_manager), 0);
 }

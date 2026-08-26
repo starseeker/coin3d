@@ -72,6 +72,7 @@
 
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SoType.h>
@@ -91,6 +92,7 @@
 #endif // HAVE_NODEKITS
 
 #include "CoinTidbits.h"
+#include "actions/SoActionP.h"
 #include "misc/SoDBP.h"
 #include "misc/SoEnvironment.h"
 
@@ -108,7 +110,8 @@ namespace {
   namespace profiler {
     static SbBool initialized = FALSE;
 
-    static SbBool enabled = FALSE;
+    static std::atomic<SbBool> enabled{FALSE};
+    static thread_local unsigned int pause_depth = 0;
 
     namespace rendering {
       static SbBool syncgl = FALSE;
@@ -155,6 +158,10 @@ namespace {
 
 /*!
   Initializes the Coin scene graph profiling subsystem.
+
+  Initialization registers the profiler types and action elements, but does
+  not enable profiling.  Applications can opt in with enable(TRUE), or by
+  configuring the profiler through the environment before SoDB::init().
 */
 
 void
@@ -176,12 +183,34 @@ SoProfiler::init(void)
 
   SoProfilingReportGenerator::init();
 
-  profiler::enabled = TRUE;
-
   //SoProfilerP::setActionType(SoRayPickAction::getClassTypeId());
   SoProfilerP::parseCoinProfilerOverlayVariable();
 
   profiler::initialized = TRUE;
+  coin_atexit(reinterpret_cast<coin_atexit_f *>(SoProfiler::cleanup),
+              CC_ATEXIT_NORMAL);
+}
+
+void
+SoProfiler::cleanup(void)
+{
+  // Release objects while their profiler node types are still registered.
+  SoActionP::cleanupProfilerResources();
+  SoProfilingReportGenerator::cleanup();
+
+  profiler::initialized = FALSE;
+  profiler::enabled.store(FALSE, std::memory_order_release);
+  profiler::rendering::syncgl = FALSE;
+  profiler::rendering::redraw_rate = -1.0f;
+  profiler::overlay::active = FALSE;
+  profiler::console::active = FALSE;
+  profiler::console::clear = FALSE;
+  profiler::console::header = FALSE;
+  profiler::console::lines = 20;
+  profiler::console::category = SoProfilingReportGenerator::NODES;
+  profiler::console::actiontype = SoType::badType();
+  profiler::console::onstdout = FALSE;
+  profiler::console::onstderr = FALSE;
 }
 
 /*!
@@ -214,7 +243,7 @@ SoProfiler::enable(SbBool enable)
     SoDebugError::post("SoProfiler::enable", "module not initialized");
     return;
   }
-  profiler::enabled = enable;
+  profiler::enabled.store(enable, std::memory_order_release);
 }
 
 /*!
@@ -225,10 +254,40 @@ SbBool
 SoProfiler::isEnabled(void)
 {
 #ifdef OBOL_PROFILING
-  return profiler::enabled;
+  return profiler::enabled.load(std::memory_order_acquire) &&
+         !SoProfilerP::isPausedForCurrentThread();
 #else
   return FALSE;
 #endif
+}
+
+SoProfilerP::ScopedPause::ScopedPause(void)
+{
+  SoProfilerP::pushPause();
+}
+
+SoProfilerP::ScopedPause::~ScopedPause(void)
+{
+  SoProfilerP::popPause();
+}
+
+void
+SoProfilerP::pushPause(void)
+{
+  ++profiler::pause_depth;
+}
+
+void
+SoProfilerP::popPause(void)
+{
+  assert(profiler::pause_depth > 0);
+  --profiler::pause_depth;
+}
+
+SbBool
+SoProfilerP::isPausedForCurrentThread(void)
+{
+  return profiler::pause_depth != 0 ? TRUE : FALSE;
 }
 
 SbBool
@@ -310,19 +369,20 @@ SoProfilerP::parseCoinProfilerVariable(void)
   if ((parameters.size() == 1) &&
       (parameters[0].find_first_not_of("+-0123456789 \t") == std::string::npos)) {
     // just have a numeral value (or nothing) - old semantics
-    profiler::enabled = atoi(parameters[0].data()) > 0 ? TRUE : FALSE;
+    profiler::enabled.store(atoi(parameters[0].data()) > 0 ? TRUE : FALSE,
+                            std::memory_order_release);
   }
   else if (parameters.size() > 0) {
     std::vector<std::string>::iterator it = parameters.begin();
     while (it != parameters.end()) {
       if ((*it).compare("on") == 0) {
-        profiler::enabled = TRUE;
+        profiler::enabled.store(TRUE, std::memory_order_release);
       }
       else if ((*it).compare("off") == 0) {
-        profiler::enabled = FALSE;
+        profiler::enabled.store(FALSE, std::memory_order_release);
       }
       else if ((*it).compare("syncgl") == 0) {
-        profiler::enabled = TRUE;
+        profiler::enabled.store(TRUE, std::memory_order_release);
         profiler::rendering::syncgl = TRUE;
       }
       else {

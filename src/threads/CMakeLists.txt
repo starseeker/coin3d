@@ -22,7 +22,6 @@ set(OBOL_THREADS_INTERNAL_FILES
 	recmutex_global_cxx17.h
 	mutexp.h
 	condvarp.h
-	threadp.h
 )
 
 # build module object library

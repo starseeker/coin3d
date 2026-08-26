@@ -33,6 +33,7 @@
 #include "SbImageFormatHandler.h"
 #include "SbImageResize.h"
 #include "SbJpegImageHandler.h"
+#include "SbPngImageHandler.h"
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
@@ -124,6 +125,7 @@ SbImageFormatRegistry::SbImageFormatRegistry()
   // later.  Register built-in handlers here so all callers share one
   // initialization path instead of racing through per-call lazy flags.
   this->registerHandler(std::unique_ptr<SbImageFormatHandler>(new SbJpegImageHandler));
+  this->registerHandler(std::unique_ptr<SbImageFormatHandler>(new SbPngImageHandler));
 }
 
 void SbImageFormatRegistry::registerHandler(std::unique_ptr<SbImageFormatHandler> handler)
@@ -174,6 +176,9 @@ unsigned char* SbImageFormatRegistry::readImage(const char* filename, int* width
   if (!result) {
     setError(std::string("Failed to read image: ") + handler->getLastError());
   }
+  else {
+    this->rememberAllocation(result, handler);
+  }
   return result;
 }
 
@@ -196,10 +201,20 @@ bool SbImageFormatRegistry::saveImage(const char* filename, const unsigned char*
 
 void SbImageFormatRegistry::freeImageData(unsigned char* imagedata)
 {
-  if (imagedata) {
-    // For now, use standard delete[] - individual handlers can override if needed
-    delete[] imagedata;
+  if (!imagedata) return;
+
+  SbImageFormatHandler * owner = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(allocationsMutex);
+    const auto it = allocations.find(imagedata);
+    if (it != allocations.end()) {
+      owner = it->second;
+      allocations.erase(it);
+    }
   }
+
+  if (owner) owner->freeImageData(imagedata);
+  else delete[] imagedata;
 }
 
 unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int width, int height, int components,
@@ -216,6 +231,7 @@ unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int 
     for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
       unsigned char* result = handler->resizeImage(imagedata, width, height, components, newwidth, newheight);
       if (result) {
+        this->rememberAllocation(result, handler);
         return result;
       }
     }
@@ -241,6 +257,7 @@ unsigned char* SbImageFormatRegistry::resize3DImage(unsigned char* imagedata, in
       unsigned char* result = handler->resize3DImage(imagedata, width, height, depth, components, 
                                                     newwidth, newheight, newdepth);
       if (result) {
+        this->rememberAllocation(result, handler);
         return result;
       }
     }
@@ -321,6 +338,15 @@ SbImageFormatRegistry::getHandlersSnapshot() const
   snapshot.reserve(handlers.size());
   for (const auto & handler : handlers) snapshot.push_back(handler.get());
   return snapshot;
+}
+
+void
+SbImageFormatRegistry::rememberAllocation(unsigned char * data,
+                                          SbImageFormatHandler * handler)
+{
+  if (!data || !handler) return;
+  std::lock_guard<std::mutex> lock(allocationsMutex);
+  allocations[data] = handler;
 }
 
 void SbImageFormatRegistry::setError(const std::string& error) const

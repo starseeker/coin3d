@@ -70,10 +70,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_details_deep()
+int obol_run_upstream_test_details_deep()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // =========================================================================
     // SoCubeDetail
@@ -310,10 +310,4 @@ static int obol_run_upstream_test_details_deep()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_details_deep) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_details_deep), 0);
 }

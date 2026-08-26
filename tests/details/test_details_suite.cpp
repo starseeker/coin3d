@@ -64,10 +64,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_details_suite()
+int obol_run_upstream_test_details_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoPointDetail
@@ -501,10 +501,4 @@ static int obol_run_upstream_test_details_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_details_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_details_suite), 0);
 }

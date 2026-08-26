@@ -101,10 +101,10 @@ static void writeNodeBinary(SoNode * root, char ** outBuf, size_t * outSize)
 // Silent callback used to suppress error output during negative tests
 static void silentErrCb(const SoError * /*err*/, void * /*data*/) {}
 
-static int obol_run_upstream_test_io_edge_cases()
+int obol_run_upstream_test_io_edge_cases()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // Build a simple scene: Separator > Cube
     SoSeparator * root = new SoSeparator;
@@ -153,7 +153,10 @@ static int obol_run_upstream_test_io_edge_cases()
             in.setBuffer(buf, sz);
             SoSeparator * r2 = SoDB::readAll(&in);
             pass = (r2 != nullptr);
-            if (r2) r2->unref();
+            if (r2) {
+                r2->ref();
+                r2->unref();
+            }
         }
         runner.endTest(pass, pass ? "" :
             "Binary round-trip: SoDB::readAll returned null for binary scene");
@@ -170,6 +173,7 @@ static int obol_run_upstream_test_io_edge_cases()
             in.setBuffer(buf, sz);
             SoSeparator * r2 = SoDB::readAll(&in);
             if (r2) {
+                r2->ref();
                 pass = (r2->getNumChildren() > 0);
                 r2->unref();
             }
@@ -191,9 +195,11 @@ static int obol_run_upstream_test_io_edge_cases()
         SoInput in;
         in.setBuffer(const_cast<char *>(scene1), std::strlen(scene1));
         SoSeparator * r1 = SoDB::readAll(&in);
+        if (r1) r1->ref();
 
         in.setBuffer(const_cast<char *>(scene2), std::strlen(scene2));
         SoSeparator * r2 = SoDB::readAll(&in);
+        if (r2) r2->ref();
 
         bool pass = (r1 != nullptr) && (r2 != nullptr);
         if (r1) r1->unref();
@@ -220,7 +226,10 @@ static int obol_run_upstream_test_io_edge_cases()
         SoError::setHandlerCallback(oldCb, nullptr);
 
         bool pass = (r == nullptr);
-        if (r) r->unref();
+        if (r) {
+            r->ref();
+            r->unref();
+        }
         runner.endTest(pass, pass ? "" :
             "Corrupt header: SoDB::readAll should return null");
     }
@@ -241,17 +250,14 @@ static int obol_run_upstream_test_io_edge_cases()
         SoError::setHandlerCallback(oldCb, nullptr);
 
         bool pass = (r == nullptr);
-        if (r) r->unref();
+        if (r) {
+            r->ref();
+            r->unref();
+        }
         runner.endTest(pass, pass ? "" :
             "Empty buffer: SoDB::readAll should return null");
     }
 
     root->unref();
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_io_edge_cases) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_edge_cases), 0);
 }

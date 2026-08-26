@@ -69,10 +69,10 @@ static bool doubleNear(double a, double b, double tol = 1e-10) {
     return fabs(a - b) <= tol;
 }
 
-static int obol_run_upstream_test_base_advanced()
+int obol_run_upstream_test_base_advanced()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbVec2f: construction, setValue/getValue round-trip
@@ -359,10 +359,4 @@ static int obol_run_upstream_test_base_advanced()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_base_advanced) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_base_advanced), 0);
 }

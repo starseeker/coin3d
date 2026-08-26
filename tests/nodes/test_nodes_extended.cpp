@@ -107,10 +107,10 @@ static void eventCbFn(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-static int obol_run_upstream_test_nodes_extended()
+int obol_run_upstream_test_nodes_extended()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallback: setCallback fires when SoCallbackAction traverses node
@@ -364,10 +364,4 @@ static int obol_run_upstream_test_nodes_extended()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodes_extended) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_extended), 0);
 }

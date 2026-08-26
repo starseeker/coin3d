@@ -61,10 +61,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_glrender_action()
+int obol_run_upstream_test_glrender_action()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     const SbViewportRegion vp(512, 384);
 
@@ -359,10 +359,4 @@ static int obol_run_upstream_test_glrender_action()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_glrender_action) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_glrender_action), 0);
 }

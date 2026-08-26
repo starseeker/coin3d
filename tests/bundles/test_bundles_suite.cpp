@@ -234,10 +234,10 @@ static SoSeparator * buildTriSceneWithNormals()
 }
 
 // =========================================================================
-static int obol_run_upstream_test_bundles_suite()
+int obol_run_upstream_test_bundles_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoNormalBundle: construction + generation path (no normals on state)
@@ -341,10 +341,4 @@ static int obol_run_upstream_test_bundles_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_bundles_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_bundles_suite), 0);
 }

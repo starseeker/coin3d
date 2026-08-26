@@ -36,6 +36,7 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec2s.h>
+#include <cstdint>
 
 class SbImage;
 
@@ -91,6 +92,13 @@ public:
   SbBool hasTransparency(void) const;
 
 private:
+  friend class SoTexture2;
+
+  uint64_t getUpdateGeneration(void) const;
+  unsigned char * getSubTextureForGeneration(uint64_t generation,
+                                              SbVec2s & dims,
+                                              SbVec2s & offset) const;
+
   virtual SbBool readValue(SoInput * in);
   virtual void writeValue(SoOutput * out) const;
 

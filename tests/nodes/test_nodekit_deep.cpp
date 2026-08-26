@@ -91,10 +91,10 @@ static void writeNode(SoNode * root, char ** outBuf, size_t * outSize)
     *outSize = nbytes;
 }
 
-static int obol_run_upstream_test_nodekit_deep()
+int obol_run_upstream_test_nodekit_deep()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCameraKit: getPart("camera", TRUE) returns a camera
@@ -204,17 +204,14 @@ static int obol_run_upstream_test_nodekit_deep()
             in.setBuffer(buf, std::strlen(buf));
             SoSeparator * r = SoDB::readAll(&in);
             pass = (r != nullptr);
-            if (r) r->unref();
+            if (r) {
+                r->ref();
+                r->unref();
+            }
         }
         runner.endTest(pass, pass ? "" :
             "SoShapeKit write/read round-trip: SoDB::readAll returned null");
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodekit_deep) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodekit_deep), 0);
 }

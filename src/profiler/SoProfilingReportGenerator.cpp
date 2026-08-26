@@ -403,6 +403,13 @@ SoProfilingReportGenerator::init(void)
   SoProfilingReportGeneratorP::mutex = new SbMutex;
 }
 
+void
+SoProfilingReportGenerator::cleanup(void)
+{
+  delete SoProfilingReportGeneratorP::mutex;
+  SoProfilingReportGeneratorP::mutex = NULL;
+}
+
 namespace {
 // class to make sure the mutex is always unlocked again when leaving scope
 class MutexLocker {

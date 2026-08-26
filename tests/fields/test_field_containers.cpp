@@ -92,10 +92,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_field_containers()
+int obol_run_upstream_test_field_containers()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // =======================================================================
     // SoField
@@ -429,10 +429,4 @@ static int obol_run_upstream_test_field_containers()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_field_containers) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_containers), 0);
 }

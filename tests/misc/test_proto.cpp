@@ -58,10 +58,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_proto()
+int obol_run_upstream_test_proto()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProto class type system
@@ -120,10 +120,4 @@ static int obol_run_upstream_test_proto()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_proto) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_proto), 0);
 }

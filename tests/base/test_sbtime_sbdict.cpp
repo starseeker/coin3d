@@ -78,10 +78,10 @@ static void countApplyData(uintptr_t /*key*/, void * /*val*/, void * data)
     static_cast<ApplyDataCtx *>(data)->count++;
 }
 
-static int obol_run_upstream_test_sbtime_sbdict()
+int obol_run_upstream_test_sbtime_sbdict()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // =======================================================================
     // SbTime tests
@@ -412,10 +412,4 @@ static int obol_run_upstream_test_sbtime_sbdict()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sbtime_sbdict) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sbtime_sbdict), 0);
 }

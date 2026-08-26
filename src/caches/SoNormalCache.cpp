@@ -98,7 +98,7 @@ SoNormalCache::SoNormalCache(SoState * const state)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoNormalCache::SoNormalCache",
-                           "Cache created: %p", this);
+                           "Cache created: %p", static_cast<void *>(this));
     
   }
 #endif // debug
@@ -112,7 +112,7 @@ SoNormalCache::~SoNormalCache()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoNormalCache::~SoNormalCache",
-                           "Cache destructed: %p", this);
+                           "Cache destructed: %p", static_cast<void *>(this));
     
   }
 #endif // debug
@@ -485,7 +485,8 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
                                 "Polygon with less than three valid "
                                 "vertices detected. (offset: %d, [%d %d %d]). "
                                 "Should be within [0, %d].",
-                                cind - cstart, v0, v1, v2, maxcoordidx);
+                                static_cast<int>(cind - cstart),
+                                v0, v1, v2, maxcoordidx);
 #endif // OBOL_DEBUG
 
        // Insert dummy normal for robustness
@@ -640,7 +641,8 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
       SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip", "Erroneous "
                                 "coordinate index detected (offset: %d, [%d %d %d]). Should be "
                                 "within [0, %d].",
-                                cind - cstart, *(cind), *(cind+1), *(cind+2), maxcoordidx);
+                                static_cast<int>(cind - cstart),
+                                *(cind), *(cind+1), *(cind+2), maxcoordidx);
 #endif // OBOL_DEBUG
 
       // Insert dummy normal for robustness
@@ -801,7 +803,8 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
       SoDebugError::postWarning("SoNormalCache::generatePerStrip", "Erroneous "
                                 "coordinate index detected (offset: %d, [%d %d %d]). Should be "
                                 "within [0, %d].",
-                                cind - cstart, *(cind), *(cind+1), *(cind+2), maxcoordidx);
+                                static_cast<int>(cind - cstart),
+                                *(cind), *(cind+1), *(cind+2), maxcoordidx);
 #endif // OBOL_DEBUG
       // Insert dummy normal for robustness
       SbVec3f dummynormal;

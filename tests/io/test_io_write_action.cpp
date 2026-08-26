@@ -118,10 +118,10 @@ static SoSeparator * readFromBuffer(void * buf, size_t bufLen)
     return root;
 }
 
-static int obol_run_upstream_test_io_write_action()
+int obol_run_upstream_test_io_write_action()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. ASCII round-trip: SoGroup { SoSphere SoCube } — type and child count
@@ -476,16 +476,13 @@ static int obol_run_upstream_test_io_write_action()
         SoError::setHandlerCallback(old, nullptr);
 
         bool pass = (root == nullptr);
-        if (root) root->unref();
+        if (root) {
+            root->ref();
+            root->unref();
+        }
         runner.endTest(pass, pass ? "" :
             "SoDB::readAll on empty buffer should return nullptr");
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_io_write_action) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_write_action), 0);
 }

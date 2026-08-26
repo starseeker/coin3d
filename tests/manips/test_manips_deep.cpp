@@ -69,10 +69,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_manips_deep()
+int obol_run_upstream_test_manips_deep()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoPointLightManip
@@ -339,10 +339,4 @@ static int obol_run_upstream_test_manips_deep()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_manips_deep) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_manips_deep), 0);
 }

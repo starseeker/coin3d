@@ -279,7 +279,9 @@ option(OBOL_THREADSAFE "Deprecated – thread safety is now always on; kept for 
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
 option(HAVE_DRAGGERS "Enable Dragger support" ON)
 option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
-option(OBOL_PROFILING "Enable profiling subsystem" OFF)
+option(OBOL_PROFILING
+    "Compile in the profiling subsystem (runtime collection remains off by default)"
+    ON)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
@@ -343,20 +345,35 @@ option(OBOL_TSAN "Enable ThreadSanitizer instrumentation (GCC/Clang)" OFF)
 #                    are brought into conformance.
 #   -Wmissing-field-initializers  ~207 warnings; deferred to a future clean-up pass.
 option(OBOL_WARNINGS "Enable extra warning flags (-Wall -Wextra -Wundef -Wshadow -Wpedantic -Wformat-nonliteral -Wmaybe-uninitialized -Wmissing-declarations -Wredundant-decls -Wcast-qual) on the Obol target" ON)
+option(OBOL_WARNINGS_AS_ERRORS
+  "Treat warnings from Obol sources as build errors (external dependencies are unaffected)"
+  OFF)
 
+set(_obol_warning_flags "")
 if(OBOL_WARNINGS AND NOT MSVC)
-  set(_obol_warning_flags "")
   foreach(_flag Wall Wextra Wundef Wshadow Wno-long-long Wpedantic Wformat-nonliteral Wmaybe-uninitialized Wmissing-declarations Wredundant-decls Wcast-qual)
     check_cxx_compiler_flag("-${_flag}" OBOL_CXX_HAS_${_flag})
     if(OBOL_CXX_HAS_${_flag})
       list(APPEND _obol_warning_flags "-${_flag}")
     endif()
   endforeach()
-  set(OBOL_WARNING_FLAGS "${_obol_warning_flags}" CACHE INTERNAL
-      "Compiler warning flags applied to the Obol library target")
-  if(OBOL_WARNING_FLAGS)
-    message(STATUS "Obol warning flags: ${OBOL_WARNING_FLAGS}")
+endif()
+if(OBOL_WARNINGS_AS_ERRORS)
+  if(MSVC)
+    list(APPEND _obol_warning_flags /WX)
+  else()
+    check_cxx_compiler_flag("-Werror" OBOL_CXX_HAS_Werror)
+    if(NOT OBOL_CXX_HAS_Werror)
+      message(FATAL_ERROR
+        "OBOL_WARNINGS_AS_ERRORS requires compiler support for -Werror")
+    endif()
+    list(APPEND _obol_warning_flags -Werror)
   endif()
+endif()
+set(OBOL_WARNING_FLAGS "${_obol_warning_flags}" CACHE INTERNAL
+    "Compiler warning flags applied to the Obol library target" FORCE)
+if(OBOL_WARNING_FLAGS)
+  message(STATUS "Obol warning flags: ${OBOL_WARNING_FLAGS}")
 endif()
 
 # Build optimization options
@@ -450,7 +467,10 @@ else()
       check_include_file_cxx("GL/glx.h" HAVE_GLX_H)
       if(HAVE_GLX_H)
         set(HAVE_GLX 1)
-        list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL ${X11_X11_LIB})
+        # Keep the installed static target relocatable.  FindX11's imported
+        # target is rediscovered by obol-config.cmake instead of baking the
+        # build machine's absolute libX11 path into the export.
+        list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL X11::X11)
         list(APPEND OBOL_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR})
         message(STATUS "GLX offscreen rendering support enabled")
       endif()
@@ -805,17 +825,23 @@ endif()
 # Add subdirectories
 # ============================================================================
 
+# PNG decoding and encoding is part of SbImage's built-in functionality, not
+# test infrastructure. Compile the bundled implementation as object code so
+# both shared and static Obol libraries contain it without exposing a private,
+# non-installed dependency in the package export.
+add_library(obol_lodepng_objects OBJECT
+  "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
+target_include_directories(obol_lodepng_objects PUBLIC
+  "${PROJECT_SOURCE_DIR}/external")
+set_target_properties(obol_lodepng_objects PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF)
+message(STATUS "Using bundled lodepng from external/lodepng.cpp")
+
 add_subdirectory(include)
 add_subdirectory(src)
-
-if(OBOL_BUILD_TESTS OR OBOL_BUILD_TEST_TOOLS)
-  # Build lodepng from the bundled source for the modern image assertion
-  # helpers and standalone image tools; this keeps PNG handling independent of
-  # system packages.
-  add_library(lodepng STATIC "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
-  target_include_directories(lodepng PUBLIC "${PROJECT_SOURCE_DIR}/external")
-  message(STATUS "Using bundled lodepng from external/lodepng.cpp")
-endif()
 
 if(OBOL_BUILD_TESTS)
   enable_testing()
@@ -913,6 +939,8 @@ endif()
 
 add_feature_info(ThreadSafe FEAT_HAVE_SAFETHREAD "Thread safe render traversals (always on)")
 add_feature_info(ThreadSanitizer OBOL_TSAN "ThreadSanitizer instrumentation")
+add_feature_info(Profiler OBOL_PROFILING
+  "Profiling support (runtime collection is off by default)")
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL

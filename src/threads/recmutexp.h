@@ -49,7 +49,7 @@ extern "C" {
 /* ********************************************************************** */
 
 struct cc_recmutex {
-  unsigned long threadid;
+  cc_thread_id_t threadid;
   int level;
   int waiters;
   cc_mutex mutex;

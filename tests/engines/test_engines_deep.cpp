@@ -65,10 +65,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_engines_deep()
+int obol_run_upstream_test_engines_deep()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoDecomposeMatrix: identity matrix → translation ~(0,0,0)
@@ -311,10 +311,4 @@ static int obol_run_upstream_test_engines_deep()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_engines_deep) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_deep), 0);
 }

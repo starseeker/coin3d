@@ -102,10 +102,10 @@ using namespace ObolTest;
             TestName " not initialized or initial count != 0"); \
     }
 
-static int obol_run_upstream_test_mf_fields()
+int obol_run_upstream_test_mf_fields()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // All SoMF* types: class initialized with zero elements
@@ -245,10 +245,4 @@ static int obol_run_upstream_test_mf_fields()
     TEST_MF_INITIALIZED("SoMFEngine",   SoMFEngine)
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_mf_fields) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_mf_fields), 0);
 }

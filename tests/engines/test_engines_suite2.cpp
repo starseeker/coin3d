@@ -83,10 +83,10 @@ static bool floatNear(float a, float b, float eps = 1e-5f)
     return std::fabs(a - b) < eps;
 }
 
-static int obol_run_upstream_test_engines_suite2()
+int obol_run_upstream_test_engines_suite2()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBoolOperation
@@ -420,10 +420,4 @@ static int obol_run_upstream_test_engines_suite2()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_engines_suite2) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_suite2), 0);
 }

@@ -124,10 +124,10 @@ static void writeAscii(SoNode * node, char ** outBuf, size_t * outSize)
 }
 
 // =========================================================================
-static int obol_run_upstream_test_io_input_binary()
+int obol_run_upstream_test_io_input_binary()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // Build a simple scene for round-trip tests
     SoSeparator * root = new SoSeparator;
@@ -216,6 +216,7 @@ static int obol_run_upstream_test_io_input_binary()
             in.setBuffer(buf, sz);
             SoSeparator * r2 = SoDB::readAll(&in);
             if (r2) {
+                r2->ref();
                 pass = (r2->getNumChildren() == root->getNumChildren());
                 r2->unref();
             }
@@ -245,7 +246,10 @@ static int obol_run_upstream_test_io_input_binary()
             // A truncated binary file should either return null or an empty tree.
             // Both are acceptable; the important thing is no crash.
             pass = true;  // if we reach here without crashing, test passes
-            if (r) r->unref();
+            if (r) {
+                r->ref();
+                r->unref();
+            }
         } else {
             pass = false; // could not write binary
         }
@@ -278,7 +282,10 @@ static int obol_run_upstream_test_io_input_binary()
 
         // null or empty separator: both are acceptable; no crash = pass
         bool pass = true;
-        if (r) r->unref();
+        if (r) {
+            r->ref();
+            r->unref();
+        }
         runner.endTest(pass, pass ? "" :
             "Wrong magic: SoDB::readAll crashed");
     }
@@ -328,9 +335,11 @@ static int obol_run_upstream_test_io_input_binary()
         SoInput in;
         in.setBuffer(const_cast<char *>(s1), std::strlen(s1));
         SoSeparator * r1 = SoDB::readAll(&in);
+        if (r1) r1->ref();
 
         in.setBuffer(const_cast<char *>(s2), std::strlen(s2));
         SoSeparator * r2 = SoDB::readAll(&in);
+        if (r2) r2->ref();
 
         bool pass = (r1 != nullptr) && (r2 != nullptr);
         if (r1) r1->unref();
@@ -360,6 +369,7 @@ static int obol_run_upstream_test_io_input_binary()
             in.setBuffer(buf, sz);
             SoSeparator * r = SoDB::readAll(&in);
             if (r) {
+                r->ref();
                 pass = (r->getNumChildren() == 10);
                 r->unref();
             }
@@ -370,10 +380,4 @@ static int obol_run_upstream_test_io_input_binary()
 
     root->unref();
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_io_input_binary) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_io_input_binary), 0);
 }

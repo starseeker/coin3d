@@ -143,7 +143,7 @@ SoGLCacheList::SoGLCacheList(int numcaches)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoGLCacheList::SoGLCacheList",
-                           "Cache list created: %p", this);
+                           "Cache list created: %p", static_cast<void *>(this));
   }
 #endif // debug
 }
@@ -156,7 +156,7 @@ SoGLCacheList::~SoGLCacheList()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoGLCacheList::~SoGLCacheList",
-                           "Cache list destructed: %p", this);
+                           "Cache list destructed: %p", static_cast<void *>(this));
   }
 #endif // debug
 
@@ -427,7 +427,7 @@ SoGLCacheList::call(SoGLRenderAction * action)
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoGLCacheList::call",
                            "no valid cache found for %p. Node has %d caches",
-                           this, n);
+                           static_cast<void *>(this), n);
     for (i = 0; i < n; i++) {
       SoGLRenderCache * cache = PRIVATE(this)->itemlist[i];
       if (cache->getCacheContext() == context) {
@@ -437,7 +437,8 @@ SoGLCacheList::call(SoGLRenderAction * action)
           const SoElement * elem = cache->getInvalidElement(state);
           if (elem) {
             SoDebugError::postInfo("SoGLCacheList::call",
-                                   "cache: %p, invalid element: %s", this,
+                                   "cache: %p, invalid element: %s",
+                                   static_cast<void *>(this),
                                    elem->getTypeId().getName().getString());
           }
         }
@@ -508,7 +509,7 @@ SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
       if (coin_debug_caching_level() > 0 && PRIVATE(this)->numframesok >= 2) {
         SoDebugError::postInfo("SoGLCacheList::open",
                                "consider cache create: %p. numframesok: %d, numused: %d, numdiscarded: %d",
-                               this, PRIVATE(this)->numframesok, PRIVATE(this)->numused, PRIVATE(this)->numdiscarded);
+                               static_cast<void *>(this), PRIVATE(this)->numframesok, PRIVATE(this)->numused, PRIVATE(this)->numdiscarded);
       }
 #endif // debug
 
@@ -551,7 +552,7 @@ SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
 #if OBOL_DEBUG // debug
     if (coin_debug_caching_level() > 0) {
       SoDebugError::postInfo("SoGLCacheList::open",
-                             "trying to create cache: %p", this);
+                             "trying to create cache: %p", static_cast<void *>(this));
     }
 #endif // debug
   }
@@ -588,7 +589,7 @@ SoGLCacheList::close(SoGLRenderAction * action)
 #if OBOL_DEBUG
       if (coin_debug_caching_level() > 0) {
         SoDebugError::postInfo("SoGLCacheList::close",
-                               "failed to create cache: %p", this);
+                               "failed to create cache: %p", static_cast<void *>(this));
       }
 #endif // debug
     }
@@ -602,7 +603,7 @@ SoGLCacheList::close(SoGLRenderAction * action)
 #if OBOL_DEBUG
     if (coin_debug_caching_level() > 0) {
       SoDebugError::postInfo("SoGLCacheList::close",
-                             "new cache created: %p", this);
+                             "new cache created: %p", static_cast<void *>(this));
     }
 #endif // debug
     PRIVATE(this)->itemlist.append(PRIVATE(this)->opencache);
@@ -626,7 +627,8 @@ SoGLCacheList::invalidateAll(void)
 #if OBOL_DEBUG
   if (n && coin_debug_caching_level() > 1) {
     SoDebugError::postInfo("SoGLCacheList::invalidateAll",
-                           "invalidate all: %p (num caches = %d)", this, n);
+                           "invalidate all: %p (num caches = %d)",
+                           static_cast<void *>(this), n);
   }
 #endif // debug
 

@@ -831,7 +831,7 @@ SoPath::removeIndex(SoNode * const parent, const int oldindex)
     SoDebugError::post("SoPath::removeIndex",
                        "failure: pos==%d (len=%d), parent=%p (%s)",
                        pos, this->getFullLength(),
-                       parent,
+                       static_cast<void *>(parent),
                        parent->getTypeId().getName().getString());
     return;
   }

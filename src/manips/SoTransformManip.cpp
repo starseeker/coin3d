@@ -234,7 +234,8 @@ SoTransformManip::replaceNode(SoPath * path)
 #if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode",
                        "end of path (%p) is not an SoTransform, but an %s",
-                       fulltail, fulltail->getTypeId().getName().getString());
+                       static_cast<void *>(fulltail),
+                       fulltail->getTypeId().getName().getString());
 #endif // OBOL_DEBUG
     return FALSE;
   }
@@ -280,7 +281,8 @@ SoTransformManip::replaceNode(SoPath * path)
 #if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode",
                        "Parent node %p is not an SoGroup, but %s",
-                       parent, parent->getTypeId().getName().getString());
+                       static_cast<void *>(parent),
+                       parent->getTypeId().getName().getString());
 #endif // OBOL_DEBUG
     return FALSE;
   }

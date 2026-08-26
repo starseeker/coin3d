@@ -38,6 +38,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 
 // Realloc callback for SoOutput dynamic buffer writes
 static char *  g_wra_buf      = nullptr;
@@ -173,11 +174,13 @@ static bool test1_writeReadBuffer()
 // ---------------------------------------------------------------------------
 // Test 2: Write scene to a temp file, read back from file
 // ---------------------------------------------------------------------------
-static bool test2_writeReadFile()
+static bool test2_writeReadFile(const char * output_stem)
 {
     SoSeparator *origRoot = buildScene();
 
-    const char *tmpPath = "render_write_read_test.iv";
+    const std::string temporary_path =
+        std::string(output_stem) + "_roundtrip.iv";
+    const char *tmpPath = temporary_path.c_str();
 
     // Write to file
     SoOutput out;
@@ -363,7 +366,7 @@ static int obol_run_render_render_write_read_action(int argc, char **argv)
     printf("\n=== SoWriteAction + SoDB::readAll tests ===\n");
 
     if (!test1_writeReadBuffer())  ++failures;
-    if (!test2_writeReadFile())    ++failures;
+    if (!test2_writeReadFile(basepath)) ++failures;
     if (!test3_complexWrite())     ++failures;
     if (!test4_getOutput())        ++failures;
 

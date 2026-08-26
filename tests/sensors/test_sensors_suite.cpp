@@ -70,10 +70,10 @@ static void onNodeChange(void*, SoSensor*) { ++s_nodeFired; }
 static int s_timerFired = 0;
 static void onTimer(void*, SoSensor*) { ++s_timerFired; }
 
-static int obol_run_upstream_test_sensors_suite()
+int obol_run_upstream_test_sensors_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFieldSensor: fires when the watched field changes
@@ -249,10 +249,4 @@ static int obol_run_upstream_test_sensors_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sensors_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sensors_suite), 0);
 }

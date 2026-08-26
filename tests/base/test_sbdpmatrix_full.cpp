@@ -53,10 +53,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_sbdpmatrix_full()
+int obol_run_upstream_test_sbdpmatrix_full()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // det3(): identity matrix → 1.0
@@ -179,10 +179,4 @@ static int obol_run_upstream_test_sbdpmatrix_full()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sbdpmatrix_full) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sbdpmatrix_full), 0);
 }

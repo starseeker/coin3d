@@ -104,10 +104,10 @@ static void* bufferRealloc(void* ptr, size_t size)
     return s_buffer;
 }
 
-static int obol_run_upstream_test_actions_suite()
+int obol_run_upstream_test_actions_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallbackAction: default traversal skips switch children
@@ -626,10 +626,4 @@ static int obol_run_upstream_test_actions_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_actions_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_actions_suite), 0);
 }

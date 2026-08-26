@@ -300,7 +300,8 @@ SoBase::destroy(void)
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::destroy",
                            "%p ('%s')",
-                           this, this->getTypeId().getName().getString());
+                           static_cast<void *>(this),
+                           this->getTypeId().getName().getString());
   }
 #endif // OBOL_DEBUG
 
@@ -484,7 +485,8 @@ SoBase::ref(void) const
   if (newrefcount < currentrefcount) {
     SoDebugError::post("SoBase::ref",
                        "%p ('%s') - referencecount overflow!: %d -> %d",
-                       this, this->getTypeId().getName().getString(),
+                       static_cast<const void *>(this),
+                       this->getTypeId().getName().getString(),
                        currentrefcount, newrefcount);
 
     // The reference counter is a 32-bit signed integer, which means
@@ -494,7 +496,8 @@ SoBase::ref(void) const
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::ref",
                            "%p ('%s') - referencecount: %d",
-                           this, this->getTypeId().getName().getString(),
+                           static_cast<const void *>(this),
+                           this->getTypeId().getName().getString(),
                            newrefcount);
   }
 #else
@@ -528,7 +531,8 @@ SoBase::unref(void) const
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unref",
                            "%p ('%s') - referencecount: %d",
-                           this, this->getTypeId().getName().getString(),
+                           static_cast<const void *>(this),
+                           this->getTypeId().getName().getString(),
                            refcount);
   }
   if (refcount < 0) {
@@ -537,7 +541,8 @@ SoBase::unref(void) const
     // single SoDebugError::postWarning() call.
     SoDebugError::postWarning("SoBase::unref", "ref count less than zero");
     SoDebugError::postWarning("SoBase::unref", "...for %s instance at %p",
-                              this->getTypeId().getName().getString(), this);
+                              this->getTypeId().getName().getString(),
+                              static_cast<const void *>(this));
   }
 #endif // OBOL_DEBUG
   if (refcount == 0) {
@@ -564,7 +569,8 @@ SoBase::unrefNoDelete(void) const
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unrefNoDelete",
                            "%p ('%s') - referencecount: %d",
-                           this, this->getTypeId().getName().getString(),
+                           static_cast<const void *>(this),
+                           this->getTypeId().getName().getString(),
                            newrefcount);
   }
 #else
@@ -900,7 +906,8 @@ SoBase::addWriteReference(SoOutput * out, SbBool isfromfield)
   if (SoWriterefCounter::debugWriterefs()) {
     SoDebugError::postInfo("SoBase::addWriteReference",
                            "%p/%s/'%s': %d -> %d",
-                           this, this->getTypeId().getName().getString(),
+                           static_cast<void *>(this),
+                           this->getTypeId().getName().getString(),
                            this->getName().getString(),
                            refcount, refcount + 1);
   }
@@ -1119,7 +1126,8 @@ SoBase::read(SoInput * in, SoBase *& base, SoType expectedtype)
 #if OBOL_DEBUG
   if (SoInputP::debug()) {
     SoDebugError::postInfo("SoBase::read", "done, name=='%s' baseptr==%p, result==%s",
-                           name.getString(), base, result ? "TRUE" : "FALSE");
+                           name.getString(), static_cast<void *>(base),
+                           result ? "TRUE" : "FALSE");
   }
 #endif // OBOL_DEBUG
 
@@ -1263,7 +1271,7 @@ SoBase::writeHeader(SoOutput * out, SbBool isgroup, SbBool isengine) const
   if (SoWriterefCounter::debugWriterefs()) {
     SoDebugError::postInfo("SoBase::writeHeader",
                            "%p/%s/'%s': %d -> %d",
-                           this,
+                           static_cast<const void *>(this),
                            this->getTypeId().getName().getString(),
                            this->getName().getString(),
                            writerefcount, writerefcount - 1);

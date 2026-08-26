@@ -75,7 +75,7 @@ extern "C" {
  * 
  * \param threadid The ID of the thread to clean up
  */
-void cc_storage_thread_cleanup_enhanced(unsigned long threadid);
+void cc_storage_thread_cleanup_enhanced(cc_thread_id_t threadid);
 
 /*!
  * \brief Register a storage object for enhanced thread cleanup
@@ -141,13 +141,13 @@ public:
      * \brief Clean up all data for a specific thread across all storage objects
      * \param threadid The ID of the thread to clean up
      */
-    void cleanupThread(unsigned long threadid);
+    void cleanupThread(cc_thread_id_t threadid);
 
     /*!
      * \brief Get the current thread ID in a platform-independent way
      * \return Thread ID compatible with cc_storage key format
      */
-    static unsigned long getCurrentThreadId();
+    static cc_thread_id_t getCurrentThreadId();
 
 private:
     struct StorageRecord {
@@ -185,7 +185,7 @@ public:
     static void ensureCleanupTrigger();
 
 private:
-    unsigned long thread_id;
+    cc_thread_id_t thread_id;
     static thread_local std::unique_ptr<ThreadCleanupTrigger> instance;
 };
 

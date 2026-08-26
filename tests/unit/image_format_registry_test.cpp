@@ -3,7 +3,9 @@
 #include "base/SbImageFormatHandler.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <thread>
@@ -36,7 +38,144 @@ private:
     std::string extension_;
 };
 
+class MallocImageHandler final : public SbImageFormatHandler {
+public:
+    explicit MallocImageHandler(std::string extension)
+        : extension_(std::move(extension)) {}
+
+    const char * getFormatName() const override { return "malloc-test"; }
+    const char * getDescription() const override { return "allocator ownership test"; }
+    std::vector<std::string> getExtensions() const override { return {extension_}; }
+
+    unsigned char * readImage(const char *, int * width, int * height,
+                              int * components) override
+    {
+        if (width) *width = 1;
+        if (height) *height = 1;
+        if (components) *components = 1;
+        auto * data = static_cast<unsigned char *>(std::malloc(1));
+        if (data) data[0] = 42;
+        return data;
+    }
+
+    bool saveImage(const char *, const unsigned char *, int, int, int) override
+    {
+        return false;
+    }
+
+    void freeImageData(unsigned char * data) override
+    {
+        frees_.fetch_add(1, std::memory_order_relaxed);
+        std::free(data);
+    }
+
+    int freeCount() const { return frees_.load(std::memory_order_relaxed); }
+
+private:
+    std::string extension_;
+    std::atomic<int> frees_{0};
+};
+
+class TemporaryImageFile {
+public:
+    explicit TemporaryImageFile(const char * extension)
+    {
+        static std::atomic<unsigned long> serial{0};
+        path_ = std::filesystem::temp_directory_path() /
+            ("obol-image-registry-" +
+             std::to_string(serial.fetch_add(1, std::memory_order_relaxed)) +
+             extension);
+    }
+
+    ~TemporaryImageFile()
+    {
+        std::error_code ignored;
+        std::filesystem::remove(path_, ignored);
+    }
+
+    const char * c_str() const { return path_string().c_str(); }
+
+private:
+    const std::string & path_string() const
+    {
+        path_cache_ = path_.string();
+        return path_cache_;
+    }
+
+    std::filesystem::path path_;
+    mutable std::string path_cache_;
+};
+
 } // namespace
+
+TEST(ImageFormatRegistry, BuiltInPngRoundTripPreservesPixels)
+{
+    SbImageFormatRegistry & registry = SbImageFormatRegistry::getInstance();
+    TemporaryImageFile file(".png");
+    const unsigned char source[] = {
+        255, 0, 0, 255, 0, 255, 0, 128,
+        0, 0, 255, 64, 255, 255, 255, 0
+    };
+
+    ASSERT_TRUE(registry.saveImage(file.c_str(), source, 2, 2, 4))
+        << registry.getLastError();
+
+    int width = 0;
+    int height = 0;
+    int components = 0;
+    unsigned char * decoded =
+        registry.readImage(file.c_str(), &width, &height, &components);
+    ASSERT_NE(decoded, nullptr) << registry.getLastError();
+    EXPECT_EQ(width, 2);
+    EXPECT_EQ(height, 2);
+    EXPECT_EQ(components, 4);
+    EXPECT_EQ(std::memcmp(decoded, source, sizeof(source)), 0);
+    registry.freeImageData(decoded);
+}
+
+TEST(ImageFormatRegistry, BuiltInJpegCanReadItsOwnOutput)
+{
+    SbImageFormatRegistry & registry = SbImageFormatRegistry::getInstance();
+    TemporaryImageFile file(".jpg");
+    const unsigned char source[] = {
+        255, 0, 0, 0, 255, 0,
+        0, 0, 255, 255, 255, 255
+    };
+
+    ASSERT_TRUE(registry.saveImage(file.c_str(), source, 2, 2, 3))
+        << registry.getLastError();
+
+    int width = 0;
+    int height = 0;
+    int components = 0;
+    unsigned char * decoded =
+        registry.readImage(file.c_str(), &width, &height, &components);
+    ASSERT_NE(decoded, nullptr) << registry.getLastError();
+    EXPECT_EQ(width, 2);
+    EXPECT_EQ(height, 2);
+    EXPECT_EQ(components, 3);
+    registry.freeImageData(decoded);
+}
+
+TEST(ImageFormatRegistry, FreesDataWithTheHandlerThatAllocatedIt)
+{
+    SbImageFormatRegistry & registry = SbImageFormatRegistry::getInstance();
+    static std::atomic<unsigned long> serial{0};
+    const std::string extension =
+        "malloc-owner-" +
+        std::to_string(serial.fetch_add(1, std::memory_order_relaxed));
+    auto handler = std::make_unique<MallocImageHandler>(extension);
+    MallocImageHandler * handler_ptr = handler.get();
+    registry.registerHandler(std::move(handler));
+
+    const std::string filename = "unused." + extension;
+    unsigned char * data =
+        registry.readImage(filename.c_str(), nullptr, nullptr, nullptr);
+    ASSERT_NE(data, nullptr);
+    EXPECT_EQ(data[0], 42);
+    registry.freeImageData(data);
+    EXPECT_EQ(handler_ptr->freeCount(), 1);
+}
 
 TEST(ImageFormatRegistry, ConcurrentRegistrationQueriesAndErrorsAreIsolated)
 {

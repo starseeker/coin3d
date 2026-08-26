@@ -69,6 +69,7 @@ public:
 
   static SoNode * getProfilerOverlay(void);
   static SoProfilerStats * getProfilerStatsNode(void);
+  static void cleanupProfilerResources(void);
 }; // SoActionP
 
 #endif // !OBOL_SOACTIONP_H

@@ -92,7 +92,7 @@ SoConvexDataCache::SoConvexDataCache(SoState * const state)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoConvexDataCache::SoConvexDataCache",
-                           "Cache created: %p", this);
+                           "Cache created: %p", static_cast<void *>(this));
     
   }
 #endif // debug
@@ -106,7 +106,7 @@ SoConvexDataCache::~SoConvexDataCache()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoConvexDataCache::~SoConvexDataCache",
-                           "Cache destructed: %p", this);
+                           "Cache destructed: %p", static_cast<void *>(this));
     
   }
 #endif // debug

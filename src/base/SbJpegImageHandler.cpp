@@ -32,7 +32,32 @@
 
 #include "SbJpegImageHandler.h"
 #include <cstdlib>
+#include <limits>
 #include <memory>
+
+// stb_image is used only as a JPEG decoder here.  Restricting the compiled
+// implementation avoids carrying its unrelated format decoders into Obol.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+#define STBI_ONLY_JPEG
+#define STB_IMAGE_IMPLEMENTATION
+#include "../../external/nanort/stb_image.h"
+#undef STB_IMAGE_IMPLEMENTATION
+#undef STBI_ONLY_JPEG
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 // Include TooJPEG implementation
 #define TOOJPEG_IMPLEMENTATION
@@ -53,7 +78,7 @@ const char* SbJpegImageHandler::getFormatName() const
 
 const char* SbJpegImageHandler::getDescription() const
 {
-  return "JPEG image format using TooJPEG library";
+  return "JPEG image format using stb_image and TooJPEG";
 }
 
 std::vector<std::string> SbJpegImageHandler::getExtensions() const
@@ -61,22 +86,54 @@ std::vector<std::string> SbJpegImageHandler::getExtensions() const
   return {"jpg", "jpeg"};
 }
 
-unsigned char* SbJpegImageHandler::readImage([[maybe_unused]] const char* filename, int* width, int* height, int* components)
+unsigned char* SbJpegImageHandler::readImage(const char* filename, int* width, int* height, int* components)
 {
-  // Image reading is not currently supported in the minimal build
-  setError("JPEG image reading not supported in minimal build");
+  setError("");
   if (width) *width = 0;
   if (height) *height = 0;
   if (components) *components = 0;
-  return nullptr;
+  if (!filename) {
+    setError("Null filename provided for JPEG read");
+    return nullptr;
+  }
+
+  int imagewidth = 0;
+  int imageheight = 0;
+  int imagecomponents = 0;
+  unsigned char * data = stbi_load(filename, &imagewidth, &imageheight,
+                                   &imagecomponents, 0);
+  if (!data) {
+    const char * reason = stbi_failure_reason();
+    setError(reason ? reason : "JPEG decoding failed");
+    return nullptr;
+  }
+  if (imagewidth <= 0 || imageheight <= 0 ||
+      imagecomponents < 1 || imagecomponents > 4) {
+    stbi_image_free(data);
+    setError("JPEG decoder returned invalid image dimensions or components");
+    return nullptr;
+  }
+
+  if (width) *width = imagewidth;
+  if (height) *height = imageheight;
+  if (components) *components = imagecomponents;
+  return data;
 }
 
 bool SbJpegImageHandler::saveImage(const char* filename, const unsigned char* imagedata,
                                   int width, int height, int components)
 {
   setError("");
-  if (!filename || !imagedata || width <= 0 || height <= 0 || components <= 0) {
+  if (!filename || !imagedata || width <= 0 || height <= 0 ||
+      components < 1 || components > 4) {
     setError("Invalid parameters for JPEG save");
+    return false;
+  }
+
+  const size_t pixelcount = static_cast<size_t>(width) *
+                            static_cast<size_t>(height);
+  if (pixelcount > std::numeric_limits<size_t>::max() / 3u) {
+    setError("JPEG image dimensions are too large");
     return false;
   }
   
@@ -96,16 +153,23 @@ bool SbJpegImageHandler::saveImage(const char* filename, const unsigned char* im
   
   try {
     if (components == 4) {
-      // Convert RGBA to RGB by discarding alpha channel
-      std::unique_ptr<unsigned char[]> rgbData(new unsigned char[width * height * 3]);
+      // Convert RGBA to RGB by discarding alpha channel.
+      std::unique_ptr<unsigned char[]> rgbData(new unsigned char[pixelcount * 3u]);
       
-      for (int i = 0; i < width * height; i++) {
+      for (size_t i = 0; i < pixelcount; i++) {
         rgbData[i * 3] = imagedata[i * 4];
         rgbData[i * 3 + 1] = imagedata[i * 4 + 1];
         rgbData[i * 3 + 2] = imagedata[i * 4 + 2];
       }
       
       success = TooJpeg::writeJpeg(writeCallback, rgbData.get(), width, height, true, 90);
+    } else if (components == 2) {
+      // TooJPEG accepts one-byte grayscale or three-byte RGB input.  Strip
+      // the alpha byte from grayscale-alpha images instead of accidentally
+      // treating the interleaved alpha bytes as neighboring pixels.
+      std::unique_ptr<unsigned char[]> grayData(new unsigned char[pixelcount]);
+      for (size_t i = 0; i < pixelcount; ++i) grayData[i] = imagedata[i * 2];
+      success = TooJpeg::writeJpeg(writeCallback, grayData.get(), width, height, false, 90);
     } else {
       // Use data directly (RGB or grayscale)
       bool isRGB = (components >= 3);
@@ -136,6 +200,12 @@ bool SbJpegImageHandler::saveImage(const char* filename, const unsigned char* im
   }
   
   return success;
+}
+
+void
+SbJpegImageHandler::freeImageData(unsigned char * imagedata)
+{
+  stbi_image_free(imagedata);
 }
 
 void SbJpegImageHandler::getVersion(int* major, int* minor, int* micro) const

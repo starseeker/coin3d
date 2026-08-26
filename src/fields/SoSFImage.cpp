@@ -141,13 +141,19 @@ public:
     SbVec2s dims;
     SbVec2s offset;
     std::vector<unsigned char> pixels;
+    uint64_t generation;
   };
+
+  static constexpr size_t MAX_SUBTEXTURE_BYTES = 16u * 1024u * 1024u;
+  static constexpr size_t MAX_SUBTEXTURE_UPDATES = 64u;
 
   SoSFImageP(void) {
     this->image = new SbImage;
     this->freeimage = NULL;
     this->deleteimage = NULL;
     this->neverwrite = FALSE;
+    this->updategeneration = 0;
+    this->subtexturebytes = 0;
   }
   ~SoSFImageP() {
     delete this->image;
@@ -159,6 +165,44 @@ public:
   unsigned char * freeimage; // free this data using free()
   SbBool neverwrite;
   std::vector<std::unique_ptr<SubTexture> > subtextures;
+  uint64_t updategeneration;
+  size_t subtexturebytes;
+
+  uint64_t nextGeneration(void) {
+    ++this->updategeneration;
+    // Do not terminate a host application if an artificial test somehow
+    // forces the counter through its otherwise unreachable wrap point.
+    if (this->updategeneration == 0) this->updategeneration = 1;
+    return this->updategeneration;
+  }
+
+  void clearSubTextures(void) {
+    this->subtextures.clear();
+    this->subtexturebytes = 0;
+  }
+
+  void markFullUpdate(void) {
+    this->clearSubTextures();
+    (void)this->nextGeneration();
+  }
+
+  void appendSubTexture(std::unique_ptr<SubTexture> sub) {
+    sub->generation = this->nextGeneration();
+    const size_t bytes = sub->pixels.size();
+    if (bytes > MAX_SUBTEXTURE_BYTES) {
+      // The system-memory image already contains this update. Keeping no
+      // delta makes GL consumers perform a correct full-image fallback.
+      this->clearSubTextures();
+      return;
+    }
+    this->subtexturebytes += bytes;
+    this->subtextures.push_back(std::move(sub));
+    while (this->subtextures.size() > MAX_SUBTEXTURE_UPDATES ||
+           this->subtexturebytes > MAX_SUBTEXTURE_BYTES) {
+      this->subtexturebytes -= this->subtextures.front()->pixels.size();
+      this->subtextures.erase(this->subtextures.begin());
+    }
+  }
 };
 
 #define PRIVATE(p) ((p)->pimpl)
@@ -244,11 +288,6 @@ SoSFImage::operator=(const SoSFImage & field)
 
   this->setValue(size, nc, bytes);
   PRIVATE(this)->neverwrite = PRIVATE(&field)->neverwrite;
-  PRIVATE(this)->subtextures.clear();
-  for (const auto & source : PRIVATE(&field)->subtextures) {
-    std::unique_ptr<SoSFImageP::SubTexture> copy(new SoSFImageP::SubTexture(*source));
-    PRIVATE(this)->subtextures.push_back(std::move(copy));
-  }
   return *this;
 }
 
@@ -298,7 +337,7 @@ SoSFImage::readValue(SoInput * in)
   // A syntactically valid image header begins a full replacement. Clear the
   // old update history before changing the image so a truncated payload can
   // never leave records that describe unrelated pixel storage.
-  PRIVATE(this)->subtextures.clear();
+  PRIVATE(this)->markFullUpdate();
 
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSFImage::readValue", "image dimensions: %dx%dx%d",
@@ -532,7 +571,7 @@ SoSFImage::setValue(const SbVec2s & size, const int nc,
     PRIVATE(this)->freeimage = const_cast<unsigned char *>(pixels);
     break;
   }
-  PRIVATE(this)->subtextures.clear();
+  PRIVATE(this)->markFullUpdate();
   this->valueChanged();
 }
 
@@ -570,7 +609,12 @@ SoSFImage::finishEditing(void)
     sub->dims = size;
     sub->offset.setValue(0, 0);
     sub->pixels.assign(pixels, pixels + bytes);
-    PRIVATE(this)->subtextures.push_back(std::move(sub));
+    // Preserve the public append/history semantics while the bounded history
+    // has room. Large images and evicted histories use full-upload fallback.
+    PRIVATE(this)->appendSubTexture(std::move(sub));
+  }
+  else {
+    PRIVATE(this)->markFullUpdate();
   }
   this->valueChanged();
 }
@@ -615,7 +659,7 @@ SoSFImage::setSubValue(
   sub->offset = offset;
   sub->pixels.assign(pixels, pixels + pixelcount * static_cast<size_t>(nc));
   apply_subtexture(PRIVATE(this)->image, image_size, nc, *sub);
-  PRIVATE(this)->subtextures.push_back(std::move(sub));
+  PRIVATE(this)->appendSubTexture(std::move(sub));
   this->valueChanged();
 }
 
@@ -675,7 +719,7 @@ SoSFImage::setSubValues(
     apply_subtexture(PRIVATE(this)->image, image_size, nc, *sub);
   }
   for (auto & sub : pending) {
-    PRIVATE(this)->subtextures.push_back(std::move(sub));
+    PRIVATE(this)->appendSubTexture(std::move(sub));
   }
   this->valueChanged();
 }
@@ -720,6 +764,29 @@ SoSFImage::hasSubTextures(int & numsubtextures)
 {
   numsubtextures = static_cast<int>(PRIVATE(this)->subtextures.size());
   return numsubtextures > 0 ? TRUE : FALSE;
+}
+
+uint64_t
+SoSFImage::getUpdateGeneration(void) const
+{
+  return PRIVATE(this)->updategeneration;
+}
+
+unsigned char *
+SoSFImage::getSubTextureForGeneration(uint64_t generation,
+                                     SbVec2s & dims,
+                                     SbVec2s & offset) const
+{
+  for (const auto & sub : PRIVATE(this)->subtextures) {
+    if (sub->generation == generation) {
+      dims = sub->dims;
+      offset = sub->offset;
+      return const_cast<unsigned char *>(sub->pixels.data());
+    }
+  }
+  dims.setValue(0, 0);
+  offset.setValue(0, 0);
+  return NULL;
 }
 
 /*!

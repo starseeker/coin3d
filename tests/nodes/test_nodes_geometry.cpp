@@ -76,10 +76,10 @@ static bool floatNear(float a, float b, float eps = 0.01f)
     return std::fabs(a - b) < eps;
 }
 
-static int obol_run_upstream_test_nodes_geometry()
+int obol_run_upstream_test_nodes_geometry()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFaceSet
@@ -334,10 +334,4 @@ static int obol_run_upstream_test_nodes_geometry()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodes_geometry) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_geometry), 0);
 }

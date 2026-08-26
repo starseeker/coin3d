@@ -64,10 +64,10 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-static int obol_run_upstream_test_sb_rotation_plane()
+int obol_run_upstream_test_sb_rotation_plane()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // ======================================================================
     // SbRotation
@@ -309,10 +309,4 @@ static int obol_run_upstream_test_sb_rotation_plane()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sb_rotation_plane) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sb_rotation_plane), 0);
 }

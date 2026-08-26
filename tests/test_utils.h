@@ -37,10 +37,10 @@
  * @file test_utils.h
  * @brief Shared GTest support for the upstream-derived test cases
  *
- * The upstream-derived cases use this small recorder while they are being
- * expressed as GTest cases.  It preserves the original per-check messages
- * and lets a source keep running after one check fails, while each failure is
- * also reported through GTest's normal result stream.
+ * Each retained check is registered as an independent GTest.  Its source
+ * function runs once so shared setup, teardown, and registry state retain
+ * their historical semantics; the cached check results are then routed
+ * individually through GTest's filtering and reporting.
  */
 
 #include <iostream>
@@ -48,13 +48,14 @@
 #include <vector>
 #include <cstdio>
 #include <gtest/gtest.h>
+#include "framework/upstream_test_registration.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
 
 namespace ObolTest {
 
-class GTestResultRecorder {
+class UpstreamCheckRecorder {
 private:
     std::string current_test_name;
     int failed_tests = 0;
@@ -62,9 +63,11 @@ private:
 public:
     void startTest(const std::string& name) {
         current_test_name = name;
+        detail::beginUpstreamCheck(name);
     }
     
     void endTest(bool passed, const std::string& error_msg = "") {
+        if (detail::finishUpstreamCheck(passed, error_msg)) return;
         if (!passed) {
             ++failed_tests;
             ADD_FAILURE() << current_test_name

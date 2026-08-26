@@ -52,10 +52,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_nodes_path()
+int obol_run_upstream_test_nodes_path()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoPath::getClassTypeId() != SoType::badType()
@@ -445,10 +445,4 @@ static int obol_run_upstream_test_nodes_path()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodes_path) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_path), 0);
 }

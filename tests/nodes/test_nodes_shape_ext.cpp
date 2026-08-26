@@ -67,10 +67,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_nodes_shape_ext()
+int obol_run_upstream_test_nodes_shape_ext()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoComplexity
@@ -389,10 +389,4 @@ static int obol_run_upstream_test_nodes_shape_ext()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodes_shape_ext) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_shape_ext), 0);
 }

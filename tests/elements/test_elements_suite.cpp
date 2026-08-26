@@ -87,10 +87,10 @@ static SoCallbackAction::Response nodeCallback(void * /*data*/,
     return SoCallbackAction::CONTINUE;
 }
 
-static int obol_run_upstream_test_elements_suite()
+int obol_run_upstream_test_elements_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoDrawStyleElement::getClassTypeId
@@ -375,10 +375,4 @@ static int obol_run_upstream_test_elements_suite()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_elements_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_elements_suite), 0);
 }

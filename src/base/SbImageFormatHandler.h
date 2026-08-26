@@ -36,7 +36,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
+#include <unordered_map>
 
 // Forward declarations
 class SbString;
@@ -130,9 +132,12 @@ private:
   
   std::vector<std::unique_ptr<SbImageFormatHandler>> handlers;
   mutable std::shared_mutex handlersMutex;
+  std::unordered_map<unsigned char *, SbImageFormatHandler *> allocations;
+  mutable std::mutex allocationsMutex;
   
   std::string getFileExtension(const char* filename) const;
   std::vector<SbImageFormatHandler*> getHandlersSnapshot() const;
+  void rememberAllocation(unsigned char * data, SbImageFormatHandler * handler);
   void setError(const std::string& error) const;
 };
 

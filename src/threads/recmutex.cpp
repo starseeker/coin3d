@@ -141,7 +141,7 @@ cc_recmutex_destruct(cc_recmutex * recmutex)
 static int recmutex_lock_internal(cc_recmutex * recmutex, int wait)
 {
   int level = -1; /* return -1 for recmutex_try_lock() if we couldn't get the mutex */
-  unsigned long id = cc_thread_id();
+  const cc_thread_id_t id = cc_thread_id();
   
   assert(recmutex != NULL);
   cc_mutex_lock(&recmutex->mutex);

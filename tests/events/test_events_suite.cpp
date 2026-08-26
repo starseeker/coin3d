@@ -72,10 +72,10 @@ static void keyboardEventCb(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-static int obol_run_upstream_test_events_suite()
+int obol_run_upstream_test_events_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoKeyboardEvent: set/get key, state, position, shift modifier
@@ -248,10 +248,4 @@ static int obol_run_upstream_test_events_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_events_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_events_suite), 0);
 }

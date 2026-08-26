@@ -83,10 +83,10 @@ static SoSeparator * buildPickScene()
     return root;
 }
 
-static int obol_run_upstream_test_actions_pick()
+int obol_run_upstream_test_actions_pick()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRayPickAction class type
@@ -328,10 +328,4 @@ static int obol_run_upstream_test_actions_pick()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_actions_pick) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_actions_pick), 0);
 }

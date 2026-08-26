@@ -1529,7 +1529,7 @@ SoOutput::resolveRoutes(void)
         int writerefcount = PRIVATE(this)->counter->getWriteref(fromc);
         SoDebugError::postInfo("SoOutput::resolveRoutes",
                                "%p/%s/'%s': %d -> %d",
-                               fromc,
+                               static_cast<void *>(fromc),
                                fromc->getTypeId().getName().getString(),
                                fromc->getName().getString(),
                                writerefcount, writerefcount - 1);
@@ -1541,7 +1541,7 @@ SoOutput::resolveRoutes(void)
         int writerefcount = PRIVATE(this)->counter->getWriteref(toc);
         SoDebugError::postInfo("SoOutput::resolveRoutes",
                                "%p/%s/'%s': %d -> %d",
-                               toc,
+                               static_cast<void *>(toc),
                                toc->getTypeId().getName().getString(),
                                toc->getName().getString(),
                                writerefcount, writerefcount - 1);

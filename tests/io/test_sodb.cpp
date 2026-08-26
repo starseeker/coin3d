@@ -110,10 +110,10 @@ static void writeNodeBinary(SoNode* root, char** outBuf, size_t* outSize)
     *outSize = nbytes;
 }
 
-static int obol_run_upstream_test_sodb()
+int obol_run_upstream_test_sodb()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoDB: realTime global field is set and close to wall-clock time
@@ -380,10 +380,4 @@ static int obol_run_upstream_test_sodb()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sodb) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sodb), 0);
 }

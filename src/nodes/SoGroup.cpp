@@ -808,7 +808,7 @@ SoGroup::removeChild(SoNode * child)
 #if OBOL_DEBUG
     SoDebugError::post("SoGroup::removeChild",
 		       "tried to remove non-existent child %p (%s)",
-		       child,
+                       static_cast<void *>(child),
 		       child ? child->getTypeId().getName().getString() : "");
 #endif // OBOL_DEBUG
     return;
@@ -874,8 +874,8 @@ SoGroup::replaceChild(SoNode * oldchild, SoNode * newchild)
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGroup::replaceChild",
 			 "(%p) from %p (%s) to %p (%s)",
-			 this,
-			 oldchild,
+                       static_cast<void *>(this),
+                       static_cast<void *>(oldchild),
 			 oldchild->getTypeId().getName().getString(),
 			 newchild,
 			 newchild->getTypeId().getName().getString());
@@ -887,8 +887,8 @@ SoGroup::replaceChild(SoNode * oldchild, SoNode * newchild)
   if (idx < 0 || idx > this->getNumChildren()) {
     SoDebugError::post("SoGroup::replaceChild",
 		       "(%p) Tried to remove non-existent child %p (%s)",
-		       this,
-		       oldchild,
+                       static_cast<void *>(this),
+                       static_cast<void *>(oldchild),
 		       oldchild->getTypeId().getName().getString());
     return;
   }

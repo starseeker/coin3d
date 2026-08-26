@@ -109,10 +109,10 @@ static bool matrixIsIdentity(const SbMatrix & m)
     return true;
 }
 
-static int obol_run_upstream_test_draggers()
+int obol_run_upstream_test_draggers()
 {
     TestFixture fixture;
-    GTestResultRecorder  runner;
+    UpstreamCheckRecorder  runner;
 
     // -----------------------------------------------------------------------
     // SoTranslate1Dragger: instantiation and type
@@ -892,10 +892,4 @@ static int obol_run_upstream_test_draggers()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_draggers) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_draggers), 0);
 }

@@ -508,7 +508,8 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
                                 "might be more errors)",
                                 index,
                                 this->coinstate.numdiffuse-1,
-                                tail, name != SbName::empty() ? name.getString() : "<noname>");
+                                static_cast<void *>(tail),
+                                name != SbName::empty() ? name.getString() : "<noname>");
       first = 0;
     }
 

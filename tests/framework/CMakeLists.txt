@@ -33,12 +33,17 @@ endif()
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
     target_compile_definitions(obol_test_support PRIVATE OBOL_DUAL_GL_BUILD)
 endif()
+if(OBOL_PROFILING)
+    # A small number of API-contract tests need to know whether the library
+    # contains the optional implementation.  Keep the macro scoped to test
+    # code rather than exposing this private build detail to Obol consumers.
+    target_compile_definitions(obol_test_support PUBLIC OBOL_PROFILING)
+endif()
 target_link_libraries(obol_test_support
     PUBLIC
         ${PROJECT_NAME}
         ${OBOL_TARGET_LINK_LIBRARIES}
         GTest::gtest
-        lodepng
 )
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     # render_fixture.cpp owns the GLX context implementation, so the support
@@ -66,6 +71,7 @@ target_include_directories(obol_test_support
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_BINARY_DIR}/src
         ${PROJECT_SOURCE_DIR}/external/nanort
+        ${PROJECT_SOURCE_DIR}/external
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 if(EXISTS "${PROJECT_SOURCE_DIR}/fonts/Iosevka/IosevkaAile-Regular.ttc")
@@ -175,107 +181,99 @@ target_include_directories(obol_integration_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/cad/picking
 )
 
-# OSMesa is the portable deterministic raster backend for visual conformance
-# tests.  System-GL tests remain a separate optional backend lane.
+# Every backend-independent rendering contract belongs in one manifest.  Each
+# enabled backend compiles and discovers exactly this corpus, which prevents a
+# new software-lane regression test from silently missing native OpenGL.
+set(OBOL_PORTABLE_RENDER_SOURCES
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_fixture_smoke_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/offscreen_renderer_api_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_semantic_contracts_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/interaction_contracts_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/portable_feature_contracts_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/demo_catalogue_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/subtexture_render_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/visual_regression_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_lighting.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_cameras.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_colored_cube.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_coordinates.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_indexed_face_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_point_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_mesh.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_indexed_line_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_face_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_line_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_triangle_strip_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_vertex_colors.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_marker_set.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_image_node.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_sphere_position.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_reset_transform.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_switch_visibility.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_drawstyle.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_lod.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_text3.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_overlay.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_text2.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_no3d.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_demo.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_cubemap.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_gl_big_image.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_multi_texture.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_transparency.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_ascii_text.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_annotation.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_array_multiple_copy.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_checker_texture.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_clip_plane.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_shadow.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_gradient.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_background_gradient.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_iosevka_text2.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_iosevka_text3.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_text_demo.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_sorender_manager.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_gl_features.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture3.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_bump_map.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_environment.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_alpha_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture_transform.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_depth_buffer.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_shape_hints.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_viewport_scene.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_texture.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_texture_multi_mgr.cpp
+    ${PROJECT_SOURCE_DIR}/examples/demo_scenes/demo_scenes.cpp
+)
+
+function(obol_configure_render_target target)
+    target_include_directories(${target} PRIVATE
+        ${PROJECT_SOURCE_DIR}/examples/demo_scenes)
+    target_compile_definitions(${target} PRIVATE
+        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
+endfunction()
+
+# OSMesa is the deterministic software lane.  In a dual build its selection
+# remains runtime-controlled through OBOL_TEST_RENDER_BACKEND.
 if(OBOL_USE_SWRAST)
-    # These cover the former primitives/materials/transforms image wrappers
-    # with feature-level contracts rather than backend-specific golden files.
     obol_add_gtest(obol_render_tests "render;osmesa"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=swrast"
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_fixture_smoke_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/offscreen_renderer_api_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_semantic_contracts_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/interaction_contracts_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/portable_feature_contracts_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/demo_catalogue_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/subtexture_render_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/visual_regression_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lighting.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_cameras.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_colored_cube.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_coordinates.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_indexed_face_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_point_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_mesh.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_indexed_line_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_face_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_line_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_triangle_strip_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_vertex_colors.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_marker_set.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_image_node.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sphere_position.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_reset_transform.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_switch_visibility.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_drawstyle.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lod.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_text3.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_overlay.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_text2.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_no3d.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_demo.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_cubemap.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_gl_big_image.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_multi_texture.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_transparency.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_ascii_text.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_annotation.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_array_multiple_copy.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_checker_texture.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_clip_plane.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shadow.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_gradient.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_background_gradient.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_iosevka_text2.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_iosevka_text3.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_text_demo.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sorender_manager.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_gl_features.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture3.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_bump_map.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_environment.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_alpha_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture_transform.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_depth_buffer.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shape_hints.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_viewport_scene.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_texture.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_texture_multi_mgr.cpp
-        ${PROJECT_SOURCE_DIR}/examples/demo_scenes/demo_scenes.cpp
-    )
-    target_include_directories(obol_render_tests PRIVATE
-        ${PROJECT_SOURCE_DIR}/examples/demo_scenes
-    )
-    target_compile_definitions(obol_render_tests PRIVATE
-        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
+        ${OBOL_PORTABLE_RENDER_SOURCES})
+    obol_configure_render_target(obol_render_tests)
 else()
     message(STATUS "Software-rasterizer render lane: skipped (OBOL_USE_SWRAST=OFF)")
 endif()
 
-# Exercise the native OpenGL dispatch and GLX context path independently of
-# OSMesa.  The retained references were generated with GLX and use explicit
-# cross-driver tolerances; the focused semantic and visual contracts
-# deliberately share source with the software lane.
+# Exercise native dispatch and GLX with the same portable contracts.
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
         TEST_PREFIX "system-gl."
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_fixture_smoke_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/offscreen_renderer_api_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_semantic_contracts_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/portable_feature_contracts_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/subtexture_render_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/visual_regression_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lighting.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_cameras.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_colored_cube.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_coordinates.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_texture.cpp
-    )
-    target_compile_definitions(obol_system_gl_render_tests PRIVATE
-        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
+        ${OBOL_PORTABLE_RENDER_SOURCES})
+    obol_configure_render_target(obol_system_gl_render_tests)
 elseif(OBOL_USE_SYSTEM_GL)
     message(STATUS
         "System-GL render lane: skipped (the modern native fixture currently requires GLX)")
@@ -293,9 +291,9 @@ endif()
 # -----------------------------------------------------------------------------
 # Upstream-derived unit cases
 # -----------------------------------------------------------------------------
-# These cases retain their useful, broad API coverage, but each source now
-# registers a GTest case directly.  They share obol_test_support with the
-# focused unit tests; no generated main() wrapper or second runner is needed.
+# These cases retain their useful, broad API coverage.  Their original check
+# boundaries are generated as individual, filterable GTest cases; there are no
+# one-case-per-source wrappers or standalone executables.
 set(OBOL_UPSTREAM_TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_extended.cpp
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_pick.cpp
@@ -360,8 +358,36 @@ set(OBOL_UPSTREAM_TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/sensors/test_sensors_suite.cpp
 )
 
+find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+set(OBOL_GENERATED_UPSTREAM_TESTS
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/upstream_test_cases.cpp")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${OBOL_UPSTREAM_TEST_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/generate_upstream_gtests.py")
+execute_process(
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/generate_upstream_gtests.py"
+        --root "${PROJECT_SOURCE_DIR}"
+        --output "${OBOL_GENERATED_UPSTREAM_TESTS}"
+        ${OBOL_UPSTREAM_TEST_SOURCES}
+    RESULT_VARIABLE OBOL_UPSTREAM_GENERATOR_RESULT
+    OUTPUT_VARIABLE OBOL_UPSTREAM_GENERATOR_OUTPUT
+    ERROR_VARIABLE OBOL_UPSTREAM_GENERATOR_ERROR
+)
+if(NOT OBOL_UPSTREAM_GENERATOR_RESULT EQUAL 0)
+    message(FATAL_ERROR
+        "Failed to generate native upstream GTests:\n"
+        "${OBOL_UPSTREAM_GENERATOR_ERROR}")
+endif()
+string(STRIP "${OBOL_UPSTREAM_GENERATOR_OUTPUT}" OBOL_UPSTREAM_GENERATOR_OUTPUT)
+message(STATUS "${OBOL_UPSTREAM_GENERATOR_OUTPUT}")
+set_source_files_properties("${OBOL_GENERATED_UPSTREAM_TESTS}"
+    PROPERTIES GENERATED TRUE)
+
 target_sources(obol_unit_tests PRIVATE
-    ${OBOL_UPSTREAM_TEST_SOURCES})
+    ${OBOL_UPSTREAM_TEST_SOURCES}
+    "${OBOL_GENERATED_UPSTREAM_TESTS}")
 target_include_directories(obol_unit_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/tests/utils
     ${PROJECT_SOURCE_DIR}/src
@@ -369,90 +395,97 @@ target_include_directories(obol_unit_tests PRIVATE
 
 
 # -----------------------------------------------------------------------------
-# Every rendering source is now a normal GTest translation unit.  Keep the
-# source list explicit for the modern cases above, then add the converted
-# upstream-style cases to the same executable and discovery stream.  There are
-# no per-source executables or generated main() adapters left in this lane.
-if(OBOL_USE_SWRAST)
-    # Keep converted rendering cases in a reviewable manifest.  A new test is
-    # intentionally a CMake change, so a source file cannot silently enter a
-    # build just because it appeared in the directory.
-    set(OBOL_UPSTREAM_RENDER_SOURCES
-        ${PROJECT_SOURCE_DIR}/tests/rendering/nogl_scenegraph_test.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_draggers.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_edit_cycle.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_basic_context.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_bbox_action.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action_deep.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_node.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_camera_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_draggers.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_embree.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_converter.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_callback_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_propagation.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection_events.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_field_connections.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_action_modes.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_deep.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_nanort.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_image_deep.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_light_manips.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lod_picking.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_manip_sequences.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_material_binding.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort_shadow.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nodekit_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen_advanced.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_path_operations.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_filter.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_procedural_shape.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_mesh_deep.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport_lod.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_raypick_shapes.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_render_manager_full.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_rt_proxy_shapes.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_search_action.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_selection_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensor_interaction.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensors_rendering.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shader_program.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shadow_advanced.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_simple_draggers.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sogl_bindings.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_text3_parts.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_view_volume_ops.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_viewport.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/render_write_read_action.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/stt_iosevka.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/stt_reference.cpp
-        ${PROJECT_SOURCE_DIR}/tests/rendering/test_shadow_direct.cpp
-    )
-    target_sources(obol_render_tests PRIVATE
-        ${OBOL_UPSTREAM_RENDER_SOURCES})
-    target_include_directories(obol_render_tests PRIVATE
+# Retained rendering cases remain in a reviewable manifest.  A new test is an
+# intentional CMake change, and every enabled GL backend receives the same
+# source list.  The shared headless helper selects system GL or OSMesa from the
+# executable's OBOL_TEST_RENDER_BACKEND environment.
+set(OBOL_RETAINED_RENDER_SOURCES
+    ${PROJECT_SOURCE_DIR}/tests/rendering/nogl_scenegraph_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_draggers.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_edit_cycle.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_basic_context.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_bbox_action.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action_deep.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_node.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_camera_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_draggers.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_embree.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_converter.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_callback_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_propagation.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection_events.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_field_connections.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_action_modes.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_deep.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_nanort.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_image_deep.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_light_manips.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_lod_picking.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_manip_sequences.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_material_binding.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort_shadow.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_nodekit_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen_advanced.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_path_operations.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_filter.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_procedural_shape.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_mesh_deep.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport_lod.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_raypick_shapes.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_render_manager_full.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_rt_proxy_shapes.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_search_action.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_selection_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensor_interaction.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensors_rendering.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_shader_program.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_shadow_advanced.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_simple_draggers.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_sogl_bindings.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_text3_parts.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_view_volume_ops.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_viewport.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_write_read_action.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/stt_iosevka.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/stt_reference.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/test_shadow_direct.cpp
+)
+
+function(obol_add_retained_render_sources target)
+    target_sources(${target} PRIVATE
+        ${OBOL_RETAINED_RENDER_SOURCES})
+    target_include_directories(${target} PRIVATE
         ${PROJECT_SOURCE_DIR}/tests/utils
         ${PROJECT_SOURCE_DIR}/tests/testlib
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_BINARY_DIR}/src
         ${PROJECT_SOURCE_DIR}/external/nanort
-        ${PROJECT_SOURCE_DIR}/external/nanort/examples/common
+        ${PROJECT_SOURCE_DIR}/external/nanort/examples/common)
+    if(EXISTS "${PROJECT_SOURCE_DIR}/fonts/Iosevka/IosevkaAile-Regular.ttc")
+        target_compile_definitions(${target} PRIVATE
+            OBOL_FONTS_DIR="${PROJECT_SOURCE_DIR}/fonts")
+    endif()
+endfunction()
+
+if(TARGET obol_render_tests)
+    obol_add_retained_render_sources(obol_render_tests)
+    target_include_directories(obol_render_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/external/osmesa/include)
     target_compile_definitions(obol_render_tests PRIVATE OBOL_SWRAST_BUILD)
     if(OBOL_USE_SYSTEM_GL)
         target_compile_definitions(obol_render_tests PRIVATE OBOL_DUAL_GL_BUILD)
     endif()
-    if(EXISTS "${PROJECT_SOURCE_DIR}/fonts/Iosevka/IosevkaAile-Regular.ttc")
-        target_compile_definitions(obol_render_tests PRIVATE
-            OBOL_FONTS_DIR="${PROJECT_SOURCE_DIR}/fonts")
-    endif()
+endif()
+
+if(TARGET obol_system_gl_render_tests)
+    obol_add_retained_render_sources(obol_system_gl_render_tests)
 endif()

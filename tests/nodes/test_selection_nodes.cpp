@@ -73,10 +73,10 @@ static void onDeselected(void * /*userdata*/, SoPath * /*path*/)
     ++g_deselectionCount;
 }
 
-static int obol_run_upstream_test_selection_nodes()
+int obol_run_upstream_test_selection_nodes()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // =========================================================================
     // SoSelection
@@ -337,10 +337,4 @@ static int obol_run_upstream_test_selection_nodes()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_selection_nodes) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_selection_nodes), 0);
 }

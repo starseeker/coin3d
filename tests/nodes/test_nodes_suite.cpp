@@ -131,10 +131,10 @@ using namespace ObolTest;
 // Factory function needed by SoType::createType
 static void* createDummyInstance(void*) { return reinterpret_cast<void*>(0x1); }
 
-static int obol_run_upstream_test_nodes_suite()
+int obol_run_upstream_test_nodes_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAnnotation: class initialized (ref/unref, getTypeId)
@@ -1119,10 +1119,4 @@ static int obol_run_upstream_test_nodes_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodes_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodes_suite), 0);
 }

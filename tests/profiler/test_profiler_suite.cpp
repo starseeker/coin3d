@@ -51,15 +51,30 @@
 #include <Inventor/SoType.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/misc/SoState.h>
+
+#include "profiler/SoProfilerP.h"
+
+#include <atomic>
+#include <thread>
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_profiler_suite()
+namespace {
+
+class ProfilerGLRenderActionAccess : public SoGLRenderAction {
+public:
+    static const SoEnabledElementsList & enabledElements()
+    {
+        return *getClassEnabledElements();
+    }
+};
+
+} // namespace
+
+int obol_run_upstream_test_profiler_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProfiler::init can be called without crashing
@@ -67,7 +82,9 @@ static int obol_run_upstream_test_profiler_suite()
     runner.startTest("SoProfiler::init does not crash");
     {
         SoProfiler::init();
-        runner.endTest(true);
+        const bool pass = (SoProfiler::isEnabled() == FALSE);
+        runner.endTest(pass, pass ? "" :
+            "SoProfiler::init unexpectedly enabled runtime profiling");
     }
 
     // -----------------------------------------------------------------------
@@ -84,8 +101,6 @@ static int obol_run_upstream_test_profiler_suite()
     // -----------------------------------------------------------------------
     runner.startTest("SoProfiler::isEnabled returns FALSE before enable");
     {
-        // Ensure profiler is disabled (init() alone does not enable it)
-        SoProfiler::enable(FALSE);
         bool pass = (SoProfiler::isEnabled() == FALSE);
         runner.endTest(pass, pass ? "" : "SoProfiler::isEnabled should be FALSE before enable");
     }
@@ -211,7 +226,7 @@ static int obol_run_upstream_test_profiler_suite()
     // -----------------------------------------------------------------------
     runner.startTest("SoProfiler enable/disable round-trip after init");
     {
-        // init sets enabled=TRUE; verify we can toggle it and restore state
+        // Verify that runtime control remains usable after initialization.
         SbBool originalState = SoProfiler::isEnabled();
         SoProfiler::enable(FALSE);
         bool disabledOk = (SoProfiler::isEnabled() == FALSE);
@@ -229,20 +244,55 @@ static int obol_run_upstream_test_profiler_suite()
     }
 
     // -----------------------------------------------------------------------
-    // SoProfilerElement is accessible on SoGLRenderAction state when enabled
+    // SoProfilerElement is registered for SoGLRenderAction after initialization
     // -----------------------------------------------------------------------
-    runner.startTest("SoProfilerElement is enabled for SoGLRenderAction when profiler is on");
+    runner.startTest("SoProfilerElement is registered for SoGLRenderAction");
     {
         // SoProfilerStats::initClass() calls SO_ENABLE(SoGLRenderAction, SoProfilerElement)
-        // so after SoProfiler::init(), the element must be available on that action.
-        SoProfiler::enable(TRUE);
-        SoGLRenderAction action(SbViewportRegion(100, 100));
-        SoState * state = action.getState();
-        bool pass = (state != NULL) &&
-            state->isElementEnabled(SoProfilerElement::getClassStackIndex());
+        // so after SoProfiler::init(), the element must appear in that action's
+        // class metadata even while collection is disabled.
         SoProfiler::enable(FALSE);
+        const SoTypeList & elements =
+            ProfilerGLRenderActionAccess::enabledElements().getElements();
+        const int stackIndex = SoProfilerElement::getClassStackIndex();
+        const bool pass = stackIndex >= 0 && stackIndex < elements.getLength() &&
+            elements[stackIndex] == SoProfilerElement::getClassTypeId();
         runner.endTest(pass, pass ? "" :
-            "SoProfilerElement not enabled on SoGLRenderAction state after profiler init");
+            "SoProfilerElement not registered for SoGLRenderAction after profiler init");
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal traversal pauses are local to the current thread
+    // -----------------------------------------------------------------------
+    runner.startTest("Profiler traversal pause is scoped and thread-local");
+    {
+        SoProfiler::enable(TRUE);
+        std::atomic<bool> otherThreadEnabled{false};
+        bool pausedHere = false;
+        {
+            SoProfilerP::ScopedPause pause;
+            pausedHere = (SoProfiler::isEnabled() == FALSE);
+            std::thread observer([&] {
+#ifdef OBOL_PROFILING
+                otherThreadEnabled.store(SoProfiler::isEnabled() == TRUE,
+                                         std::memory_order_release);
+#else
+                otherThreadEnabled.store(SoProfiler::isEnabled() == FALSE,
+                                         std::memory_order_release);
+#endif
+            });
+            observer.join();
+        }
+#ifdef OBOL_PROFILING
+        const bool restored = (SoProfiler::isEnabled() == TRUE);
+#else
+        const bool restored = (SoProfiler::isEnabled() == FALSE);
+#endif
+        SoProfiler::enable(FALSE);
+        const bool pass = pausedHere && restored &&
+            otherThreadEnabled.load(std::memory_order_acquire);
+        runner.endTest(pass, pass ? "" :
+            "profiler pause leaked across threads or outlived its scope");
     }
 
     // -----------------------------------------------------------------------
@@ -275,10 +325,4 @@ static int obol_run_upstream_test_profiler_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_profiler_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_profiler_suite), 0);
 }

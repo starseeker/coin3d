@@ -73,10 +73,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_engines_suite()
+int obol_run_upstream_test_engines_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCalculator: simple arithmetic via expression
@@ -336,10 +336,4 @@ static int obol_run_upstream_test_engines_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_engines_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_engines_suite), 0);
 }

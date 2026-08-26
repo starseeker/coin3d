@@ -61,10 +61,10 @@ static bool isFiniteVec(const SbVec3f & v)
     return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
 }
 
-static int obol_run_upstream_test_projectors_suite()
+int obol_run_upstream_test_projectors_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // Build a perspective view volume used by all projector tests
     SbViewVolume vv;
@@ -169,10 +169,4 @@ static int obol_run_upstream_test_projectors_suite()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_projectors_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_projectors_suite), 0);
 }

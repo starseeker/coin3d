@@ -63,10 +63,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_nodekit_traversal()
+int obol_run_upstream_test_nodekit_traversal()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoShapeKit: basic instantiation and type check
@@ -227,10 +227,4 @@ static int obol_run_upstream_test_nodekit_traversal()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_nodekit_traversal) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_nodekit_traversal), 0);
 }

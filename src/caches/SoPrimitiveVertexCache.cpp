@@ -301,7 +301,7 @@ SoPrimitiveVertexCache::SoPrimitiveVertexCache(SoState * state)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoPrimitiveVertexCache::SoPrimitiveVertexCache",
-                           "Cache constructed: %p", this);
+                           "Cache constructed: %p", static_cast<void *>(this));
 
   }
 #endif // debug
@@ -319,7 +319,7 @@ SoPrimitiveVertexCache::~SoPrimitiveVertexCache()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoPrimitiveVertexCache::~SoPrimitiveVertexCache",
-                           "Cache destructed: %p", this);
+                           "Cache destructed: %p", static_cast<void *>(this));
 
   }
 #endif // debug

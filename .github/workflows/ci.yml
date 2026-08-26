@@ -52,6 +52,7 @@ jobs:
             -G "Unix Makefiles" \
             -DCMAKE_BUILD_TYPE=Release \
             -DOBOL_BUILD_TESTS=ON \
+            -DOBOL_WARNINGS_AS_ERRORS=ON \
             -DOBOL_USE_UNITY_BUILD=${{ matrix.unity_build }} \
             ${{ matrix.cmake_gl_flags }}
 
@@ -113,4 +114,4 @@ jobs:
           setarch "$(uname -m)" -R ctest --test-dir build-tsan \
             --output-on-failure \
             --timeout 180 \
-            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords)\.'
+            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords|ImageFormatRegistry|UpstreamProfilerSuite)\.'

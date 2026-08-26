@@ -79,10 +79,10 @@ static SbViewVolume makeViewVolume()
     return vv;
 }
 
-static int obol_run_upstream_test_projectors_deep()
+int obol_run_upstream_test_projectors_deep()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     SbViewVolume vv = makeViewVolume();
 
@@ -242,10 +242,4 @@ static int obol_run_upstream_test_projectors_deep()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_projectors_deep) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_projectors_deep), 0);
 }

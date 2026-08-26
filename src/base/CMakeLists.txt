@@ -30,6 +30,7 @@ set(OBOL_BASE_FILES
 	SbImageFormatHandler.cpp
 	SbImageResize.cpp
 	SbJpegImageHandler.cpp
+	SbPngImageHandler.cpp
 	SbLine.cpp
 	SbMatrix.cpp
 	SbName.cpp
@@ -90,6 +91,7 @@ set(OBOL_BASE_INTERNAL_FILES
 	heapp.h
 	namemap.h
 	namemap.cpp
+	SbVecI32Conversion.h
 )
 
 # build module object library

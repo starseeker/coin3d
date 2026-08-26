@@ -163,6 +163,34 @@ TEST(ImageFields, InvalidDimensionsDoNotCorruptExistingImages)
     EXPECT_EQ(base_image.getSize(), SbVec3s(1, 1, 0));
 }
 
+TEST(ImageFields, SubImageHistoryIsBoundedWithoutLosingCurrentPixels)
+{
+    SoSFImage image;
+    const unsigned char initial[] = {0};
+    image.setValue(SbVec2s(1, 1), 1, initial);
+
+    for (int update = 0; update < 100; ++update) {
+        unsigned char pixel[] = {static_cast<unsigned char>(update)};
+        image.setSubValue(SbVec2s(1, 1), SbVec2s(0, 0), pixel);
+    }
+
+    int retained = 0;
+    EXPECT_TRUE(image.hasSubTextures(retained));
+    EXPECT_EQ(retained, 64);
+
+    SbVec2s dims;
+    SbVec2s offset;
+    unsigned char * oldest = image.getSubTexture(0, dims, offset);
+    ASSERT_NE(oldest, nullptr);
+    EXPECT_EQ(oldest[0], 36);
+
+    SbVec2s size;
+    int components = 0;
+    const unsigned char * current = image.getValue(size, components);
+    ASSERT_NE(current, nullptr);
+    EXPECT_EQ(current[0], 99);
+}
+
 TEST(ImageFields, NeverWriteOmitsPixelPayload)
 {
     SoSFImage image;

@@ -157,10 +157,10 @@ static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWi
 // main
 // ============================================================================
 
-static int obol_run_upstream_test_procedural_shape()
+int obol_run_upstream_test_procedural_shape()
 {
     TestFixture fixture;
-    GTestResultRecorder  runner;
+    UpstreamCheckRecorder  runner;
 
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
@@ -1031,10 +1031,4 @@ static int obol_run_upstream_test_procedural_shape()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_procedural_shape) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_procedural_shape), 0);
 }

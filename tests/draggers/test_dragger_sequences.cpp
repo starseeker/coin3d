@@ -119,10 +119,10 @@ static bool searchDragger(SoDragger * d, SoType t)
     return found;
 }
 
-static int obol_run_upstream_test_dragger_sequences()
+int obol_run_upstream_test_dragger_sequences()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRotateCylindricalDragger
@@ -593,10 +593,4 @@ static int obol_run_upstream_test_dragger_sequences()
     }
 
     return runner.getSummary();
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_dragger_sequences) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_dragger_sequences), 0);
 }

@@ -233,7 +233,8 @@ SoTimerSensor::unschedule(void)
   if (!this->isScheduled()) {
     SoDebugError::postWarning("SoTimerSensor::unschedule",
                               "%p not scheduled (istriggering=%s)",
-                              this, this->istriggering ? "TRUE" : "FALSE");
+                              static_cast<void *>(this),
+                              this->istriggering ? "TRUE" : "FALSE");
     return;
   }
 #endif // OBOL_DEBUG

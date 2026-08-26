@@ -62,13 +62,14 @@
 class SoNodeProfiling {
 public:
   SoNodeProfiling(void)
-    : pretime(SbTime::zero()), entryindex(-1)
+    : pretime(SbTime::zero()), entryindex(-1), active(false)
   {
   }
 
   void preTraversal(SoAction * action)
   {
-    if (!SoNodeProfiling::isActive(action)) return;
+    this->active = SoNodeProfiling::isActive(action);
+    if (!this->active) return;
 
     SoState * state = action->getState();
     SoProfilerElement * profilerelt = SoProfilerElement::get(state);
@@ -88,7 +89,10 @@ public:
 
   void postTraversal(SoAction * action)
   {
-    if (!SoNodeProfiling::isActive(action)) return;
+    // Cache the decision made before traversal.  Besides cutting the disabled
+    // hot path from two global checks to one, this keeps pre/post accounting
+    // paired if another thread toggles profiling during the child traversal.
+    if (!this->active) return;
 
     if (action->isOfType(SoGLRenderAction::getClassTypeId()) &&
         SoProfilerP::shouldSyncGL())
@@ -117,14 +121,20 @@ public:
 
   static bool isActive(SoAction * action)
   {
+#ifdef OBOL_PROFILING
     if (!SoProfiler::isEnabled()) return false;
     SoState * state = action->getState();
     return state->isElementEnabled(SoProfilerElement::getClassStackIndex()) ? true : false;
+#else
+    (void) action;
+    return false;
+#endif
   }
 
 private:
   SbTime pretime;
   int entryindex;
+  bool active;
 
 };
 

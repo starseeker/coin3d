@@ -40,8 +40,8 @@
   \class SbJpegImageHandler SbJpegImageHandler.h
   \brief JPEG image format handler using TooJPEG library.
   
-  This handler provides JPEG image saving capability using the embedded
-  TooJPEG library. Reading is not currently supported (returns null).
+  This handler reads JPEG images with the bundled stb_image decoder and saves
+  them with the embedded TooJPEG encoder.
 */
 class SbJpegImageHandler : public SbImageFormatHandler {
 public:
@@ -57,6 +57,7 @@ public:
   unsigned char* readImage(const char* filename, int* width, int* height, int* components) override;
   bool saveImage(const char* filename, const unsigned char* imagedata,
                 int width, int height, int components) override;
+  void freeImageData(unsigned char * imagedata) override;
   
   // Version info
   void getVersion(int* major, int* minor, int* micro) const override;

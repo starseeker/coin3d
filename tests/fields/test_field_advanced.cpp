@@ -68,10 +68,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_field_advanced()
+int obol_run_upstream_test_field_advanced()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSFRotation: setValue(axis, angle) / getValue(axis, angle) round-trip
@@ -391,10 +391,4 @@ static int obol_run_upstream_test_field_advanced()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_field_advanced) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_field_advanced), 0);
 }

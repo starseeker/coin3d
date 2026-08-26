@@ -21,7 +21,7 @@ migration guide.
 8. [Collision Detection Action Removed](#8-collision-detection-action-removed)
 9. [Platform-Specific Context Code Removed](#9-platform-specific-context-code-removed)
 10. [PostScript / Hardcopy Output Always Included](#10-postscript--hardcopy-output-always-included)
-11. [Profiling Subsystem Off by Default](#11-profiling-subsystem-off-by-default)
+11. [Profiling Compiled In, Runtime Off by Default](#11-profiling-compiled-in-runtime-off-by-default)
 12. [Font Handling Simplified](#12-font-handling-simplified)
 13. [Threading Primitives Modernized](#13-threading-primitives-modernized)
 14. [Dead Code and Obsolete Classes Removed](#14-dead-code-and-obsolete-classes-removed)
@@ -420,39 +420,36 @@ option is needed and no source changes are required relative to upstream Coin.
 
 ---
 
-## 11. Profiling Subsystem Off by Default
+## 11. Profiling Compiled In, Runtime Off by Default
 
 ### What changed
 
-In upstream Coin the profiling subsystem is always compiled in and activated by
-setting the `COIN_PROFILER` environment variable at runtime.
-
-In Obol, the profiling code is compiled in but **`SoProfiler::isEnabled()`
-always returns `FALSE` unless the build is configured with
-`-DOBOL_PROFILING=ON`**.  With that option off (the default) the entire
-profiling code path is unreachable at runtime regardless of the `COIN_PROFILER`
-environment variable.
+Obol compiles the profiling subsystem by default (`OBOL_PROFILING=ON`), but
+initialization alone does not start data collection.  Profiling remains off
+until the application calls `SoProfiler::enable(TRUE)` or sets the
+`OBOL_PROFILER` environment variable.  A size- or latency-sensitive build can
+still configure `-DOBOL_PROFILING=OFF`; in that configuration
+`SoProfiler::isEnabled()` always returns `FALSE`.
 
 ### Why
 
-Profiling instrumentation adds dead-code weight to every hot traversal path
-(`SoSeparator`, `SoGroup`, `SoMaterial`).  Until the overhead has been
-benchmarked against realistic scenes the subsystem is kept disabled by default
-so that performance regressions cannot be silently introduced.
+Keeping the implementation available makes performance diagnosis possible in
+normal builds without requiring a rebuild.  The runtime-off path performs only
+the inexpensive enable-state check; collection, timing, report generation, and
+overlay work do not run until profiling is explicitly enabled.
 
 ### User implications
 
 `SoProfilingReportGenerator`, `SbProfilingData`, and related classes are
-always compiled but are not reachable at runtime unless `-DOBOL_PROFILING=ON`
-is specified at CMake configure time:
+available in a default build.  Enable collection explicitly when it is needed:
 
 ```bash
-cmake -S . -B build_dir -DOBOL_PROFILING=ON
+OBOL_PROFILER=on your_application
 ```
 
-When enabled, profiling behaves identically to upstream Coin: set the
-`COIN_PROFILER` environment variable to activate it (see the upstream Coin
-documentation for the full syntax).
+Applications may instead call `SoProfiler::enable(TRUE)`.  Configure with
+`-DOBOL_PROFILING=OFF` only when excluding the instrumentation at compile time
+is an intentional requirement.
 
 ---
 
@@ -766,7 +763,7 @@ The combination of these two flags determines the build mode:
 | `HAVE_NODEKITS` | `ON` | NodeKit support |
 | `HAVE_DRAGGERS` | `ON` | Dragger support |
 | `HAVE_MANIPULATORS` | `ON` | Manipulator support |
-| `OBOL_PROFILING` | `OFF` | Enable profiling subsystem (`SoProfiler::isEnabled()` always `FALSE` when `OFF`) |
+| `OBOL_PROFILING` | `ON` | Compile the profiling subsystem; runtime collection remains opt-in |
 | `USE_EXCEPTIONS` | `ON` | Compile with C++ exceptions (GCC/Clang) |
 
 ### Build quality options
@@ -844,7 +841,7 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 | **Platform GL context** | WGL/GLX/AGL/CGL/EGL code removed | Implement `SoDB::ContextManager` for each platform |
 | **Configurable DPI** | Offscreen renderer defaults to 72 DPI; adjustable at runtime | Call `SoOffscreenRenderer::setScreenPixelsPerInch(dpi)` to override |
 | **PostScript/hardcopy** | Always compiled; API always available | No action needed; `SoVectorizePSAction` usable in all builds |
-| **Profiling** | Always compiled; off by default (`-DOBOL_PROFILING=ON` to enable) | Add CMake option; `COIN_PROFILER` env var activates it when enabled |
+| **Profiling** | Compiled in by default; runtime collection is off by default | Set `OBOL_PROFILER=on` or call `SoProfiler::enable(TRUE)` when needed |
 | **Font: SoGlyph** | Removed (was deprecated in Coin) | Use `SbFont` / `SbGlyph2D` / `SbGlyph3D` |
 | **Font: Win32 GDI / libfreetype** | Both removed; embedded `struetype` rasterizer used | No external font library needed; supply `.ttf` files via `SbFont::loadFont()` |
 | **Threading C API** | `Inventor/C/threads/` headers not public | Use `Sb*` C++ threading classes |

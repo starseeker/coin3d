@@ -73,10 +73,10 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-static int obol_run_upstream_test_sensors_extra()
+int obol_run_upstream_test_sensors_extra()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAlarmSensor: construction / destruction (class type valid)
@@ -289,10 +289,4 @@ static int obol_run_upstream_test_sensors_extra()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_sensors_extra) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_sensors_extra), 0);
 }

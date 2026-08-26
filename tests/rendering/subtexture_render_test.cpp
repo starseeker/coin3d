@@ -103,5 +103,31 @@ TEST(SubtextureRendering, UpdatesOnlyTheRequestedTextureRegion)
     EXPECT_GT(unchanged_corner[0], 220);
     EXPECT_LT(unchanged_corner[1], 30);
 
+    // Let this context fall behind far enough for the bounded delta history
+    // to evict an update. Rendering must detect the generation gap and fall
+    // back to the authoritative system-memory image.
+    unsigned char repeated_subimage[2 * 2 * 3];
+    for (int update = 0; update < 65; ++update) {
+        const unsigned char blue = update == 64 ? 255 : 0;
+        const unsigned char green = update == 64 ? 0 :
+            static_cast<unsigned char>((update & 1) ? 255 : 128);
+        for (std::size_t i = 0; i < sizeof(repeated_subimage); i += 3) {
+            repeated_subimage[i] = 0;
+            repeated_subimage[i + 1] = green;
+            repeated_subimage[i + 2] = blue;
+        }
+        texture->image.setSubValue(SbVec2s(2, 2), SbVec2s(1, 1),
+                                   repeated_subimage);
+    }
+
+    int retained_updates = 0;
+    EXPECT_TRUE(texture->image.hasSubTextures(retained_updates));
+    EXPECT_EQ(retained_updates, 64);
+    ASSERT_TRUE(fixture.render(root));
+    const auto fallback_center = pixelAt(fixture, 48, 48);
+    EXPECT_LT(fallback_center[0], 30);
+    EXPECT_LT(fallback_center[1], 30);
+    EXPECT_GT(fallback_center[2], 220);
+
     root->unref();
 }

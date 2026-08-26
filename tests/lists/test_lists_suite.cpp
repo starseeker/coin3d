@@ -59,10 +59,10 @@
 
 using namespace ObolTest;
 
-static int obol_run_upstream_test_lists_suite()
+int obol_run_upstream_test_lists_suite()
 {
     TestFixture fixture;
-    GTestResultRecorder runner;
+    UpstreamCheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbPList
@@ -395,10 +395,4 @@ static int obol_run_upstream_test_lists_suite()
     }
 
     return runner.getSummary() != 0 ? 1 : 0;
-}
-
-#include "framework/upstream_test_registration.h"
-
-TEST(UpstreamCoverage, test_lists_suite) {
-    EXPECT_EQ(ObolTest::runUpstreamCase(obol_run_upstream_test_lists_suite), 0);
 }

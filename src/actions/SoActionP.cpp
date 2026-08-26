@@ -45,18 +45,43 @@
 
 // *************************************************************************
 
+namespace {
+
+struct ProfilerStatsState {
+  std::mutex mutex;
+  SoProfilerStats * node = NULL;
+};
+
+struct ProfilerOverlayState {
+  std::mutex mutex;
+  SoNode * nodekit = NULL;
+};
+
+ProfilerStatsState & profilerStatsState(void)
+{
+  static ProfilerStatsState state;
+  return state;
+}
+
+ProfilerOverlayState & profilerOverlayState(void)
+{
+  static ProfilerOverlayState state;
+  return state;
+}
+
+} // namespace
+
+// *************************************************************************
+
 SoProfilerStats *
 SoActionP::getProfilerStatsNode(void)
 {
-  struct StatsState {
-    std::once_flag once;
-    SoProfilerStats * node = NULL;
-  };
-  static StatsState state;
-  std::call_once(state.once, []() {
+  ProfilerStatsState & state = profilerStatsState();
+  std::lock_guard<std::mutex> lock(state.mutex);
+  if (!state.node) {
     state.node = new SoProfilerStats;
     state.node->ref();
-  });
+  }
   return state.node;
 }
 
@@ -66,25 +91,42 @@ SoActionP::getProfilerOverlay(void)
   if (!SoProfiler::isEnabled() || !SoProfiler::isOverlayActive())
     return NULL;
 
-  struct OverlayState {
-    std::once_flag once;
-    SoNode * nodekit = NULL;
-  };
-  static OverlayState state;
+  ProfilerOverlayState & state = profilerOverlayState();
+  std::lock_guard<std::mutex> lock(state.mutex);
 #ifdef HAVE_NODEKITS
-  std::call_once(state.once, []() {
-      SoProfilerTopKit * kit = new SoProfilerTopKit;
-      kit->ref();
-      kit->setPart("profilingStats",
-                   SoActionP::getProfilerStatsNode());
-      state.nodekit = kit;
+  if (!state.nodekit) {
+    SoProfilerTopKit * kit = new SoProfilerTopKit;
+    kit->ref();
+    kit->setPart("profilingStats", SoActionP::getProfilerStatsNode());
+    state.nodekit = kit;
 
-      SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
-      viskit->stats.setValue(SoActionP::getProfilerStatsNode());
-      kit->addOverlayGeometry(viskit);
-    });
+    SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
+    viskit->stats.setValue(SoActionP::getProfilerStatsNode());
+    kit->addOverlayGeometry(viskit);
+  }
 #endif // HAVE_NODEKITS
   return state.nodekit;
+}
+
+void
+SoActionP::cleanupProfilerResources(void)
+{
+  {
+    ProfilerOverlayState & state = profilerOverlayState();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    if (state.nodekit) {
+      state.nodekit->unref();
+      state.nodekit = NULL;
+    }
+  }
+  {
+    ProfilerStatsState & state = profilerStatsState();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    if (state.node) {
+      state.node->unref();
+      state.node = NULL;
+    }
+  }
 }
 
 // *************************************************************************

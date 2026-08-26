@@ -61,6 +61,8 @@
 #include <atomic>
 #include <sstream>
 #include <thread>
+#include <mutex>
+#include <set>
 
 // ---------------------------------------------------------------------------
 // Shared test state
@@ -439,6 +441,40 @@ TEST(ThreadPrimitives, TypedStorageIsThreadLocal)
 TEST(ThreadPrimitives, StorageDestructorMayDestroyItsOwnStorage)
 {
     EXPECT_TRUE(test_reentrant_thread_local_storage_destruction());
+}
+
+TEST(ThreadPrimitives, StorageSeparatesConcurrentThreads)
+{
+    constexpr int thread_count = 64;
+    SbStorage storage(sizeof(int));
+    std::atomic<int> ready{0};
+    std::atomic<bool> release{false};
+    std::atomic<bool> failed{false};
+    std::mutex addresses_mutex;
+    std::set<void *> addresses;
+    std::vector<std::thread> threads;
+    threads.reserve(thread_count);
+
+    for (int index = 0; index < thread_count; ++index) {
+        threads.emplace_back([&, index] {
+            int * value = static_cast<int *>(storage.get());
+            *value = index;
+            {
+                std::lock_guard<std::mutex> lock(addresses_mutex);
+                addresses.insert(value);
+            }
+            ready.fetch_add(1, std::memory_order_release);
+            while (!release.load(std::memory_order_acquire)) {}
+            if (*value != index) failed.store(true, std::memory_order_relaxed);
+        });
+    }
+
+    while (ready.load(std::memory_order_acquire) != thread_count) {}
+    release.store(true, std::memory_order_release);
+    for (std::thread & thread : threads) thread.join();
+
+    EXPECT_FALSE(failed.load());
+    EXPECT_EQ(addresses.size(), static_cast<size_t>(thread_count));
 }
 
 TEST(ThreadPrimitives, AutoLockReleasesOnScopeExit)

@@ -503,9 +503,9 @@ SoChildList::removePathAuditor(SoPath * const path)
   if (index == -1) {
     SoDebugError::post("SoChildList::removePathAuditor",
                        "no SoPath %p is auditing list %p! (of parent %p (%s))",
-                       path,
-                       this,
-                       this->parent,
+                       static_cast<void *>(path),
+                       static_cast<void *>(this),
+                       static_cast<void *>(this->parent),
                        this->parent ? this->parent->getTypeId().getName().getString() : "<no type>");
     return;
   }

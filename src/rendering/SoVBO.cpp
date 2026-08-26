@@ -325,13 +325,14 @@ SoVBO::bindBuffer(uint32_t contextid)
   if (vbo_debug) {
     if (this->target == GL_ELEMENT_ARRAY_BUFFER) {
       SoDebugError::postInfo("SoVBO::bindBuffer",
-                             "Rendering using VBO. Index array size: %d",
-                             this->datasize / sizeof(int32_t));
+                             "Rendering using VBO. Index array size: %lld",
+                             static_cast<long long>(
+                               this->datasize / sizeof(int32_t)));
     }
     else {
       SoDebugError::postInfo("SoVBO::bindBuffer",
-                             "Setting up buffer for rendering. Datasize: %d",
-                             this->datasize);
+                             "Setting up buffer for rendering. Datasize: %lld",
+                             static_cast<long long>(this->datasize));
     }
   }
 #endif // OBOL_DEBUG

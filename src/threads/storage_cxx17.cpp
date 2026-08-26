@@ -50,8 +50,6 @@
 
 #include "threads/threads.h"
 
-#include "base/dict.h"
-
 namespace CoinInternal {
 
 // Thread-local cleanup trigger instance
@@ -89,7 +87,7 @@ void StorageRegistry::unregisterStorage(cc_storage* storage) {
     });
 }
 
-void StorageRegistry::cleanupThread(unsigned long threadid) {
+void StorageRegistry::cleanupThread(cc_thread_id_t threadid) {
     // Snapshot stable records rather than raw storage pointers. A lifetime
     // lease is acquired for only one storage at a time and is released before
     // its user destructor is invoked. Consequently a destructor may safely
@@ -120,9 +118,13 @@ void StorageRegistry::cleanupThread(unsigned long threadid) {
 #ifdef HAVE_THREADS
         if (storage->mutex) cc_mutex_lock(storage->mutex);
 #endif /* HAVE_THREADS */
-        if (storage->dict && cc_dict_get(storage->dict, threadid, &data) && data) {
-            destructor = storage->destructor;
-            cc_dict_remove(storage->dict, threadid);
+        if (storage->dict) {
+            const auto entry = storage->dict->find(threadid);
+            if (entry != storage->dict->end()) {
+                data = entry->second;
+                destructor = storage->destructor;
+                storage->dict->erase(entry);
+            }
         }
 #ifdef HAVE_THREADS
         if (storage->mutex) cc_mutex_unlock(storage->mutex);
@@ -152,7 +154,7 @@ void StorageRegistry::cleanupThread(unsigned long threadid) {
     }
 }
 
-unsigned long StorageRegistry::getCurrentThreadId() {
+cc_thread_id_t StorageRegistry::getCurrentThreadId() {
     // Use the same thread ID mechanism as the existing cc_storage implementation
     return cc_thread_id();
 }
@@ -185,7 +187,7 @@ void ThreadCleanupTrigger::ensureCleanupTrigger() {
 // C API implementation
 extern "C" {
 
-void cc_storage_thread_cleanup_enhanced(unsigned long threadid) {
+void cc_storage_thread_cleanup_enhanced(cc_thread_id_t threadid) {
     try {
         CoinInternal::StorageRegistry::getInstance().cleanupThread(threadid);
     } catch (...) {

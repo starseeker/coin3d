@@ -220,6 +220,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/lists/SbStringList.h>
+#include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/misc/SoGLBigImage.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/threads/SbMutex.h>
@@ -379,7 +380,15 @@ public:
   static SbMutex * mutex;
   int readstatus;
   SbBool glimagevalid;
-  std::unordered_map<uint32_t, int> appliedsubtextures;
+  std::unordered_map<uint32_t, uint64_t> appliedsubtextures;
+
+  static void contextCleanup(uint32_t contextid, void * closure) {
+    SoTexture2P * pimpl = static_cast<SoTexture2P *>(closure);
+    if (!SoTexture2P::mutex) return;
+    SoTexture2P::mutex->lock();
+    pimpl->appliedsubtextures.erase(contextid);
+    SoTexture2P::mutex->unlock();
+  }
 
   static void cleanup(void) {
     delete SoTexture2P::mutex;
@@ -439,6 +448,8 @@ SoTexture2::SoTexture2(void)
   PRIVATE(this)->filenamesensor = new SoFieldSensor(filenameSensorCB, this);
   PRIVATE(this)->filenamesensor->setPriority(0);
   PRIVATE(this)->filenamesensor->attach(&this->filename);
+  SoContextHandler::addContextDestructionCallback(
+    SoTexture2P::contextCleanup, PRIVATE(this));
 }
 
 /*!
@@ -447,6 +458,8 @@ SoTexture2::SoTexture2(void)
 */
 SoTexture2::~SoTexture2()
 {
+  SoContextHandler::removeContextDestructionCallback(
+    SoTexture2P::contextCleanup, PRIVATE(this));
   if (PRIVATE(this)->glimage) PRIVATE(this)->glimage->unref(NULL);
   delete PRIVATE(this)->filenamesensor;
   delete PRIVATE(this);
@@ -509,8 +522,7 @@ SoTexture2::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
   int unit = SoTextureUnitElement::get(state);
   const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-  int subtexturecount = 0;
-  (void)this->image.hasSubTextures(subtexturecount);
+  const uint64_t updategeneration = this->image.getUpdateGeneration();
   
   if ((unit == 0) && SoTextureOverrideElement::getImageOverride(state))
     return;
@@ -562,9 +574,9 @@ SoTexture2::GLRender(SoGLRenderAction * action)
                              quality);
       PRIVATE(this)->glimagevalid = TRUE;
       // Every context texture created from this point uses the already-updated
-      // system-memory image. The current context therefore starts at the full
-      // pending-subtexture count even if its GL object is created lazily.
-      PRIVATE(this)->appliedsubtextures[cachecontext] = subtexturecount;
+      // system-memory image. The current context therefore starts at the
+      // current update generation even if its GL object is created lazily.
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
       // don't cache while creating a texture object
       SoCacheElement::setInvalid(TRUE);
       if (state->isCacheOpen()) {
@@ -576,25 +588,28 @@ SoTexture2::GLRender(SoGLRenderAction * action)
     auto applied = PRIVATE(this)->appliedsubtextures.find(cachecontext);
     if (applied == PRIVATE(this)->appliedsubtextures.end()) {
       // This context has not had a texture object yet. Its lazy initial upload
-      // will use the current system-memory image, including every subtexture.
-      PRIVATE(this)->appliedsubtextures[cachecontext] = subtexturecount;
+      // will use the current system-memory image, including every update.
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
     }
-    else if (applied->second != subtexturecount) {
-      SbBool updated = applied->second < subtexturecount &&
+    else if (applied->second != updategeneration) {
+      SbBool updated = applied->second < updategeneration &&
                        PRIVATE(this)->glimage->getTypeId() ==
                          SoGLImage::getClassTypeId();
       int nc = 0;
       SbVec2s size;
       const unsigned char * bytes = this->image.getValue(size, nc);
 
-      for (int idx = applied->second; updated && idx < subtexturecount; ++idx) {
+      uint64_t generation = applied->second + 1;
+      while (updated) {
         SbVec2s subsize;
         SbVec2s offset;
         const unsigned char * subpixels =
-          this->image.getSubTexture(idx, subsize, offset);
+          this->image.getSubTextureForGeneration(generation, subsize, offset);
         updated = subpixels &&
           PRIVATE(this)->glimage->setSubData(state, subpixels, size, nc,
                                              subsize, offset);
+        if (!updated || generation == updategeneration) break;
+        ++generation;
       }
 
       if (!updated) {
@@ -615,7 +630,7 @@ SoTexture2::GLRender(SoGLRenderAction * action)
         }
         PRIVATE(this)->appliedsubtextures.clear();
       }
-      PRIVATE(this)->appliedsubtextures[cachecontext] = subtexturecount;
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
     }
   }
 

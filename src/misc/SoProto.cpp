@@ -423,7 +423,7 @@ SoProto::write(SoWriteAction * action)
     if (SoWriterefCounter::debugWriterefs()) {
       SoDebugError::postInfo("SoProto::write",
                              "%p/%s/'%s': %d -> %d",
-                             this,
+                             static_cast<void *>(this),
                              this->getTypeId().getName().getString(),
                              this->getName().getString(),
                              writerefcount, writerefcount - 1);
