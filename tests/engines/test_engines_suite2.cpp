@@ -83,10 +83,9 @@ static bool floatNear(float a, float b, float eps = 1e-5f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_engines_suite2()
+TEST(UpstreamEnginesSuite2, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBoolOperation
@@ -419,5 +418,4 @@ int obol_run_upstream_test_engines_suite2()
         runner.endTest(pass, pass ? "" : "SoComposeMatrix bad class type");
     }
 
-    return runner.getSummary();
 }

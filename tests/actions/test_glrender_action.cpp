@@ -61,10 +61,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_glrender_action()
+TEST(UpstreamActionsGlrenderAction, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     const SbViewportRegion vp(512, 384);
 
@@ -358,5 +357,4 @@ int obol_run_upstream_test_glrender_action()
             "SoGLRenderAction class type should be registered");
     }
 
-    return runner.getSummary();
 }

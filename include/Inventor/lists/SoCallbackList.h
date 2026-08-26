@@ -55,10 +55,24 @@ typedef void SoCallbackListCB(void * userdata, void * callbackdata);
 class OBOL_DLL_API SoCallbackList {
 public:
   SoCallbackList(void);
+  SoCallbackList(const SoCallbackList & other);
+  SoCallbackList & operator=(const SoCallbackList & other);
   ~SoCallbackList();
 
   void addCallback(SoCallbackListCB * f, void * userData = NULL);
   void removeCallback(SoCallbackListCB * f, void * userdata = NULL);
+
+  // Preserve strongly typed callback signatures.  Historically callers cast
+  // callbacks such as void(void *, SoDragger *) to SoCallbackListCB and the
+  // list invoked them through that incompatible type.  That happens to work
+  // on common ABIs, but is undefined C++.  These overloads erase only the
+  // callback data pointer and invoke the function through its exact type.
+  template <typename CallbackData>
+  void addCallback(void (*f)(void *, CallbackData *),
+                   void * userData = NULL);
+  template <typename CallbackData>
+  void removeCallback(void (*f)(void *, CallbackData *),
+                      void * userData = NULL);
 
   void clearCallbacks(void);
   int getNumCallbacks(void) const;
@@ -66,8 +80,64 @@ public:
   void invokeCallbacks(void * callbackdata);
 
 private:
+  class CallbackEntry {
+  public:
+    virtual ~CallbackEntry() = default;
+    virtual CallbackEntry * clone() const = 0;
+    virtual void invoke(void * userdata, void * callbackdata) const = 0;
+  };
+
+  template <typename CallbackData>
+  class TypedCallbackEntry final : public CallbackEntry {
+  public:
+    explicit TypedCallbackEntry(void (*callback)(void *, CallbackData *))
+      : function(callback) { }
+
+    CallbackEntry * clone() const override {
+      return new TypedCallbackEntry(this->function);
+    }
+    void invoke(void * userdata, void * callbackdata) const override {
+      this->function(userdata, static_cast<CallbackData *>(callbackdata));
+    }
+
+    void (*function)(void *, CallbackData *);
+  };
+
+  void copyCallbacks(const SoCallbackList & other);
+  void reportMissingCallback(void) const;
+
+  // funclist owns CallbackEntry pointers.  datalist retains the associated
+  // caller-owned userdata.  Keeping the two historical SbPList members also
+  // preserves the public class layout.
   SbPList funclist;
   SbPList datalist;
 };
+
+template <typename CallbackData>
+void
+SoCallbackList::addCallback(void (*f)(void *, CallbackData *), void * userdata)
+{
+  this->funclist.append(new TypedCallbackEntry<CallbackData>(f));
+  this->datalist.append(userdata);
+}
+
+template <typename CallbackData>
+void
+SoCallbackList::removeCallback(void (*f)(void *, CallbackData *),
+                               void * userdata)
+{
+  for (int idx = this->getNumCallbacks() - 1; idx >= 0; --idx) {
+    CallbackEntry * base = static_cast<CallbackEntry *>(this->funclist[idx]);
+    TypedCallbackEntry<CallbackData> * entry =
+      dynamic_cast<TypedCallbackEntry<CallbackData> *>(base);
+    if (entry && entry->function == f && this->datalist[idx] == userdata) {
+      delete entry;
+      this->funclist.remove(idx);
+      this->datalist.remove(idx);
+      return;
+    }
+  }
+  this->reportMissingCallback();
+}
 
 #endif // !OBOL_LISTS_SOCALLBACKLIST_H

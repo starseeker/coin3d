@@ -101,10 +101,9 @@ static void writeNodeBinary(SoNode * root, char ** outBuf, size_t * outSize)
 // Silent callback used to suppress error output during negative tests
 static void silentErrCb(const SoError * /*err*/, void * /*data*/) {}
 
-int obol_run_upstream_test_io_edge_cases()
+TEST(UpstreamIoEdgeCases, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // Build a simple scene: Separator > Cube
     SoSeparator * root = new SoSeparator;
@@ -259,5 +258,4 @@ int obol_run_upstream_test_io_edge_cases()
     }
 
     root->unref();
-    return runner.getSummary();
 }

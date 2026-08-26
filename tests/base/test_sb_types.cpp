@@ -101,10 +101,9 @@ static bool doubleNear(double a, double b, double tol = 1e-10) {
     return fabs(a - b) <= tol;
 }
 
-int obol_run_upstream_test_sb_types()
+TEST(UpstreamBaseSbTypes, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbVec3f: fromString valid/invalid
@@ -1086,5 +1085,4 @@ int obol_run_upstream_test_sb_types()
             "SbDPMatrix getTransform translation round-trip failed");
     }
 
-    return runner.getSummary();
 }

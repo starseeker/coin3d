@@ -35,6 +35,7 @@
 
 #include <Inventor/errors/SoError.h>
 
+struct cc_debugerror;
 
 
 // Avoid problem with Microsoft Win32 API headers (yes, they actually
@@ -75,7 +76,7 @@ protected:
   virtual SoErrorCBPtr getHandler(void * & data) const;
 
 private:
-  static void callbackForwarder(const void * error, void * data);
+  static void callbackForwarder(const cc_debugerror * error, void * data);
   static void commonPostHandling(Severity severity, const char * type,
                                  const char * source, const SbString & s);
 

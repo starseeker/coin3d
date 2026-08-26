@@ -116,6 +116,14 @@ public:
 */
 SoBlinker::SoBlinker(void)
 {
+  // Initialize this node's fields before wiring the internal calculator and
+  // counter to them.  connectFrom() can evaluate synchronously, so the old
+  // ordering exposed uninitialized SoSFBool/SoSFFloat storage.
+  SO_NODE_INTERNAL_CONSTRUCTOR(SoBlinker);
+
+  SO_NODE_ADD_FIELD(speed, (1));
+  SO_NODE_ADD_FIELD(on, (TRUE));
+
   PRIVATE(this) = new SoBlinkerP(this);
 
   PRIVATE(this)->calculator = new SoCalculator;
@@ -136,11 +144,6 @@ SoBlinker::SoBlinker(void)
   PRIVATE(this)->whichvalue = SO_SWITCH_NONE;
 
 
-  SO_NODE_INTERNAL_CONSTRUCTOR(SoBlinker);
-
-  SO_NODE_ADD_FIELD(speed, (1));
-  SO_NODE_ADD_FIELD(on, (TRUE));
-  
   this->whichChild.connectFrom(&PRIVATE(this)->counter->output, TRUE);
 }
 

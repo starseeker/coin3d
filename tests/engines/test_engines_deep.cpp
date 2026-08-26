@@ -65,10 +65,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_engines_deep()
+TEST(UpstreamEnginesDeep, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoDecomposeMatrix: identity matrix → translation ~(0,0,0)
@@ -310,5 +309,4 @@ int obol_run_upstream_test_engines_deep()
         runner.endTest(pass, pass ? "" : "SoTriggerAny has bad type");
     }
 
-    return runner.getSummary();
 }

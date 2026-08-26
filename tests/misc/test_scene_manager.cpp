@@ -77,10 +77,9 @@ static void renderCb(void * data, SoSceneManager * /*mgr*/)
     static_cast<RenderCap *>(data)->count++;
 }
 
-int obol_run_upstream_test_scene_manager()
+TEST(UpstreamMiscSceneManager, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // Construction / destruction
@@ -347,5 +346,4 @@ int obol_run_upstream_test_scene_manager()
             "SoSceneManager enableRealTimeUpdate(FALSE) round-trip failed");
     }
 
-    return runner.getSummary();
 }

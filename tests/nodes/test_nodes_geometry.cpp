@@ -76,10 +76,9 @@ static bool floatNear(float a, float b, float eps = 0.01f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_nodes_geometry()
+TEST(UpstreamNodesGeometry, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFaceSet
@@ -333,5 +332,4 @@ int obol_run_upstream_test_nodes_geometry()
         runner.endTest(pass, pass ? "" : "BoundingBox on SoIndexedFaceSet triangle failed");
     }
 
-    return runner.getSummary();
 }

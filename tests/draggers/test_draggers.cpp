@@ -109,10 +109,9 @@ static bool matrixIsIdentity(const SbMatrix & m)
     return true;
 }
 
-int obol_run_upstream_test_draggers()
+TEST(UpstreamDraggersDraggers, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder  runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoTranslate1Dragger: instantiation and type
@@ -891,5 +890,4 @@ int obol_run_upstream_test_draggers()
         runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoCenterballDragger");
     }
 
-    return runner.getSummary();
 }

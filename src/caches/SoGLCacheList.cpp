@@ -68,8 +68,25 @@
 // store at least one cache per cache context to support rendering in
 // multiple contexts though.
 
-static int OBOL_AUTO_CACHING = -1;
-static int OBOL_SMART_CACHING = -1;
+static int
+obol_auto_caching(void)
+{
+  static const int value = [] {
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_AUTO_CACHING");
+    return env.has_value() ? std::atoi(env->c_str()) : 1;
+  }();
+  return value;
+}
+
+static int
+obol_smart_caching(void)
+{
+  static const int value = [] {
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_SMART_CACHING");
+    return env.has_value() ? std::atoi(env->c_str()) : 0;
+  }();
+  return value;
+}
 
 // *************************************************************************
 
@@ -125,18 +142,6 @@ SoGLCacheList::SoGLCacheList(int numcaches)
   PRIVATE(this)->invalidelement = NULL;
   PRIVATE(this)->numframesok = 0;
   PRIVATE(this)->numshapes = 0;
-
-  // auto caching must be enabled using an environment variable
-  if (OBOL_AUTO_CACHING < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("OBOL_AUTO_CACHING");
-    if (env.has_value()) OBOL_AUTO_CACHING = std::atoi(env->c_str());
-    else OBOL_AUTO_CACHING = 1;
-  }
-  if (OBOL_SMART_CACHING < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("OBOL_SMART_CACHING");
-    if (env.has_value()) OBOL_SMART_CACHING = std::atoi(env->c_str());
-    else OBOL_SMART_CACHING = 0;
-  }
 
   SoContextHandler::addContextDestructionCallback(SoGLCacheListP::contextCleanup, PRIVATE(this));
 
@@ -459,7 +464,7 @@ void
 SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
 {
   // needclose is used to quickly return in close()
-  if (PRIVATE(this)->numcaches == 0 || (autocache && OBOL_AUTO_CACHING == 0)) {
+  if (PRIVATE(this)->numcaches == 0 || (autocache && obol_auto_caching() == 0)) {
     PRIVATE(this)->needclose = FALSE;
     return;
   }
@@ -482,7 +487,7 @@ SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
     if (PRIVATE(this)->numframesok >= 2 &&
         (PRIVATE(this)->autocachebits == SoGLCacheContextElement::DO_AUTO_CACHE)) {
 
-      if (OBOL_SMART_CACHING) {
+      if (obol_smart_caching()) {
         if (PRIVATE(this)->numshapes < 2) {
           if (PRIVATE(this)->numframesok >= 5) shouldcreate = TRUE;
         }

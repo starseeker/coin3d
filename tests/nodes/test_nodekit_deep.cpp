@@ -91,10 +91,9 @@ static void writeNode(SoNode * root, char ** outBuf, size_t * outSize)
     *outSize = nbytes;
 }
 
-int obol_run_upstream_test_nodekit_deep()
+TEST(UpstreamNodesNodekitDeep, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCameraKit: getPart("camera", TRUE) returns a camera
@@ -213,5 +212,4 @@ int obol_run_upstream_test_nodekit_deep()
             "SoShapeKit write/read round-trip: SoDB::readAll returned null");
     }
 
-    return runner.getSummary();
 }

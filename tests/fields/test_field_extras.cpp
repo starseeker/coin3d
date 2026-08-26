@@ -61,10 +61,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_field_extras()
+TEST(UpstreamFieldsFieldExtras, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoField::getDirty / setDirty
@@ -255,5 +254,4 @@ int obol_run_upstream_test_field_extras()
             "Freshly created SoSFFloat should not be connected from engine");
     }
 
-    return runner.getSummary();
 }

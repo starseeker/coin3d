@@ -58,11 +58,14 @@
 
 #include "../misc/SoEnvironment.h"
 
-static int vbo_vertex_count_min_limit = -1;
-static int vbo_vertex_count_max_limit = -1;
-static int vbo_render_as_vertex_arrays = -1;
-static int vbo_enabled = -1;
-static int vbo_debug = -1;
+#include <atomic>
+#include <mutex>
+
+static std::atomic<int> vbo_vertex_count_min_limit{-1};
+static std::atomic<int> vbo_vertex_count_max_limit{-1};
+static std::atomic<int> vbo_render_as_vertex_arrays{-1};
+static std::atomic<int> vbo_enabled{-1};
+static std::atomic<int> vbo_debug{-1};
 
 // VBO rendering seems to be faster than other rendering, even for
 // large VBOs. Just set the default limit very high
@@ -70,6 +73,7 @@ static const int DEFAULT_MAX_LIMIT = 100000000;
 static const int DEFAULT_MIN_LIMIT = 20;
 
 static SbHash<uint32_t, SbBool> * vbo_isfast_hash;
+static std::mutex vbo_isfast_hash_mutex;
 
 /*!
   Constructor
@@ -104,6 +108,7 @@ SoVBO::vbo_delete(void * closure, uint32_t contextid)
 SoVBO::~SoVBO()
 {
   SoContextHandler::removeContextDestructionCallback(context_destruction_cb, this);
+  const std::lock_guard<std::mutex> guard(this->mutex);
   // schedule delete for all allocated GL resources
   for(
       SbHash<uint32_t, GLuint>::const_iterator iter =
@@ -125,6 +130,7 @@ SoVBO::~SoVBO()
 // atexit cleanup function
 static void vbo_atexit_cleanup(void)
 {
+  const std::lock_guard<std::mutex> guard(vbo_isfast_hash_mutex);
   delete vbo_isfast_hash;
   vbo_isfast_hash = NULL;
   vbo_vertex_count_min_limit = -1;
@@ -142,55 +148,60 @@ SoVBO::init(void)
   coin_atexit(vbo_atexit_cleanup, CC_ATEXIT_NORMAL);
 
   // use OBOL_VBO_MAX_LIMIT to set the largest VBO we create
-  if (vbo_vertex_count_max_limit < 0) {
+  if (vbo_vertex_count_max_limit.load(std::memory_order_relaxed) < 0) {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO_MAX_LIMIT");
     if (env.has_value()) {
-      vbo_vertex_count_max_limit = std::atoi(env->c_str());
+      vbo_vertex_count_max_limit.store(std::atoi(env->c_str()),
+                                       std::memory_order_relaxed);
     }
     else {
-      vbo_vertex_count_max_limit = DEFAULT_MAX_LIMIT;
+      vbo_vertex_count_max_limit.store(DEFAULT_MAX_LIMIT,
+                                       std::memory_order_relaxed);
     }
   }
 
   // use OBOL_VBO_MIN_LIMIT to set the smallest VBO we create
-  if (vbo_vertex_count_min_limit < 0) {
+  if (vbo_vertex_count_min_limit.load(std::memory_order_relaxed) < 0) {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO_MIN_LIMIT");
     if (env.has_value()) {
-      vbo_vertex_count_min_limit = std::atoi(env->c_str());
+      vbo_vertex_count_min_limit.store(std::atoi(env->c_str()),
+                                       std::memory_order_relaxed);
     }
     else {
-      vbo_vertex_count_min_limit = DEFAULT_MIN_LIMIT;
+      vbo_vertex_count_min_limit.store(DEFAULT_MIN_LIMIT,
+                                       std::memory_order_relaxed);
     }
   }
 
   // use OBOL_VERTEX_ARRAYS to globally disable vertex array rendering
-  if (vbo_render_as_vertex_arrays < 0) {
+  if (vbo_render_as_vertex_arrays.load(std::memory_order_relaxed) < 0) {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_VERTEX_ARRAYS");
     if (env.has_value()) {
-      vbo_render_as_vertex_arrays = std::atoi(env->c_str());
+      vbo_render_as_vertex_arrays.store(std::atoi(env->c_str()),
+                                        std::memory_order_relaxed);
     }
     else {
-      vbo_render_as_vertex_arrays = 1;
+      vbo_render_as_vertex_arrays.store(1, std::memory_order_relaxed);
     }
   }
 
   // use OBOL_VBO to globally disable VBOs when doing vertex array rendering
-  if (vbo_enabled < 0) {
+  if (vbo_enabled.load(std::memory_order_relaxed) < 0) {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO");
     if (env.has_value()) {
-      vbo_enabled = std::atoi(env->c_str());
+      vbo_enabled.store(std::atoi(env->c_str()), std::memory_order_relaxed);
     }
     else {
-      vbo_enabled = 1;
+      vbo_enabled.store(1, std::memory_order_relaxed);
     }
   }
-  if (vbo_debug < 0) {
+  if (vbo_debug.load(std::memory_order_relaxed) < 0) {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_VBO");
     if (env.has_value()) {
-      vbo_debug = std::atoi(env->c_str());
+      vbo_debug.store(std::atoi(env->c_str()), std::memory_order_relaxed);
     }
     else {
-      vbo_debug = 0;
+      vbo_debug.store(0, std::memory_order_relaxed);
     }
   }
 }
@@ -204,6 +215,7 @@ SoVBO::init(void)
 void *
 SoVBO::allocBufferData(intptr_t size, SbUniqueId new_dataid)
 {
+  const std::lock_guard<std::mutex> guard(this->mutex);
   // schedule delete for all allocated GL resources
   for(
       SbHash<uint32_t, GLuint>::const_iterator iter =
@@ -242,6 +254,7 @@ SoVBO::allocBufferData(intptr_t size, SbUniqueId new_dataid)
 void
 SoVBO::setBufferData(const GLvoid * new_data, intptr_t size, SbUniqueId new_dataid)
 {
+  const std::lock_guard<std::mutex> guard(this->mutex);
   // schedule delete for all allocated GL resources
   for(
       SbHash<uint32_t, GLuint>::const_iterator iter =
@@ -277,6 +290,7 @@ SoVBO::setBufferData(const GLvoid * new_data, intptr_t size, SbUniqueId new_data
 SbUniqueId
 SoVBO::getBufferDataId(void) const
 {
+  const std::lock_guard<std::mutex> guard(this->mutex);
   return this->dataid;
 }
 
@@ -286,6 +300,7 @@ SoVBO::getBufferDataId(void) const
 void
 SoVBO::getBufferData(const GLvoid *& out_data, intptr_t & out_size)
 {
+  const std::lock_guard<std::mutex> guard(this->mutex);
   out_data = this->data;
   out_size = this->datasize;
 }
@@ -297,6 +312,7 @@ SoVBO::getBufferData(const GLvoid *& out_data, intptr_t & out_size)
 void
 SoVBO::bindBuffer(uint32_t contextid)
 {
+  const std::lock_guard<std::mutex> guard(this->mutex);
   if ((this->data == NULL) ||
       (this->datasize == 0)) {
     assert(0 && "no data in buffer");
@@ -322,7 +338,7 @@ SoVBO::bindBuffer(uint32_t contextid)
   }
 
 #if OBOL_DEBUG
-  if (vbo_debug) {
+  if (vbo_debug.load(std::memory_order_relaxed)) {
     if (this->target == GL_ELEMENT_ARRAY_BUFFER) {
       SoDebugError::postInfo("SoVBO::bindBuffer",
                              "Rendering using VBO. Index array size: %lld",
@@ -348,6 +364,7 @@ SoVBO::context_destruction_cb(uint32_t context, void * userdata)
 {
   GLuint buffer;
   SoVBO * thisp = (SoVBO*) userdata;
+  const std::lock_guard<std::mutex> guard(thisp->mutex);
 
   if (thisp->vbohash.get(context, buffer)) {
     const SoGLContext * glue = SoGLContext_instance((int) context);
@@ -364,8 +381,8 @@ SoVBO::context_destruction_cb(uint32_t context, void * userdata)
 void
 SoVBO::setVertexCountLimits(const int minlimit, const int maxlimit)
 {
-  vbo_vertex_count_min_limit = minlimit;
-  vbo_vertex_count_max_limit = maxlimit;
+  vbo_vertex_count_min_limit.store(minlimit, std::memory_order_relaxed);
+  vbo_vertex_count_max_limit.store(maxlimit, std::memory_order_relaxed);
 }
 
 /*!
@@ -376,7 +393,7 @@ SoVBO::setVertexCountLimits(const int minlimit, const int maxlimit)
 int
 SoVBO::getVertexCountMinLimit(void)
 {
-  return vbo_vertex_count_min_limit;
+  return vbo_vertex_count_min_limit.load(std::memory_order_relaxed);
 }
 
 /*!
@@ -387,13 +404,14 @@ SoVBO::getVertexCountMinLimit(void)
 int
 SoVBO::getVertexCountMaxLimit(void)
 {
-  return vbo_vertex_count_max_limit;
+  return vbo_vertex_count_max_limit.load(std::memory_order_relaxed);
 }
 
 SbBool
 SoVBO::shouldCreateVBO(SoState * state, const uint32_t contextid, const int numdata)
 {
-  if (!vbo_enabled || !vbo_render_as_vertex_arrays) return FALSE;
+  if (!vbo_enabled.load(std::memory_order_relaxed) ||
+      !vbo_render_as_vertex_arrays.load(std::memory_order_relaxed)) return FALSE;
   int minv = SoVBO::getVertexCountMinLimit();
   int maxv = SoVBO::getVertexCountMaxLimit();
   return
@@ -414,13 +432,15 @@ SoVBO::shouldRenderAsVertexArrays(SoState * OBOL_UNUSED_ARG(state),
   // don't render as vertex arrays if there are very few elements to
   // be rendered. The VA setup overhead would make it slower than just
   // doing plain immediate mode rendering.
-  return (numdata >= vbo_vertex_count_min_limit) && vbo_render_as_vertex_arrays;
+  return (numdata >= vbo_vertex_count_min_limit.load(std::memory_order_relaxed)) &&
+    vbo_render_as_vertex_arrays.load(std::memory_order_relaxed);
 }
 
 SbBool
 SoVBO::isVBOFast(const uint32_t contextid)
 {
   SbBool result = TRUE;
+  const std::lock_guard<std::mutex> guard(vbo_isfast_hash_mutex);
   assert(vbo_isfast_hash != NULL);
   (void) vbo_isfast_hash->get(contextid, result);
   return result;
@@ -443,8 +463,11 @@ SoVBO::testGLPerformance(const uint32_t contextid)
 {
   SbBool isfast;
   // did we already test this for this context?
-  assert(vbo_isfast_hash != NULL);
-  if (vbo_isfast_hash->get(contextid, isfast)) return;
+  {
+    const std::lock_guard<std::mutex> guard(vbo_isfast_hash_mutex);
+    assert(vbo_isfast_hash != NULL);
+    if (vbo_isfast_hash->get(contextid, isfast)) return;
+  }
 
   // Run time test disabled. Our old test seemed to be buggy, and
   // VBO should be fast on all platforms supporting it now. It was
@@ -452,9 +475,11 @@ SoVBO::testGLPerformance(const uint32_t contextid)
   // us. This should be handled in the driver database anyway
   const SoGLContext * glue = SoGLContext_instance(contextid);
   if (SoGLDriverDatabase::isSupported(glue, SO_GL_VERTEX_BUFFER_OBJECT)) {
-    vbo_isfast_hash->put(contextid, TRUE);
+    isfast = TRUE;
   }
   else {
-    vbo_isfast_hash->put(contextid, FALSE);
+    isfast = FALSE;
   }
+  const std::lock_guard<std::mutex> guard(vbo_isfast_hash_mutex);
+  vbo_isfast_hash->put(contextid, isfast);
 }

@@ -73,10 +73,9 @@ static void onDeselected(void * /*userdata*/, SoPath * /*path*/)
     ++g_deselectionCount;
 }
 
-int obol_run_upstream_test_selection_nodes()
+TEST(UpstreamNodesSelectionNodes, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =========================================================================
     // SoSelection
@@ -336,5 +335,4 @@ int obol_run_upstream_test_selection_nodes()
             "SoSearchAction did not find SoExtSelection");
     }
 
-    return runner.getSummary();
 }

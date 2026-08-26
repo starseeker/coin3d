@@ -87,10 +87,9 @@ static SoCallbackAction::Response nodeCallback(void * /*data*/,
     return SoCallbackAction::CONTINUE;
 }
 
-int obol_run_upstream_test_elements_suite()
+TEST(UpstreamElementsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoDrawStyleElement::getClassTypeId
@@ -374,5 +373,4 @@ int obol_run_upstream_test_elements_suite()
             "SoUnits::units field should be MILLIMETERS after assignment");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

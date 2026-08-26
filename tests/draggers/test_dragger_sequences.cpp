@@ -119,10 +119,9 @@ static bool searchDragger(SoDragger * d, SoType t)
     return found;
 }
 
-int obol_run_upstream_test_dragger_sequences()
+TEST(UpstreamDraggersDraggerSequences, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRotateCylindricalDragger
@@ -592,5 +591,4 @@ int obol_run_upstream_test_dragger_sequences()
         runner.endTest(pass, pass ? "" : "SoSearchAction did not find it");
     }
 
-    return runner.getSummary();
 }

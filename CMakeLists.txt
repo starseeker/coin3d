@@ -133,10 +133,10 @@ endif()
 
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
-option(OBOL_BUILD_TESTS "Build unit tests" ON)
+option(OBOL_BUILD_TESTS "Build unit tests" OFF)
 option(OBOL_BUILD_BENCHMARKS "Build standalone performance benchmarks" OFF)
 option(OBOL_BUILD_TEST_TOOLS "Build standalone image and test utilities" OFF)
-option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
+option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" OFF)
 option(OBOL_FETCH_SUBMODULES
   "Initialize missing registered git submodules during configure"
   OFF)
@@ -296,6 +296,9 @@ option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 #   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
 #   cmake --build <dir> && ctest
 option(OBOL_TSAN "Enable ThreadSanitizer instrumentation (GCC/Clang)" OFF)
+option(OBOL_ASAN_UBSAN
+  "Enable AddressSanitizer and UndefinedBehaviorSanitizer instrumentation"
+  OFF)
 
 # Extra warning flags for the Obol library target (GCC/Clang only).
 # Applied via target_compile_options so external dependencies are unaffected.
@@ -801,6 +804,22 @@ endif()
 #   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
 #   cmake --build <dir> && ctest --output-on-failure
 # ============================================================================
+if(OBOL_ASAN_UBSAN)
+  if(OBOL_TSAN OR OBOL_COVERAGE)
+    message(FATAL_ERROR
+      "OBOL_ASAN_UBSAN cannot be combined with OBOL_TSAN or OBOL_COVERAGE")
+  elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
+         CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(STATUS "AddressSanitizer and UndefinedBehaviorSanitizer enabled")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+  else()
+    message(WARNING
+      "OBOL_ASAN_UBSAN=ON but the compiler is not GCC/Clang; sanitizers disabled")
+    set(OBOL_ASAN_UBSAN OFF CACHE BOOL "" FORCE)
+  endif()
+endif()
+
 if(OBOL_TSAN)
   if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
      CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

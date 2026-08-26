@@ -163,13 +163,19 @@ complete worked examples.
 
 ### What changed
 
-The entire VRML and VRML97 subsystem has been removed:
+The public VRML/VRML97 node and action subsystem has been removed:
 
 * **70 headers** under `include/Inventor/VRMLnodes/` are gone.
 * `SoDB::readAllVRML()` has been removed.
 * Actions `SoToVRMLAction` and `SoToVRML2Action` have been removed.
 * `SoVRMLGroup` and all other `SoVRML*` node classes are gone.
 * VRML-specific elements and fields are removed.
+
+The legacy `SoProto` / `SoProtoInstance` implementation is intentionally
+retained because Obol's Inventor reader still uses it for PROTO definitions,
+instances, IS references, and routes. It is functional compatibility code,
+not a complete VRML97 runtime; in particular, the removed `SoVRML*` classes
+and network-backed EXTERNPROTO behavior are not restored by it.
 
 ### Why
 
@@ -757,7 +763,8 @@ The combination of these two flags determines the build mode:
 | CMake option | Default | Description |
 |---|---|---|
 | `BUILD_SHARED_LIBS` | `ON` | Shared vs. static library |
-| `OBOL_BUILD_TESTS` | `ON` | Build the GTest/CTest test suite |
+| `OBOL_BUILD_TESTS` | `OFF` | Build the GTest/CTest test suite |
+| `OBOL_BUILD_EXAMPLES` | `OFF` | Build examples and viewer applications |
 | `OBOL_BUILD_DOCS` | `OFF` | Build Doxygen API documentation (requires Doxygen) |
 | `OBOL_THREADSAFE` | `ON` | Deprecated compatibility option; thread safety is always enabled |
 | `HAVE_NODEKITS` | `ON` | NodeKit support |
@@ -773,6 +780,7 @@ The combination of these two flags determines the build mode:
 | `OBOL_USE_UNITY_BUILD` | `ON` | Unity (jumbo) build for faster compilation (CMake ≥ 3.16) |
 | `OBOL_WARNINGS` | `ON` | Enable extra warning flags (`-Wall -Wextra -Wundef -Wshadow` etc.) on the Obol target |
 | `OBOL_COVERAGE` | `OFF` | Code-coverage instrumentation (GCC/Clang; adds `coverage` CTest target) |
+| `OBOL_ASAN_UBSAN` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer instrumentation |
 | `OBOL_FETCH_SUBMODULES` | `OFF` | Permit configure to initialize missing registered git submodules |
 
 ### Viewer options

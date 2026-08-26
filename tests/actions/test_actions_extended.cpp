@@ -96,10 +96,9 @@ static bool floatNear(float a, float b, float eps = 0.01f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_actions_extended()
+TEST(UpstreamActionsExtended, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =======================================================================
     // SoGetPrimitiveCountAction
@@ -421,5 +420,4 @@ int obol_run_upstream_test_actions_extended()
         runner.endTest(pass, pass ? "" : "Unit cube bbox not ±1 in all axes");
     }
 
-    return runner.getSummary();
 }

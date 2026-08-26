@@ -76,8 +76,10 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
   - **Concurrent render** — Multiple threads, each owning an independent GL
     context and action/state, may render independent scene graphs
     simultaneously.  Call SoDB::init() once, from a quiescent startup thread,
-    before starting worker threads.  The global registries and counters used by
-    traversal are protected by their internal synchronization.  GL contexts
+    before starting worker threads.  The shared registries used by this
+    supported traversal path are protected by internal synchronization.  This
+    does not make arbitrary application callbacks or mutable node instances
+    implicitly thread-safe.  GL contexts
     must \e not be used by two threads at the same time; platform rebinding
     (glXMakeCurrent, wglMakeCurrent, or the equivalent) remains the
     application's responsibility.
@@ -202,7 +204,7 @@ public:
     renderScene() — fill a pre-allocated pixel buffer without using OpenGL.
     When this returns TRUE, SoOffscreenRenderer uses the resulting pixels
     directly and skips the entire GL pipeline.
-    SoNanoRTContextManager (tests/utils/nanort_context_manager.h) is a
+    SoNanoRTContextManager (<Obol/render/SoNanoRTContextManager.h>) is a
     reference implementation using NanoRT for ray-triangle intersection.
 
     The two paths are independent: a subclass may implement only the GL path

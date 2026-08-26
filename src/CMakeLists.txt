@@ -220,12 +220,19 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/nanort>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Obol/render>
 )
 
 # Target-specific linking (modern approach)  
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE ${OBOL_TARGET_LINK_LIBRARIES}
+    # Public utility headers, including SoNanoRTContextManager, use
+    # std::thread inline.  Consumers therefore need the platform thread link
+    # flags even when Obol itself is shared.
+    PUBLIC Threads::Threads)
 
 # For dual-GL builds, link OSMesa so osmesa_SoGLContext_* functions can resolve
 # mgl* symbols at runtime.  A shared Obol carries that runtime dependency
@@ -383,13 +390,12 @@ else()
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
 
-  # The NanoRT context manager is a diagnostic/test backend implemented by
-  # Obol.  Keep its header-only helper and nanort dependency together so
-  # package consumers do not reach into an Obol source checkout.
+  # SoNanoRTContextManager is a supported header-only rendering backend.
+  # Keep its third-party dependency beside it so quoted inclusion works from
+  # both package-manager and relocatable-prefix installs.
   install(FILES
-          ${PROJECT_SOURCE_DIR}/tests/utils/nanort_context_manager.h
           ${PROJECT_SOURCE_DIR}/external/nanort/nanort.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol/testing
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol/render
           COMPONENT development)
 
 

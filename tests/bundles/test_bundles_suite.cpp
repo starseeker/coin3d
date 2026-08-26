@@ -234,10 +234,9 @@ static SoSeparator * buildTriSceneWithNormals()
 }
 
 // =========================================================================
-int obol_run_upstream_test_bundles_suite()
+TEST(UpstreamBundlesSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoNormalBundle: construction + generation path (no normals on state)
@@ -322,7 +321,7 @@ int obol_run_upstream_test_bundles_suite()
     runner.startTest("SoMaterialBundle: SoNormalBundle has no static type (instantiation only)");
     {
         // SoBundle subclasses are not independently type-registered in Coin.
-        // Verify that SoDB::init completed without crash (via TestFixture) and
+        // Verify that the shared GTest environment initialized SoDB and
         // that SoNormalBundle objects can be constructed/destructed when state
         // is available (already tested above via SoCallbackAction).
         bool pass = true;
@@ -340,5 +339,4 @@ int obol_run_upstream_test_bundles_suite()
         runner.endTest(pass, pass ? "" : "SoVertexAttributeBinding type not found");
     }
 
-    return runner.getSummary();
 }

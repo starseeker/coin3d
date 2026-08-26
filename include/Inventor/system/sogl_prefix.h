@@ -495,8 +495,10 @@
  * --------------------------------------------------------------------- */
 #define coin_gl_current_context                    SOGL_ADD_PREFIX(coin_gl_current_context)
 #define coin_glerror_string                        SOGL_ADD_PREFIX(coin_glerror_string)
-#define sogl_current_render_glue                   SOGL_ADD_PREFIX(sogl_current_render_glue)
-#define sogl_set_current_render_glue               SOGL_ADD_PREFIX(sogl_set_current_render_glue)
+
+/* The active render traversal is a single thread-local dispatch pointer,
+   implemented in SoGL.cpp rather than by either backend instantiation.  It
+   must therefore retain its public, unprefixed name in the OSMesa glue TU. */
 
 #endif /* SOGL_PREFIX_SET */
 

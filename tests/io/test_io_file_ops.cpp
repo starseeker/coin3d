@@ -81,10 +81,9 @@ static std::string writeTempIV(const char * suffix)
     return std::string(path);
 }
 
-int obol_run_upstream_test_io_file_ops()
+TEST(UpstreamIoFileOps, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInput::openFile / closeFile
@@ -257,5 +256,4 @@ int obol_run_upstream_test_io_file_ops()
             "SoInput stack getCurFileName did not return top-of-stack file");
     }
 
-    return runner.getSummary();
 }

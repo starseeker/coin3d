@@ -82,10 +82,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_nodes_misc()
+TEST(UpstreamNodesMisc, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAnnotation
@@ -434,5 +433,4 @@ int obol_run_upstream_test_nodes_misc()
         runner.endTest(pass, pass ? "" : "SoColorIndex index field round-trip failed");
     }
 
-    return runner.getSummary();
 }

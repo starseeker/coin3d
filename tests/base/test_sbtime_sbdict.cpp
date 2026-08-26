@@ -78,10 +78,9 @@ static void countApplyData(uintptr_t /*key*/, void * /*val*/, void * data)
     static_cast<ApplyDataCtx *>(data)->count++;
 }
 
-int obol_run_upstream_test_sbtime_sbdict()
+TEST(UpstreamBaseSbtimeSbdict, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =======================================================================
     // SbTime tests
@@ -411,5 +410,4 @@ int obol_run_upstream_test_sbtime_sbdict()
         runner.endTest(pass, pass ? "" : "SbDict enter should return FALSE for duplicate key");
     }
 
-    return runner.getSummary();
 }

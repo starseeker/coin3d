@@ -79,10 +79,9 @@ static SbViewVolume makeViewVolume()
     return vv;
 }
 
-int obol_run_upstream_test_projectors_deep()
+TEST(UpstreamProjectorsDeep, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     SbViewVolume vv = makeViewVolume();
 
@@ -241,5 +240,4 @@ int obol_run_upstream_test_projectors_deep()
         runner.endTest(pass, pass ? "" : "copy() returned null");
     }
 
-    return runner.getSummary();
 }

@@ -42,6 +42,8 @@
 
 #include "misc/SbHash.h"
 
+#include <mutex>
+
 class SoState;
 
 class SoVBO {
@@ -82,6 +84,7 @@ class SoVBO {
   SbUniqueId dataid;
   SbBool didalloc;
 
+  mutable std::mutex mutex;
   SbHash<uint32_t, GLuint> vbohash;
 };
 

@@ -77,10 +77,9 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_sb_viewvolume()
+TEST(UpstreamBaseSbViewvolume, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // Orthographic view volume setup
@@ -276,5 +275,4 @@ int obol_run_upstream_test_sb_viewvolume()
         runner.endTest(pass, pass ? "" : "translateCamera did not shift sight point");
     }
 
-    return runner.getSummary();
 }

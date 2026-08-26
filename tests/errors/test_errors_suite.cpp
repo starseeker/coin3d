@@ -70,10 +70,9 @@ static void myErrorCb(const SoError * err, void * data)
 // Silent sink — used to suppress error output during negative tests
 [[maybe_unused]] static void silentCb(const SoError * /*err*/, void * /*data*/) {}
 
-int obol_run_upstream_test_errors_suite()
+TEST(UpstreamErrorsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // Class type IDs are valid
@@ -182,5 +181,4 @@ int obol_run_upstream_test_errors_suite()
             "SoDebugError should be derived from SoError");
     }
 
-    return runner.getSummary();
 }

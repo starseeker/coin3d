@@ -92,10 +92,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_field_containers()
+TEST(UpstreamFieldsFieldContainers, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =======================================================================
     // SoField
@@ -428,5 +427,4 @@ int obol_run_upstream_test_field_containers()
         runner.endTest(pass, pass ? "" : "SoMFTime set1Value/operator[] failed");
     }
 
-    return runner.getSummary();
 }

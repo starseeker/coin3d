@@ -67,10 +67,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_nodes_shape_ext()
+TEST(UpstreamNodesShapeExt, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoComplexity
@@ -388,5 +387,4 @@ int obol_run_upstream_test_nodes_shape_ext()
         runner.endTest(pass, pass ? "" : "SoPolygonOffset on default != TRUE");
     }
 
-    return runner.getSummary();
 }

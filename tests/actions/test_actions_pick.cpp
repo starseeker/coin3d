@@ -83,10 +83,9 @@ static SoSeparator * buildPickScene()
     return root;
 }
 
-int obol_run_upstream_test_actions_pick()
+TEST(UpstreamActionsPick, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoRayPickAction class type
@@ -327,5 +326,4 @@ int obol_run_upstream_test_actions_pick()
         runner.endTest(pass, pass ? "" : "Ray through cube at origin should hit");
     }
 
-    return runner.getSummary();
 }

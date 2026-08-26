@@ -76,10 +76,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_nodes_anim_misc()
+TEST(UpstreamNodesAnimMisc, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBlinker
@@ -426,5 +425,4 @@ int obol_run_upstream_test_nodes_anim_misc()
         runner.endTest(pass, pass ? "" : "SoSelection initial getNumSelected should be 0");
     }
 
-    return runner.getSummary();
 }

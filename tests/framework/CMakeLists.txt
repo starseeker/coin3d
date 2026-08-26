@@ -9,6 +9,22 @@
 find_package(GTest 1.10 REQUIRED)
 include(GoogleTest)
 
+add_test(NAME package.installed_consumer
+    COMMAND ${CMAKE_COMMAND}
+        -DOBOL_BINARY_DIR=${PROJECT_BINARY_DIR}
+        -DOBOL_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DOBOL_CONFIG=$<CONFIG>
+        "-DOBOL_GENERATOR=${CMAKE_GENERATOR}"
+        "-DOBOL_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}"
+        "-DOBOL_GENERATOR_TOOLSET=${CMAKE_GENERATOR_TOOLSET}"
+        "-DOBOL_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}"
+        "-DOBOL_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
+        -P ${PROJECT_SOURCE_DIR}/tests/package/run_consumer.cmake)
+set_tests_properties(package.installed_consumer PROPERTIES
+    LABELS "package"
+    TIMEOUT 180
+    RUN_SERIAL TRUE)
+
 add_library(obol_test_support STATIC
     image_assertions.cpp
     stb_image_write_impl.cpp
@@ -147,6 +163,34 @@ gtest_discover_tests(obol_lifecycle_tests
         TIMEOUT 30
 )
 
+# Exercise the extension-node loader with a real shared object.  The probe's
+# deliberately short class name guards against heuristic filtering of valid
+# third-party types.
+add_library(obol_dynload_probe MODULE
+    ${PROJECT_SOURCE_DIR}/tests/unit/dynload_probe.cpp)
+set_target_properties(obol_dynload_probe PROPERTIES
+    OUTPUT_NAME Probe
+    WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+target_link_libraries(obol_dynload_probe PRIVATE ${PROJECT_NAME})
+target_include_directories(obol_dynload_probe PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_BINARY_DIR}/include)
+
+if(WIN32)
+    set(_obol_dynload_environment
+        "PATH=$<TARGET_FILE_DIR:obol_dynload_probe>;$ENV{PATH}")
+elseif(APPLE)
+    set(_obol_dynload_environment
+        "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
+else()
+    set(_obol_dynload_environment
+        "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
+endif()
+obol_add_gtest(obol_dynload_tests "unit;dynload"
+    ENVIRONMENT "${_obol_dynload_environment}"
+    ${PROJECT_SOURCE_DIR}/tests/unit/type_dynload_test.cpp)
+add_dependencies(obol_dynload_tests obol_dynload_probe)
+
 obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/base_math_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/base_geometry_test.cpp
@@ -154,6 +198,7 @@ obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/base_value_types_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/draggers_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/engines_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/error_handling_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/events_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/fields_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_assertions_test.cpp
@@ -291,9 +336,9 @@ endif()
 # -----------------------------------------------------------------------------
 # Upstream-derived unit cases
 # -----------------------------------------------------------------------------
-# These cases retain their useful, broad API coverage.  Their original check
-# boundaries are generated as individual, filterable GTest cases; there are no
-# one-case-per-source wrappers or standalone executables.
+# These files are ordinary source-level GTest suites. Their retained check
+# bodies preserve broad API coverage without a parser-generated registration
+# layer or process-local result cache.
 set(OBOL_UPSTREAM_TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_extended.cpp
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_pick.cpp
@@ -358,36 +403,8 @@ set(OBOL_UPSTREAM_TEST_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/sensors/test_sensors_suite.cpp
 )
 
-find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
-set(OBOL_GENERATED_UPSTREAM_TESTS
-    "${CMAKE_CURRENT_BINARY_DIR}/generated/upstream_test_cases.cpp")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    ${OBOL_UPSTREAM_TEST_SOURCES}
-    "${CMAKE_CURRENT_SOURCE_DIR}/generate_upstream_gtests.py")
-execute_process(
-    COMMAND
-        "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/generate_upstream_gtests.py"
-        --root "${PROJECT_SOURCE_DIR}"
-        --output "${OBOL_GENERATED_UPSTREAM_TESTS}"
-        ${OBOL_UPSTREAM_TEST_SOURCES}
-    RESULT_VARIABLE OBOL_UPSTREAM_GENERATOR_RESULT
-    OUTPUT_VARIABLE OBOL_UPSTREAM_GENERATOR_OUTPUT
-    ERROR_VARIABLE OBOL_UPSTREAM_GENERATOR_ERROR
-)
-if(NOT OBOL_UPSTREAM_GENERATOR_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "Failed to generate native upstream GTests:\n"
-        "${OBOL_UPSTREAM_GENERATOR_ERROR}")
-endif()
-string(STRIP "${OBOL_UPSTREAM_GENERATOR_OUTPUT}" OBOL_UPSTREAM_GENERATOR_OUTPUT)
-message(STATUS "${OBOL_UPSTREAM_GENERATOR_OUTPUT}")
-set_source_files_properties("${OBOL_GENERATED_UPSTREAM_TESTS}"
-    PROPERTIES GENERATED TRUE)
-
 target_sources(obol_unit_tests PRIVATE
-    ${OBOL_UPSTREAM_TEST_SOURCES}
-    "${OBOL_GENERATED_UPSTREAM_TESTS}")
+    ${OBOL_UPSTREAM_TEST_SOURCES})
 target_include_directories(obol_unit_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/tests/utils
     ${PROJECT_SOURCE_DIR}/src

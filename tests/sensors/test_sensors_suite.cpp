@@ -70,10 +70,9 @@ static void onNodeChange(void*, SoSensor*) { ++s_nodeFired; }
 static int s_timerFired = 0;
 static void onTimer(void*, SoSensor*) { ++s_timerFired; }
 
-int obol_run_upstream_test_sensors_suite()
+TEST(UpstreamSensorsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoFieldSensor: fires when the watched field changes
@@ -248,5 +247,4 @@ int obol_run_upstream_test_sensors_suite()
             "SoDataSensor setTriggerPathFlag did not stick");
     }
 
-    return runner.getSummary();
 }

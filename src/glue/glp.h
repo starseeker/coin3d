@@ -1670,6 +1670,7 @@ struct SoGLContext {
   SbBool vendor_is_3dlabs;
   const char * rendererstr;
   const char * extensionsstr;
+  SbBool extensionsstr_owned;
   int maxtextureunits;
   float max_anisotropy;
 
@@ -1750,6 +1751,10 @@ void sogl_set_current_render_glue(const SoGLContext * glue);
  * Needed for a hack in SoVertexShader and SoFramgmentShader
  * Will be removed soon.
  */
+/* Legacy compatibility entry point.  Context pointers are no longer converted
+   to integer IDs because that truncates addresses on 64-bit platforms.  The
+   function now returns the dispatch context active on the calling render
+   thread, or NULL when called outside a render traversal. */
 const SoGLContext * SoGLContext_instance_from_context_ptr(void * ptr);
 
 /* ********************************************************************** */

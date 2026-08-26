@@ -70,10 +70,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_details_deep()
+TEST(UpstreamDetailsDeep, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =========================================================================
     // SoCubeDetail
@@ -309,5 +308,4 @@ int obol_run_upstream_test_details_deep()
             "SoTextDetail not a SoDetail subtype");
     }
 
-    return runner.getSummary();
 }

@@ -223,6 +223,16 @@ SoDB::init(ContextManager * context_manager)
   std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   OBOL_INIT_CHECK_THREAD();
 
+  // Repeated initialization updates only the manager.  In particular,
+  // init(nullptr) must not claim GL services are unavailable when an existing
+  // initialized database still owns a valid manager.
+  if (SoDB::isInitialized()) {
+    if (context_manager) {
+      global_context_manager.store(context_manager, std::memory_order_release);
+    }
+    return;
+  }
+
   if (!context_manager) {
     // Use fprintf here because SoError::initClasses() has not been called yet;
     // calling SoDebugError::post() before that would trigger an assert.
@@ -232,18 +242,6 @@ SoDB::init(ContextManager * context_manager)
   } else {
     // Set the global context manager
     global_context_manager.store(context_manager, std::memory_order_release);
-  }
-
-  // Allow re-initialization if a context manager is provided, even if already initialized
-  // This enables tests to be run in isolation with proper context setup
-  if (SoDB::isInitialized() && !context_manager) {
-    return; // No re-initialization without context manager
-  }
-
-  // If already initialized and context manager is provided, just update the context manager
-  if (SoDB::isInitialized() && context_manager) {
-    global_context_manager.store(context_manager, std::memory_order_release);
-    return; // Context manager updated, no need to re-initialize everything else
   }
 
   // This is to catch the (unlikely) event that the C++ compiler adds

@@ -68,10 +68,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_misc_suite()
+TEST(UpstreamMiscSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =======================================================================
     // SoType
@@ -461,5 +460,4 @@ int obol_run_upstream_test_misc_suite()
         runner.endTest(pass, pass ? "" : "SoChildList remove by index failed");
     }
 
-    return runner.getSummary();
 }

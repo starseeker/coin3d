@@ -60,10 +60,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_field_connections()
+TEST(UpstreamFieldsFieldConnections, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // connectFrom / isConnectedFromField
@@ -245,5 +244,4 @@ int obol_run_upstream_test_field_connections()
         runner.endTest(pass, pass ? "" : "SoMFFloat connectFrom failed");
     }
 
-    return runner.getSummary();
 }

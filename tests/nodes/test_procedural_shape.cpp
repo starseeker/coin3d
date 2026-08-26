@@ -157,10 +157,9 @@ static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWi
 // main
 // ============================================================================
 
-int obol_run_upstream_test_procedural_shape()
+TEST(UpstreamNodesProceduralShape, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder  runner;
+    CheckRecorder runner;
 
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
@@ -1030,5 +1029,4 @@ int obol_run_upstream_test_procedural_shape()
         runner.endTest(pass, failMsg);
     }
 
-    return runner.getSummary();
 }

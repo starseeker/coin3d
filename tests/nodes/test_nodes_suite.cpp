@@ -131,10 +131,9 @@ using namespace ObolTest;
 // Factory function needed by SoType::createType
 static void* createDummyInstance(void*) { return reinterpret_cast<void*>(0x1); }
 
-int obol_run_upstream_test_nodes_suite()
+TEST(UpstreamNodesSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAnnotation: class initialized (ref/unref, getTypeId)
@@ -1118,5 +1117,4 @@ int obol_run_upstream_test_nodes_suite()
             "SoDirectionalLightDragger deep copy failed or shared child pointer");
     }
 
-    return runner.getSummary();
 }

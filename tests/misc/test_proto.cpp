@@ -58,10 +58,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_proto()
+TEST(UpstreamMiscProto, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProto class type system
@@ -119,5 +118,4 @@ int obol_run_upstream_test_proto()
             "SoProtoInstance should be derived from SoNode");
     }
 
-    return runner.getSummary();
 }

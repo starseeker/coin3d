@@ -81,10 +81,9 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-int obol_run_upstream_test_sensors_deeper()
+TEST(UpstreamSensorsDeeper, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSensor base: setFunction/getFunction, setData/getData
@@ -318,5 +317,4 @@ int obol_run_upstream_test_sensors_deeper()
         runner.endTest(pass, pass ? "" : "setTriggerPathFlag(FALSE) failed");
     }
 
-    return runner.getSummary();
 }

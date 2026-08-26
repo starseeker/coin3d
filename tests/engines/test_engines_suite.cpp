@@ -73,10 +73,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_engines_suite()
+TEST(UpstreamEnginesSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCalculator: simple arithmetic via expression
@@ -335,5 +334,4 @@ int obol_run_upstream_test_engines_suite()
         runner.endTest(pass, pass ? "" : "SoComputeBoundingBox has bad type");
     }
 
-    return runner.getSummary();
 }

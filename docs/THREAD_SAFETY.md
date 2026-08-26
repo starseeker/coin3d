@@ -57,8 +57,8 @@ the write side when mutating a graph concurrently with traversal.  Lifecycle
 operations are serialized separately, and the initialized flag and global
 context-manager pointer are atomic.
 
-*Status:* Correct for the single-scene-graph case; does **not** protect other
-global state described below.
+*Status:* Correct within the stated scene-graph locking contract.  Other
+process-wide registries are protected independently as described below.
 
 ### 2. Field notification — global recursive mutex
 
@@ -74,8 +74,8 @@ cc_recmutex_cxx17_notify_lock()  / cc_recmutex_cxx17_notify_unlock()
 mutex) around value operations.  `SoDB::startNotify()` / `SoDB::endNotify()`
 acquire the notify mutex around notification traversals.
 
-*Status:* Protects the hot path of field evaluation and notification.  See the
-gaps listed in §5 below.
+*Status:* Protects the hot path of field evaluation and notification.  Object
+graph mutation that can overlap traversal still requires the global write lock.
 
 ### 3. Sensor queues — per-queue `SbMutex`
 
@@ -91,8 +91,8 @@ every enqueue and dequeue operation.
 `getGLDisplayList()` calls across all `SoGLImage` instances.  `SoGLBigImage`
 uses a per-instance `SbMutex`.
 
-*Status:* Correct within each class; does not protect the unrelated GL context
-list described below.
+*Status:* Correct within each class. The separate GL context registry is
+protected as described below.
 
 ### 5. Per-`SoSeparator` render-cache mutex
 
@@ -135,6 +135,28 @@ differ.  This is a diagnostic tool, not synchronization and not a concurrency
 restriction enforced by the library.
 
 *Status:* Useful for development; not a fix.
+
+### 10. GL context and destruction-callback registries
+
+The GL dispatch dictionaries are protected by a recursive registry mutex, and
+context records are destroyed when their context ID is retired. Context-created
+callbacks are snapshotted under their own mutex and invoked without holding
+that callback lock. `SoContextHandler` similarly snapshots callbacks in FILO
+order; removal marks an entry inactive and waits for any in-flight invocation,
+so an owning object may release its callback closure after removal returns.
+
+The registry lock protects lookup and lifetime. It does not transfer ownership
+of a native GL context between threads or make a platform context current.
+
+### 11. Type loading, error handlers, and small global settings
+
+`SoType` uses a shared mutex for registered-type data and a separate recursive
+loader mutex around dynamic module loading; foreign loader and `initClass()`
+code executes without holding the type registry write lock. Error callback/data
+pairs are snapshotted atomically and callbacks execute outside internal locks,
+which permits reentrant posting. Field-container user data, VBO context maps,
+offscreen renderer DPI, and immutable environment-derived settings have their
+own mutexes, atomics, or thread-safe function-local initialization.
 
 ---
 
@@ -550,14 +572,16 @@ The blockers fall into three natural phases, ordered by dependency and risk.
   ```
   `OBOL_TSAN` is mutually exclusive with `OBOL_COVERAGE`.
 
-- **Test suite** — The test suite in `tests/threads/` covers all three phases
-  (16 tests):
+- **Test suite** — The stress suite in `tests/threads/` covers all three phases
+  (20 tests):
   - Phase 1 (tests 1–11): concurrent `SbName`, `SoNode` ID, `SoBase` refcount,
     `SoType` lookup, notification counter, mixed workload.
   - Phase 2 (tests 12–14): concurrent `setName`/`getName`, GL cache context
     IDs, enabled-elements counter.
-  - Phase 3 (tests 15–16): concurrent auditor-list notification via field
-    connect/disconnect; concurrent field connect/disconnect + notification.
+  - Phase 3 (tests 15–20): concurrent context-callback registration/removal,
+    deterministic removal during active dispatch, callback cross-removal,
+    nested self-removal, auditor-list notification, and field
+    connect/disconnect + notification.
 
 - **Public API documentation** — The `SoDB` class documentation now contains
   a *Thread Safety* section stating the supported scenarios (*Concurrent render*,

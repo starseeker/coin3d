@@ -34,6 +34,7 @@
 
 #include <climits>
 #include <cstring>
+#include <atomic>
 
 #include "glue/glp.h"
 #include <Inventor/errors/SoDebugError.h>
@@ -48,10 +49,6 @@
 
 // *************************************************************************
 
-unsigned int CoinOffscreenGLCanvas::tilesizeroof = UINT_MAX;
-
-// *************************************************************************
-
 CoinOffscreenGLCanvas::CoinOffscreenGLCanvas(void)
 {
   this->size = SbVec2s(0, 0);
@@ -62,6 +59,9 @@ CoinOffscreenGLCanvas::CoinOffscreenGLCanvas(void)
   this->depth_rb = 0;
   this->fbo_initialized = FALSE;
   this->instance_mgr = NULL;
+  this->max_tile_size_cached = FALSE;
+  this->max_tile_size = SbVec2s(0, 0);
+  this->tilesizeroof = UINT_MAX;
 }
 
 CoinOffscreenGLCanvas::~CoinOffscreenGLCanvas()
@@ -80,6 +80,11 @@ CoinOffscreenGLCanvas::setContextManager(SoDB::ContextManager * mgr)
   // manager, destroy it first so the new manager starts fresh.
   if (this->context && this->instance_mgr != mgr) {
     this->destructContext();
+  }
+  if (this->instance_mgr != mgr) {
+    this->max_tile_size_cached = FALSE;
+    this->max_tile_size = SbVec2s(0, 0);
+    this->tilesizeroof = UINT_MAX;
   }
   this->instance_mgr = mgr;
 }
@@ -103,7 +108,7 @@ CoinOffscreenGLCanvas::clampSize(SbVec2s & reqsize) const
   // able to allocate a buffer of this size -- e.g. due to memory
   // constraints on the gfx card.
 
-  SbVec2s maxsize = CoinOffscreenGLCanvas::getMaxTileSize(this->effectiveMgr());
+  SbVec2s maxsize = this->getMaxTileSize(this->effectiveMgr());
   if (maxsize == SbVec2s(0, 0)) {
     // The global GL probe returned nothing usable (e.g. no system-GL context
     // could be created because we are headless or there is no display).
@@ -134,7 +139,7 @@ CoinOffscreenGLCanvas::clampSize(SbVec2s & reqsize) const
   // time, and it will also kill all GL resources tied to the
   // context).
   while ((((unsigned int)reqsize[0]) * ((unsigned int)reqsize[1])) >
-         CoinOffscreenGLCanvas::tilesizeroof) {
+         this->tilesizeroof) {
     // shrink by halving the largest dimension:
     if (reqsize[0] > reqsize[1]) { reqsize[0] /= 2; }
     else { reqsize[1] /= 2; }
@@ -302,19 +307,19 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
 }
 
 void
-CoinOffscreenGLCanvas::clampToPixelSizeRoof(SbVec2s & s)
+CoinOffscreenGLCanvas::clampToPixelSizeRoof(SbVec2s & s) const
 {
   unsigned int pixelsize;
   do {
     pixelsize = (unsigned int)s[0] * (unsigned int)s[1];
     if (pixelsize == 0) { return; } // avoid never-ending loop
 
-    if (pixelsize >= CoinOffscreenGLCanvas::tilesizeroof) {
+    if (pixelsize >= this->tilesizeroof) {
       // halve the largest dimension, and try again:
       if (s[0] > s[1]) { s[0] /= 2; }
       else { s[1] /= 2; }
     }
-  } while (pixelsize >= CoinOffscreenGLCanvas::tilesizeroof);
+  } while (pixelsize >= this->tilesizeroof);
 }
 
 // Activates an offscreen GL context, and returns a guaranteed unique
@@ -332,7 +337,7 @@ CoinOffscreenGLCanvas::activateGLContext(void)
   // found, or no buffer could be made.
   uint32_t ctx;
   do {
-    CoinOffscreenGLCanvas::clampToPixelSizeRoof(this->size);
+    this->clampToPixelSizeRoof(this->size);
 
     ctx = this->tryActivateGLContext();
     if (ctx != 0) { break; }
@@ -344,8 +349,8 @@ CoinOffscreenGLCanvas::activateGLContext(void)
     // tile sizes later
     const unsigned int failedsize =
       (unsigned int)this->size[0] * (unsigned int)this->size[1];
-    assert(failedsize <= CoinOffscreenGLCanvas::tilesizeroof);
-    CoinOffscreenGLCanvas::tilesizeroof = failedsize;
+    assert(failedsize <= this->tilesizeroof);
+    this->tilesizeroof = failedsize;
 
     // keep trying until 32x32 -- if even those dimensions doesn't
     // work, give up, as too small tiles will cause the processing
@@ -577,27 +582,15 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
 
 // *************************************************************************
 
-static SbBool tilesize_cached = FALSE;
-static unsigned int maxtile[2] = { 0, 0 };
-
-static void tilesize_cleanup(void)
-{
-  tilesize_cached = FALSE;
-  maxtile[0] = maxtile[1] = 0;
-}
-
 // Return largest size of offscreen canvas system can handle. Will
-// cache result, so only the first look-up is expensive.
+// cache the result per canvas and context manager.
 SbVec2s
-CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr)
+CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr) const
 {
-  // cache the values in static variables so that a new context is not
-  // created every time render() is called in SoOffscreenRenderer
-  if (tilesize_cached) return SbVec2s((short)maxtile[0], (short)maxtile[1]);
-
-  tilesize_cached = TRUE; // Flip on first run.
-
-  coin_atexit((coin_atexit_f*) tilesize_cleanup, CC_ATEXIT_NORMAL);
+  // Cache per instance so one backend's limits cannot contaminate another.
+  // A new context should not be created every time render() is called.
+  if (this->max_tile_size_cached) return this->max_tile_size;
+  this->max_tile_size_cached = TRUE;
 
   unsigned int width, height;
   SoGLContext_context_max_dimensions(mgr, &width, &height);
@@ -628,10 +621,12 @@ CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr)
 
   // cache result for later calls, and clamp to fit within a short
   // integer type
-  maxtile[0] = SbMin(width, (unsigned int)SHRT_MAX);
-  maxtile[1] = SbMin(height, (unsigned int)SHRT_MAX);
+  this->max_tile_size[0] = static_cast<short>(
+    SbMin(width, static_cast<unsigned int>(SHRT_MAX)));
+  this->max_tile_size[1] = static_cast<short>(
+    SbMin(height, static_cast<unsigned int>(SHRT_MAX)));
 
-  return SbVec2s((short)maxtile[0], (short)maxtile[1]);
+  return this->max_tile_size;
 }
 
 // *************************************************************************
@@ -639,23 +634,27 @@ CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr)
 SbBool
 CoinOffscreenGLCanvas::debug(void)
 {
-  static int flag = -1; // -1 means "not initialized" in this context
-  if (flag == -1) {
+  static const bool flag = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOOFFSCREENRENDERER");
-    flag = env && (atoi(env) > 0);
-  }
+    return env && atoi(env) > 0;
+  }();
   return flag;
 }
 
 SbBool
 CoinOffscreenGLCanvas::allowResourcehog(void)
 {
-  static int resourcehog_flag = -1; // -1 means "not initialized" in this context
-  if (resourcehog_flag == -1) {
+  static const bool resourcehog_flag = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG");
-    resourcehog_flag = env && (atoi(env) > 0);
-    SoDebugError::postInfo("CoinOffscreenGLCanvas",
-                           "Ignoring resource hogging due to set OBOL_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG environment variable.");
+    return env && atoi(env) > 0;
+  }();
+  if (resourcehog_flag) {
+    static std::atomic_flag notice = ATOMIC_FLAG_INIT;
+    if (!notice.test_and_set(std::memory_order_relaxed)) {
+      SoDebugError::postInfo("CoinOffscreenGLCanvas",
+                             "Ignoring resource hogging because "
+                             "OBOL_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG is set.");
+    }
   }
   return resourcehog_flag;
 }

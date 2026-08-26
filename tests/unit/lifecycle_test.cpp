@@ -7,6 +7,14 @@
 
 namespace {
 
+class LifecycleContextManager final : public SoDB::ContextManager {
+public:
+    void * createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
+    SbBool makeContextCurrent(void *) override { return FALSE; }
+    void restorePreviousContext(void *) override { }
+    void destroyContext(void *) override { }
+};
+
 void exercise_initialized_database()
 {
     EXPECT_TRUE(SoDB::isInitialized());
@@ -57,4 +65,18 @@ TEST(DatabaseLifecycle, ReinitializesProfilerOwnedTypes)
         EXPECT_FALSE(SoDB::isInitialized());
         EXPECT_TRUE(SoProfilerStats::getClassTypeId().isBad());
     }
+}
+
+TEST(DatabaseLifecycle, NullReinitPreservesAnInstalledContextManager)
+{
+    ASSERT_FALSE(SoDB::isInitialized());
+    LifecycleContextManager manager;
+
+    SoDB::init(&manager);
+    ASSERT_EQ(SoDB::getContextManager(), &manager);
+    SoDB::init(nullptr);
+    EXPECT_EQ(SoDB::getContextManager(), &manager);
+
+    SoDB::finish();
+    EXPECT_EQ(SoDB::getContextManager(), nullptr);
 }

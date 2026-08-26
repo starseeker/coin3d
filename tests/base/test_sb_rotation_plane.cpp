@@ -64,10 +64,9 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_sb_rotation_plane()
+TEST(UpstreamBaseSbRotationPlane, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // ======================================================================
     // SbRotation
@@ -308,5 +307,4 @@ int obol_run_upstream_test_sb_rotation_plane()
         runner.endTest(pass, pass ? "" : "SbPlane::transform with translation failed");
     }
 
-    return runner.getSummary();
 }

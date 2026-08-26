@@ -52,10 +52,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_nodes_path()
+TEST(UpstreamNodesPath, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. SoPath::getClassTypeId() != SoType::badType()
@@ -444,5 +443,4 @@ int obol_run_upstream_test_nodes_path()
             "SoPath::push/pop: unexpected path length");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

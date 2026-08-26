@@ -41,8 +41,9 @@
  * exposed as public C API in include/Inventor/C/errors/. The functionality
  * is now internal implementation detail only.
  * 
- * The implementation can leverage the modern C++17 CoinDebugError system
- * but provides a clean C API interface for legacy code compatibility.
+ * The implementation is shared with the public SoError hierarchy.  The
+ * cc_* names remain only as an internal compatibility layer for existing
+ * implementation code; they are not a supported public C API.
  */
 
 /* ********************************************************************** */

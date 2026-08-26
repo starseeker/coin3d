@@ -124,10 +124,9 @@ static void writeAscii(SoNode * node, char ** outBuf, size_t * outSize)
 }
 
 // =========================================================================
-int obol_run_upstream_test_io_input_binary()
+TEST(UpstreamIoInputBinary, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // Build a simple scene for round-trip tests
     SoSeparator * root = new SoSeparator;
@@ -379,5 +378,4 @@ int obol_run_upstream_test_io_input_binary()
     }
 
     root->unref();
-    return runner.getSummary();
 }

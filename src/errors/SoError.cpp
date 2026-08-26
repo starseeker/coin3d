@@ -60,6 +60,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <mutex>
 
 #include "CoinTidbits.h"
 #include <Inventor/SbName.h>
@@ -80,6 +81,10 @@
 SoType SoError::classTypeId STATIC_SOTYPE_INIT;
 SoErrorCB * SoError::callback = NULL; // make use of default cc_error handler
 void * SoError::callbackData = NULL;
+
+namespace {
+std::mutex soerror_callback_mutex;
+}
 
 // *************************************************************************
 
@@ -104,12 +109,20 @@ SoError::SoError(const void * error)
 }
 
 void
-SoError::callbackForwarder(const void * error_ptr, void * OBOL_UNUSED_ARG(data))
+SoError::callbackForwarder(const cc_error * error_ptr,
+                           void * OBOL_UNUSED_ARG(data))
 {
   SoError wrappederr(error_ptr);
 
-  assert(SoError::callback != NULL);
-  (*SoError::callback)(&wrappederr, SoError::callbackData);
+  void * callbackdata = NULL;
+  SoErrorCB * function = NULL;
+  {
+    const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
+    function = SoError::callback;
+    callbackdata = SoError::callbackData;
+  }
+  assert(function != NULL);
+  (*function)(&wrappederr, callbackdata);
 }
 
 /*!
@@ -125,8 +138,12 @@ SoError::callbackForwarder(const void * error_ptr, void * OBOL_UNUSED_ARG(data))
 void
 SoError::initClass(void)
 {
-  SoError::callback = defaultHandlerCB;
-  SoError::callbackData = NULL;
+  {
+    const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
+    SoError::callback = defaultHandlerCB;
+    SoError::callbackData = NULL;
+    cc_error_set_handler_callback(cc_error_default_handler_cb, NULL);
+  }
   SoError::classTypeId =
     SoType::createType(SoType::badType(), SbName("Error"));
 }
@@ -191,19 +208,15 @@ SoError::isOfType(const SoType type) const
 void
 SoError::setHandlerCallback(SoErrorCB * const function, void * const data)
 {
-  if (SoError::callback == SoError::defaultHandlerCB ||
-      SoError::callback == NULL) {
-    // The user is overriding the default handler, so set up a
-    // "converter" callback function that makes an SoError out of an
-    // cc_error and forwards control to the callback function given as
-    // an argument to setHandlerCallback().
-    cc_error_set_handler_callback(
-       reinterpret_cast<cc_error_cb *>(SoError::callbackForwarder),
-       NULL);
-  }
-
-  SoError::callback = function;
+  const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
+  SoError::callback = function ? function : SoError::defaultHandlerCB;
   SoError::callbackData = data;
+  if (SoError::callback == SoError::defaultHandlerCB) {
+    cc_error_set_handler_callback(cc_error_default_handler_cb, NULL);
+  }
+  else {
+    cc_error_set_handler_callback(SoError::callbackForwarder, NULL);
+  }
 }
 
 /*!
@@ -213,6 +226,7 @@ SoError::setHandlerCallback(SoErrorCB * const function, void * const data)
 SoErrorCB *
 SoError::getHandlerCallback(void)
 {
+  const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
   return SoError::callback;
 }
 
@@ -223,6 +237,7 @@ SoError::getHandlerCallback(void)
 void *
 SoError::getHandlerData(void)
 {
+  const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
   return SoError::callbackData;
 }
 
@@ -307,6 +322,7 @@ SoError::defaultHandlerCB(const SoError * error, void * data)
 SoErrorCB *
 SoError::getHandler(void * & data) const
 {
+  const std::lock_guard<std::mutex> guard(soerror_callback_mutex);
   data = SoError::callbackData;
   return SoError::callback;
 }
@@ -342,7 +358,10 @@ SoError::handleError(void)
   assert((SoError::classTypeId != SoType::badType()) &&
          "SoError attempted used before class was initialized");
 
-  cc_error_handle(static_cast<cc_error *>(this->impl));
+  void * data = NULL;
+  SoErrorCB * function = this->getHandler(data);
+  assert(function != NULL);
+  function(this, data);
 }
 
 /*!

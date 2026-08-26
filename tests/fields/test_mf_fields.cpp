@@ -102,10 +102,9 @@ using namespace ObolTest;
             TestName " not initialized or initial count != 0"); \
     }
 
-int obol_run_upstream_test_mf_fields()
+TEST(UpstreamFieldsMfFields, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // All SoMF* types: class initialized with zero elements
@@ -244,5 +243,4 @@ int obol_run_upstream_test_mf_fields()
     TEST_MF_INITIALIZED("SoMFPath",     SoMFPath)
     TEST_MF_INITIALIZED("SoMFEngine",   SoMFEngine)
 
-    return runner.getSummary();
 }

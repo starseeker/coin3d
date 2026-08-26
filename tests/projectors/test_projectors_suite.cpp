@@ -61,10 +61,9 @@ static bool isFiniteVec(const SbVec3f & v)
     return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
 }
 
-int obol_run_upstream_test_projectors_suite()
+TEST(UpstreamProjectorsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // Build a perspective view volume used by all projector tests
     SbViewVolume vv;
@@ -168,5 +167,4 @@ int obol_run_upstream_test_projectors_suite()
             "SbCylinderSectionProjector project returned non-finite point");
     }
 
-    return runner.getSummary();
 }

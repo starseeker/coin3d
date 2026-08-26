@@ -56,10 +56,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_sb_plist()
+TEST(UpstreamBaseSbPlist, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // =======================================================================
     // SbPList tests
@@ -337,5 +336,4 @@ int obol_run_upstream_test_sb_plist()
         runner.endTest(pass, pass ? "" : "SbVec3fList append/retrieve failed");
     }
 
-    return runner.getSummary();
 }

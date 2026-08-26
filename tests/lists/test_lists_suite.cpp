@@ -49,6 +49,7 @@
 #include <Inventor/lists/SoPathList.h>
 #include <Inventor/lists/SoTypeList.h>
 #include <Inventor/lists/SoFieldList.h>
+#include <Inventor/lists/SoCallbackList.h>
 #include <Inventor/SoPath.h>
 #include <Inventor/SoType.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -59,10 +60,78 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_lists_suite()
+namespace {
+
+struct CallbackPayload {
+    int value;
+};
+
+struct CallbackState {
+    SoCallbackList * list = nullptr;
+    std::vector<int> calls;
+    bool removed = false;
+};
+
+void callbackSecond(void * userdata, CallbackPayload * payload)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    auto * state = static_cast<CallbackState *>(userdata);
+    state->calls.push_back(20 + payload->value);
+}
+
+void callbackRemoving(void * userdata, CallbackPayload * payload)
+{
+    auto * state = static_cast<CallbackState *>(userdata);
+    state->calls.push_back(10 + payload->value);
+    if (!state->removed) {
+        state->removed = true;
+        state->list->removeCallback(callbackSecond, state);
+    }
+}
+
+void callbackIncrement(void * userdata, CallbackPayload * payload)
+{
+    *static_cast<int *>(userdata) += payload->value;
+}
+
+} // namespace
+
+TEST(CallbackList, TypedCallbacksUseSnapshotSemantics)
+{
+    SoCallbackList callbacks;
+    CallbackState state;
+    state.list = &callbacks;
+    callbacks.addCallback(callbackRemoving, &state);
+    callbacks.addCallback(callbackSecond, &state);
+
+    CallbackPayload payload{3};
+    callbacks.invokeCallbacks(&payload);
+    EXPECT_EQ(state.calls, (std::vector<int>{13, 23}));
+
+    state.calls.clear();
+    callbacks.invokeCallbacks(&payload);
+    EXPECT_EQ(state.calls, (std::vector<int>{13}));
+}
+
+TEST(CallbackList, CopiesOwnIndependentTypedEntries)
+{
+    SoCallbackList original;
+    int total = 0;
+    original.addCallback(callbackIncrement, &total);
+
+    SoCallbackList copied(original);
+    SoCallbackList assigned;
+    assigned = original;
+    original.clearCallbacks();
+
+    CallbackPayload payload{4};
+    copied.invokeCallbacks(&payload);
+    assigned.invokeCallbacks(&payload);
+    EXPECT_EQ(total, 8);
+}
+
+TEST(UpstreamListsSuite, RetainedCoverage)
+{
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbPList
@@ -394,5 +463,4 @@ int obol_run_upstream_test_lists_suite()
             "SoFieldList operator[] should return the appended field pointer");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

@@ -72,10 +72,9 @@ static void keyboardEventCb(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-int obol_run_upstream_test_events_suite()
+TEST(UpstreamEventsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoKeyboardEvent: set/get key, state, position, shift modifier
@@ -247,5 +246,4 @@ int obol_run_upstream_test_events_suite()
             "SoEventCallback fired for wrong event type");
     }
 
-    return runner.getSummary();
 }

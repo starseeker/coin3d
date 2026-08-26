@@ -30,6 +30,9 @@ endif()
 
 include(CMakeFindDependencyMacro)
 
+# Obol's public headers include inline std::thread-based helpers.
+find_dependency(Threads)
+
 # For static builds, pull in the same dependencies that were used at build time
 if(NOT OBOL_BUILD_SHARED_LIBS)
   set(_OPENGL_FOUND @OPENGL_FOUND@)
@@ -38,10 +41,6 @@ if(NOT OBOL_BUILD_SHARED_LIBS)
   endif()
   if(@HAVE_GLX@)
     find_dependency(X11)
-  endif()
-  set(_Threads_FOUND @Threads_FOUND@)
-  if(_Threads_FOUND)
-    find_dependency(Threads)
   endif()
 endif()
 
@@ -54,8 +53,8 @@ set(Obol_LIBRARY   Obol::Obol)
 if(NOT OBOL_BUILD_MAC_FRAMEWORK)
   set(Obol_INCLUDE_DIRS ${Obol_INCLUDE_DIR})
   set(Obol_NanoRTContextManager_INCLUDE_DIR
-      "${Obol_INCLUDE_DIR}/Obol/testing")
-  if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort_context_manager.h" AND
+      "${Obol_INCLUDE_DIR}/Obol/render")
+  if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/SoNanoRTContextManager.h" AND
      EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort.h")
     set(Obol_NanoRTContextManager_FOUND TRUE)
   else()

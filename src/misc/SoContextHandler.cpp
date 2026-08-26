@@ -61,11 +61,15 @@
 #include <Inventor/misc/SoContextHandler.h>
 
 #include <cstdlib>
+#include <algorithm>
+#include <condition_variable>
+#include <exception>
+#include <memory>
+#include <mutex>
+#include <vector>
 
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/lists/SbList.h>
 
-#include "misc/SbHash.h"
 #include "CoinTidbits.h"
 #include "glue/glp.h"
 
@@ -73,74 +77,85 @@
 
 class socontexthandler_cbitem {
 public:
-  socontexthandler_cbitem(void) : func(NULL), closure(NULL), idx(0) { }
+  socontexthandler_cbitem(SoContextHandler::ContextDestructionCB * callback,
+                          void * userdata)
+    : func(callback), closure(userdata) { }
 
-  int operator==(const socontexthandler_cbitem & theother) {
-    return
-      this->func == theother.func &&
-      this->closure == theother.closure;
-  }
-
-  operator unsigned long(void) const {
-    unsigned long key = 0;
-    // create an xor key
-    const unsigned char * ptr = (const unsigned char *) this;
-
-    // a bit hackish. Stop xor'ing at idx
-    const unsigned char * stop = (const unsigned char*) &this->idx;
-
-    const ptrdiff_t size = stop - ptr;
-
-    for (int i = 0; i < size; i++) {
-      int shift = (i%4) * 8;
-      key ^= (ptr[i]<<shift);
-    }
-    return key;
+  bool matches(SoContextHandler::ContextDestructionCB * callback,
+               void * userdata) const {
+    return this->func == callback && this->closure == userdata;
   }
 
   SoContextHandler::ContextDestructionCB * func;
   void * closure;
-
-  // this must be last!!
-  int idx;
+  std::mutex state_mutex;
+  std::condition_variable state_changed;
+  bool active = true;
+  size_t running = 0;
 };
 
-// "extern C" wrapper is needed with the OSF1/cxx compiler (probably a
-// bug in the compiler, but it doesn't seem to hurt to do this
-// anyway).
-extern "C" { static int
-socontexthandler_qsortcb(const void * p0, const void * p1)
+using ContextCallbackPtr = std::shared_ptr<socontexthandler_cbitem>;
+static std::vector<ContextCallbackPtr> * socontexthandler_callbacks;
+static std::mutex socontexthandler_mutex;
+
+struct socontexthandler_invocation {
+  socontexthandler_cbitem * callback;
+  socontexthandler_invocation * previous;
+};
+static thread_local socontexthandler_invocation *
+  socontexthandler_current_invocation;
+
+static size_t
+socontexthandler_current_count(const socontexthandler_cbitem * callback)
 {
-  socontexthandler_cbitem * i0 = const_cast<socontexthandler_cbitem*>(static_cast<const socontexthandler_cbitem*>(p0));
-  socontexthandler_cbitem * i1 = const_cast<socontexthandler_cbitem*>(static_cast<const socontexthandler_cbitem*>(p1));
-
-  return int(i0->idx) - int(i1->idx);
+  size_t count = 0;
+  for (socontexthandler_invocation * invocation =
+         socontexthandler_current_invocation;
+       invocation; invocation = invocation->previous) {
+    if (invocation->callback == callback) ++count;
+  }
+  return count;
 }
-}
-
-// *************************************************************************
-
-static SbHash<socontexthandler_cbitem, uint32_t> * socontexthandler_hashlist;
-static uint32_t socontexthandler_idx = 0;
 
 // *************************************************************************
 
 static void
 socontexthandler_cleanup(void)
 {
+  std::vector<ContextCallbackPtr> callbacks;
 #if OBOL_DEBUG
-  const int len = socontexthandler_hashlist ?
-    socontexthandler_hashlist->getNumElements() : 0;
+  size_t len;
+#endif
+  {
+    std::lock_guard<std::mutex> lock(socontexthandler_mutex);
+    if (socontexthandler_callbacks) {
+      callbacks.swap(*socontexthandler_callbacks);
+    }
+#if OBOL_DEBUG
+    len = callbacks.size();
+#endif
+    delete socontexthandler_callbacks;
+    socontexthandler_callbacks = NULL;
+    for (const ContextCallbackPtr & callback : callbacks) {
+      std::lock_guard<std::mutex> statelock(callback->state_mutex);
+      callback->active = false;
+    }
+  }
+  for (const ContextCallbackPtr & callback : callbacks) {
+    std::unique_lock<std::mutex> lock(callback->state_mutex);
+    const size_t selfcount = socontexthandler_current_count(callback.get());
+    callback->state_changed.wait(lock, [&] {
+      return callback->running <= selfcount;
+    });
+  }
+#if OBOL_DEBUG
   if (len > 0) {
     // Can't use SoDebugError here, as SoError et al might have been
     // "cleaned up" already.
     (void)printf("Coin debug: socontexthandler_cleanup(): %d context-bound "
-                 "resources not free'd before exit.\n", len);
+                 "resources not free'd before exit.\n", static_cast<int>(len));
   }
 #endif // OBOL_DEBUG
-  delete socontexthandler_hashlist;
-  socontexthandler_hashlist = NULL;
-  socontexthandler_idx = 0;
 }
 
 // *************************************************************************
@@ -162,25 +177,13 @@ socontexthandler_cleanup(void)
 void
 SoContextHandler::destructingContext(uint32_t contextid)
 {
-  if (socontexthandler_hashlist == NULL) {
-    return;
+  std::vector<ContextCallbackPtr> callbacks;
+  {
+    std::lock_guard<std::mutex> lock(socontexthandler_mutex);
+    if (socontexthandler_callbacks) {
+      callbacks = *socontexthandler_callbacks;
+    }
   }
-
-  SbList <socontexthandler_cbitem> listcopy;
-  for(
-      SbHash<socontexthandler_cbitem, uint32_t>::const_iterator iter =
-       socontexthandler_hashlist->const_begin();
-      iter!=socontexthandler_hashlist->const_end();
-      ++iter
-      ) {
-    listcopy.append(iter->key);
-  }
-
-  qsort(const_cast<void*>(static_cast<const void*>(listcopy.getArrayPtr())),
-        listcopy.getLength(),
-        sizeof(socontexthandler_cbitem),
-        socontexthandler_qsortcb);
-
   // process callbacks FILO-style so that callbacks registered first
   // are called last. HACK WARNING: SoGLCacheContextElement will add a
   // callback in initClass(). It's quite important that this callback
@@ -193,13 +196,39 @@ SoContextHandler::destructingContext(uint32_t contextid)
   // FIXME: We should probably add a new method in
   // SoGLCacheContextElement which this class can call after all the
   // regular callbacks though. pederb, 2004-10-27
-  for (int i = listcopy.getLength()-1; i >= 0; i--) {
-    const socontexthandler_cbitem & item = listcopy[i];
-    item.func(contextid, item.closure);
+  std::exception_ptr callbackexception;
+  for (auto iter = callbacks.rbegin(); iter != callbacks.rend(); ++iter) {
+    const ContextCallbackPtr & callback = *iter;
+    {
+      std::lock_guard<std::mutex> lock(callback->state_mutex);
+      // A callback earlier in this FILO dispatch may have removed this entry.
+      // Reserve only immediately before invocation; reserving the whole
+      // snapshot up front would make cross-removal deadlock while waiting for
+      // a later callback that the blocked dispatcher had not reached yet.
+      if (!callback->active) continue;
+      ++callback->running;
+    }
+    socontexthandler_invocation invocation = {
+      callback.get(), socontexthandler_current_invocation
+    };
+    socontexthandler_current_invocation = &invocation;
+    try {
+      callback->func(contextid, callback->closure);
+    }
+    catch (...) {
+      if (!callbackexception) callbackexception = std::current_exception();
+    }
+    socontexthandler_current_invocation = invocation.previous;
+    {
+      std::lock_guard<std::mutex> lock(callback->state_mutex);
+      --callback->running;
+    }
+    callback->state_changed.notify_all();
   }
 
   // tell glglue that this context is dead
   SoGLContext_destruct(contextid);
+  if (callbackexception) std::rethrow_exception(callbackexception);
 }
 
 // *************************************************************************
@@ -219,17 +248,22 @@ void
 SoContextHandler::addContextDestructionCallback(ContextDestructionCB * func,
                                                 void * closure)
 {
-  if (socontexthandler_hashlist == NULL) {
-    socontexthandler_hashlist = new SbHash<socontexthandler_cbitem, uint32_t> (64);
+  std::lock_guard<std::mutex> lock(socontexthandler_mutex);
+  if (socontexthandler_callbacks == NULL) {
+    socontexthandler_callbacks = new std::vector<ContextCallbackPtr>;
     // make this callback trigger after the SoGLCacheContext cleanup function
     // by setting priority to -1
     coin_atexit((coin_atexit_f *)socontexthandler_cleanup, CC_ATEXIT_NORMAL_LOWPRIORITY);
   }
-  socontexthandler_cbitem item;
-  item.func = func;
-  item.closure = closure;
-  item.idx = socontexthandler_idx++;
-  (*socontexthandler_hashlist)[item] = item.idx;
+  const auto existing = std::find_if(
+    socontexthandler_callbacks->begin(), socontexthandler_callbacks->end(),
+    [func, closure](const ContextCallbackPtr & callback) {
+      return callback->matches(func, closure);
+    });
+  if (existing == socontexthandler_callbacks->end()) {
+    socontexthandler_callbacks->push_back(
+      std::make_shared<socontexthandler_cbitem>(func, closure));
+  }
 }
 
 /*!
@@ -240,14 +274,30 @@ SoContextHandler::addContextDestructionCallback(ContextDestructionCB * func,
 void
 SoContextHandler::removeContextDestructionCallback(ContextDestructionCB * func, void * closure)
 {
-  assert(socontexthandler_hashlist);
+  ContextCallbackPtr removed;
+  {
+    std::lock_guard<std::mutex> lock(socontexthandler_mutex);
+    assert(socontexthandler_callbacks);
+    const auto iter = std::find_if(
+      socontexthandler_callbacks->begin(), socontexthandler_callbacks->end(),
+      [func, closure](const ContextCallbackPtr & callback) {
+        return callback->matches(func, closure);
+      });
+    assert(iter != socontexthandler_callbacks->end());
+    if (iter == socontexthandler_callbacks->end()) return;
+    removed = *iter;
+    {
+      std::lock_guard<std::mutex> statelock(removed->state_mutex);
+      removed->active = false;
+    }
+    socontexthandler_callbacks->erase(iter);
+  }
 
-  socontexthandler_cbitem item;
-  item.func = func;
-  item.closure = closure;
-
-  [[maybe_unused]] size_t didremove = socontexthandler_hashlist->erase(item);
-  assert(didremove);
+  const size_t selfcount = socontexthandler_current_count(removed.get());
+  std::unique_lock<std::mutex> lock(removed->state_mutex);
+  removed->state_changed.wait(lock, [&] {
+    return removed->running <= selfcount;
+  });
 }
 
 // *************************************************************************

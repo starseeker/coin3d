@@ -63,10 +63,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_nodekit_traversal()
+TEST(UpstreamNodesNodekitTraversal, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoShapeKit: basic instantiation and type check
@@ -226,5 +225,4 @@ int obol_run_upstream_test_nodekit_traversal()
             "SoShapeKit getPartString did not return \"shape\"");
     }
 
-    return runner.getSummary();
 }

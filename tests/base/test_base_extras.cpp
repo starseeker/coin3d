@@ -65,10 +65,9 @@ static void triCb(void * /*v0*/, void * /*v1*/, void * /*v2*/, void * /*data*/)
     ++g_triCount;
 }
 
-int obol_run_upstream_test_base_extras()
+TEST(UpstreamBaseExtras, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SbClip: add 4 vertices of a unit quad, clip against z>=0 plane —
@@ -222,5 +221,4 @@ int obol_run_upstream_test_base_extras()
             "SbTesselator: convex quad should produce exactly 2 triangles");
     }
 
-    return runner.getSummary();
 }

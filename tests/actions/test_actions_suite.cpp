@@ -104,10 +104,9 @@ static void* bufferRealloc(void* ptr, size_t size)
     return s_buffer;
 }
 
-int obol_run_upstream_test_actions_suite()
+TEST(UpstreamActionsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallbackAction: default traversal skips switch children
@@ -625,5 +624,4 @@ int obol_run_upstream_test_actions_suite()
             "SoRayPickAction should pick SoIndexedFaceSet triangle");
     }
 
-    return runner.getSummary();
 }

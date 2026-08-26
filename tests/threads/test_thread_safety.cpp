@@ -32,7 +32,7 @@
 
 /**
  * @file test_thread_safety.cpp
- * @brief Phase-1 and Phase-2 thread safety stress tests.
+ * @brief Thread-safety stress tests for the audited global infrastructure.
  *
  * Each test hammers a specific fix from multiple threads and verifies
  * the invariant that the fix is supposed to guarantee.  The tests are designed
@@ -58,8 +58,12 @@
  * 13. glcache_unique_context_ids   — SoGLCacheContextElement::getUniqueCacheContext
  * 14. enabled_elements_counter     — SoEnabledElementsList::getCounter atomicity
  * Phase 3:
- * 15. auditorlist_concurrent_notification — SoAuditorList snapshot-then-deliver (no crash)
- * 16. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
+ * 15. context_handler_registry     — Concurrent callback registration/removal
+ * 16. context_handler_dispatch     — Removal waits for active callback dispatch
+ * 17. context_handler_cross_remove — A callback may remove a later callback
+ * 18. context_handler_nested_remove — Nested invocation can remove itself
+ * 19. auditorlist_concurrent_notification — SoAuditorList snapshot-then-deliver (no crash)
+ * 20. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
  */
 
 #include <gtest/gtest.h>
@@ -79,12 +83,16 @@
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoMFFloat.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/lists/SoEnabledElementsList.h>
 #include <Inventor/lists/SoNodeList.h>
 
 #include <thread>
 #include <vector>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <future>
 #include <set>
 #include <mutex>
 #include <cassert>
@@ -95,8 +103,6 @@
 #include <algorithm>
 #include <functional>
 
-// ---------------------------------------------------------------------------
-// Test parameters — tune these for faster CI vs. more thorough local runs.
 // ---------------------------------------------------------------------------
 // Test parameters — configurable via environment variables for CI vs. local:
 //   OBOL_TEST_THREADS  — number of concurrent threads per test (default: 8)
@@ -762,6 +768,174 @@ static bool test_enabled_elements_counter()
   return !failure;
 }
 
+static void context_destruction_counter(uint32_t, void * closure)
+{
+  static_cast<std::atomic<int> *>(closure)->fetch_add(1,
+                                                       std::memory_order_relaxed);
+}
+
+/**
+ * Exercise callback registration, removal, and snapshot delivery from several
+ * threads.  Removal waits for any invocation that has already entered the
+ * callback, so callers may safely release their closure after removal returns.
+ */
+static bool test_context_handler_concurrent_registry()
+{
+  std::vector<std::atomic<int>> callback_counts(static_cast<size_t>(kNumThreads));
+  for (auto & count : callback_counts) count.store(0, std::memory_order_relaxed);
+
+  std::atomic<int> ready{0};
+  std::vector<std::thread> threads;
+  threads.reserve(static_cast<size_t>(kNumThreads));
+  for (int tid = 0; tid < kNumThreads; ++tid) {
+    threads.emplace_back([&, tid] {
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) < kNumThreads) { }
+      for (int iter = 0; iter < kItersPerThread; ++iter) {
+        SoContextHandler::addContextDestructionCallback(
+          context_destruction_counter, &callback_counts[static_cast<size_t>(tid)]);
+        SoContextHandler::destructingContext(
+          SoGLCacheContextElement::getUniqueCacheContext());
+        SoContextHandler::removeContextDestructionCallback(
+          context_destruction_counter, &callback_counts[static_cast<size_t>(tid)]);
+      }
+    });
+  }
+  for (std::thread & thread : threads) thread.join();
+
+  return std::all_of(callback_counts.begin(), callback_counts.end(),
+                     [](const std::atomic<int> & count) {
+                       return count.load(std::memory_order_relaxed) > 0;
+                     });
+}
+
+struct BlockingContextCallback {
+  std::mutex mutex;
+  std::condition_variable changed;
+  bool entered = false;
+  bool release = false;
+};
+
+static void blocking_context_callback(uint32_t, void * closure)
+{
+  BlockingContextCallback * state =
+    static_cast<BlockingContextCallback *>(closure);
+  std::unique_lock<std::mutex> lock(state->mutex);
+  state->entered = true;
+  state->changed.notify_all();
+  state->changed.wait(lock, [&] { return state->release; });
+}
+
+/**
+ * Verify the closure-lifetime guarantee directly: removal must not return
+ * while a callback that captured the closure is still running.
+ */
+static bool test_context_handler_removal_waits_for_dispatch()
+{
+  BlockingContextCallback state;
+  SoContextHandler::addContextDestructionCallback(blocking_context_callback,
+                                                   &state);
+
+  std::thread dispatcher([] {
+    SoContextHandler::destructingContext(
+      SoGLCacheContextElement::getUniqueCacheContext());
+  });
+  {
+    std::unique_lock<std::mutex> lock(state.mutex);
+    state.changed.wait(lock, [&] { return state.entered; });
+  }
+
+  std::promise<void> removal_started;
+  std::future<void> started = removal_started.get_future();
+  std::packaged_task<void()> remove_task([&] {
+    removal_started.set_value();
+    SoContextHandler::removeContextDestructionCallback(
+      blocking_context_callback, &state);
+  });
+  std::future<void> removed = remove_task.get_future();
+  std::thread remover(std::move(remove_task));
+  started.wait();
+
+  const bool returned_early =
+    removed.wait_for(std::chrono::milliseconds(20)) ==
+    std::future_status::ready;
+  {
+    std::lock_guard<std::mutex> lock(state.mutex);
+    state.release = true;
+  }
+  state.changed.notify_all();
+  dispatcher.join();
+  remover.join();
+
+  return !returned_early &&
+    removed.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+}
+
+struct CrossRemovingContextCallback {
+  std::atomic<int> victim_calls{0};
+};
+
+static void cross_removal_victim(uint32_t, void * closure)
+{
+  static_cast<CrossRemovingContextCallback *>(closure)->victim_calls.fetch_add(
+    1, std::memory_order_relaxed);
+}
+
+static void cross_removal_callback(uint32_t, void * closure)
+{
+  SoContextHandler::removeContextDestructionCallback(cross_removal_victim,
+                                                      closure);
+}
+
+/**
+ * Callbacks execute in FILO order.  A later registration must be able to
+ * remove an earlier registration that has not started yet, without either
+ * invoking the removed closure or waiting on its own blocked dispatcher.
+ */
+static bool test_context_handler_cross_removal()
+{
+  CrossRemovingContextCallback state;
+  SoContextHandler::addContextDestructionCallback(cross_removal_victim, &state);
+  SoContextHandler::addContextDestructionCallback(cross_removal_callback, &state);
+
+  SoContextHandler::destructingContext(
+    SoGLCacheContextElement::getUniqueCacheContext());
+  SoContextHandler::removeContextDestructionCallback(cross_removal_callback,
+                                                      &state);
+  return state.victim_calls.load(std::memory_order_relaxed) == 0;
+}
+
+struct NestedRemovingContextCallback {
+  int calls = 0;
+  bool nested = false;
+};
+
+static void nested_removal_callback(uint32_t, void * closure)
+{
+  NestedRemovingContextCallback * state =
+    static_cast<NestedRemovingContextCallback *>(closure);
+  ++state->calls;
+  if (!state->nested) {
+    state->nested = true;
+    SoContextHandler::destructingContext(
+      SoGLCacheContextElement::getUniqueCacheContext());
+  }
+  else {
+    SoContextHandler::removeContextDestructionCallback(nested_removal_callback,
+                                                        state);
+  }
+}
+
+static bool test_context_handler_nested_self_removal()
+{
+  NestedRemovingContextCallback state;
+  SoContextHandler::addContextDestructionCallback(nested_removal_callback,
+                                                   &state);
+  SoContextHandler::destructingContext(
+    SoGLCacheContextElement::getUniqueCacheContext());
+  return state.calls == 2;
+}
+
 // ============================================================================
 // Phase 3 tests
 // ============================================================================
@@ -929,6 +1103,14 @@ OBOL_THREAD_STRESS_TEST(MixedWorkload, test_mixed_workload)
 OBOL_THREAD_STRESS_TEST(SoBaseSetNameGetName, test_sobase_setname_getname)
 OBOL_THREAD_STRESS_TEST(GlCacheContextIdsAreUnique, test_glcache_unique_context_ids)
 OBOL_THREAD_STRESS_TEST(EnabledElementsCounter, test_enabled_elements_counter)
+OBOL_THREAD_STRESS_TEST(ContextHandlerConcurrentRegistry,
+                        test_context_handler_concurrent_registry)
+OBOL_THREAD_STRESS_TEST(ContextHandlerRemovalWaitsForDispatch,
+                        test_context_handler_removal_waits_for_dispatch)
+OBOL_THREAD_STRESS_TEST(ContextHandlerAllowsCrossRemoval,
+                        test_context_handler_cross_removal)
+OBOL_THREAD_STRESS_TEST(ContextHandlerAllowsNestedSelfRemoval,
+                        test_context_handler_nested_self_removal)
 OBOL_THREAD_STRESS_TEST(AuditorListConcurrentNotification,
                         test_auditorlist_concurrent_notification)
 OBOL_THREAD_STRESS_TEST(FieldConnectDisconnect,

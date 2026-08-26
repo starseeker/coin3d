@@ -107,10 +107,9 @@ static void eventCbFn(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-int obol_run_upstream_test_nodes_extended()
+TEST(UpstreamNodesExtended, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoCallback: setCallback fires when SoCallbackAction traverses node
@@ -363,5 +362,4 @@ int obol_run_upstream_test_nodes_extended()
         runner.endTest(pass, pass ? "" : "SoVertexAttributeBinding has bad type");
     }
 
-    return runner.getSummary();
 }

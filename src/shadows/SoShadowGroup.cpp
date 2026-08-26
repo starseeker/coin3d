@@ -323,6 +323,7 @@
 #include <Inventor/SoPath.h>
 #include <Inventor/misc/SoTempPath.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/elements/SoShapeStyleElement.h>
 #include <Inventor/elements/SoTextureUnitElement.h>
@@ -922,9 +923,6 @@ SoShadowGroup::isSupported(void) const
   // so a static cache is intentional -- it avoids redundant GL probes across
   // all instances.  Thread-safety is not a concern here because the check is
   // idempotent: a race between two threads writing the same value is benign.
-  static int supp = -1;
-  if (supp != -1) { return supp ? true : false; }
-
   // The context manager must be set -- either by the explicit constructor,
   // via setContextManager(), or populated from the render state element
   // during a prior render.  No silent global fallback.
@@ -941,12 +939,17 @@ SoShadowGroup::isSupported(void) const
     return false;
   }
 
-  const SoGLContext * glue = SoGLContext_instance_from_context_ptr(glctx);
+  const uint32_t contextid = SoGLCacheContextElement::getUniqueCacheContext();
+  coingl_register_context_manager(static_cast<int>(contextid), mgr);
+  if (mgr->isOSMesaContext(glctx)) {
+    coingl_register_osmesa_context(static_cast<int>(contextid));
+  }
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(contextid));
 
   SbString unused;
-  const bool supported = SoShadowGroupP::supported(glue, unused);
-  supp = supported ? 1 : 0;
+  const bool supported = glue && SoShadowGroupP::supported(glue, unused);
 
+  SoContextHandler::destructingContext(contextid);
   mgr->restorePreviousContext(glctx);
   mgr->destroyContext(glctx);
 
@@ -2431,4 +2434,3 @@ SoShadowLightCache::shadowmap_post_glcallback(void * OBOL_UNUSED_ARG(closure), S
 #undef PUBLIC
 #undef DISTRIBUTE_FACTOR
 #undef USE_NEGATIVE
-

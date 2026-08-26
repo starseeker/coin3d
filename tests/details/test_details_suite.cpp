@@ -64,10 +64,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_details_suite()
+TEST(UpstreamDetailsSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoPointDetail
@@ -500,5 +499,4 @@ int obol_run_upstream_test_details_suite()
             "SoRayPickAction on SoIndexedLineSet should return SoLineDetail");
     }
 
-    return runner.getSummary();
 }

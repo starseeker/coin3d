@@ -68,10 +68,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_field_advanced()
+TEST(UpstreamFieldsFieldAdvanced, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoSFRotation: setValue(axis, angle) / getValue(axis, angle) round-trip
@@ -390,5 +389,4 @@ int obol_run_upstream_test_field_advanced()
         runner.endTest(pass, pass ? "" : "SoSphere getFieldName round-trip failed");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

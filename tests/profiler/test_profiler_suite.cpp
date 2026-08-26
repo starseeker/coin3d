@@ -71,10 +71,9 @@ public:
 
 } // namespace
 
-int obol_run_upstream_test_profiler_suite()
+TEST(UpstreamProfilerSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoProfiler::init can be called without crashing
@@ -324,5 +323,4 @@ int obol_run_upstream_test_profiler_suite()
             "reset() did not clear timing data to zero");
     }
 
-    return runner.getSummary();
 }

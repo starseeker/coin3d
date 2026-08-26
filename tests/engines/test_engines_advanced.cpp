@@ -83,10 +83,9 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
     return std::fabs(a - b) < eps;
 }
 
-int obol_run_upstream_test_engines_advanced()
+TEST(UpstreamEnginesAdvanced, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoInterpolateFloat: alpha=0.5 produces the midpoint
@@ -542,5 +541,4 @@ int obol_run_upstream_test_engines_advanced()
             "SoConcatenate MFVec3f combination failed");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

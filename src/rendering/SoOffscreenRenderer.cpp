@@ -310,6 +310,7 @@
 
 #include "config.h"
 
+#include <atomic>
 #include <cassert>
 #include <cstring> // memset(), memcpy()
 #include <cmath> // for ceil()
@@ -355,7 +356,7 @@
 // for most offscreen rendering use cases.  Applications can override
 // this value via SoOffscreenRenderer::setScreenPixelsPerInch().
 
-static float s_screen_pixels_per_inch = 72.0f;
+static std::atomic<float> s_screen_pixels_per_inch{72.0f};
 
 // *************************************************************************
 
@@ -563,7 +564,7 @@ SoOffscreenRenderer::~SoOffscreenRenderer()
 float
 SoOffscreenRenderer::getScreenPixelsPerInch(void)
 {
-  return s_screen_pixels_per_inch;
+  return s_screen_pixels_per_inch.load(std::memory_order_relaxed);
 }
 
 /*!
@@ -576,7 +577,7 @@ void
 SoOffscreenRenderer::setScreenPixelsPerInch(float dpi)
 {
   if (dpi > 0.0f) {
-    s_screen_pixels_per_inch = dpi;
+    s_screen_pixels_per_inch.store(dpi, std::memory_order_relaxed);
   }
 }
 
@@ -982,12 +983,11 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   // -------------------------------------------------------------------------
 
   if (SoOffscreenRendererP::offscreenContextsNotSupported()) {
-    static SbBool first = TRUE;
-    if (first) {
+    static std::atomic_flag warning = ATOMIC_FLAG_INIT;
+    if (!warning.test_and_set(std::memory_order_relaxed)) {
       SoDebugError::post("SoOffscreenRenderer::renderFromBase",
                          "SoOffscreenRenderer not compiled against any "
                          "window-system binding, it is defunct for this build.");
-      first = FALSE;
     }
     return FALSE;
   }
@@ -1108,11 +1108,13 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   //
   // (Note: don't use this envvar when using SoExtSelection nodes, for
   // the reason noted below.)
-  static int forcetiled = -1;
-  if (forcetiled == -1) {
+  static const bool forcetiled = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_FORCE_TILED_OFFSCREENRENDERING");
-    forcetiled = (env && (atoi(env) > 0)) ? 1 : 0;
-    if (forcetiled) {
+    return env && atoi(env) > 0;
+  }();
+  if (forcetiled) {
+    static std::atomic_flag notice = ATOMIC_FLAG_INIT;
+    if (!notice.test_and_set(std::memory_order_relaxed)) {
       SoDebugError::postInfo("SoOffscreenRendererP::renderFromBase",
                              "Forcing tiled rendering.");
     }
@@ -2198,15 +2200,14 @@ SoOffscreenRendererP::setCameraViewvolForTile(SoCamera * cam)
     { // FIXME: should really fix this bug, not just warn that it is
       // there. See item #191 in Coin/BUGS.txt for more information.
       // 20050714 mortene.
-      static SbBool first = TRUE;
-      if (first) {
+      static std::atomic_flag warning = ATOMIC_FLAG_INIT;
+      if (!warning.test_and_set(std::memory_order_relaxed)) {
         SbString s;
         cam->viewportMapping.get(s);
         SoDebugError::postWarning("SoOffscreenRendererP::setCameraViewvolForTile",
                                   "The SoOffscreenRenderer does not yet work "
                                   "properly with the SoCamera::viewportMapping "
                                   "field set to '%s'", s.getString());
-        first = FALSE;
       }
     }
     break;

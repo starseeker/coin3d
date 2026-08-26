@@ -35,6 +35,7 @@
 #include "config.h"
 
 #include <cstring>
+#include <climits>
 
 #include <Inventor/errors/SoDebugError.h>
 
@@ -42,8 +43,6 @@
 
 SoGLARBShaderParameter::SoGLARBShaderParameter(void)
 {
-  this->target = 0;
-  this->identifier = 0;
 }
 
 SoGLARBShaderParameter::~SoGLARBShaderParameter()
@@ -60,9 +59,10 @@ void
 SoGLARBShaderParameter::set1f(const SoGLShaderObject * shader,
                               const float value, const char*, const int idx)
 {
-  if (this->isValid(shader, idx))
+  GLenum target;
+  if (this->isValid(shader, idx, 1, target))
     SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
-                                        this->target, this->identifier,
+                                        target, static_cast<GLuint>(idx),
                                         value, value, value, value);
 }
 
@@ -70,9 +70,10 @@ void
 SoGLARBShaderParameter::set2f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
-  if (this->isValid(shader, idx))
+  GLenum target;
+  if (this->isValid(shader, idx, 1, target))
     SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
-                                        this->target, this->identifier,
+                                        target, static_cast<GLuint>(idx),
                                         value[0], value[1], value[0], value[0]);
 }
 
@@ -80,9 +81,10 @@ void
 SoGLARBShaderParameter::set3f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
-  if (this->isValid(shader, idx))
+  GLenum target;
+  if (this->isValid(shader, idx, 1, target))
     SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
-                                        this->target, this->identifier,
+                                        target, static_cast<GLuint>(idx),
                                         value[0], value[1], value[2], value[0]);
 }
 
@@ -90,131 +92,194 @@ void
 SoGLARBShaderParameter::set4f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
-  if (this->isValid(shader, idx))
+  GLenum target;
+  if (this->isValid(shader, idx, 1, target))
     SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
-                                        this->target, this->identifier,
+                                        target, static_cast<GLuint>(idx),
                                         value[0], value[1], value[2], value[3]);
 }
 
 void
-SoGLARBShaderParameter::set1fv(const SoGLShaderObject*, const int,
-                               const float*, const char*, const int)
+SoGLARBShaderParameter::set1fv(const SoGLShaderObject * shader, const int num,
+                               const float * value, const char *, const int idx)
 {
-  // FIXME: not implemented yet 20050127 martin
+  this->setFloats(shader, num, value, 1, idx);
 }
 
 void
-SoGLARBShaderParameter::set2fv(const SoGLShaderObject*, const int,
-                               const float*, const char*, const int)
+SoGLARBShaderParameter::set2fv(const SoGLShaderObject * shader, const int num,
+                               const float * value, const char *, const int idx)
 {
-  // FIXME: not implemented yet 20050127 martin
+  this->setFloats(shader, num, value, 2, idx);
 }
 
 void
-SoGLARBShaderParameter::set3fv(const SoGLShaderObject*, const int,
-                               const float*, const char*, const int)
+SoGLARBShaderParameter::set3fv(const SoGLShaderObject * shader, const int num,
+                               const float * value, const char *, const int idx)
 {
-  // FIXME: not implemented yet 20050127 martin
+  this->setFloats(shader, num, value, 3, idx);
 }
 
 void
-SoGLARBShaderParameter::set4fv(const SoGLShaderObject*, const int,
-                               const float*, const char*, const int)
+SoGLARBShaderParameter::set4fv(const SoGLShaderObject * shader, const int num,
+                               const float * value, const char *, const int idx)
 {
-  // FIXME: not implemented yet 20050127 martin
+  this->setFloats(shader, num, value, 4, idx);
 }
 
 void
-SoGLARBShaderParameter::setMatrix(const SoGLShaderObject *,
-                                  const float *, const char *, const int)
+SoGLARBShaderParameter::setMatrix(const SoGLShaderObject * shader,
+                                  const float * value, const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050128 martin
+  this->setFloats(shader, 4, value, 4, idx);
 }
 
 
 void
-SoGLARBShaderParameter::setMatrixArray(const SoGLShaderObject *, const int,
-                                       const float *, const char *, const int)
+SoGLARBShaderParameter::setMatrixArray(const SoGLShaderObject * shader,
+                                       const int num, const float * value,
+                                       const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050128 martin
+  if (num > INT_MAX / 4) {
+    SoDebugError::postWarning("SoGLARBShaderParameter::setMatrixArray",
+                              "matrix array is too large");
+    return;
+  }
+  this->setFloats(shader, num * 4, value, 4, idx);
 }
 
 void
-SoGLARBShaderParameter::set1i(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                              const int32_t OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                              const int)
+SoGLARBShaderParameter::set1i(const SoGLShaderObject * shader,
+                              const int32_t value, const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050222 martin
+  this->setIntegers(shader, 1, &value, 1, idx);
 }
 
 void
-SoGLARBShaderParameter::set2i(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                              const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                              const int)
+SoGLARBShaderParameter::set2i(const SoGLShaderObject * shader,
+                              const int32_t * value, const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050222 martin
+  this->setIntegers(shader, 1, value, 2, idx);
 }
 
 void
-SoGLARBShaderParameter::set3i(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                              const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                              const int)
+SoGLARBShaderParameter::set3i(const SoGLShaderObject * shader,
+                              const int32_t * value, const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050222 martin
+  this->setIntegers(shader, 1, value, 3, idx);
 }
 
 void
-SoGLARBShaderParameter::set4i(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                              const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                              const int)
+SoGLARBShaderParameter::set4i(const SoGLShaderObject * shader,
+                              const int32_t * value, const char *, const int idx)
 {
-  // FIXME not implemented yet -- 20050222 martin
+  this->setIntegers(shader, 1, value, 4, idx);
 }
 
 void
-SoGLARBShaderParameter::set1iv(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                               const int OBOL_UNUSED_ARG(num),
-                               const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                               const int)
+SoGLARBShaderParameter::set1iv(const SoGLShaderObject * shader, const int num,
+                               const int32_t * value, const char *, const int idx)
 {
-  // probably not supported. pederb, 20070530
+  this->setIntegers(shader, num, value, 1, idx);
 }
 
 void
-SoGLARBShaderParameter::set2iv(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                               const int OBOL_UNUSED_ARG(num),
-                               const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                               const int)
+SoGLARBShaderParameter::set2iv(const SoGLShaderObject * shader, const int num,
+                               const int32_t * value, const char *, const int idx)
 {
-  // probably not supported. pederb, 20070530
+  this->setIntegers(shader, num, value, 2, idx);
 }
 
 void
-SoGLARBShaderParameter::set3iv(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                               const int OBOL_UNUSED_ARG(num),
-                               const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                               const int)
+SoGLARBShaderParameter::set3iv(const SoGLShaderObject * shader, const int num,
+                               const int32_t * value, const char *, const int idx)
 {
-  // probably not supported. pederb, 20070530
+  this->setIntegers(shader, num, value, 3, idx);
 }
 
 void
-SoGLARBShaderParameter::set4iv(const SoGLShaderObject * OBOL_UNUSED_ARG(shader),
-                               const int OBOL_UNUSED_ARG(num),
-                               const int32_t * OBOL_UNUSED_ARG(value), const char * OBOL_UNUSED_ARG(name),
-                               const int)
+SoGLARBShaderParameter::set4iv(const SoGLShaderObject * shader, const int num,
+                               const int32_t * value, const char *, const int idx)
 {
-  // probably not supported. pederb, 20070530
+  this->setIntegers(shader, num, value, 4, idx);
 }
 
-//FIXME: no type checking implemented 20050128 martin
 SbBool
-SoGLARBShaderParameter::isValid(const SoGLShaderObject * shader, const int idx)
+SoGLARBShaderParameter::isValid(const SoGLShaderObject * shader, const int idx,
+                                const int count, GLenum & target) const
 {
   assert(shader);
   assert(shader->shaderType() == SoShader::ARB_SHADER);
+  if (shader == NULL || shader->shaderType() != SoShader::ARB_SHADER ||
+      idx < 0 || count <= 0) {
+    SoDebugError::postWarning("SoGLARBShaderParameter::isValid",
+                              "invalid ARB parameter index %d", idx);
+    return FALSE;
+  }
 
-  this->target     = const_cast<SoGLARBShaderObject*>(static_cast<const SoGLARBShaderObject*>(shader))->target;
-  this->identifier = idx;
+  target = static_cast<const SoGLARBShaderObject *>(shader)->target;
+  GLint maximum = 0;
+  SoGLContext_glGetIntegerv(shader->GLContext(),
+                           GL_MAX_PROGRAM_LOCAL_PARAMETERS_ARB, &maximum);
+  if (maximum <= 0 || idx >= maximum || count > maximum - idx) {
+    SoDebugError::postWarning("SoGLARBShaderParameter::isValid",
+                              "ARB parameter range [%d, %d] exceeds the "
+                              "implementation limit of %d",
+                              idx, idx + count - 1, maximum);
+    return FALSE;
+  }
   return TRUE;
+}
+
+void
+SoGLARBShaderParameter::setFloats(const SoGLShaderObject * shader, int count,
+                                  const float * values, int components,
+                                  int idx) const
+{
+  if (count <= 0 || values == NULL || components < 1 || components > 4) return;
+  if (idx < 0 || count - 1 > INT_MAX - idx) {
+    SoDebugError::postWarning("SoGLARBShaderParameter::setFloats",
+                              "ARB parameter range overflows its integer index");
+    return;
+  }
+  GLenum target;
+  if (!this->isValid(shader, idx, count, target)) return;
+
+  for (int element = 0; element < count; ++element) {
+    const float * value = values + element * components;
+    float packed[4] = { value[0], value[0], value[0], value[0] };
+    for (int component = 1; component < components; ++component) {
+      packed[component] = value[component];
+    }
+    SoGLContext_glProgramLocalParameter4fv(
+      shader->GLContext(), target, static_cast<GLuint>(idx + element), packed);
+  }
+}
+
+void
+SoGLARBShaderParameter::setIntegers(const SoGLShaderObject * shader, int count,
+                                    const int32_t * values, int components,
+                                    int idx) const
+{
+  if (count <= 0 || values == NULL || components < 1 || components > 4) return;
+  if (idx < 0 || count - 1 > INT_MAX - idx) {
+    SoDebugError::postWarning("SoGLARBShaderParameter::setIntegers",
+                              "ARB parameter range overflows its integer index");
+    return;
+  }
+  GLenum target;
+  if (!this->isValid(shader, idx, count, target)) return;
+
+  for (int element = 0; element < count; ++element) {
+    const int32_t * value = values + element * components;
+    float packed[4] = {
+      static_cast<float>(value[0]), static_cast<float>(value[0]),
+      static_cast<float>(value[0]), static_cast<float>(value[0])
+    };
+    for (int component = 1; component < components; ++component) {
+      packed[component] = static_cast<float>(value[component]);
+    }
+    SoGLContext_glProgramLocalParameter4fv(
+      shader->GLContext(), target, static_cast<GLuint>(idx + element), packed);
+  }
 }

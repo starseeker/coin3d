@@ -51,10 +51,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_caches_suite()
+TEST(UpstreamCachesSuite, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoBoundingBoxCache: construct, set, getBox, isCenterSet
@@ -168,5 +167,4 @@ int obol_run_upstream_test_caches_suite()
             "SoConvexDataCache: failed to construct");
     }
 
-    return runner.getSummary();
 }

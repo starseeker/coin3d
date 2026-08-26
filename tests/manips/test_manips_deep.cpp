@@ -69,10 +69,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_manips_deep()
+TEST(UpstreamManipsDeep, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoPointLightManip
@@ -338,5 +337,4 @@ int obol_run_upstream_test_manips_deep()
             "SoClipPlaneManip replaceNode/replaceManip failed");
     }
 
-    return runner.getSummary();
 }

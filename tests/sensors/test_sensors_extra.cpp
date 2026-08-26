@@ -73,10 +73,9 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-int obol_run_upstream_test_sensors_extra()
+TEST(UpstreamSensorsExtra, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoAlarmSensor: construction / destruction (class type valid)
@@ -288,5 +287,4 @@ int obol_run_upstream_test_sensors_extra()
             "SoDataSensor::getTriggerField() should be null before any trigger");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

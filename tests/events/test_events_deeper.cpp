@@ -63,10 +63,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_events_deeper()
+TEST(UpstreamEventsDeeper, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoEvent base: time, position, modifiers
@@ -316,5 +315,4 @@ int obol_run_upstream_test_events_deeper()
         runner.endTest(pass, pass ? "" : "SoLocation2Event position round-trip failed");
     }
 
-    return runner.getSummary();
 }

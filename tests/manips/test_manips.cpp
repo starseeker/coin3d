@@ -83,10 +83,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_manips()
+TEST(UpstreamManipsManips, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder  runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoTrackballManip: instantiation and type
@@ -616,5 +615,4 @@ int obol_run_upstream_test_manips()
         runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoCenterballManip");
     }
 
-    return runner.getSummary();
 }

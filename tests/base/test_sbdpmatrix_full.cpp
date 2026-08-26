@@ -53,10 +53,9 @@
 
 using namespace ObolTest;
 
-int obol_run_upstream_test_sbdpmatrix_full()
+TEST(UpstreamBaseSbdpmatrixFull, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // det3(): identity matrix → 1.0
@@ -178,5 +177,4 @@ int obol_run_upstream_test_sbdpmatrix_full()
             "SbDPMatrix equals() failed for two identity matrices");
     }
 
-    return runner.getSummary();
 }

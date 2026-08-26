@@ -110,10 +110,9 @@ static void writeNodeBinary(SoNode* root, char** outBuf, size_t* outSize)
     *outSize = nbytes;
 }
 
-int obol_run_upstream_test_sodb()
+TEST(UpstreamIoSodb, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // SoDB: realTime global field is set and close to wall-clock time
@@ -379,5 +378,4 @@ int obol_run_upstream_test_sodb()
             "Binary write/read round-trip failed: header, data, or child count mismatch");
     }
 
-    return runner.getSummary();
 }

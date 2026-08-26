@@ -35,12 +35,11 @@
 
 /**
  * @file test_utils.h
- * @brief Shared GTest support for the upstream-derived test cases
+ * @brief Shared support for retained source-level GTest suites
  *
- * Each retained check is registered as an independent GTest.  Its source
- * function runs once so shared setup, teardown, and registry state retain
- * their historical semantics; the cached check results are then routed
- * individually through GTest's filtering and reporting.
+ * Retained checks execute directly inside ordinary GTest suites.  The small
+ * recorder keeps their original names and diagnostics while migration to
+ * idiomatic EXPECT/ASSERT expressions proceeds incrementally.
  */
 
 #include <iostream>
@@ -48,51 +47,27 @@
 #include <vector>
 #include <cstdio>
 #include <gtest/gtest.h>
-#include "framework/upstream_test_registration.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
 
 namespace ObolTest {
 
-class UpstreamCheckRecorder {
+class CheckRecorder {
 private:
     std::string current_test_name;
-    int failed_tests = 0;
     
 public:
     void startTest(const std::string& name) {
         current_test_name = name;
-        detail::beginUpstreamCheck(name);
     }
     
     void endTest(bool passed, const std::string& error_msg = "") {
-        if (detail::finishUpstreamCheck(passed, error_msg)) return;
         if (!passed) {
-            ++failed_tests;
             ADD_FAILURE() << current_test_name
                           << (error_msg.empty() ? "" : ": ")
                           << error_msg;
         }
     }
     
-    int getSummary() const { return failed_tests; }
-};
-
-// Test fixture base class for initialization
-class TestFixture {
-public:
-    TestFixture() {
-        // Initialize Coin3D if not already initialized
-        if (!SoDB::isInitialized()) {
-            SoDB::init(nullptr);
-            SoInteraction::init();
-        }
-    }
-    
-    virtual ~TestFixture() {
-        // Cleanup if needed
-    }
 };
 
 // RGB output utilities to replace PNG functions

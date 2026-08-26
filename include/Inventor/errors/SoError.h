@@ -41,6 +41,7 @@ class SoBase;
 class SoNode;
 class SoPath;
 class SoEngine;
+struct cc_error;
 
 typedef void SoErrorCB(const class SoError * error, void * data);
 typedef SoErrorCB * SoErrorCBPtr;
@@ -84,7 +85,7 @@ private:
   static void generateBaseString(SbString & str, const SoBase * const base,
                                  const char * const what);
 
-  static void callbackForwarder(const void * err, void * data);
+  static void callbackForwarder(const cc_error * err, void * data);
 
   static SoType classTypeId;
   static SoErrorCB * callback;

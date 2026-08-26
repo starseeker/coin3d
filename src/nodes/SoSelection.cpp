@@ -527,7 +527,7 @@ SoSelection::operator[](const int i) const
 void
 SoSelection::addSelectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->selCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->selCBList->addCallback(f, userData);
 }
 
 /*!
@@ -538,7 +538,7 @@ SoSelection::addSelectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::removeSelectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->selCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->selCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -550,7 +550,7 @@ SoSelection::removeSelectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::addDeselectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->deselCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->deselCBList->addCallback(f, userData);
 }
 
 /*!
@@ -561,7 +561,7 @@ SoSelection::addDeselectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::removeDeselectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->deselCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->deselCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -576,7 +576,7 @@ SoSelection::removeDeselectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::addStartCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->startCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->startCBList->addCallback(f, userData);
 }
 
 /*!
@@ -587,7 +587,7 @@ SoSelection::addStartCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeStartCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->startCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->startCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -600,7 +600,7 @@ SoSelection::removeStartCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::addFinishCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->finishCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->finishCBList->addCallback(f, userData);
 }
 
 /*!
@@ -611,7 +611,7 @@ SoSelection::addFinishCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeFinishCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->finishCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->finishCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -694,7 +694,7 @@ SoSelection::getPickMatching(void) const
 void
 SoSelection::addChangeCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->changeCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->changeCBList->addCallback(f, userData);
 }
 
 /*!
@@ -704,7 +704,7 @@ SoSelection::addChangeCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeChangeCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->changeCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->changeCBList->removeCallback(f, userData);
 }
 
 /*!

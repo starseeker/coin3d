@@ -118,10 +118,9 @@ static SoSeparator * readFromBuffer(void * buf, size_t bufLen)
     return root;
 }
 
-int obol_run_upstream_test_io_write_action()
+TEST(UpstreamIoWriteAction, RetainedCoverage)
 {
-    TestFixture fixture;
-    UpstreamCheckRecorder runner;
+    CheckRecorder runner;
 
     // -----------------------------------------------------------------------
     // 1. ASCII round-trip: SoGroup { SoSphere SoCube } — type and child count
@@ -484,5 +483,4 @@ int obol_run_upstream_test_io_write_action()
             "SoDB::readAll on empty buffer should return nullptr");
     }
 
-    return runner.getSummary() != 0 ? 1 : 0;
 }

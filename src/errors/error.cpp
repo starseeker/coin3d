@@ -65,13 +65,11 @@
 #endif /* HAVE_UNISTD_H */
 
 #include <mutex>
-#include "threads/mutexp.h"
-
 #include "CoinTidbits.h"
 
 /* ********************************************************************** */
 
-static std::mutex error_mutex;
+static std::mutex cc_error_handler_mutex;
 
 /* FIXME: should be hidden from public API, and only visible to
    subclasses. 20020526 mortene. */
@@ -103,6 +101,7 @@ static SbBool cc_error_cleanup_function_set = FALSE;
 static void
 cc_error_cleanup(void)
 {
+  const std::lock_guard<std::mutex> guard(cc_error_handler_mutex);
   cc_error_callback = cc_error_default_handler_cb;
   cc_error_callback_data = NULL;
   cc_error_cleanup_function_set = FALSE;
@@ -177,12 +176,7 @@ cc_error_handle(cc_error * me)
 
   cc_error_cb * function = cc_error_get_handler(&arg);
   assert(function != NULL);
-
-  error_mutex.lock();
-
   (*function)(me, arg);
-
-  error_mutex.unlock();
 }
 
 /*!
@@ -192,7 +186,8 @@ cc_error_handle(cc_error * me)
 void
 cc_error_set_handler_callback(cc_error_cb * func, void * data)
 {
-  cc_error_callback = func;
+  const std::lock_guard<std::mutex> guard(cc_error_handler_mutex);
+  cc_error_callback = func ? func : cc_error_default_handler_cb;
   cc_error_callback_data = data;
 
   if (!cc_error_cleanup_function_set) {
@@ -208,6 +203,7 @@ cc_error_set_handler_callback(cc_error_cb * func, void * data)
 cc_error_cb *
 cc_error_get_handler_callback(void)
 {
+  const std::lock_guard<std::mutex> guard(cc_error_handler_mutex);
   return cc_error_callback;
 }
 
@@ -218,6 +214,7 @@ cc_error_get_handler_callback(void)
 void *
 cc_error_get_handler_data(void)
 {
+  const std::lock_guard<std::mutex> guard(cc_error_handler_mutex);
   return cc_error_callback_data;
 }
 
@@ -228,6 +225,7 @@ cc_error_get_handler_data(void)
 cc_error_cb *
 cc_error_get_handler(void ** data)
 {
+  const std::lock_guard<std::mutex> guard(cc_error_handler_mutex);
   *data = cc_error_callback_data;
   return cc_error_callback;
 }

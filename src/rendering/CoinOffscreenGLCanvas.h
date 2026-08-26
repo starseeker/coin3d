@@ -73,9 +73,8 @@ public:
   void updateDCBitmap();	
 private:
   SbBool clampSize(SbVec2s & s) const;
-  static void clampToPixelSizeRoof(SbVec2s & s);
-  static SbVec2s getMaxTileSize(SoDB::ContextManager * mgr);
-  static unsigned int tilesizeroof;
+  void clampToPixelSizeRoof(SbVec2s & s) const;
+  SbVec2s getMaxTileSize(SoDB::ContextManager * mgr) const;
   uint32_t tryActivateGLContext(void);
   void destructContext(void);
   
@@ -97,6 +96,9 @@ private:
 
   // Per-instance context manager (NULL → use global singleton)
   SoDB::ContextManager * instance_mgr;
+  mutable SbBool max_tile_size_cached;
+  mutable SbVec2s max_tile_size;
+  unsigned int tilesizeroof;
   
   // FBO-based offscreen rendering support
   unsigned int fbo;          // Framebuffer object ID
