@@ -77,6 +77,7 @@
 
 #include <Obol/cad/SoCADAssembly.h>
 #include <Obol/cad/CadViewState.h>
+#include <Obol/cad/CadPresentationPreparation.h>
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
@@ -127,6 +128,7 @@ public:
                 const SbMatrix&      viewMatrix,
                 const SbMatrix&      projectionMatrix,
                 const SbViewVolume&  viewVolume,
+                bool                  fixedFunctionClipPlanes,
                 const std::unordered_map<PartId, uint64_t,
                                          std::hash<PartId>>& partGenMap);
 
@@ -216,6 +218,9 @@ public:
     uint64_t renderPreparationSerial() const {
         return renderPreparationSerial_;
     }
+
+    Obol::CadPresentationPreparationSnapshot
+        presentationPreparationSnapshot() const;
 
     /** Number of visible occurrences proxied because atlas admission failed. */
     size_t lastPressureProxyCount() const {
@@ -314,6 +319,8 @@ private:
     Obol::CadRenderedWork lastRenderedWork_;
     bool      lastRenderUsedPreparedReplay_ = false;
     uint64_t  renderPreparationSerial_ = 0;
+    Obol::CadPresentationPreparationSnapshot presentationPreparation_;
+    uint64_t nextPreparationRevision_ = 1;
     bool      atlasAdmissionPressure_ = false;
     Obol::CadGpuResourceSnapshot lastGpuResourceSnapshot_;
     uint64_t completedResourceFrameSerial_ = 0;
@@ -521,6 +528,7 @@ private:
         uint64_t instanceAttributeRevision = 0;
         uint64_t subpixelProxyRevision = 0;
         int progressiveCutCeiling = -1;
+        float progressiveCutNextFraction = 0.0f;
         SbMatrix viewProj;
         std::vector<IndirectPreparedPart> parts;
         std::vector<uint32_t> partByPlanPartIndex;
@@ -599,6 +607,7 @@ private:
         uint32_t contextId = 0;
         uint64_t planRevision = 0;
         int progressiveCutCeiling = -1;
+        float progressiveCutNextFraction = 0.0f;
         SbMatrix viewProj;
 
         size_t itemCursor = 0;
@@ -608,6 +617,8 @@ private:
         size_t reverseCursor = 0;
         size_t visibleOccurrenceCount = 0;
         uint64_t requestedLiveBytes = 0;
+        uint64_t totalUnits = 0;
+        uint64_t completedUnits = 0;
 
         bool proxyPartActive = false;
         uint32_t proxyPartIndex = 0;
@@ -657,6 +668,24 @@ private:
     std::vector<uint32_t> indirectPackedInstanceByPart_;
     IndirectPreparedFrame indirectPrepared_;
     IndirectPreparationState indirectPreparation_;
+
+    Obol::CadPresentationPreparationTarget preparationTarget(
+        Obol::CadPresentationPreparationKind kind,
+        uint32_t contextId, uint64_t planRevision,
+        uint64_t geometryRevision, int progressiveCutCeiling,
+        float progressiveCutNextFraction,
+        const SbMatrix& viewProjection);
+    bool preparationTargetMatches(
+        Obol::CadPresentationPreparationKind kind,
+        uint32_t contextId, uint64_t planRevision,
+        uint64_t geometryRevision, int progressiveCutCeiling,
+        float progressiveCutNextFraction,
+        const SbMatrix& viewProjection) const;
+    void publishPreparation(
+        const Obol::CadPresentationPreparationTarget& target,
+        Obol::CadPresentationPreparationState state,
+        uint64_t totalUnits, uint64_t completedUnits,
+        uint64_t reservedBytes);
 
     bool renderIndirectShaded(
         const CadFramePlan& plan,
@@ -722,6 +751,25 @@ private:
                                  const SbMatrix& viewProj,
                                  const SbMatrix& viewMatrix,
                                  const SbMatrix& projectionMatrix);
+
+    /** Establish the complete compatibility client-array contract for a
+     * position draw.  Direct rendering may inherit arbitrary Coin state, so
+     * every fixed-function executor names the optional arrays it supplies
+     * instead of relying on a preceding executor to disable them. */
+    static void configureFixedClientArrays(const SoGLContext *glue,
+                                           bool normals,
+                                           bool colors);
+
+    /** Submit a software flat-batch group in bounded primitive-aligned
+     * chunks.  Returns false after observing a host interruption between
+     * chunks; callers still own GL-state restoration on that path. */
+    bool drawSoftwareFlatRanges(const SoGLContext *glue,
+                                GLenum mode,
+                                GLint first,
+                                GLsizei count,
+                                const std::vector<GLint>& firsts,
+                                const std::vector<GLsizei>& counts,
+                                GLsizei primitiveSize);
 
     /** Draw zero-copy WireRep triangle-edge aliases from the retained indexed
      * triangle buffers.  Returns false only when such work exists but could

@@ -85,6 +85,7 @@
 
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
+#include <Obol/cad/CadPresentationPreparation.h>
 #include <Obol/cad/CadProgressive.h>
 
 #include <vector>
@@ -705,6 +706,13 @@ public:
      * in O(1) at interaction start while its precise per-instance allocator
      * catches up. */
     SoSFInt32 progressiveCutCeiling;
+    /** Fraction of progressive instances promoted one cut above the ceiling.
+     *
+     * A stable retained frame can use this to spend capacity between two
+     * discrete scene-wide PoP populations.  Promotion is deterministic for
+     * an instance id, so unchanged frames never shimmer.  Zero preserves the
+     * ordinary whole-cut ceiling used for interactive backoff. */
+    SoSFFloat progressiveCutNextFraction;
     /** Screen-space size below which eligible occurrences enter one point
      * batch.  The default 1 px is pixel-exact; an interactive controller may
      * temporarily raise it to its measured screen-error tolerance.  Geometry
@@ -902,6 +910,16 @@ public:
     /** Apply the render-only progressive ceiling to one requested cut. */
     uint8_t effectiveProgressiveCut(uint8_t requested) const;
 
+    /** Apply the render-only ceiling and deterministic fractional promotion
+     * for one retained part.  All instances of shared geometry consequently
+     * use one coherent cut. */
+    uint8_t effectiveProgressiveCut(
+        Obol::PartId part, uint8_t requested) const;
+
+    /** Richest cut any instance may request under the current render-only
+     * ceiling.  Upload/allocation planning uses this conservative bound. */
+    uint8_t maximumEffectiveProgressiveCut(uint8_t requested) const;
+
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.
      * Used by the GPU renderer to upload per-part VBOs.
@@ -996,6 +1014,10 @@ public:
      * prevents one-time preparation cost from being learned as steady draw
      * capacity. */
     uint64_t renderPreparationSerial() const;
+
+    /** Finite exact-target certificate for retained frame preparation. */
+    Obol::CadPresentationPreparationSnapshot
+        presentationPreparationSnapshot() const;
 
     /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
     size_t lastSubpixelProxyCount() const;

@@ -133,16 +133,33 @@ public:
         : glue_(context), hasVbo_(vbo), hasVao_(vao),
           hasIndirect_(indirect)
     {
+        if (compatibilityStack) {
+            valid_ = false;
+        }
         if (compatibilityStack && glue_->glPushAttrib &&
                 glue_->glPopAttrib && glue_->glPushClientAttrib &&
                 glue_->glPopClientAttrib) {
+            GLint stackDepth = 0;
+            GLint pushedDepth = 0;
+            glue_->glGetIntegerv(GL_ATTRIB_STACK_DEPTH, &stackDepth);
             glue_->glPushAttrib(
                 GL_CURRENT_BIT | GL_ENABLE_BIT | GL_LIGHTING_BIT |
                 GL_LINE_BIT | GL_POINT_BIT | GL_POLYGON_BIT |
                 GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
                 GL_TRANSFORM_BIT);
-            glue_->glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-            compatibilityStack_ = true;
+            glue_->glGetIntegerv(GL_ATTRIB_STACK_DEPTH, &pushedDepth);
+            serverCompatibilityStack_ = pushedDepth == stackDepth + 1;
+
+            if (serverCompatibilityStack_) {
+                glue_->glGetIntegerv(
+                    GL_CLIENT_ATTRIB_STACK_DEPTH, &stackDepth);
+                glue_->glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+                glue_->glGetIntegerv(
+                    GL_CLIENT_ATTRIB_STACK_DEPTH, &pushedDepth);
+                clientCompatibilityStack_ = pushedDepth == stackDepth + 1;
+            }
+            valid_ = serverCompatibilityStack_ &&
+                clientCompatibilityStack_;
         }
 #ifdef GL_CURRENT_PROGRAM
         if (glue_->glUseProgramObjectARB) {
@@ -197,11 +214,13 @@ public:
             SoGLContext_glEnable(glue_, GL_POLYGON_OFFSET_FILL);
         else
             SoGLContext_glDisable(glue_, GL_POLYGON_OFFSET_FILL);
-        if (compatibilityStack_) {
+        if (clientCompatibilityStack_)
             glue_->glPopClientAttrib();
+        if (serverCompatibilityStack_)
             glue_->glPopAttrib();
-        }
     }
+
+    bool valid() const { return valid_; }
 
 private:
     const SoGLContext *glue_;
@@ -209,7 +228,9 @@ private:
     bool hasVbo_ = false;
     bool hasVao_ = false;
     bool hasIndirect_ = false;
-    bool compatibilityStack_ = false;
+    bool serverCompatibilityStack_ = false;
+    bool clientCompatibilityStack_ = false;
+    bool valid_ = true;
     GLint program_ = 0;
     GLint vao_ = 0;
     GLint arrayBuffer_ = 0;
@@ -873,6 +894,121 @@ void CadRendererGL::noteRenderPreparation(const char *reason)
             reason ? reason : "unknown");
 }
 
+Obol::CadPresentationPreparationTarget
+CadRendererGL::preparationTarget(
+        Obol::CadPresentationPreparationKind kind,
+        uint32_t contextId, uint64_t planRevision,
+        uint64_t geometryRevision, int progressiveCutCeiling,
+        float progressiveCutNextFraction,
+        const SbMatrix& viewProjection)
+{
+    Obol::CadPresentationPreparationTarget target;
+    target.kind = kind;
+    target.contextId = contextId;
+    target.planRevision = planRevision;
+    target.geometryRevision = geometryRevision;
+    target.progressiveCutCeiling = progressiveCutCeiling;
+    std::memcpy(&target.progressiveCutNextFractionBits,
+        &progressiveCutNextFraction,
+        sizeof(target.progressiveCutNextFractionBits));
+    for (size_t i = 0; i < target.viewProjectionBits.size(); ++i)
+        std::memcpy(&target.viewProjectionBits[i],
+            viewProjection[0] + i, sizeof(target.viewProjectionBits[i]));
+    if (presentationPreparation_.state ==
+            Obol::CadPresentationPreparationState::Preparing) {
+        Obol::CadPresentationPreparationTarget active =
+            presentationPreparation_.target;
+        active.obligationRevision = 0;
+        if (active == target)
+            return presentationPreparation_.target;
+    }
+    target.obligationRevision = nextPreparationRevision_++;
+    if (!nextPreparationRevision_)
+        nextPreparationRevision_ = 1;
+    return target;
+}
+
+bool
+CadRendererGL::preparationTargetMatches(
+        Obol::CadPresentationPreparationKind kind,
+        uint32_t contextId, uint64_t planRevision,
+        uint64_t geometryRevision, int progressiveCutCeiling,
+        float progressiveCutNextFraction,
+        const SbMatrix& viewProjection) const
+{
+    if (!presentationPreparation_.hasTarget())
+        return false;
+    const Obol::CadPresentationPreparationTarget& target =
+        presentationPreparation_.target;
+    if (target.kind != kind || target.contextId != contextId ||
+            target.planRevision != planRevision ||
+            target.geometryRevision != geometryRevision ||
+            target.progressiveCutCeiling != progressiveCutCeiling)
+        return false;
+    uint32_t fractionBits = 0;
+    std::memcpy(&fractionBits, &progressiveCutNextFraction,
+        sizeof(fractionBits));
+    if (target.progressiveCutNextFractionBits != fractionBits)
+        return false;
+    for (size_t i = 0; i < target.viewProjectionBits.size(); ++i) {
+        uint32_t matrixBits = 0;
+        std::memcpy(&matrixBits, viewProjection[0] + i,
+            sizeof(matrixBits));
+        if (target.viewProjectionBits[i] != matrixBits)
+            return false;
+    }
+    return true;
+}
+
+void
+CadRendererGL::publishPreparation(
+        const Obol::CadPresentationPreparationTarget& target,
+        Obol::CadPresentationPreparationState state,
+        uint64_t totalUnits, uint64_t completedUnits,
+        uint64_t reservedBytes)
+{
+    Obol::CadPresentationPreparationSnapshot next;
+    next.target = target;
+    next.state = state;
+    next.totalUnits = totalUnits;
+    next.completedUnits = std::min(completedUnits, totalUnits);
+    next.reservedBytes = reservedBytes;
+
+    /* An exact target may only move forward.  Replacing the target starts a
+     * new obligation; replaying the same target can never make completed
+     * retained work disappear from the host-visible certificate. */
+    if (presentationPreparation_.target == target &&
+            presentationPreparation_.hasTarget()) {
+        next.totalUnits = presentationPreparation_.totalUnits;
+        next.completedUnits = std::max(
+            next.completedUnits,
+            presentationPreparation_.completedUnits);
+        next.reservedBytes = std::max(
+            next.reservedBytes,
+            presentationPreparation_.reservedBytes);
+    }
+    presentationPreparation_ = next;
+}
+
+Obol::CadPresentationPreparationSnapshot
+CadRendererGL::presentationPreparationSnapshot() const
+{
+    Obol::CadPresentationPreparationSnapshot snapshot =
+        presentationPreparation_;
+    if (!indirectPreparation_.active)
+        return snapshot;
+    snapshot.state = indirectPreparation_.phase ==
+            IndirectPreparationPhase::Submit ?
+        Obol::CadPresentationPreparationState::Complete :
+        Obol::CadPresentationPreparationState::Preparing;
+    snapshot.totalUnits = indirectPreparation_.totalUnits;
+    snapshot.completedUnits = std::min(
+        indirectPreparation_.completedUnits,
+        indirectPreparation_.totalUnits);
+    snapshot.reservedBytes = indirectPreparation_.requestedLiveBytes;
+    return snapshot;
+}
+
 void CadRendererGL::ensurePartUploaded(
         PartId pid, const SoCADAssembly& assembly, uint64_t gen,
         uint8_t requestedCut, const SoGLContext* glue)
@@ -1294,9 +1430,10 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
 static uint8_t maximumRequestedCut(
         const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
 {
-    const auto found = plan.maximumRequestedCutByPart.find(part);
-    return found != plan.maximumRequestedCutByPart.end() ?
-        assembly.effectiveProgressiveCut(found->second) :
+    const auto found = plan.partPresentation.find(part);
+    return found != plan.partPresentation.end() ?
+        assembly.maximumEffectiveProgressiveCut(
+            found->second.maximumRequestedCut) :
         Obol::ProgressiveCutUnspecified;
 }
 
@@ -1336,7 +1473,7 @@ void CadRendererGL::renderPoints(
         glue->glPushMatrix();
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
         glue->glDisable(GL_LIGHTING);
-        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        configureFixedClientArrays(glue, false, false);
 
         for (const CadDrawItem& item : plan.pointItems) {
             if (renderInterruptedAfter(deadlineWork)) {
@@ -1513,8 +1650,9 @@ void CadRendererGL::renderPoints(
 bool CadRendererGL::wireRepHasUncollapsedInstances(
         const CadFramePlan& plan, PartId part)
 {
-    return plan.wirePartsWithUncollapsedInstances.find(part) !=
-        plan.wirePartsWithUncollapsedInstances.end();
+    const auto found = plan.partPresentation.find(part);
+    return found != plan.partPresentation.end() &&
+        found->second.wireHasUncollapsedInstances;
 }
 
 const std::vector<CadSubpixelProxyPoint>&
@@ -1885,8 +2023,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
         glue->glLoadMatrixf(viewProj[0]);
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
         glue->glDisable(GL_LIGHTING);
-        glue->glEnableClientState(GL_VERTEX_ARRAY);
-        glue->glEnableClientState(GL_COLOR_ARRAY);
+        configureFixedClientArrays(glue, false, true);
         for (size_t i = 0; i < streamCount; ++i) {
             const CadSubpixelProxyGpu& gpu = *streams[i];
             glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.posBuf);
@@ -1991,6 +2128,7 @@ void CadRendererGL::render(
         const SbMatrix&      viewMatrix,
         const SbMatrix&      projectionMatrix,
         const SbViewVolume&  viewVolume,
+        bool                  fixedFunctionClipPlanes,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -2021,6 +2159,8 @@ void CadRendererGL::render(
             !capsDetected_ || shadersContextId_ != glue->contextid)
         noteRenderPreparation("renderer-initialization");
     if (!ensureReady(glue)) return;
+    const bool forceFixedClipPlanes = fixedFunctionClipPlanes &&
+        caps_.canUseFixedVbo();
     const auto publishResourceSnapshot = [&]() {
         Obol::CadGpuResourceSnapshot snapshot =
             gpuRes_->resourceSnapshot();
@@ -2077,6 +2217,12 @@ void CadRendererGL::render(
         caps_.hasMultiDrawIndirect,
         caps_.compatibilityProfile &&
             (caps_.isSoftwareRenderer || !caps_.canUseVbo()));
+    if (!directState.valid()) {
+        atlasAdmissionPressure_ = true;
+        activeRenderInterrupted_ = true;
+        finishFrameResources(false);
+        return;
+    }
 
     // SoCADAssembly has synchronized Coin's lazy shape state before entering
     // this direct-GL renderer.  Keep all internal cull changes local and
@@ -2119,10 +2265,13 @@ void CadRendererGL::render(
         !retainedProgressive || shaders_.wirePopInst;
     const bool progressiveShadedInstShaderReady =
         !retainedProgressive || shaders_.shadedPopInst;
-    const bool useFlatShaded = !adaptiveShadedRanges &&
+    const bool useFlatShaded = !forceFixedClipPlanes &&
         flatShadedEnabled && canUseFlatShaded &&
-        (hiddenLine || plan.shadedItems.size() >= 128);
+        ((caps_.isSoftwareRenderer && adaptiveShadedRanges) ||
+         (!adaptiveShadedRanges &&
+          (hiddenLine || plan.shadedItems.size() >= 128)));
 
+    try {
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
     if (finishInterruptedFrame()) {
         return;
@@ -2138,7 +2287,8 @@ void CadRendererGL::render(
         explicitWire = explicitWire ||
             item.rep.type == CadRepType::WireSegments;
     }
-    if (assembly.drawMode.getValue() == SoCADAssembly::WIREFRAME &&
+    if (!forceFixedClipPlanes &&
+            assembly.drawMode.getValue() == SoCADAssembly::WIREFRAME &&
             indexedTriangleWire) {
         if (!renderIndexedTriangleWire(plan, assembly, glue, viewProj,
                 viewMatrix, projectionMatrix)) {
@@ -2209,7 +2359,7 @@ void CadRendererGL::render(
         SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
         SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
-        if (caps_.canUseVbo() && shaders_.shaded &&
+        if (!forceFixedClipPlanes && caps_.canUseVbo() && shaders_.shaded &&
                 progressiveShadedShaderReady) {
             renderVboLoop(
                 plan, assembly, glue, viewProj, viewVolume,
@@ -2226,13 +2376,14 @@ void CadRendererGL::render(
         if (finishInterruptedFrame())
             return;
 
-        if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
+        if (!forceFixedClipPlanes && !adaptiveWireRanges &&
+                caps_.canUseInstanced() && shaders_.wireInst &&
                 progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
             renderInstanced(plan, assembly, glue, viewProj, viewVolume,
                             partGenMap,
                             true, false, false);
-        } else if (caps_.canUseVbo() && shaders_.wire &&
+        } else if (!forceFixedClipPlanes && caps_.canUseVbo() && shaders_.wire &&
                 progressiveWireShaderReady) {
             lastRenderTier_ = 1;
             renderVboLoop(
@@ -2256,7 +2407,8 @@ void CadRendererGL::render(
         return;
     }
 
-    const bool indirectEnabled = configuration.indirect;
+    const bool indirectEnabled = !forceFixedClipPlanes &&
+        configuration.indirect;
     if (!indirectStatusReported_ &&
             configuration.indirectDebug &&
             plan.shadedItems.size() >= 128) {
@@ -2382,7 +2534,7 @@ void CadRendererGL::render(
                     "points=%.3fms shaded=%.3fms wire=%.3fms "
                     "proxy-maintenance=%.3fms "
                     "source_instances=%zu wire_items=%zu "
-                    "wire_uncollapsed_parts=%zu proxies=%zu\n",
+                    "proxies=%zu\n",
                     total,
                     milliseconds(renderStarted, pointsCompleted),
                     milliseconds(pointsCompleted, shadedCompleted),
@@ -2390,7 +2542,6 @@ void CadRendererGL::render(
                     milliseconds(wireCompleted, completed),
                     plan.visibleInstances.size(),
                     plan.wireItems.size(),
-                    plan.wirePartsWithUncollapsedInstances.size(),
                     plan.subpixelProxyPoints.size() +
                         pressureProxyPoints().size());
         }
@@ -2459,7 +2610,8 @@ void CadRendererGL::render(
         (wireInstanceCount >= 128 &&
          wireInstanceCount <= maximumSoftwareFlatWireInstances) :
         plan.wireItems.size() >= 128;
-    const bool flatWireRendered = !adaptiveWireRanges && flatWireEnabled &&
+    const bool flatWireRendered = !forceFixedClipPlanes &&
+        !adaptiveWireRanges && flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
         renderFlatWire(plan, assembly, glue, viewProj);
     if (finishInterruptedFrame())
@@ -2494,8 +2646,9 @@ void CadRendererGL::render(
 
     if (flatWireRendered && plan.shadedItems.empty()) {
         lastRenderTier_ = 3;
-    } else if (caps_.isSoftwareRenderer && !softwareGlslRequested() &&
-            caps_.canUseFixedVbo()) {
+    } else if (forceFixedClipPlanes ||
+            (caps_.isSoftwareRenderer && !softwareGlslRequested() &&
+             caps_.canUseFixedVbo())) {
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
                            projectionMatrix, !flatWireRendered, true);
@@ -2532,6 +2685,16 @@ void CadRendererGL::render(
     if (finishInterruptedFrame())
         return;
     finishFrameResources(true);
+    } catch (const std::bad_alloc &) {
+        /* CPU staging and renderer bookkeeping are admitted work just like
+         * GPU buffers.  Process-address or backend pressure must reject this
+         * candidate frame atomically, never escape through Coin and terminate
+         * the application.  The owner retains its preceding completed image;
+         * the normal interrupted-frame feedback selects a cheaper successor. */
+        atlasAdmissionPressure_ = true;
+        activeRenderInterrupted_ = true;
+        finishFrameResources(false);
+    }
 }
 
 

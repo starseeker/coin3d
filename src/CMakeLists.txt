@@ -288,7 +288,14 @@ endif()
 # relationship relocatable so consumers do not need LD_LIBRARY_PATH merely to
 # load a dual-backend Obol installation.
 if(UNIX AND NOT APPLE AND OBOL_USE_SWRAST)
-  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+  # Obol and its bundled software renderer are published as a co-located
+  # pair.  Use the install rpath for the build artifact too: downstream
+  # projects may copy the shared library into their own build lib directory,
+  # where the producer's absolute build rpath would otherwise make the loader
+  # select a stale external libosmesa before the consumer's copy.
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN")
 endif()
 
 # Set library version properties

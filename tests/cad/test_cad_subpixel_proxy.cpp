@@ -1164,6 +1164,24 @@ struct DeadlineAssemblyAbort {
     size_t abortAt = 10;
 };
 
+struct DeadlinePreparationAbort {
+    SoCADAssembly *assembly = nullptr;
+    size_t calls = 0u;
+};
+
+SoGLRenderAction::AbortCode
+deadlineAbortPreparation(void *userData)
+{
+    DeadlinePreparationAbort *counter =
+        static_cast<DeadlinePreparationAbort *>(userData);
+    if (!counter || !counter->assembly ||
+            counter->assembly->presentationPreparationSnapshot().state !=
+                Obol::CadPresentationPreparationState::Preparing)
+        return SoGLRenderAction::CONTINUE;
+    ++counter->calls;
+    return SoGLRenderAction::ABORT;
+}
+
 SoGLRenderAction::AbortCode
 deadlineAbortAssemblyWork(void *userData)
 {
@@ -1176,6 +1194,117 @@ deadlineAbortAssemblyWork(void *userData)
     ++counter->calls;
     return counter->calls >= counter->abortAt ?
         SoGLRenderAction::ABORT : SoGLRenderAction::CONTINUE;
+}
+
+bool
+subpixelPreparationReservationCoversBoundedScratch()
+{
+    constexpr uint32_t occurrenceCount = 131072u;
+    constexpr uint32_t gridWidth = 512u;
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(2048.0f);
+    root->addChild(camera);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    root->addChild(assembly);
+
+    Obol::PartGeometry geometry;
+    geometry.wire = unitBox();
+    geometry.subpixelProxyEligible = true;
+    geometry.structuralProxy = true;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("bounded-subpixel-preparation");
+    assembly->upsertPart(part, geometry);
+
+    std::vector<Obol::InstanceUpdate> updates;
+    updates.reserve(occurrenceCount);
+    for (uint32_t index = 0; index < occurrenceCount; ++index) {
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = "bounded-subpixel-preparation";
+        instance.occurrenceIndex = index;
+        instance.lodStructuralProxy = true;
+        instance.localToRoot.setTranslate(SbVec3f(
+            static_cast<float>(index % gridWidth) -
+                static_cast<float>(gridWidth) * 0.5f,
+            static_cast<float>(index / gridWidth) -
+                static_cast<float>(occurrenceCount / gridWidth) * 0.5f,
+            0.0f));
+        Obol::InstanceUpdate update;
+        update.instance = Obol::CadIdBuilder::extendNameOccBool(
+            instance.parent, instance.childName,
+            instance.occurrenceIndex, instance.boolOp);
+        update.record = instance;
+        updates.push_back(std::move(update));
+    }
+    assembly->upsertInstances(updates);
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    SoGLRenderAction *action = renderer.getGLRenderAction();
+    SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+    void *previousData = nullptr;
+    if (action)
+        action->getAbortCallback(previousCallback, previousData);
+
+    DeadlinePreparationAbort interrupted;
+    interrupted.assembly = assembly;
+    if (action)
+        action->setAbortCallback(deadlineAbortPreparation, &interrupted);
+    (void)renderer.render(root);
+    const Obol::CadPresentationPreparationSnapshot preparing =
+        assembly->presentationPreparationSnapshot();
+    if (action)
+        action->setAbortCallback(previousCallback, previousData);
+
+    /* These are only the fixed occurrence-indexed buffers.  Point records
+     * and their reverse index make the real reservation larger.  Requiring
+     * this lower bound catches any return to unaccounted node-based scratch
+     * while remaining independent of std::vector growth policy. */
+    const uint64_t fixedOccurrenceBytes =
+        sizeof(uint8_t) + sizeof(uint32_t) + sizeof(int8_t) +
+        sizeof(Obol::InstanceId);
+    const uint64_t minimumReservation =
+        static_cast<uint64_t>(occurrenceCount) * fixedOccurrenceBytes +
+        sizeof(uint8_t) + sizeof(size_t);
+    const bool preparationInterrupted = action &&
+        action->hasTerminated() && interrupted.calls == 1u;
+    bool passed = preparationInterrupted &&
+        preparing.target.kind == Obol::CadPresentationPreparationKind::
+            SubpixelClassification &&
+        preparing.state == Obol::CadPresentationPreparationState::Preparing &&
+        preparing.completedUnits > 0u &&
+        preparing.completedUnits < preparing.totalUnits &&
+        preparing.reservedBytes >= minimumReservation;
+
+    SoOffscreenRenderer recoveryRenderer(SbViewportRegion(128, 128));
+    recoveryRenderer.setComponents(SoOffscreenRenderer::RGB);
+    passed = passed && render(recoveryRenderer, root) &&
+        assembly->lastSubpixelProxyCount() == occurrenceCount &&
+        assembly->lastUncollapsedStructuralProxyCount() == 0u;
+    if (!passed) {
+        std::fprintf(stderr,
+            "bounded classifier reservation failed "
+            "(aborted=%d state=%u completed=%llu/%llu reserved=%llu "
+            "minimum=%llu proxies=%zu boxes=%zu)\n",
+            preparationInterrupted ? 1 : 0,
+            static_cast<unsigned>(preparing.state),
+            static_cast<unsigned long long>(preparing.completedUnits),
+            static_cast<unsigned long long>(preparing.totalUnits),
+            static_cast<unsigned long long>(preparing.reservedBytes),
+            static_cast<unsigned long long>(minimumReservation),
+            assembly->lastSubpixelProxyCount(),
+            assembly->lastUncollapsedStructuralProxyCount());
+    }
+    root->unref();
+    return passed;
 }
 
 bool
@@ -2573,4 +2702,9 @@ TEST_F(CadSubpixelProxyContracts, IndirectValidationResumesAcrossAborts)
 TEST_F(CadSubpixelProxyContracts, IndirectAtlasPreservesCoverageUnderPressure)
 {
     EXPECT_TRUE(indirectProgressiveAtlasPreservesCoverageUnderPressure());
+}
+
+TEST_F(CadSubpixelProxyContracts, PreparationReservationCoversBoundedScratch)
+{
+    EXPECT_TRUE(subpixelPreparationReservationCoversBoundedScratch());
 }

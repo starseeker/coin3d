@@ -390,10 +390,14 @@ struct CadFramePlan {
      * these in the plan avoids rescanning every draw item for every required
      * part (quadratic in a scene with many distinct meshes).
      */
-    std::unordered_map<PartId, uint8_t, std::hash<PartId>>
-        maximumRequestedCutByPart;
-    std::unordered_set<PartId, std::hash<PartId>>
-        wirePartsWithUncollapsedInstances;
+    struct PartPresentation {
+        uint8_t maximumRequestedCut = 0;
+        bool wireHasUncollapsedInstances = false;
+    };
+
+    /** Per-part values shared by resource admission and wire fallback. */
+    std::unordered_map<PartId, PartPresentation, std::hash<PartId>>
+        partPresentation;
 
     /** Conservative aggregate world bounding box of visible instances. */
     SbBox3f worldBounds;

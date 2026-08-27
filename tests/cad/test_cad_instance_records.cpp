@@ -11,6 +11,8 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/sensors/SoNodeSensor.h>
 
+#include <string>
+
 namespace {
 
 static void
@@ -131,6 +133,33 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     }
     assembly->upsertPart(first.part, shaded);
     EXPECT_TRUE(assembly->hasProgressivePartLod());
+
+    assembly->progressiveCutCeiling = 5;
+    assembly->progressiveCutNextFraction = 0.5f;
+    size_t promotedParts = 0;
+    for (size_t i = 0; i < 128; ++i) {
+        const Obol::PartId part = Obol::CadIdBuilder::hash128(
+            std::string("fractional-part-") + std::to_string(i));
+        const uint8_t firstCut =
+            assembly->effectiveProgressiveCut(part, 10);
+        const uint8_t repeatedCut =
+            assembly->effectiveProgressiveCut(part, 10);
+        if (firstCut == 6)
+            ++promotedParts;
+        if (firstCut != repeatedCut || (firstCut != 5 && firstCut != 6)) {
+            promotedParts = 0;
+            break;
+        }
+    }
+    EXPECT_GT(promotedParts, 32u);
+    EXPECT_LT(promotedParts, 96u);
+    assembly->progressiveCutNextFraction = 0.0f;
+    EXPECT_EQ(assembly->effectiveProgressiveCut(first.part, 10), 5);
+    assembly->progressiveCutNextFraction = 1.0f;
+    EXPECT_EQ(assembly->effectiveProgressiveCut(first.part, 10), 6);
+    EXPECT_EQ(assembly->maximumEffectiveProgressiveCut(10), 6);
+    assembly->progressiveCutCeiling = -1;
+    assembly->progressiveCutNextFraction = 0.0f;
 
     unsigned int changeCount = 0;
     SoNodeSensor changeSensor(nodeChanged, &changeCount);
