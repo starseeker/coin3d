@@ -148,65 +148,18 @@ static bool testDragger(SoDragger *dragger,
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_simple_draggers";
-    int failures = 0;
-
-    printf("\n=== Simple dragger interaction tests ===\n");
-
-    // Translation draggers
-    { SoTranslate1Dragger *d = new SoTranslate1Dragger;
-      if (!testDragger(d, basepath, "translate1")) ++failures; }
-
-    { SoTranslate2Dragger *d = new SoTranslate2Dragger;
-      if (!testDragger(d, basepath, "translate2")) ++failures; }
-
-    // Scale draggers
-    { SoScale1Dragger *d = new SoScale1Dragger;
-      if (!testDragger(d, basepath, "scale1")) ++failures; }
-
-    { SoScale2Dragger *d = new SoScale2Dragger;
-      if (!testDragger(d, basepath, "scale2")) ++failures; }
-
-    { SoScale2UniformDragger *d = new SoScale2UniformDragger;
-      if (!testDragger(d, basepath, "scale2uniform")) ++failures; }
-
-    { SoScaleUniformDragger *d = new SoScaleUniformDragger;
-      if (!testDragger(d, basepath, "scaleuniform")) ++failures; }
-
-    // Rotation draggers
-    { SoRotateCylindricalDragger *d = new SoRotateCylindricalDragger;
-      if (!testDragger(d, basepath, "rotate_cylindrical")) ++failures; }
-
-    { SoRotateDiscDragger *d = new SoRotateDiscDragger;
-      if (!testDragger(d, basepath, "rotate_disc")) ++failures; }
-
-    { SoRotateSphericalDragger *d = new SoRotateSphericalDragger;
-      if (!testDragger(d, basepath, "rotate_spherical")) ++failures; }
-
-    // Trackball dragger
-    { SoTrackballDragger *d = new SoTrackballDragger;
-      if (!testDragger(d, basepath, "trackball")) ++failures; }
-
-    // DragPoint dragger
-    { SoDragPointDragger *d = new SoDragPointDragger;
-      if (!testDragger(d, basepath, "dragpoint")) ++failures; }
-
-    // Jack dragger
-    { SoJackDragger *d = new SoJackDragger;
-      if (!testDragger(d, basepath, "jack")) ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_simple_draggers) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_simple_draggers");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Translate1, "dragger_translate1", testDragger(new SoTranslate1Dragger, outputStem.c_str(), "translate1"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Translate2, "dragger_translate2", testDragger(new SoTranslate2Dragger, outputStem.c_str(), "translate2"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Scale1, "dragger_scale1", testDragger(new SoScale1Dragger, outputStem.c_str(), "scale1"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Scale2, "dragger_scale2", testDragger(new SoScale2Dragger, outputStem.c_str(), "scale2"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Scale2Uniform, "dragger_scale2_uniform", testDragger(new SoScale2UniformDragger, outputStem.c_str(), "scale2uniform"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, ScaleUniform, "dragger_scale_uniform", testDragger(new SoScaleUniformDragger, outputStem.c_str(), "scaleuniform"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, RotateCylindrical, "dragger_rotate_cyl", testDragger(new SoRotateCylindricalDragger, outputStem.c_str(), "rotate_cylindrical"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, RotateDisc, "dragger_rotate_disc", testDragger(new SoRotateDiscDragger, outputStem.c_str(), "rotate_disc"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, RotateSpherical, "dragger_rotate_sphere", testDragger(new SoRotateSphericalDragger, outputStem.c_str(), "rotate_spherical"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Trackball, "dragger_trackball", testDragger(new SoTrackballDragger, outputStem.c_str(), "trackball"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, DragPoint, "dragger_point", testDragger(new SoDragPointDragger, outputStem.c_str(), "dragpoint"))
+OBOL_RENDER_TEST_CASE(SimpleDraggerRenderTest, Jack, "dragger_jack", testDragger(new SoJackDragger, outputStem.c_str(), "jack"))

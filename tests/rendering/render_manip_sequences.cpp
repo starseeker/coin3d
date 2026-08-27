@@ -279,30 +279,12 @@ static bool test6_manipSwap(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_manip_sequences";
-    int failures = 0;
-
-    printf("\n=== Complex manipulator sequence tests ===\n");
-
-    if (!test1_centerballManip(basepath))  ++failures;
-    if (!test2_handleBoxManip(basepath))   ++failures;
-    if (!test3_tabBoxManip(basepath))      ++failures;
-    if (!test4_transformBoxManip(basepath)) ++failures;
-    if (!test5_jackManip(basepath))        ++failures;
-    if (!test6_manipSwap(basepath))        ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_manip_sequences) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_manip_sequences");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, Centerball, "manip_centerball_sequence", test1_centerballManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, HandleBox, "manip_handlebox_sequence", test2_handleBoxManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, TabBox, "manip_tabbox_sequence", test3_tabBoxManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, TransformBox, "manip_transformbox_sequence", test4_transformBoxManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, Jack, "manip_jack", test5_jackManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ManipulatorSequenceTest, Swap, "manip_swap", test6_manipSwap(outputStem.c_str()))

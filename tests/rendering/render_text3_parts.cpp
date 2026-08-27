@@ -269,45 +269,10 @@ static bool test4_boundingBox()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_text3_parts";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createText3Parts(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoText3 parts and justification tests ===\n");
-
-    if (!test1_allJustifications(basepath))  ++failures;
-    if (!test2_allParts(basepath))           ++failures;
-    if (!test3_multilineSpacing(basepath))   ++failures;
-    if (!test4_boundingBox())                ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_text3_parts) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_text3_parts");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(Text3PartsRenderTest, Justifications, "text3_justification", test1_allJustifications(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(Text3PartsRenderTest, Parts, "text3_parts", test2_allParts(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(Text3PartsRenderTest, MultilineSpacing, "text3_spacing", test3_multilineSpacing(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(Text3PartsRenderTest, BoundingBox, "text3_bbox", test4_boundingBox())

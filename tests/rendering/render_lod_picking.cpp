@@ -249,44 +249,10 @@ static bool test4_multipleLODs(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_lod_picking";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createLODPicking(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== LOD picking and interaction tests ===\n");
-
-    if (!test1_lodRenderDistances(basepath)) ++failures;
-    if (!test2_pickLODNear(basepath))       ++failures;
-    if (!test3_levelOfDetail(basepath))     ++failures;
-    if (!test4_multipleLODs(basepath))      ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_lod_picking) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_lod_picking");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(LodPickingRenderTest, RenderDistances, "lod_distances", test1_lodRenderDistances(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LodPickingRenderTest, NearPick, "lod_near_pick", test2_pickLODNear(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LodPickingRenderTest, LevelOfDetail, "lod_level", test3_levelOfDetail(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LodPickingRenderTest, MultipleLods, "lod_multiple", test4_multipleLODs(outputStem.c_str()))

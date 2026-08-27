@@ -309,48 +309,14 @@ static bool test8_multipleImages(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_image_deep";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *root = ObolTest::Scenes::createImageDeep(256, 256);
-        SbViewportRegion vp(256, 256);
-        SoOffscreenRenderer ren(vp);
-        ren.setComponents(SoOffscreenRenderer::RGB);
-        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (ren.render(root)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            ren.writeToRGB(primaryPath);
-        }
-        root->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoImage deep coverage tests ===\n");
-
-    if (!test1_grayscale(basepath))     { printf("FAIL test1\n"); ++failures; }
-    if (!test2_grayAlpha(basepath))     { printf("FAIL test2\n"); ++failures; }
-    if (!test3_rgba(basepath))          { printf("FAIL test3\n"); ++failures; }
-    if (!test4_vertAlignment(basepath)) { printf("FAIL test4\n"); ++failures; }
-    if (!test5_horAlignment(basepath))  { printf("FAIL test5\n"); ++failures; }
-    if (!test6_nullImage(basepath))     { printf("FAIL test6\n"); ++failures; }
-    if (!test7_largeImage(basepath))    { printf("FAIL test7\n"); ++failures; }
-    if (!test8_multipleImages(basepath)){ printf("FAIL test8\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_image_deep) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_image_deep");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, Grayscale, "image_gray", test1_grayscale(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, GrayAlpha, "image_gray_alpha", test2_grayAlpha(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, Rgba, "image_rgba", test3_rgba(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, VerticalAlignment, "image_valign", test4_vertAlignment(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, HorizontalAlignment, "image_halign", test5_horAlignment(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, NullImage, "image_null", test6_nullImage(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, LargeImage, "image_large", test7_largeImage(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ImageNodeDeepTest, MultipleImages, "image_multiple", test8_multipleImages(outputStem.c_str()))

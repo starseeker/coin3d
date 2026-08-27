@@ -65,6 +65,8 @@
  * 19. context_handler_mutual_remove — Concurrent callbacks may remove one another
  * 20. auditorlist_concurrent_notification — SoAuditorList snapshot-then-deliver (no crash)
  * 21. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
+ * 22. write_action_concurrent       — Independent SoWriteAction traversal state
+ * 23. shader_ids_concurrent         — 64-bit shader cache IDs remain unique
  */
 
 #include <gtest/gtest.h>
@@ -80,6 +82,8 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/SoType.h>
+#include <Inventor/SoOutput.h>
+#include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoMFFloat.h>
@@ -87,6 +91,8 @@
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/lists/SoEnabledElementsList.h>
 #include <Inventor/lists/SoNodeList.h>
+
+#include "shaders/SoGLShaderObject.h"
 
 #include <thread>
 #include <vector>
@@ -102,6 +108,16 @@
 #include <string>
 #include <algorithm>
 #include <functional>
+#include <unordered_set>
+
+namespace {
+
+class ShaderIdProbe : public SoGLShaderObject {
+public:
+  static uint64_t allocateId(void) { return allocateShaderObjectId(); }
+};
+
+} // namespace
 
 // ---------------------------------------------------------------------------
 // Test parameters — configurable via environment variables for CI vs. local:
@@ -1128,6 +1144,85 @@ static bool test_field_connect_disconnect_concurrent()
   return !failure;
 }
 
+static bool test_write_action_concurrent()
+{
+  std::atomic<bool> failure{false};
+  std::atomic<int> ready{0};
+  std::mutex failure_mutex;
+  std::string failure_output;
+  std::vector<std::thread> threads;
+  threads.reserve(static_cast<size_t>(kNumThreads));
+
+  for (int thread_index = 0; thread_index < kNumThreads; ++thread_index) {
+    threads.emplace_back([&] {
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) != kNumThreads) {}
+
+      const int iterations = std::min(kItersPerThread, 100);
+      for (int iteration = 0; iteration < iterations && !failure; ++iteration) {
+        SoSeparator * root = new SoSeparator;
+        root->ref();
+        SoCube * shared = new SoCube;
+        shared->setName("ConcurrentSharedCube");
+        root->addChild(shared);
+        root->addChild(shared);
+
+        std::ostringstream stream;
+        SoOutput output;
+        output.setStream(&stream);
+        SoWriteAction action(&output);
+        action.apply(root);
+        root->unref();
+
+        const std::string text = stream.str();
+        if (text.find("DEF") == std::string::npos ||
+            text.find("USE") == std::string::npos ||
+            text.find("ConcurrentSharedCube") == std::string::npos) {
+          std::lock_guard<std::mutex> lock(failure_mutex);
+          if (failure_output.empty()) failure_output = text;
+          failure.store(true, std::memory_order_relaxed);
+        }
+      }
+    });
+  }
+  for (std::thread & thread : threads) thread.join();
+  if (failure.load(std::memory_order_relaxed)) {
+    std::fprintf(stderr, "First invalid concurrent write output:\n%s\n",
+                 failure_output.c_str());
+  }
+  return !failure.load(std::memory_order_relaxed);
+}
+
+static bool test_shader_ids_concurrent()
+{
+  std::mutex ids_mutex;
+  std::atomic<int> ready{0};
+  std::vector<uint64_t> ids;
+  const int iterations = std::min(kItersPerThread, 500);
+  ids.reserve(static_cast<size_t>(kNumThreads * iterations));
+
+  std::vector<std::thread> threads;
+  threads.reserve(static_cast<size_t>(kNumThreads));
+  for (int thread_index = 0; thread_index < kNumThreads; ++thread_index) {
+    threads.emplace_back([&] {
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) < kNumThreads) { }
+
+      std::vector<uint64_t> local_ids;
+      local_ids.reserve(static_cast<size_t>(iterations));
+      for (int iteration = 0; iteration < iterations; ++iteration) {
+        local_ids.push_back(ShaderIdProbe::allocateId());
+      }
+      std::lock_guard<std::mutex> lock(ids_mutex);
+      ids.insert(ids.end(), local_ids.begin(), local_ids.end());
+    });
+  }
+  for (std::thread & thread : threads) thread.join();
+
+  std::unordered_set<uint64_t> unique(ids.begin(), ids.end());
+  return unique.size() == ids.size() && unique.find(0) == unique.end();
+}
+
 static void prepare_thread_safety_suite()
 {
   static std::once_flag once;
@@ -1182,5 +1277,9 @@ OBOL_THREAD_STRESS_TEST(AuditorListConcurrentNotification,
                         test_auditorlist_concurrent_notification)
 OBOL_THREAD_STRESS_TEST(FieldConnectDisconnect,
                         test_field_connect_disconnect_concurrent)
+OBOL_THREAD_STRESS_TEST(WriteActionIndependentOutputs,
+                        test_write_action_concurrent)
+OBOL_THREAD_STRESS_TEST(ShaderObjectIdsAreUnique,
+                        test_shader_ids_concurrent)
 
 #undef OBOL_THREAD_STRESS_TEST

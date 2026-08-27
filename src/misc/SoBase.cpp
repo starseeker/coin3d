@@ -234,6 +234,20 @@ SoBase::~SoBase()
 
   {
     std::unique_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
+
+    // Keep the two halves of the global name registry in sync.  Named
+    // objects can also reach the destructor through an explicit delete, so
+    // this belongs here rather than only in destroy().
+    if (SoBase::PImpl::obj2name && SoBase::PImpl::name2obj) {
+      SbHash<const SoBase *, const char *>::const_iterator nameiter =
+        SoBase::PImpl::obj2name->find(this);
+      if (nameiter != SoBase::PImpl::obj2name->const_end()) {
+        const char * name = nameiter->obj;
+        SoBase::PImpl::removeName2Obj(this, name);
+        SoBase::PImpl::removeObj2Name(this, name);
+      }
+    }
+
     if (SoBase::PImpl::auditordict) {
       if (SoBase::PImpl::auditordict->find(this)!=SoBase::PImpl::auditordict->const_end()) {
         SoBase::PImpl::auditordict->erase(this);
@@ -288,8 +302,8 @@ sobase_sensor_add_cb(void * auditor, void * type, void * closure)
 void
 SoBase::destroy(void)
 {
-  SbName name = this->getName();
 #if OBOL_DEBUG && 0 // debug
+  SbName name = this->getName();
   SoType t = this->getTypeId();
   SoDebugError::postInfo("SoBase::destroy", "start -- %p '%s' ('%s')",
                          this, t.getName().getString(), name.getString());
@@ -318,18 +332,12 @@ SoBase::destroy(void)
   for (int j = 0; j < auditingsensors.getLength(); j++)
     auditingsensors[j]->dyingReference();
 
-  // Link out instance name from the list of all SoBase instances.
-  if (name != SbName::empty()) SoBase::PImpl::removeName2Obj(this, name.getString());
-
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::destroy", "delete this %p", this);
 #endif // debug
 
   // Harakiri!
   delete this;
-
-  // Link out obj-pointer to name reference now that object is dead.
-  if (name != SbName::empty()) SoBase::PImpl::removeObj2Name(this, name.getString());
 
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::destroy", "done -- %p '%s' ('%s')",
@@ -1297,10 +1305,8 @@ SoBase::writeFooter(SoOutput * out) const
 
     // Keep the old ugly-bugly formatting style around, in case
     // someone, for some obscure reason, needs it.
-    static int oldstyle = -1;
-    if (oldstyle == -1) {
-      oldstyle = CoinInternal::getEnvironmentVariable("OBOL_OLDSTYLE_FORMATTING").has_value() ? 1 : 0;
-    }
+    static const bool oldstyle =
+      CoinInternal::getEnvironmentVariable("OBOL_OLDSTYLE_FORMATTING").has_value();
 
     // FIXME: if we last wrote a field, this EOF is superfluous -- so
     // we are getting a lot of empty lines in the files. Should

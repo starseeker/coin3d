@@ -414,63 +414,26 @@ cc_dirname(const char *path) {
    dynamic libraries, separated by ':'. Needed since Mac OS X
    requires to have a full path to the library when loading it. */
 
-static std::string * 
-cc_build_search_list(const char * libname)
+static std::string *
+cc_build_search_list(void)
 {
 /* We search for libraries in several locations:
 
-   for OBOL_MACOS_10 && OBOL_MACOSX_FRAMEWORK
-   (1) Bundled with Coin framework
-
    for OBOL_MACOS_10
-   (2) Bundled on the application level, if application is bundled
+   (1) Bundled on the application level, if application is bundled
        Application.app/Contents/MacOS/lib/
        Application.app/Contents/MacOS/
 
    for *
-   (3) the default search paths for libraries
-
-   for OBOL_MACOS_10
-   (4) We check if the library exists as a framework in
-       /Library/Frameworks/$libname.framework/$libname.
-       (This is actually quite an ugly hack, since frameworks
-       are not meant to be dlopen'ed -- but we need this for
-       dynamic loading of OpenAL symbols.)
+   (2) the default search paths for libraries
 */
 
   std::string * path = new std::string();
 
-  int i, image_count = _dyld_image_count();
-  std::string res_path, framework_path, dyld_path;
-
-#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
-  /* (1) Bundled with Coin framework, inside Libraries/ */
-  do {
-    char buf[MAXPATHLEN];
-    UInt8 * bufptr = reinterpret_cast<UInt8 *>(buf);
-
-    CFStringRef identifier =
-      CFStringCreateWithCString(kCFAllocatorDefault,
-                                OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
-                                kCFStringEncodingASCII);
-    CFBundleRef coinbundle = CFBundleGetBundleWithIdentifier(identifier);
-    CFRelease(identifier);
-    if (!coinbundle) break;
-
-    CFURLRef coinbundleurl = CFBundleCopyBundleURL(coinbundle);
-    if (!coinbundleurl) break;
-    if (!CFURLGetFileSystemRepresentation(coinbundleurl, true, bufptr, MAXPATHLEN-1)) {
-      CFRelease(coinbundleurl);
-      break;
-    }
-    CFRelease(coinbundleurl);
-    strcat(buf, "/Libraries:");
-    path->append(buf);
-  } while (FALSE);
-#endif // OBOL_MACOSX_FRAMEWORK
+  std::string dyld_path;
 
 #ifdef OBOL_MACOS_10
-  /* (2) Bundled on the application level, if application is bundled */
+  /* (1) Bundled on the application level, if application is bundled */
   do {
     char buf[MAXPATHLEN];
     UInt8 * bufptr = reinterpret_cast<UInt8 *>(buf);
@@ -488,7 +451,7 @@ cc_build_search_list(const char * libname)
   } while (FALSE);
 #endif // OBOL_MACOS_10
 
-  /* (3) default library search path  */
+  /* (2) default library search path  */
   char * dyld_library_path = getenv("DYLD_LIBRARY_PATH"); 
   if (dyld_library_path) {
     dyld_path.append(dyld_library_path);
@@ -507,32 +470,19 @@ cc_build_search_list(const char * libname)
   }
   path->append(dyld_path);
 
-#ifdef OBOL_MACOS_10
-  /* (4) Check if library exists as framework (as in OS Xs 'OpenAL') */
-  if ((libname != NULL) &&
-      (strstr(libname, ".dylib") == NULL) &&
-      (strstr(libname, ".so") == NULL) &&
-      (strstr(libname, ".dll") == NULL)) {
-    const char * framework_prefix = "/Library/Frameworks/";
-    const char * framework_ext = ".framework";
-    framework_path = framework_prefix + std::string(libname) + framework_ext + ":";
-    path->append(framework_path);
-  }
-#endif // OBOL_MACOS_10
-
   return path;
 }
 
 /* Returns the absolute path to file if file can be found in the
-   library and framework search path, NULL otherwise. It is the
-   caller's responsibility to free the returned string. */
+   library search path, NULL otherwise. It is the caller's responsibility
+   to free the returned string. */
 
 static std::string *
 cc_find_file(const char * file)
 {
   int end_reached = 0;
   std::string * path = new std::string();
-  std::string * list = cc_build_search_list(file);
+  std::string * list = cc_build_search_list();
   const char * listptr = list->c_str();
 
   while (!end_reached) {
@@ -582,8 +532,7 @@ cc_dl_open(const char * filename)
 #ifdef HAVE_DL_LIB
 
 #ifdef HAVE_DYLD_RUNTIME_BINDING
-  /* Mac OS X: Search for library shipped with bundled Inventor framework
-     or directly in application bundle. */
+  /* macOS: Search for a library shipped directly in the application bundle. */
 
   if (h->nativehnd == NULL) {
     std::string * path = cc_find_file(filename);

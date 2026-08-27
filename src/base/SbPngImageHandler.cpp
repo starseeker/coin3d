@@ -27,10 +27,11 @@ SbPngImageHandler::getDescription() const
   return "PNG image format using bundled lodepng";
 }
 
-std::vector<std::string>
+const std::vector<std::string> &
 SbPngImageHandler::getExtensions() const
 {
-  return {"png"};
+  static const std::vector<std::string> extensions{"png"};
+  return extensions;
 }
 
 unsigned char *

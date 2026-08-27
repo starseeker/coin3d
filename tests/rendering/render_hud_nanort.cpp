@@ -116,75 +116,53 @@ static bool validateHUDButtons(const unsigned char * buf, int w, int h)
 
 static const int MAX_PATH_LEN = 1024;
 
-static int runScenario(const char *outputStem)
+static bool renderHudLabel(const char * outputStem)
 {
-    initCoinHeadless();
-
-    // ---- Sub-test 1: SoHUDLabel text compositing --------------------------
-    {
-        SoSeparator * root = ObolTest::Scenes::createHUD(W, H);
-
-        char outpath[MAX_PATH_LEN];
-        if (outputStem != nullptr)
-            snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
-        else
-            snprintf(outpath, sizeof(outpath), "render_hud_nanort.rgb");
-
-        bool ok = false;
+    SoSeparator * root = ObolTest::Scenes::createHUD(W, H);
+    char outpath[MAX_PATH_LEN];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
+    bool ok = false;
 #ifdef OBOL_NANORT_BUILD
-        SoOffscreenRenderer renderer(SbViewportRegion(W, H));
-        renderer.setComponents(SoOffscreenRenderer::RGB);
-        renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.1f));
-        if (renderer.render(root)) {
-            const unsigned char * buf = renderer.getBuffer();
-            ok = (buf != nullptr) && validateHUDText(buf, W, H) &&
-                 renderer.writeToRGB(outpath);
-        } else {
-            fprintf(stderr, "render_hud_nanort: render() failed (label scene)\n");
-        }
-#else
-        ok = renderToFile(root, outpath, W, H);
-#endif
-        root->unref();
-        if (!ok) return 1;
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.1f));
+    if (renderer.render(root)) {
+        const unsigned char * buf = renderer.getBuffer();
+        ok = (buf != nullptr) && validateHUDText(buf, W, H) &&
+             renderer.writeToRGB(outpath);
     }
+#else
+    ok = renderToFile(root, outpath, W, H);
+#endif
+    root->unref();
+    return ok;
+}
 
-    // ---- Sub-test 2: SoHUDButton border + label compositing ---------------
-    {
-        SoSeparator * root2 = ObolTest::Scenes::createHUDOverlay(W, H);
-
-        char outpath2[MAX_PATH_LEN];
-        if (outputStem != nullptr)
-            snprintf(outpath2, sizeof(outpath2), "%s_overlay.rgb", outputStem);
-        else
-            snprintf(outpath2, sizeof(outpath2), "render_hud_nanort_overlay.rgb");
-
-        bool ok2 = false;
+static bool renderHudButtons(const char * outputStem)
+{
+    SoSeparator * root = ObolTest::Scenes::createHUDOverlay(W, H);
+    char outpath[MAX_PATH_LEN];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
+    bool ok = false;
 #ifdef OBOL_NANORT_BUILD
-        SoOffscreenRenderer renderer2(SbViewportRegion(W, H));
-        renderer2.setComponents(SoOffscreenRenderer::RGB);
-        renderer2.setBackgroundColor(SbColor(0.05f, 0.05f, 0.1f));
-        if (renderer2.render(root2)) {
-            const unsigned char * buf2 = renderer2.getBuffer();
-            ok2 = (buf2 != nullptr) && validateHUDButtons(buf2, W, H) &&
-                  renderer2.writeToRGB(outpath2);
-        } else {
-            fprintf(stderr, "render_hud_nanort: render() failed (overlay scene)\n");
-        }
-#else
-        ok2 = renderToFile(root2, outpath2, W, H);
-#endif
-        root2->unref();
-        if (!ok2) return 1;
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.05f, 0.05f, 0.1f));
+    if (renderer.render(root)) {
+        const unsigned char * buf = renderer.getBuffer();
+        ok = (buf != nullptr) && validateHUDButtons(buf, W, H) &&
+             renderer.writeToRGB(outpath);
     }
-
-    printf("render_hud_nanort: PASS\n");
-    return 0;
+#else
+    ok = renderToFile(root, outpath, W, H);
+#endif
+    root->unref();
+    return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_hud_nanort) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_hud_nanort");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(HudNanoRTRenderTest, LabelCompositesOverScene,
+    "hud_nanort_label", renderHudLabel(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(HudNanoRTRenderTest, ButtonBordersCompositeOverScene,
+    "hud_nanort_buttons", renderHudButtons(outputStem.c_str()))

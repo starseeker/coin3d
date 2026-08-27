@@ -394,45 +394,11 @@ static bool test5_filterChange(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_pick_filter";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createPickFilter(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoSelection pick-filter callback tests ===\n");
-
-    if (!test1_acceptAll(basepath))    ++failures;
-    if (!test2_rejectAll(basepath))    ++failures;
-    if (!test3_sphereOnlyFilter())     ++failures;
-    if (!test4_selectionPath(basepath)) ++failures;
-    if (!test5_filterChange(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_pick_filter) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_pick_filter");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(PickFilterRenderTest, AcceptAll, "pick_filter_accept", test1_acceptAll(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(PickFilterRenderTest, RejectAll, "pick_filter_reject", test2_rejectAll(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(PickFilterRenderTest, SphereOnly, "pick_filter_sphere", test3_sphereOnlyFilter())
+OBOL_RENDER_TEST_CASE(PickFilterRenderTest, SelectionPath, "pick_filter_path", test4_selectionPath(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(PickFilterRenderTest, FilterChange, "pick_filter_change", test5_filterChange(outputStem.c_str()))

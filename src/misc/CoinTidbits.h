@@ -214,8 +214,6 @@ unsigned long coin_geq_prime_number(unsigned long num);
 
 int coin_runtime_os(void);
 
-#define OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING ("org.coin3d.Coin.framework")
-
 /* ********************************************************************** */
 /* Debug functions */
 

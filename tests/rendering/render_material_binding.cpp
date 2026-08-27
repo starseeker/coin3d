@@ -524,49 +524,14 @@ static bool test8_perPartIndexed(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_material_binding";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *root = ObolTest::Scenes::createMaterialBinding(256, 256);
-        SbViewportRegion vp(256, 256);
-        SoOffscreenRenderer ren(vp);
-        ren.setComponents(SoOffscreenRenderer::RGB);
-        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (ren.render(root)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            ren.writeToRGB(primaryPath);
-        }
-        root->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoMaterialBinding modes tests ===\n");
-
-    if (!test1_overall(basepath))          ++failures;
-    if (!test2_perFace(basepath))          ++failures;
-    if (!test3_perVertex(basepath))        ++failures;
-    if (!test4_perVertexIndexed(basepath)) ++failures;
-    if (!test5_baseColor(basepath))        ++failures;
-    if (!test6_fullMaterial(basepath))     ++failures;
-    if (!test7_vertexPropertyColors(basepath)) ++failures;
-    if (!test8_perPartIndexed(basepath))   ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_material_binding) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_material_binding");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, Overall, "material_overall", test1_overall(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, PerFace, "material_face", test2_perFace(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, PerVertex, "material_vertex", test3_perVertex(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, PerVertexIndexed, "material_vertex_indexed", test4_perVertexIndexed(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, BaseColor, "material_base_color", test5_baseColor(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, FullMaterial, "material_full", test6_fullMaterial(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, VertexPropertyColors, "material_vertex_property", test7_vertexPropertyColors(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(MaterialBindingRenderTest, PerPartIndexed, "material_part_indexed", test8_perPartIndexed(outputStem.c_str()))

@@ -326,46 +326,12 @@ static bool test6_cameraOrientation(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_camera_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createCameraInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== Camera interaction tests ===\n");
-
-    if (!test1_cameraSwitch(basepath))      ++failures;
-    if (!test2_viewAllAutoFit(basepath))    ++failures;
-    if (!test3_frustumCamera(basepath))     ++failures;
-    if (!test4_cameraPoinAt(basepath))      ++failures;
-    if (!test5_clippingPlanes(basepath))    ++failures;
-    if (!test6_cameraOrientation(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_camera_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_camera_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, CameraSwitch, "camera_switch", test1_cameraSwitch(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, ViewAll, "camera_view_all", test2_viewAllAutoFit(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, FrustumCamera, "camera_frustum", test3_frustumCamera(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, PointAt, "camera_point_at", test4_cameraPoinAt(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, ClippingPlanes, "camera_clipping", test5_clippingPlanes(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CameraInteractionRenderTest, Orientation, "camera_orientation", test6_cameraOrientation(outputStem.c_str()))

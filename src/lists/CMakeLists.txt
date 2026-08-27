@@ -22,8 +22,3 @@ set(OBOL_LISTS_FILES
 
 # build module object library
 obol_add_source_module(lists ${OBOL_LISTS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_LISTS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/lists/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

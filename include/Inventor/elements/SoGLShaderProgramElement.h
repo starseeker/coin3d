@@ -75,7 +75,7 @@ public: // Internal API
 
 private:
   virtual ~SoGLShaderProgramElement();
-  SbList <uint32_t> objectids;
+  SbList <uint64_t> objectids;
   SbBool enabled;
 };
 

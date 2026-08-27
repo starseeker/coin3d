@@ -15,8 +15,3 @@ set(OBOL_PROJECTORS_FILES
 
 # build module object library
 obol_add_source_module(projectors ${OBOL_PROJECTORS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_PROJECTORS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/projectors/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

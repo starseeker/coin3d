@@ -712,52 +712,18 @@ static bool test12_pickAllIndex()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_raypick_shapes";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createRaypickShapes(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== Comprehensive SoRayPickAction tests ===\n");
-
-    if (!test1_setRay())             ++failures;
-    if (!test2_normalizedPoint())    ++failures;
-    if (!test3_pickAll())            ++failures;
-    if (!test4_faceSet())            ++failures;
-    if (!test5_indexedFaceSet())     ++failures;
-    if (!test6_lineSet())            ++failures;
-    if (!test7_indexedLineSet())     ++failures;
-    if (!test8_pointSet())           ++failures;
-    if (!test9_pickStyleBBox())      ++failures;
-    if (!test10_triangleStripSet())  ++failures;
-    if (!test11_boxIntersectAndReset()) ++failures;
-    if (!test12_pickAllIndex())      ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_raypick_shapes) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_raypick_shapes");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, SetRay, "raypick_ray", test1_setRay())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, NormalizedPoint, "raypick_normalized", test2_normalizedPoint())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, PickAll, "raypick_all", test3_pickAll())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, FaceSet, "raypick_faces", test4_faceSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, IndexedFaceSet, "raypick_ifaces", test5_indexedFaceSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, LineSet, "raypick_lines", test6_lineSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, IndexedLineSet, "raypick_ilines", test7_indexedLineSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, PointSet, "raypick_points", test8_pointSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, BoundingBoxStyle, "raypick_bbox", test9_pickStyleBBox())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, TriangleStripSet, "raypick_strips", test10_triangleStripSet())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, BoxIntersectionAndReset, "raypick_box", test11_boxIntersectAndReset())
+OBOL_RENDER_TEST_CASE(RayPickShapeTest, PickAllIndex, "raypick_index", test12_pickAllIndex())

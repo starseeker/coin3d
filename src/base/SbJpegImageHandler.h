@@ -51,7 +51,7 @@ public:
   // Format identification
   const char* getFormatName() const override;
   const char* getDescription() const override;
-  std::vector<std::string> getExtensions() const override;
+  const std::vector<std::string> & getExtensions() const override;
   
   // Image I/O operations
   unsigned char* readImage(const char* filename, int* width, int* height, int* components) override;

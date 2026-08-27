@@ -76,7 +76,7 @@ static const TextSpec k_rows[] = {
     {  0.0f, NULL,           0,   0,   0,   0,   0 }
 };
 
-static int runScenario(const char *outputStem)
+static int renderReferenceTextContract(const char *outputStem)
 {
     const char *outpath = (outputStem != nullptr) ? outputStem : "/tmp/stt_reference.png";
 
@@ -136,7 +136,7 @@ static int runScenario(const char *outputStem)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, stt_reference) {
+TEST(SdfTextRenderTest, ReferenceFont) {
     const std::string outputStem = ObolTest::renderingOutputStem("stt_reference");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+    EXPECT_EQ(renderReferenceTextContract(outputStem.c_str()), 0);
 }

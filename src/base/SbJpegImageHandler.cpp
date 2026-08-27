@@ -81,9 +81,10 @@ const char* SbJpegImageHandler::getDescription() const
   return "JPEG image format using stb_image and TooJPEG";
 }
 
-std::vector<std::string> SbJpegImageHandler::getExtensions() const
+const std::vector<std::string> & SbJpegImageHandler::getExtensions() const
 {
-  return {"jpg", "jpeg"};
+  static const std::vector<std::string> extensions{"jpg", "jpeg"};
+  return extensions;
 }
 
 unsigned char* SbJpegImageHandler::readImage(const char* filename, int* width, int* height, int* components)

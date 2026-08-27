@@ -158,6 +158,33 @@ which permits reentrant posting. Field-container user data, VBO context maps,
 offscreen renderer DPI, and immutable environment-derived settings have their
 own mutexes, atomics, or thread-safe function-local initialization.
 
+### 12. Scene writing, shader IDs, highlighting, and image formats
+
+Every `SoOutput` owns its `SoWriterefCounter`; there is no process-global
+output dictionary. The legacy implicit counter used by `SoBase` is
+thread-local and is saved/restored around `SoWriteAction` traversal, including
+nested writes. A copied `SoOutput` receives independent transient reference
+counts while retaining the copied DEF/reference-name dictionary.
+
+Shader-object and GLSL parameter-cache generations are 64-bit atomic counters.
+Zero is reserved as the invalid generation and is skipped without aborting the
+host application. `SoLocateHighlight` keeps the active highlight path per
+event/render thread, preventing independent views on different threads from
+clearing one another's state.
+
+Image-format handlers own immutable extension vectors for their full lifetime.
+The registry never removes handlers, so `SoOffscreenRenderer` compatibility
+pointers remain stable. Registration and enumeration use the registry's shared
+mutex, and handler/registry errors are thread-local.
+
+### 13. Profiler report generation
+
+Profiler report keys, indexes, and formatted lines are stack-owned. Sorting
+uses `std::stable_sort`, and all lines are materialized before invoking user
+callbacks. A callback may stop generation or recursively generate another
+report without holding an internal report mutex or overwriting another
+thread's report state.
+
 ---
 
 ## Historical race audit
@@ -476,6 +503,11 @@ while `cleanupThread()` is still iterating with the shared lock held.
 | D2 | Re-entrant notification | `misc/SoDB.cpp`, `fields/SoField.cpp` | Design | ✅ Recursive mutex + snapshot | Fixed (Phase 3, see Blocker 9) |
 | D3 | `SoState` per-action | Traversal machinery | Design | N/A | Documented: do not share actions between threads |
 | D4 | `StorageRegistry` iteration | `threads/storage_cxx17.*` | Design | ✅ snapshot under lock | Fixed (Phase 3) |
+| 11 | Scene write-reference state | `io/SoWriterefCounter.cpp` | **HIGH** | ✅ output-owned + thread-local scope | Fixed |
+| 12 | Shader cache generations | `shaders/SoGL*ShaderObject.cpp` | **HIGH** | ✅ 64-bit atomics | Fixed |
+| 13 | Locate-highlight current path | `nodes/SoLocateHighlight.cpp` | **MEDIUM** | ✅ thread-local ownership | Fixed |
+| 14 | Image-format metadata | `base/SbImageFormatHandler.*` | **HIGH** | ✅ immutable handler storage + registry lock | Fixed |
+| 15 | Profiler report scratch state | `profiler/SoProfilingReportGenerator.cpp` | **MEDIUM** | ✅ stack-owned report context | Fixed |
 
 ---
 
@@ -573,15 +605,18 @@ The blockers fall into three natural phases, ordered by dependency and risk.
   `OBOL_TSAN` is mutually exclusive with `OBOL_COVERAGE`.
 
 - **Test suite** — The stress suite in `tests/threads/` covers all three phases
-  (20 tests):
+  (23 tests):
   - Phase 1 (tests 1–11): concurrent `SbName`, `SoNode` ID, `SoBase` refcount,
     `SoType` lookup, notification counter, mixed workload.
   - Phase 2 (tests 12–14): concurrent `setName`/`getName`, GL cache context
     IDs, enabled-elements counter.
-  - Phase 3 (tests 15–20): concurrent context-callback registration/removal,
+  - Phase 3 (tests 15–23): concurrent context-callback registration/removal,
     deterministic removal during active dispatch, callback cross-removal,
     nested self-removal, auditor-list notification, and field
-    connect/disconnect + notification.
+    connect/disconnect + notification, independent concurrent scene writes,
+    and shader cache-generation uniqueness. Image-format and profiler
+    concurrency contracts are covered by the focused unit suites selected in
+    the same TSan CI job.
 
 - **Public API documentation** — The `SoDB` class documentation now contains
   a *Thread Safety* section stating the supported scenarios (*Concurrent render*,

@@ -113,386 +113,267 @@ static SoSeparator * buildLODScene()
     return root;
 }
 
-// ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
+static void configureLodCameras(SoQuadViewport & viewport)
 {
-    initCoinHeadless();
+    const float cameraZ[3] = { 3.0f, 8.0f, 20.0f };
+    for (int index = 0; index < 3; ++index) {
+        SoPerspectiveCamera * camera = new SoPerspectiveCamera;
+        camera->position.setValue(0.0f, 0.0f, cameraZ[index]);
+        camera->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
+        camera->nearDistance.setValue(0.1f);
+        camera->farDistance.setValue(cameraZ[index] + 5.0f);
+        viewport.setCamera(index, camera);
+    }
+    SoOrthographicCamera * camera = new SoOrthographicCamera;
+    camera->position.setValue(5.0f, 0.0f, 5.0f);
+    camera->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
+    camera->height.setValue(4.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(20.0f);
+    viewport.setCamera(SoQuadViewport::BOTTOM_RIGHT, camera);
+}
 
-    const char * basepath = (outputStem != nullptr) ? outputStem : "render_quad_viewport";
+static bool renderFactoryScene(const char * basepath)
+{
     char outpath[1024];
     snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
+    SoSeparator * root = ObolTest::Scenes::createQuadViewport(256, 256);
+    SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool ok = renderer.render(root) &&
+        validateNonBlack(renderer.getBuffer(), 256 * 256, "factory") &&
+        renderer.writeToRGB(outpath);
+    root->unref();
+    return ok;
+}
 
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createQuadViewport(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            fRen.writeToRGB(outpath);
+static bool quadrantSizeIsHalfWindow()
+{
+    SoQuadViewport viewport;
+    viewport.setWindowSize(SbVec2s(W, H));
+    return viewport.getQuadrantSize() == SbVec2s(W / 2, H / 2);
+}
+
+static bool camerasAndActiveQuadrantRoundTrip()
+{
+    SoQuadViewport viewport;
+    SoPerspectiveCamera * cameras[SoQuadViewport::NUM_QUADS];
+    for (int index = 0; index < SoQuadViewport::NUM_QUADS; ++index) {
+        cameras[index] = new SoPerspectiveCamera;
+        viewport.setCamera(index, cameras[index]);
+    }
+    bool ok = true;
+    for (int index = 0; index < SoQuadViewport::NUM_QUADS; ++index) {
+        ok = ok && viewport.getCamera(index) == cameras[index];
+    }
+    viewport.setActiveQuadrant(SoQuadViewport::BOTTOM_LEFT);
+    return ok && viewport.getActiveQuadrant() == SoQuadViewport::BOTTOM_LEFT;
+}
+
+static bool backgroundColorReachesTile()
+{
+    SoQuadViewport viewport;
+    const SbColor expected(0.2f, 0.3f, 0.4f);
+    viewport.setBackgroundColor(SoQuadViewport::TOP_RIGHT, expected);
+    const SbColor & actual = viewport.getBackgroundColor(SoQuadViewport::TOP_RIGHT);
+    const SoViewport * tile = viewport.getViewport(SoQuadViewport::TOP_RIGHT);
+    return tile != nullptr &&
+        std::fabs(actual[0] - expected[0]) < 1e-4f &&
+        std::fabs(actual[1] - expected[1]) < 1e-4f &&
+        std::fabs(actual[2] - expected[2]) < 1e-4f &&
+        std::fabs(tile->getBackgroundColor()[0] - expected[0]) < 1e-4f;
+}
+
+static bool tileLayoutIsCorrect()
+{
+    SoQuadViewport viewport;
+    viewport.setWindowSize(SbVec2s(W, H));
+    const SbViewportRegion & topLeft =
+        viewport.getViewportRegion(SoQuadViewport::TOP_LEFT);
+    const SbViewportRegion & bottomRight =
+        viewport.getViewportRegion(SoQuadViewport::BOTTOM_RIGHT);
+    return topLeft.getViewportOriginPixels() == SbVec2s(0, H / 2) &&
+        topLeft.getViewportSizePixels() == SbVec2s(W / 2, H / 2) &&
+        bottomRight.getViewportOriginPixels() == SbVec2s(W / 2, 0);
+}
+
+static bool quadrantsRenderExpectedLod(const char * basepath)
+{
+    SoSeparator * scene = buildLODScene();
+    SoQuadViewport viewport;
+    viewport.setWindowSize(SbVec2s(W, H));
+    viewport.setSceneGraph(scene);
+    configureLodCameras(viewport);
+    const SbVec2s size = viewport.getQuadrantSize();
+    SoOffscreenRenderer renderer(getCoinHeadlessContextManager(),
+                                 SbViewportRegion(size[0], size[1]));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    bool ok = true;
+    int dominants[SoQuadViewport::NUM_QUADS] = {-1, -1, -1, -1};
+    for (int index = 0; index < SoQuadViewport::NUM_QUADS; ++index) {
+        const bool rendered = viewport.renderQuadrant(index, &renderer);
+        ok = ok && rendered;
+        if (rendered) {
+            ok = ok && validateNonBlack(renderer.getBuffer(), size[0] * size[1],
+                                        "quadrant");
+            dominants[index] = dominantChannel(renderer.getBuffer(),
+                                               size[0] * size[1]);
         }
-        fRoot->unref();
     }
+    char outpath[1024];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
+    ok = ok && dominants[SoQuadViewport::TOP_LEFT] == 1 &&
+        dominants[SoQuadViewport::BOTTOM_LEFT] == 0 &&
+        renderer.writeToRGB(outpath);
+    scene->unref();
+    return ok;
+}
 
-    int failures = 0;
-    printf("\n=== SoQuadViewport tests ===\n");
-
-    // -----------------------------------------------------------------------
-    // Test 1: getQuadrantSize
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        SbVec2s qs = qv.getQuadrantSize();
-        bool ok = (qs[0] == W / 2 && qs[1] == H / 2);
-        printf("  test1 getQuadrantSize: %dx%d ok=%d\n", qs[0], qs[1], (int)ok);
-        if (!ok) { printf("FAIL test1\n"); ++failures; }
+static bool viewportAccessChecksBounds()
+{
+    SoQuadViewport viewport;
+    bool ok = true;
+    for (int index = 0; index < SoQuadViewport::NUM_QUADS; ++index) {
+        ok = ok && viewport.getViewport(index) != nullptr;
     }
+    return ok && viewport.getViewport(-1) == nullptr &&
+        viewport.getViewport(SoQuadViewport::NUM_QUADS) == nullptr;
+}
 
-    // -----------------------------------------------------------------------
-    // Test 2: setCamera / getCamera round-trip + active quadrant
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
+static bool eventProcessingPreservesActiveTile()
+{
+    SoSeparator * scene = buildLODScene();
+    SoQuadViewport viewport;
+    viewport.setSceneGraph(scene);
+    SoPerspectiveCamera * camera = new SoPerspectiveCamera;
+    viewport.setCamera(SoQuadViewport::TOP_LEFT, camera);
+    viewport.setActiveQuadrant(SoQuadViewport::TOP_LEFT);
+    SoKeyboardEvent event;
+    event.setKey(SoKeyboardEvent::ESCAPE);
+    event.setState(SoButtonEvent::DOWN);
+    viewport.processEvent(&event);
+    const bool ok = viewport.getSceneGraph() == scene &&
+        viewport.getCamera(SoQuadViewport::TOP_LEFT) == camera &&
+        viewport.getActiveQuadrant() == SoQuadViewport::TOP_LEFT;
+    scene->unref();
+    return ok;
+}
 
-        SoPerspectiveCamera * cams[SoQuadViewport::NUM_QUADS];
-        for (int i = 0; i < SoQuadViewport::NUM_QUADS; ++i) {
-            cams[i] = new SoPerspectiveCamera;
-            qv.setCamera(i, cams[i]);
-        }
+static bool sceneGraphReplacesAndClears()
+{
+    SoSeparator * first = buildLODScene();
+    SoSeparator * second = buildLODScene();
+    SoQuadViewport viewport;
+    viewport.setSceneGraph(first);
+    const bool firstInstalled = viewport.getSceneGraph() == first;
+    viewport.setSceneGraph(second);
+    const bool secondInstalled = viewport.getSceneGraph() == second;
+    viewport.setSceneGraph(nullptr);
+    const bool cleared = viewport.getSceneGraph() == nullptr;
+    first->unref();
+    second->unref();
+    return firstInstalled && secondInstalled && cleared;
+}
 
-        bool ok = true;
-        for (int i = 0; i < SoQuadViewport::NUM_QUADS; ++i)
-            ok = ok && (qv.getCamera(i) == cams[i]);
-
-        qv.setActiveQuadrant(2);
-        ok = ok && (qv.getActiveQuadrant() == 2);
-        printf("  test2 cameras+active ok=%d\n", (int)ok);
-        if (!ok) { printf("FAIL test2\n"); ++failures; }
+static bool viewAllWithoutCamerasPreservesState()
+{
+    SoSeparator * scene = buildLODScene();
+    SoQuadViewport viewport;
+    viewport.setSceneGraph(scene);
+    viewport.viewAll(SoQuadViewport::TOP_LEFT);
+    viewport.viewAllQuadrants();
+    bool ok = viewport.getSceneGraph() == scene;
+    for (int index = 0; index < SoQuadViewport::NUM_QUADS; ++index) {
+        ok = ok && viewport.getCamera(index) == nullptr;
     }
+    scene->unref();
+    return ok;
+}
 
-    // -----------------------------------------------------------------------
-    // Test 3: background colour round-trip via underlying SoViewport
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-        SbColor col(0.2f, 0.3f, 0.4f);
-        qv.setBackgroundColor(1, col);
-        const SbColor & got = qv.getBackgroundColor(1);
-        bool ok = (std::fabs(got[0] - col[0]) < 1e-4f &&
-                   std::fabs(got[1] - col[1]) < 1e-4f &&
-                   std::fabs(got[2] - col[2]) < 1e-4f);
-        // Also verify the underlying SoViewport sees the same colour.
-        const SoViewport * tile = qv.getViewport(1);
-        ok = ok && tile &&
-             (std::fabs(tile->getBackgroundColor()[0] - col[0]) < 1e-4f);
-        printf("  test3 background colour ok=%d\n", (int)ok);
-        if (!ok) { printf("FAIL test3\n"); ++failures; }
+static bool borderPropertiesRoundTripAndClamp()
+{
+    SoQuadViewport viewport;
+    const bool defaultWidth = viewport.getBorderWidth() == 0;
+    viewport.setBorderWidth(4);
+    const bool setWidth = viewport.getBorderWidth() == 4;
+    viewport.setBorderWidth(-1);
+    const bool clamped = viewport.getBorderWidth() == 0;
+    const SbColor expected(1.0f, 1.0f, 0.0f);
+    viewport.setBorderColor(expected);
+    const SbColor & actual = viewport.getBorderColor();
+    return defaultWidth && setWidth && clamped &&
+        std::fabs(actual[0] - expected[0]) < 1e-4f &&
+        std::fabs(actual[1] - expected[1]) < 1e-4f &&
+        std::fabs(actual[2] - expected[2]) < 1e-4f;
+}
+
+static bool compositeContainsWhiteBorders(const char * basepath)
+{
+    SoSeparator * scene = buildLODScene();
+    SoQuadViewport viewport;
+    viewport.setWindowSize(SbVec2s(W, H));
+    viewport.setSceneGraph(scene);
+    configureLodCameras(viewport);
+    viewport.setBorderWidth(4);
+    viewport.setBorderColor(SbColor(1.0f, 1.0f, 1.0f));
+    const SbVec2s size = viewport.getQuadrantSize();
+    SoOffscreenRenderer renderer(getCoinHeadlessContextManager(),
+                                 SbViewportRegion(size[0], size[1]));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    char outpath[1024];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
+    bool ok = viewport.writeCompositeToRGB(outpath, &renderer);
+
+    FILE * file = ok ? fopen(outpath, "rb") : nullptr;
+    ok = ok && file != nullptr;
+    const int planeSize = W * H;
+    unsigned char * planes = new unsigned char[planeSize * 3];
+    if (file) {
+        ok = fseek(file, 512, SEEK_SET) == 0 &&
+            fread(planes, 1, planeSize * 3, file) ==
+                static_cast<size_t>(planeSize * 3);
+        fclose(file);
     }
-
-    // -----------------------------------------------------------------------
-    // Test 4: viewport tile layout
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        short qW = W / 2, qH = H / 2;
-
-        const SbViewportRegion & tl = qv.getViewportRegion(SoQuadViewport::TOP_LEFT);
-        const SbViewportRegion & br = qv.getViewportRegion(SoQuadViewport::BOTTOM_RIGHT);
-
-        SbVec2s tlOrig = tl.getViewportOriginPixels();
-        SbVec2s tlSize = tl.getViewportSizePixels();
-        SbVec2s brOrig = br.getViewportOriginPixels();
-
-        bool ok = (tlOrig[0] == 0  && tlOrig[1] == qH &&
-                   tlSize[0] == qW && tlSize[1] == qH &&
-                   brOrig[0] == qW && brOrig[1] == 0);
-        printf("  test4 layout ok=%d  tl=(%d,%d %dx%d) br=(%d,%d)\n",
-               (int)ok, tlOrig[0], tlOrig[1], tlSize[0], tlSize[1],
-               brOrig[0], brOrig[1]);
-        if (!ok) { printf("FAIL test4\n"); ++failures; }
+    if (ok) {
+        const int horizontal = (H / 2) * W + W / 4;
+        const int vertical = (H / 4) * W + W / 2;
+        const bool horizontalWhite = planes[horizontal] > 200 &&
+            planes[planeSize + horizontal] > 200 &&
+            planes[2 * planeSize + horizontal] > 200;
+        const bool verticalWhite = planes[vertical] > 200 &&
+            planes[planeSize + vertical] > 200 &&
+            planes[2 * planeSize + vertical] > 200;
+        ok = horizontalWhite && verticalWhite;
     }
-
-    // -----------------------------------------------------------------------
-    // Test 5: render all quadrants; verify non-blank + LOD per-view
-    // -----------------------------------------------------------------------
-    {
-        SoSeparator * geom = buildLODScene();
-
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        qv.setSceneGraph(geom);
-
-        // Camera z-distances chosen to hit specific LOD ranges:
-        //   quad 0: z=3  → distance < 5  → green sphere   (dominant G)
-        //   quad 1: z=8  → distance 5–12 → orange cube
-        //   quad 2: z=20 → distance > 12 → red cone        (dominant R)
-        //   quad 3: orthographic from the side
-        // near/far set explicitly to ensure the origin (scene centre) is visible
-        // from every camera position without moving the cameras via viewAll().
-        float cameraZ[3] = { 3.0f, 8.0f, 20.0f };
-        for (int i = 0; i < 3; ++i) {
-            SoPerspectiveCamera * cam = new SoPerspectiveCamera;
-            cam->position.setValue(0.0f, 0.0f, cameraZ[i]);
-            cam->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
-            cam->nearDistance.setValue(0.1f);
-            cam->farDistance.setValue(cameraZ[i] + 5.0f);
-            qv.setCamera(i, cam);
-        }
-        SoOrthographicCamera * ortho = new SoOrthographicCamera;
-        ortho->position.setValue(5.0f, 0.0f, 5.0f);
-        ortho->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
-        ortho->height.setValue(4.0f);
-        ortho->nearDistance.setValue(0.1f);
-        ortho->farDistance.setValue(20.0f);
-        qv.setCamera(3, ortho);
-
-        SbVec2s qs = qv.getQuadrantSize();
-        SoOffscreenRenderer * renderer =
-            new SoOffscreenRenderer(getCoinHeadlessContextManager(),
-                                    SbViewportRegion(qs[0], qs[1]));
-        renderer->setComponents(SoOffscreenRenderer::RGB);
-
-        bool ok = true;
-        int dominants[SoQuadViewport::NUM_QUADS];
-        for (int i = 0; i < SoQuadViewport::NUM_QUADS; ++i) {
-            char lbl[64];
-            snprintf(lbl, sizeof(lbl), "test5_quad%d", i);
-            bool rendered = (qv.renderQuadrant(i, renderer) == TRUE);
-            if (!rendered) {
-                printf("  %s: render FAILED\n", lbl);
-                ok = false;
-                dominants[i] = -1;
-                continue;
-            }
-            const unsigned char * buf = renderer->getBuffer();
-            int npix = qs[0] * qs[1];
-            ok = ok && validateNonBlack(buf, npix, lbl);
-            dominants[i] = dominantChannel(buf, npix);
-        }
-
-        printf("  test5 LOD dominants: q0=%d q1=%d q2=%d q3=%d (0=R 1=G 2=B)\n",
-               dominants[0], dominants[1], dominants[2], dominants[3]);
-        if (dominants[0] == 1 && dominants[2] == 0)
-            printf("  test5 LOD per-view: PASS (different detail levels)\n");
-        else
-            printf("  test5 LOD per-view: NOTE – expected G for q0 and R for q2\n");
-
-        renderer->writeToRGB(outpath);
-        printf("  test5: wrote %s\n", outpath);
-
-        delete renderer;
-        geom->unref();
-        if (!ok) { printf("FAIL test5\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 6: getViewport() gives direct SoViewport access
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-
-        bool ok = true;
-        for (int i = 0; i < SoQuadViewport::NUM_QUADS; ++i) {
-            SoViewport * tile = qv.getViewport(i);
-            ok = ok && (tile != nullptr);
-        }
-        // Out-of-range must return nullptr.
-        ok = ok && (qv.getViewport(-1) == nullptr);
-        ok = ok && (qv.getViewport(SoQuadViewport::NUM_QUADS) == nullptr);
-        printf("  test6 getViewport ok=%d\n", (int)ok);
-        if (!ok) { printf("FAIL test6\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 7: processEvent() routes to active quadrant (smoke test)
-    // -----------------------------------------------------------------------
-    {
-        SoSeparator * geom = buildLODScene();
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        qv.setSceneGraph(geom);
-
-        SoPerspectiveCamera * cam = new SoPerspectiveCamera;
-        cam->position.setValue(0.0f, 0.0f, 5.0f);
-        qv.setCamera(0, cam);
-        qv.setActiveQuadrant(0);
-
-        SoKeyboardEvent evt;
-        evt.setKey(SoKeyboardEvent::ESCAPE);
-        evt.setState(SoButtonEvent::DOWN);
-        qv.processEvent(&evt);   // must not crash
-
-        printf("  test7 processEvent smoke: PASS\n");
-        geom->unref();
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 8: setSceneGraph replacement + nullptr removal
-    // -----------------------------------------------------------------------
-    {
-        SoSeparator * g1 = buildLODScene();
-        SoSeparator * g2 = buildLODScene();
-
-        SoQuadViewport qv;
-        qv.setSceneGraph(g1);
-        bool ok = (qv.getSceneGraph() == g1);
-        qv.setSceneGraph(g2);
-        ok = ok && (qv.getSceneGraph() == g2);
-        qv.setSceneGraph(nullptr);
-        ok = ok && (qv.getSceneGraph() == nullptr);
-
-        printf("  test8 scene replacement ok=%d\n", (int)ok);
-        g1->unref();
-        g2->unref();
-        if (!ok) { printf("FAIL test8\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 9: viewAll / viewAllQuadrants with no camera — must not crash
-    // -----------------------------------------------------------------------
-    {
-        SoSeparator * geom = buildLODScene();
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        qv.setSceneGraph(geom);
-        qv.viewAll(0);
-        qv.viewAllQuadrants();
-        printf("  test9 viewAll no-camera: PASS\n");
-        geom->unref();
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 10: border width/colour round-trips
-    // -----------------------------------------------------------------------
-    {
-        SoQuadViewport qv;
-
-        // Default: no border
-        bool ok = (qv.getBorderWidth() == 0);
-
-        qv.setBorderWidth(4);
-        ok = ok && (qv.getBorderWidth() == 4);
-
-        // Negative width should clamp to 0
-        qv.setBorderWidth(-1);
-        ok = ok && (qv.getBorderWidth() == 0);
-
-        // Colour round-trip
-        SbColor yellow(1.0f, 1.0f, 0.0f);
-        qv.setBorderColor(yellow);
-        const SbColor & gc = qv.getBorderColor();
-        ok = ok && (std::fabs(gc[0] - yellow[0]) < 1e-4f &&
-                    std::fabs(gc[1] - yellow[1]) < 1e-4f &&
-                    std::fabs(gc[2] - yellow[2]) < 1e-4f);
-
-        printf("  test10 border API ok=%d\n", (int)ok);
-        if (!ok) { printf("FAIL test10\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 11: writeCompositeToRGB — non-blank composite + border pixels
-    // -----------------------------------------------------------------------
-    {
-        SoSeparator * geom = buildLODScene();
-
-        SoQuadViewport qv;
-        qv.setWindowSize(SbVec2s((short)W, (short)H));
-        qv.setSceneGraph(geom);
-
-        // Same camera setup as test5
-        float cameraZ[3] = { 3.0f, 8.0f, 20.0f };
-        for (int i = 0; i < 3; ++i) {
-            SoPerspectiveCamera * cam = new SoPerspectiveCamera;
-            cam->position.setValue(0.0f, 0.0f, cameraZ[i]);
-            cam->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
-            cam->nearDistance.setValue(0.1f);
-            cam->farDistance.setValue(cameraZ[i] + 5.0f);
-            qv.setCamera(i, cam);
-        }
-        SoOrthographicCamera * ortho = new SoOrthographicCamera;
-        ortho->position.setValue(5.0f, 0.0f, 5.0f);
-        ortho->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
-        ortho->height.setValue(4.0f);
-        ortho->nearDistance.setValue(0.1f);
-        ortho->farDistance.setValue(20.0f);
-        qv.setCamera(3, ortho);
-
-        // Enable a 4-pixel white border
-        qv.setBorderWidth(4);
-        qv.setBorderColor(SbColor(1.0f, 1.0f, 1.0f));
-
-        SbVec2s qs = qv.getQuadrantSize();
-        SoOffscreenRenderer * renderer =
-            new SoOffscreenRenderer(getCoinHeadlessContextManager(),
-                                    SbViewportRegion(qs[0], qs[1]));
-        renderer->setComponents(SoOffscreenRenderer::RGB);
-
-        char compPath[1024];
-        snprintf(compPath, sizeof(compPath), "%s_composite.rgb", basepath);
-        SbBool ok = qv.writeCompositeToRGB(compPath, renderer);
-        printf("  test11 writeCompositeToRGB ok=%d  file=%s\n",
-               (int)ok, compPath);
-
-        if (ok) {
-            // Read back the SGI RGB file and verify two things:
-            // 1. The horizontal border row (y = H/2) has white pixels.
-            // 2. The vertical border column (x = W/2) has white pixels.
-            // SGI RGB: 512-byte header, then planar R/G/B, rows bottom-to-top.
-            const int CW = W, CH = H;
-            const int CqW = CW / 2, CqH = CH / 2;
-            FILE * fp = fopen(compPath, "rb");
-            if (fp) {
-                fseek(fp, 512, SEEK_SET);
-                const int planeSz = CW * CH;
-                unsigned char * rp = new unsigned char[planeSz * 3];
-                bool readOk = (fread(rp, 1, planeSz * 3, fp) == (size_t)(planeSz * 3));
-                fclose(fp);
-
-                if (readOk) {
-                    // Border is 4 pixels wide centred at qH; check y=qH row.
-                    int hBorderRow = CqH;
-                    unsigned char hR = rp[hBorderRow * CW + CW / 4];
-                    unsigned char hG = rp[planeSz + hBorderRow * CW + CW / 4];
-                    unsigned char hB = rp[2 * planeSz + hBorderRow * CW + CW / 4];
-                    bool hBorderWhite = (hR > 200 && hG > 200 && hB > 200);
-
-                    int vBorderCol = CqW;
-                    unsigned char vR = rp[CH / 4 * CW + vBorderCol];
-                    unsigned char vG = rp[planeSz + CH / 4 * CW + vBorderCol];
-                    unsigned char vB = rp[2 * planeSz + CH / 4 * CW + vBorderCol];
-                    bool vBorderWhite = (vR > 200 && vG > 200 && vB > 200);
-
-                    printf("  test11 H-border pixel RGB=(%d,%d,%d) white=%d\n",
-                           hR, hG, hB, (int)hBorderWhite);
-                    printf("  test11 V-border pixel RGB=(%d,%d,%d) white=%d\n",
-                           vR, vG, vB, (int)vBorderWhite);
-
-                    ok = ok && hBorderWhite && vBorderWhite;
-                }
-                delete[] rp;
-            }
-        }
-
-        delete renderer;
-        geom->unref();
-        if (!ok) { printf("FAIL test11\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
+    delete[] planes;
+    scene->unref();
+    return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_quad_viewport) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_quad_viewport");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, FactorySceneRenders,
+    "quad_viewport_factory", renderFactoryScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, QuadrantSizeIsHalfWindow,
+    "quad_viewport_size", quadrantSizeIsHalfWindow())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, CamerasAndActiveQuadrantRoundTrip,
+    "quad_viewport_cameras", camerasAndActiveQuadrantRoundTrip())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, BackgroundColorReachesTile,
+    "quad_viewport_background", backgroundColorReachesTile())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, TileLayoutIsCorrect,
+    "quad_viewport_layout", tileLayoutIsCorrect())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, QuadrantsRenderExpectedLod,
+    "quad_viewport_lod", quadrantsRenderExpectedLod(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, ViewportAccessChecksBounds,
+    "quad_viewport_access", viewportAccessChecksBounds())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, EventProcessingPreservesActiveTile,
+    "quad_viewport_event", eventProcessingPreservesActiveTile())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, SceneGraphReplacesAndClears,
+    "quad_viewport_scene_graph", sceneGraphReplacesAndClears())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, ViewAllWithoutCamerasPreservesState,
+    "quad_viewport_view_all", viewAllWithoutCamerasPreservesState())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, BorderPropertiesRoundTripAndClamp,
+    "quad_viewport_border", borderPropertiesRoundTripAndClamp())
+OBOL_RENDER_TEST_CASE(QuadViewportRenderTest, CompositeContainsWhiteBorders,
+    "quad_viewport_composite", compositeContainsWhiteBorders(outputStem.c_str()))

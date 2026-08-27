@@ -77,6 +77,7 @@
 #include "config.h"
 
 #include <cassert>
+#include <array>
 #include <cstring>
 
 #ifdef HAVE_WINDOWS_H
@@ -280,8 +281,7 @@ SoOutput::SoOutput(void)
   this->constructorCommon();
   PRIVATE(this)->defstack.append(NULL);
 
-  SoWriterefCounter::create(this, NULL);
-  PRIVATE(this)->counter = SoWriterefCounter::instance(this);
+  PRIVATE(this)->counter = new SoWriterefCounter(this, NULL);
 }
 
 /*!
@@ -296,8 +296,7 @@ SoOutput::SoOutput(SoOutput * dictOut)
   BogusSet * olddef = PRIVATE(dictOut)->getCurrentDefNames(FALSE);
   PRIVATE(this)->defstack.append(olddef ? new BogusSet(*olddef) : NULL);
 
-  SoWriterefCounter::create(this, dictOut);
-  PRIVATE(this)->counter = SoWriterefCounter::instance(this);
+  PRIVATE(this)->counter = new SoWriterefCounter(this, dictOut);
 }
 
 /*!
@@ -330,10 +329,16 @@ SoOutput::constructorCommon(void)
 */
 SoOutput::~SoOutput(void)
 {
-  SoWriterefCounter::destruct(this);
+  delete PRIVATE(this)->counter;
   this->reset();
   delete PRIVATE(this)->headerstring;
   delete PRIVATE(this);
+}
+
+SoWriterefCounter *
+SoOutput::getWriterefCounter(void) const
+{
+  return PRIVATE(this)->counter;
 }
 
 /*!
@@ -1125,10 +1130,8 @@ SoOutput::indent(void)
 
   if (PRIVATE(this)->writecompact) return;
 
-  static int oldstyle = -1;
-  if (oldstyle == -1) {
-    oldstyle = CoinInternal::getEnvironmentVariableRaw("OBOL_OLDSTYLE_FORMATTING") ? 1 : 0;
-  }
+  static const bool oldstyle =
+    CoinInternal::getEnvironmentVariableRaw("OBOL_OLDSTYLE_FORMATTING") != NULL;
 
   // Keep the old ugly-bugly formatting style around, in case someone,
   // for some obscure reason, needs it.
@@ -1268,9 +1271,7 @@ SoOutput::writeBytesWithPadding(const char * const p, const size_t nr)
   // Pad binary writes to a 4-byte boundary if necessary.
   if (this->isBinary()) {
     // Static buffer filled with enough bytes of all-zero bits.
-    static unsigned char padbytes[HOSTWORDSIZE] = "X";
-    if (padbytes[0] == 'X')
-      for (size_t i=0; i < HOSTWORDSIZE; i++) padbytes[i] = '\0';
+    static const std::array<unsigned char, HOSTWORDSIZE> padbytes{};
 
     size_t writeposition = this->bytesInBuf();
     if (PRIVATE(this)->getWriter()->getType() == SoOutput_Writer::MEMBUFFER) {
@@ -1278,7 +1279,7 @@ SoOutput::writeBytesWithPadding(const char * const p, const size_t nr)
     }
     size_t padsize = HOSTWORDSIZE - (writeposition % HOSTWORDSIZE);
     if (padsize == HOSTWORDSIZE) padsize = 0;
-    this->writeBinaryArray(padbytes, (int)padsize);
+    this->writeBinaryArray(padbytes.data(), (int)padsize);
   }
 }
 

@@ -284,47 +284,13 @@ static bool test7_glRenderAction(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_render_manager_full";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createRenderManagerFull(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoRenderManager comprehensive tests ===\n");
-
-    if (!test1_camera(basepath))            { printf("FAIL test1\n"); ++failures; }
-    if (!test2_stereoMode(basepath))        { printf("FAIL test2\n"); ++failures; }
-    if (!test3_antialiasing(basepath))      { printf("FAIL test3\n"); ++failures; }
-    if (!test4_windowSize(basepath))        { printf("FAIL test4\n"); ++failures; }
-    if (!test5_autoClipping(basepath))      { printf("FAIL test5\n"); ++failures; }
-    if (!test6_scheduleAndCallback(basepath)){ printf("FAIL test6\n"); ++failures; }
-    if (!test7_glRenderAction(basepath))    { printf("FAIL test7\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_render_manager_full) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_render_manager_full");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, Camera, "manager_camera", test1_camera(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, StereoMode, "manager_stereo", test2_stereoMode(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, Antialiasing, "manager_antialias", test3_antialiasing(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, WindowSize, "manager_window", test4_windowSize(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, AutoClipping, "manager_clipping", test5_autoClipping(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, ScheduleAndCallback, "manager_schedule", test6_scheduleAndCallback(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RenderManagerFullTest, RenderAction, "manager_action", test7_glRenderAction(outputStem.c_str()))

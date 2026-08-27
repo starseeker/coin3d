@@ -50,8 +50,8 @@
 
   The path/to/resource.ext is for most platforms the path under the
   environment variable $COINDIR where the file should be present.  For
-  Mac OS X, the path is under the Inventor framework bundle Resources/
-  directory, if Coin was installed as a framework that is.
+  The external resource root is selected with the COINDIR environment
+  variable on every platform.
 
   The file on disk can be an updated version, compared to the
   compiled-in buffer, which is why the externalized files are prioritized
@@ -75,12 +75,6 @@
 #include <Inventor/SbByteBuffer.h>
 
 #include "config.h"
-
-#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
-#include <CoreFoundation/CFBundle.h>
-#include <CoreFoundation/CFURL.h>
-#endif // OBOL_MACOS_10 && OBOL_MACOSX_FRAMEWORK
-
 
 #include "SoEnvironment.h"
 
@@ -185,40 +179,12 @@ CoinResources::get(const char * resloc)
     // try loading file from COINDIR/...
     do { // to 'break' out of this try-file-loading sequence
       SbString filename;
-#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
-      // CFBundleIdentifier in Info.plist
-      CFStringRef identifier =
-        CFStringCreateWithCString(kCFAllocatorDefault,
-                                  OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
-                                  kCFStringEncodingASCII);
-      CFBundleRef coinbundle = CFBundleGetBundleWithIdentifier(identifier);
-      CFRelease(identifier);
-      if (!coinbundle) {
-        handle->filenotfound = TRUE;
-        break;
-      }
-
-      // search app-bundle as well? probably not
-      // CFBundleRef mainbundle = CFBundleGetMainBundle();
-
-      CFURLRef url = CFBundleCopyResourcesDirectoryURL(coinbundle);
-      UInt8 buf[MAXPATHLEN];
-
-      if (!CFURLGetFileSystemRepresentation(url, true, buf, MAXPATHLEN-1)) {
-        handle->filenotfound = TRUE;
-        CFRelease(url);
-        break;
-      }
-      filename.sprintf("%s/%s", buf, resloc + 5);
-      CFRelease(url);
-#else // !OBOL_MACOSX_FRAMEWORK
       static auto coindirenv = CoinInternal::getEnvironmentVariable("COINDIR");
       if (!coindirenv.has_value()) {
         handle->filenotfound = TRUE;
         break;
       }
       filename.sprintf("%s/%s/%s", coindirenv->c_str(), OBOL_DATADIR, resloc + 5);
-#endif // !OBOL_MACOSX_FRAMEWORK
       FILE * fp = fopen(filename.getString(), "rb");
       if (!fp) {
         handle->filenotfound = TRUE;

@@ -225,12 +225,10 @@ static SoMaterial* editedMaterial()
 static const SbColor kBgColor(0.12f, 0.12f, 0.14f);
 
 // ============================================================================
-// Scenario implementation// ============================================================================
+// Independently registered GTest contracts
 
-static int runScenario(const char *outputStem)
+static bool renderArb8EditCycle(const char * outputStem)
 {
-    initCoinHeadless();
-
     // ---- Register the ARB8 edit-cycle shape type from JSON schema ----
     //      objectValidateCB: always accepts (simulates parent-app approval)
     static const auto objCB = [](const char*, void*) -> SbBool {
@@ -243,7 +241,8 @@ static int runScenario(const char *outputStem)
         nullptr,
         static_cast<SoProceduralObjectValidateCB>(objCB));
 
-    const char* base = (outputStem != nullptr) ? outputStem : "render_arb8_edit_cycle";
+    const char * base = outputStem;
+    bool allRendered = true;
 
     /* Render the canonical factory scene as the primary output image.
      * This keeps the GTest scenario and obol_viewer on identical scene construction.
@@ -254,11 +253,13 @@ static int runScenario(const char *outputStem)
         SoOffscreenRenderer fRen(fVp);
         fRen.setComponents(SoOffscreenRenderer::RGB);
         fRen.setBackgroundColor(kBgColor);
-        if (fRen.render(fRoot)) {
+        const bool rendered = fRen.render(fRoot);
+        if (rendered) {
             char primaryPath[4096];
             snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", base);
-            fRen.writeToRGB(primaryPath);
+            allRendered = fRen.writeToRGB(primaryPath) && allRendered;
         }
+        else allRendered = false;
         fRoot->unref();
     }
 
@@ -284,7 +285,8 @@ static int runScenario(const char *outputStem)
 
         char out[1024];
         snprintf(out, sizeof(out), "%s_step1.rgb", base);
-        renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT, kBgColor);
+        allRendered = renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                   kBgColor) && allRendered;
         root->unref();
     }
 
@@ -332,7 +334,8 @@ static int runScenario(const char *outputStem)
 
         char out[1024];
         snprintf(out, sizeof(out), "%s_step2.rgb", base);
-        renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT, kBgColor);
+        allRendered = renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                   kBgColor) && allRendered;
         root->unref();
     }
 
@@ -390,7 +393,8 @@ static int runScenario(const char *outputStem)
 
         char out[1024];
         snprintf(out, sizeof(out), "%s_step3.rgb", base);
-        renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT, kBgColor);
+        allRendered = renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                   kBgColor) && allRendered;
         root->unref();
     }
 
@@ -513,13 +517,11 @@ static int runScenario(const char *outputStem)
         snprintf(out, sizeof(out), "%s_step4.rgb", base);
         bool ok = renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT, kBgColor);
         root->unref();
-        return ok ? 0 : 1;
+        return ok && allRendered;
     }
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_arb8_edit_cycle) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_arb8_edit_cycle");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(Arb8EditCycleRenderTest, AllEditPhasesRender,
+    "arb8_edit_cycle", renderArb8EditCycle(outputStem.c_str()))

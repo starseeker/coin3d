@@ -14,12 +14,6 @@ else()
   )
 endif()
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_GLUE_INTERNAL_FILES
-	toojpeg.h
-	toojpeg.cpp
-	gl_impl.inc
-)
 
 set(_obol_glue_sources ${OBOL_GLUE_FILES})
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
@@ -33,11 +27,3 @@ if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
 		INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
 endif()
 obol_add_source_module(glue ${_obol_glue_sources})
-
-# define documentation
-foreach(SRCFILE ${OBOL_GLUE_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/glue/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_GLUE_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/glue/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

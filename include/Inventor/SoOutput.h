@@ -46,6 +46,7 @@ class SoOutputP;
 class SoProto;
 class SoField;
 class SoFieldContainer;
+class SoWriterefCounter;
 
 typedef void * SoOutputReallocCB(void * ptr, size_t newSize);
 
@@ -171,6 +172,7 @@ private:
   
   friend class SoBase; // Need to be able to remove items from dict.
   friend class SoWriterefCounter; // ditto
+  SoWriterefCounter * getWriterefCounter(void) const;
   void removeSoBase2IdRef(const SoBase * base);
 };
 

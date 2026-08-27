@@ -66,7 +66,7 @@ public:
   virtual void updateCoinParameter(SoState * state, const SbName & name,
                                    SoShaderParameter * param, const int val);
 
-  uint32_t getShaderObjectId(void) const;
+  uint64_t getShaderObjectId(void) const;
 
 public:
 
@@ -90,6 +90,8 @@ public:
 #endif
 
 protected:
+  static uint64_t allocateShaderObjectId(void);
+
   const SoGLContext * glctx;
   uint32_t cachecontext;
 
@@ -97,7 +99,7 @@ private:
   ShaderType shadertype;
   SbBool isActiveFlag ;
   SbBool paramsdirty;
-  uint32_t id;
+  uint64_t id;
 };
 
 #endif /* ! OBOL_SOGLSHADEROBJECT_H */

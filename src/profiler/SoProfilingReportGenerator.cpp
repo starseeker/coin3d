@@ -34,14 +34,12 @@
 #include "config.h"
 
 #include <cassert>
-#include <cstdlib>
-#include <cstdarg>
+#include <algorithm>
 #include <cstring>
+#include <limits>
 
-#include <memory>
+#include <vector>
 
-#include <Inventor/errors/SoDebugError.h>
-#include <Inventor/threads/SbMutex.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
 #include "CoinTidbits.h"
 
@@ -62,8 +60,6 @@
 
 class SoProfilingReportGeneratorP {
 public:
-  static SbMutex * mutex;
-
   typedef int SortFunction(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpTimeAsc(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpTimeDes(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
@@ -99,8 +95,6 @@ public:
   static void printGfxMemKilobytes(const SbProfilingData & data, SbString & string, int idx);
 
 };
-
-SbMutex * SoProfilingReportGeneratorP::mutex = NULL;
 
 // *************************************************************************
 
@@ -362,35 +356,70 @@ SoProfilingReportGenerator::freeCriteria(SbProfilingReportPrintCriteria * criter
 
 // *************************************************************************
 
-static const SbProfilingData * profdata = NULL;
-static const int * arraystart = NULL;
-static const int * arrayend = NULL;
-static SoProfilingReportGenerator::DataCategorization sortcategory = SoProfilingReportGenerator::TYPES;
-static SbProfilingReportSortCriteria * sortingconfig = NULL;
-static SbList<SbProfilingNodeNameKey> * namekeys = NULL;
-static SbList<SbProfilingNodeTypeKey> * typekeys = NULL;
-static int longestnamelength = 0;
-static int longesttypenamelength = 0;
+// The formatting hooks predate lambdas and carry no user context.  Keep only
+// a narrow thread-local bridge to stack-owned key lists while sorting and
+// formatting.  No user callback runs while this bridge is active.
+static thread_local SoProfilingReportGenerator::DataCategorization
+  sortcategory = SoProfilingReportGenerator::TYPES;
+static thread_local const SbList<SbProfilingNodeNameKey> * namekeys = NULL;
+static thread_local const SbList<SbProfilingNodeTypeKey> * typekeys = NULL;
+static thread_local int longestnamelength = 0;
+static thread_local int longesttypenamelength = 0;
 
-static int
-gencompare(const void * ptr1, const void * ptr2)
+namespace {
+
+class ActiveReportContext {
+public:
+  ActiveReportContext(SoProfilingReportGenerator::DataCategorization category,
+                      const SbList<SbProfilingNodeNameKey> & names,
+                      const SbList<SbProfilingNodeTypeKey> & types,
+                      int namelength,
+                      int typelength)
+    : previouscategory(sortcategory), previousnames(namekeys),
+      previoustypes(typekeys), previousnamelength(longestnamelength),
+      previoustypelength(longesttypenamelength)
+  {
+    sortcategory = category;
+    namekeys = &names;
+    typekeys = &types;
+    longestnamelength = namelength;
+    longesttypenamelength = typelength;
+  }
+
+  ~ActiveReportContext()
+  {
+    sortcategory = this->previouscategory;
+    namekeys = this->previousnames;
+    typekeys = this->previoustypes;
+    longestnamelength = this->previousnamelength;
+    longesttypenamelength = this->previoustypelength;
+  }
+
+private:
+  SoProfilingReportGenerator::DataCategorization previouscategory;
+  const SbList<SbProfilingNodeNameKey> * previousnames;
+  const SbList<SbProfilingNodeTypeKey> * previoustypes;
+  int previousnamelength;
+  int previoustypelength;
+};
+
+struct ReportLine {
+  int entryindex;
+  SbString text;
+};
+
+double safeAverage(double total, uint32_t count)
 {
-  if (ptr1 < arraystart || ptr1 > arrayend || ptr2 < arraystart || ptr2 > arrayend) {
-    assert("sorting not delayed for correct");
-    return 0;
-  }
-  assert(sortingconfig);
-
-  const int idx1 = (static_cast<const int *>(ptr1))[0];
-  const int idx2 = (static_cast<const int *>(ptr2))[0];
-
-  int result = 0, sorteridx = 0;
-  while (result == 0 && sorteridx < sortingconfig->numfunctions) {
-    result = sortingconfig->functions[sorteridx](*profdata, sortcategory, idx1, idx2);
-    ++sorteridx;
-  }
-  return result;
+  return count == 0 ? 0.0 : total / static_cast<double>(count);
 }
+
+double safePercentage(double value, const SbTime & duration)
+{
+  const double seconds = duration.getValue();
+  return seconds == 0.0 ? 0.0 : value * 100.0 / seconds;
+}
+
+} // namespace
 
 /*!
   Allocate mutexes and other such infrastructure constructs needed
@@ -399,30 +428,11 @@ gencompare(const void * ptr1, const void * ptr2)
 void
 SoProfilingReportGenerator::init(void)
 {
-  assert(SoProfilingReportGeneratorP::mutex == NULL);
-  SoProfilingReportGeneratorP::mutex = new SbMutex;
 }
 
 void
 SoProfilingReportGenerator::cleanup(void)
 {
-  delete SoProfilingReportGeneratorP::mutex;
-  SoProfilingReportGeneratorP::mutex = NULL;
-}
-
-namespace {
-// class to make sure the mutex is always unlocked again when leaving scope
-class MutexLocker {
-  SbMutex * const mutex;
-public:
-  MutexLocker(SbMutex * m) : mutex(m) {
-    assert(mutex);
-    mutex->lock();
-  }
-  ~MutexLocker(void) {
-    mutex->unlock();
-  }
-};
 }
 
 #define OUTPUT_PADDING "  "
@@ -444,175 +454,76 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
   assert(sort);
   assert(print);
 
-  MutexLocker locker(SoProfilingReportGeneratorP::mutex); // lock mutex until scope is exited
-
-  profdata = &data;
-  sortingconfig = sort;
-
-  if (print->needstringlengths) {
-    longestnamelength = data.getLongestNameLength();
-    longesttypenamelength = data.getLongestTypeNameLength();
-  }
-
-  if (categorization == NODES) {
-    int c = 0;
-    const int numindexes = data.getNumNodeEntries();
-    if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
-      return;
-    }
-    std::unique_ptr<int[]> indexarray;
-    indexarray.reset(new int [ numindexes ]);
-    for (c = 0; c < numindexes; ++c) {
-      indexarray[c] = c;
-    }
-
-    sortcategory = NODES;
-    arraystart = &indexarray[0];
-    arrayend = &indexarray[numindexes-1];
-
-    qsort(indexarray.get(), numindexes, sizeof(int), gencompare);
-
-    // output
-    const int maxindexes = (count > 0) ? SbMin(numindexes, count) : numindexes;
-    c = addheader ? -1 : 0;
-    for (; c < maxindexes; ++c) {
-      SbString text;
-      int entryidx = -1;
-      if (c == -1) {
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, -1);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      } else {
-        entryidx = indexarray[c];
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, entryidx);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      }
-      /*CallbackResponse response = */reportcallback(userdata, entryidx, text.getString());
-    }
-  }
-  else if (categorization == NAMES) {
-    int c = 0;
-    if (namekeys == NULL) {
-      namekeys = new SbList<SbProfilingNodeNameKey>;
-    } else {
-      namekeys->truncate(0);
-    }
-    data.getStatsForNamesKeyList(*namekeys);
-
-    const int numindexes = namekeys->getLength();
-    if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
-      return;
-    }
-    std::unique_ptr<int[]> indexarray;
-    indexarray.reset(new int [ numindexes ]);
-    for (c = 0; c < numindexes; ++c) {
-      indexarray[c] = c;
-    }
-
-    sortcategory = NAMES;
-    arraystart = &indexarray[0];
-    arrayend = &indexarray[numindexes-1];
-
-    qsort(indexarray.get(), numindexes, sizeof(int), gencompare);
-
-    // output
-    const int maxindexes = (count > 0) ? SbMin(numindexes, count) : numindexes;
-    c = addheader ? -1 : 0;
-    for (; c < maxindexes; ++c) {
-      SbString text;
-      int entryidx = -1;
-      if (c == -1) {
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, -1);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      } else {
-        const SbProfilingNodeNameKey namekey = (*namekeys)[indexarray[c]];
-        entryidx = namekeys->find(namekey);
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, entryidx);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      }
-      /*CallbackResponse response = */reportcallback(userdata, entryidx, text.getString());
-    }
-  }
-  else if (categorization == TYPES) {
-    int c = 0;
-    if (typekeys == NULL) {
-      typekeys = new SbList<SbProfilingNodeTypeKey>;
-    } else {
-      typekeys->truncate(0);
-    }
-    data.getStatsForTypesKeyList(*typekeys);
-
-    const int numindexes = typekeys->getLength();
-    if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
-      return;
-    }
-    std::unique_ptr<int[]> indexarray;
-    indexarray.reset(new int [ numindexes ]);
-    for (c = 0; c < numindexes; ++c) {
-      indexarray[c] = c;
-    }
-
-    sortcategory = TYPES;
-    arraystart = &indexarray[0];
-    arrayend = &indexarray[numindexes-1];
-
-    qsort(indexarray.get(), numindexes, sizeof(int), gencompare);
-
-    // output
-    const int maxindexes = (count > 0) ? SbMin(numindexes, count) : numindexes;
-    c = addheader ? -1 : 0;
-    for (; c < maxindexes; ++c) {
-      SbString text;
-      int entryidx = -1;
-      if (c == -1) {
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, -1);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      } else {
-        const SbProfilingNodeTypeKey typekey = (*typekeys)[indexarray[c]];
-        entryidx = typekeys->find(typekey);
-        for (int i = 0; i < print->numfunctions; ++i) {
-          SbString part;
-          print->functions[i](data, part, entryidx);
-          text += part;
-          if ((i + 1) < print->numfunctions) { text += OUTPUT_PADDING; }
-        }
-      }
-      /*CallbackResponse response = */reportcallback(userdata, entryidx, text.getString());
-    }
-  }
-  else {
+  SbList<SbProfilingNodeNameKey> localnamekeys;
+  SbList<SbProfilingNodeTypeKey> localtypekeys;
+  int numindexes = 0;
+  switch (categorization) {
+  case NODES:
+    numindexes = data.getNumNodeEntries();
+    break;
+  case NAMES:
+    data.getStatsForNamesKeyList(localnamekeys);
+    numindexes = localnamekeys.getLength();
+    break;
+  case TYPES:
+    data.getStatsForTypesKeyList(localtypekeys);
+    numindexes = localtypekeys.getLength();
+    break;
+  default:
     assert(!"no such data categorization implemented");
+    return;
+  }
+  if (numindexes == 0) return;
+
+  std::vector<ReportLine> lines;
+  {
+    const int namelength =
+      print->needstringlengths ? data.getLongestNameLength() : 0;
+    const int typelength =
+      print->needstringlengths ? data.getLongestTypeNameLength() : 0;
+    ActiveReportContext context(categorization, localnamekeys, localtypekeys,
+                                namelength, typelength);
+
+    std::vector<int> indexes(static_cast<size_t>(numindexes));
+    for (int index = 0; index < numindexes; ++index) indexes[index] = index;
+    std::stable_sort(indexes.begin(), indexes.end(),
+      [&](const int lhs, const int rhs) {
+        for (int sorter = 0; sorter < sort->numfunctions; ++sorter) {
+          const int result =
+            sort->functions[sorter](data, categorization, lhs, rhs);
+          if (result != 0) return result < 0;
+        }
+        return lhs < rhs;
+      });
+
+    const int maxindexes =
+      (count > 0) ? SbMin(numindexes, count) : numindexes;
+    lines.reserve(static_cast<size_t>(maxindexes + (addheader ? 1 : 0)));
+
+    const auto appendline = [&](const int entryindex) {
+      ReportLine line;
+      line.entryindex = entryindex;
+      for (int column = 0; column < print->numfunctions; ++column) {
+        SbString part;
+        print->functions[column](data, part, entryindex);
+        line.text += part;
+        if ((column + 1) < print->numfunctions) line.text += OUTPUT_PADDING;
+      }
+      lines.push_back(line);
+    };
+
+    if (addheader) appendline(-1);
+    for (int outputindex = 0; outputindex < maxindexes; ++outputindex) {
+      appendline(indexes[outputindex]);
+    }
   }
 
-  profdata = NULL;
-  sortingconfig = NULL;
-  arraystart = NULL;
-  arrayend = NULL;
+  // User code runs only after all internal report state has been released.
+  for (const ReportLine & line : lines) {
+    if (reportcallback(userdata, line.entryindex, line.text.getString()) == STOP) {
+      break;
+    }
+  }
 }
 
 #undef OUTPUT_PADDING
@@ -721,8 +632,8 @@ SoProfilingReportGeneratorP::cmpTimeAvgAsc(const SbProfilingData & data, SoProfi
     uint32_t count1, count2;
     data.getStatsForName((*namekeys)[idx1], total1, max1, count1);
     data.getStatsForName((*namekeys)[idx2], total2, max2, count2);
-    diff = (total1.getValue() / static_cast<float>(count1))
-      - (total2.getValue() / static_cast<float>(count2));
+    diff = safeAverage(total1.getValue(), count1)
+      - safeAverage(total2.getValue(), count2);
     break;
   }
   case SoProfilingReportGenerator::TYPES:
@@ -731,8 +642,8 @@ SoProfilingReportGeneratorP::cmpTimeAvgAsc(const SbProfilingData & data, SoProfi
     uint32_t count1, count2;
     data.getStatsForType((*typekeys)[idx1], total1, max1, count1);
     data.getStatsForType((*typekeys)[idx2], total2, max2, count2);
-    diff = (total1.getValue() / static_cast<float>(count1))
-      - (total2.getValue() / static_cast<float>(count2));
+    diff = safeAverage(total1.getValue(), count1)
+      - safeAverage(total2.getValue(), count2);
     break;
   }
   default:
@@ -763,7 +674,7 @@ SoProfilingReportGeneratorP::cmpCountAsc(const SbProfilingData & data, SoProfili
     uint32_t count1, count2;
     data.getStatsForName((*namekeys)[idx1], total1, max1, count1);
     data.getStatsForName((*namekeys)[idx2], total2, max2, count2);
-    return static_cast<int>(count1 - count2);
+    return count1 < count2 ? -1 : (count1 > count2 ? 1 : 0);
   }
   case SoProfilingReportGenerator::TYPES:
   {
@@ -771,7 +682,7 @@ SoProfilingReportGeneratorP::cmpCountAsc(const SbProfilingData & data, SoProfili
     uint32_t count1, count2;
     data.getStatsForType((*typekeys)[idx1], total1, max1, count1);
     data.getStatsForType((*typekeys)[idx2], total2, max2, count2);
-    return static_cast<int>(count1 - count2);
+    return count1 < count2 ? -1 : (count1 > count2 ? 1 : 0);
   }
   default:
     assert(!"unsupported report categorization");
@@ -827,22 +738,56 @@ SoProfilingReportGeneratorP::cmpAlphanumericDes(const SbProfilingData & data, So
   return -SoProfilingReportGeneratorP::cmpAlphanumericAsc(data, category, idx1, idx2);
 }
 
+static size_t
+profilingFootprint(const SbProfilingData & data,
+                   SoProfilingReportGenerator::DataCategorization category,
+                   int entryidx,
+                   SbProfilingData::FootprintType footprinttype)
+{
+  if (category == SoProfilingReportGenerator::NODES) {
+    return data.getNodeFootprint(entryidx, footprinttype);
+  }
+
+  size_t footprint = 0;
+  const int nodecount = data.getNumNodeEntries();
+  for (int nodeidx = 0; nodeidx < nodecount; ++nodeidx) {
+    bool matches = false;
+    if (category == SoProfilingReportGenerator::NAMES) {
+      assert(namekeys);
+      matches = std::strcmp(data.getNodeName(nodeidx).getString(),
+                            (*namekeys)[entryidx]) == 0;
+    }
+    else if (category == SoProfilingReportGenerator::TYPES) {
+      assert(typekeys);
+      matches = static_cast<SbProfilingNodeTypeKey>(
+        data.getNodeType(nodeidx).getKey()) == (*typekeys)[entryidx];
+    }
+    if (matches) {
+      const size_t nodefootprint =
+        data.getNodeFootprint(nodeidx, footprinttype);
+      if (nodefootprint > std::numeric_limits<size_t>::max() - footprint) {
+        return std::numeric_limits<size_t>::max();
+      }
+      footprint += nodefootprint;
+    }
+  }
+  return footprint;
+}
+
 int
 SoProfilingReportGeneratorP::cmpMemAsc(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2)
 {
   switch (category) {
   case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint1 = data.getNodeFootprint(idx1, SbProfilingData::MEMORY_SIZE);
-    size_t footprint2 = data.getNodeFootprint(idx2, SbProfilingData::MEMORY_SIZE);
-    return static_cast<int>(footprint1 - footprint2);
-  }
   case SoProfilingReportGenerator::NAMES:
-    // not implemented
-    break;
   case SoProfilingReportGenerator::TYPES:
-    // not supported
-    break;
+  {
+    const size_t footprint1 =
+      profilingFootprint(data, category, idx1, SbProfilingData::MEMORY_SIZE);
+    const size_t footprint2 =
+      profilingFootprint(data, category, idx2, SbProfilingData::MEMORY_SIZE);
+    return footprint1 < footprint2 ? -1 : (footprint1 > footprint2 ? 1 : 0);
+  }
   default:
     assert(!"unsupported report categorization");
     break;
@@ -861,17 +806,15 @@ SoProfilingReportGeneratorP::cmpGfxMemAsc(const SbProfilingData & data, SoProfil
 {
   switch (category) {
   case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint1 = data.getNodeFootprint(idx1, SbProfilingData::VIDEO_MEMORY_SIZE);
-    size_t footprint2 = data.getNodeFootprint(idx2, SbProfilingData::VIDEO_MEMORY_SIZE);
-    return static_cast<int>(footprint1 - footprint2);
-  }
   case SoProfilingReportGenerator::NAMES:
-    // not implemented
-    break;
   case SoProfilingReportGenerator::TYPES:
-    // no implemented
-    break;
+  {
+    const size_t footprint1 = profilingFootprint(
+      data, category, idx1, SbProfilingData::VIDEO_MEMORY_SIZE);
+    const size_t footprint2 = profilingFootprint(
+      data, category, idx2, SbProfilingData::VIDEO_MEMORY_SIZE);
+    return footprint1 < footprint2 ? -1 : (footprint1 > footprint2 ? 1 : 0);
+  }
   default:
     assert(!"unsupported report categorization");
     break;
@@ -1090,7 +1033,7 @@ SoProfilingReportGeneratorP::printTimeSecsAvg(const SbProfilingData & data, SbSt
     SbTime total, max;
     uint32_t count;
     data.getStatsForName((*namekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() / static_cast<double>(count)));
+    string.sprintf(formatstring, safeAverage(total.getValue(), count));
     break;
   }
   case SoProfilingReportGenerator::TYPES:
@@ -1098,7 +1041,7 @@ SoProfilingReportGeneratorP::printTimeSecsAvg(const SbProfilingData & data, SbSt
     SbTime total, max;
     uint32_t count;
     data.getStatsForType((*typekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() / static_cast<double>(count)));
+    string.sprintf(formatstring, safeAverage(total.getValue(), count));
     break;
   }
   default:
@@ -1201,7 +1144,7 @@ SoProfilingReportGeneratorP::printTimeMSecsAvg(const SbProfilingData & data, SbS
     SbTime total, max;
     uint32_t count;
     data.getStatsForName((*namekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() * 1000.0) / static_cast<double>(count));
+    string.sprintf(formatstring, safeAverage(total.getValue(), count) * 1000.0);
     break;
   }
   case SoProfilingReportGenerator::TYPES:
@@ -1209,7 +1152,7 @@ SoProfilingReportGeneratorP::printTimeMSecsAvg(const SbProfilingData & data, SbS
     SbTime total, max;
     uint32_t count;
     data.getStatsForType((*typekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() * 1000.0) / static_cast<double>(count));
+    string.sprintf(formatstring, safeAverage(total.getValue(), count) * 1000.0);
     break;
   }
   default:
@@ -1231,7 +1174,7 @@ SoProfilingReportGeneratorP::printTimePercent(const SbProfilingData & data, SbSt
   case SoProfilingReportGenerator::NODES:
   {
     SbTime timing = data.getNodeTiming(entryidx);
-    string.sprintf(formatstring, (timing.getValue() * 100.0) / duration.getValue());
+    string.sprintf(formatstring, safePercentage(timing.getValue(), duration));
     break;
   }
   case SoProfilingReportGenerator::NAMES:
@@ -1239,7 +1182,7 @@ SoProfilingReportGeneratorP::printTimePercent(const SbProfilingData & data, SbSt
     SbTime total, max;
     uint32_t count;
     data.getStatsForName((*namekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() * 100.0) / duration.getValue());
+    string.sprintf(formatstring, safePercentage(total.getValue(), duration));
     break;
   }
   case SoProfilingReportGenerator::TYPES:
@@ -1247,7 +1190,7 @@ SoProfilingReportGeneratorP::printTimePercent(const SbProfilingData & data, SbSt
     SbTime total, max;
     uint32_t count;
     data.getStatsForType((*typekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (total.getValue() * 100.0) / duration.getValue());
+    string.sprintf(formatstring, safePercentage(total.getValue(), duration));
     break;
   }
   default:
@@ -1269,7 +1212,7 @@ SoProfilingReportGeneratorP::printTimePercentMax(const SbProfilingData & data, S
   case SoProfilingReportGenerator::NODES:
   {
     SbTime timing = data.getNodeTiming(entryidx);
-    string.sprintf(formatstring, timing.getValue() * 100.0 / duration.getValue());
+    string.sprintf(formatstring, safePercentage(timing.getValue(), duration));
     break;
   }
   case SoProfilingReportGenerator::NAMES:
@@ -1277,7 +1220,7 @@ SoProfilingReportGeneratorP::printTimePercentMax(const SbProfilingData & data, S
     SbTime total, max;
     uint32_t count;
     data.getStatsForName((*namekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (max.getValue() * 100.0) / duration.getValue());
+    string.sprintf(formatstring, safePercentage(max.getValue(), duration));
     break;
   }
   case SoProfilingReportGenerator::TYPES:
@@ -1285,7 +1228,7 @@ SoProfilingReportGeneratorP::printTimePercentMax(const SbProfilingData & data, S
     SbTime total, max;
     uint32_t count;
     data.getStatsForType((*typekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, (max.getValue() * 100.0) / duration.getValue());
+    string.sprintf(formatstring, safePercentage(max.getValue(), duration));
     break;
   }
   default:
@@ -1307,7 +1250,7 @@ SoProfilingReportGeneratorP::printTimePercentAvg(const SbProfilingData & data, S
   case SoProfilingReportGenerator::NODES:
   {
     SbTime timing = data.getNodeTiming(entryidx);
-    string.sprintf(formatstring, timing.getValue() * 100.0 / duration.getValue());
+    string.sprintf(formatstring, safePercentage(timing.getValue(), duration));
     break;
   }
   case SoProfilingReportGenerator::NAMES:
@@ -1315,16 +1258,17 @@ SoProfilingReportGeneratorP::printTimePercentAvg(const SbProfilingData & data, S
     SbTime total, max;
     uint32_t count;
     data.getStatsForName((*namekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, ((total.getValue() / static_cast<double>(count)) * 100.0) / duration.getValue());
+    string.sprintf(formatstring,
+                   safePercentage(safeAverage(total.getValue(), count), duration));
     break;
   }
-    break;
   case SoProfilingReportGenerator::TYPES:
   {
     SbTime total, max;
     uint32_t count;
     data.getStatsForType((*typekeys)[entryidx], total, max, count);
-    string.sprintf(formatstring, ((total.getValue() / static_cast<double>(count)) * 100.0) / duration.getValue());
+    string.sprintf(formatstring,
+                   safePercentage(safeAverage(total.getValue(), count), duration));
     break;
   }
   default:
@@ -1341,23 +1285,9 @@ SoProfilingReportGeneratorP::printMemBytes(const SbProfilingData & data, SbStrin
     string.sprintf("%9s", "MEMORY");
     return;
   }
-  switch (sortcategory) {
-  case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint = data.getNodeFootprint(entryidx, SbProfilingData::MEMORY_SIZE);
-    string.sprintf(formatstring, footprint);
-    break;
-  }
-  case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, size_t{0});
-    break;
-  case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, size_t{0});
-    break;
-  default:
-    assert(!"unsupported report categorization");
-    break;
-  }
+  const size_t footprint = profilingFootprint(
+    data, sortcategory, entryidx, SbProfilingData::MEMORY_SIZE);
+  string.sprintf(formatstring, footprint);
 }
 
 void
@@ -1368,23 +1298,9 @@ SoProfilingReportGeneratorP::printMemKilobytes(const SbProfilingData & data, SbS
     string.sprintf("%8s", "MEMORY");
     return;
   }
-  switch (sortcategory) {
-  case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint = data.getNodeFootprint(entryidx, SbProfilingData::MEMORY_SIZE);
-    string.sprintf(formatstring, static_cast<double>(footprint) / 1024.0);
-    break;
-  }
-  case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, 0.0);
-    break;
-  case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, 0.0);
-    break;
-  default:
-    assert(!"unsupported report categorization");
-    break;
-  }
+  const size_t footprint = profilingFootprint(
+    data, sortcategory, entryidx, SbProfilingData::MEMORY_SIZE);
+  string.sprintf(formatstring, static_cast<double>(footprint) / 1024.0);
 }
 
 void
@@ -1395,23 +1311,9 @@ SoProfilingReportGeneratorP::printGfxMemBytes(const SbProfilingData & data, SbSt
     string.sprintf("%9s", "GFX MEM");
     return;
   }
-  switch (sortcategory) {
-  case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint = data.getNodeFootprint(entryidx, SbProfilingData::VIDEO_MEMORY_SIZE);
-    string.sprintf(formatstring, footprint);
-    break;
-  }
-  case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, size_t{0});
-    break;
-  case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, size_t{0});
-    break;
-  default:
-    assert(!"unsupported report categorization");
-    break;
-  }
+  const size_t footprint = profilingFootprint(
+    data, sortcategory, entryidx, SbProfilingData::VIDEO_MEMORY_SIZE);
+  string.sprintf(formatstring, footprint);
 }
 
 void
@@ -1422,23 +1324,9 @@ SoProfilingReportGeneratorP::printGfxMemKilobytes(const SbProfilingData & data, 
     string.sprintf("%8s", "GFX MEM");
     return;
   }
-  switch (sortcategory) {
-  case SoProfilingReportGenerator::NODES:
-  {
-    size_t footprint = data.getNodeFootprint(entryidx, SbProfilingData::VIDEO_MEMORY_SIZE);
-    string.sprintf(formatstring, static_cast<double>(footprint) / 1024.0);
-    break;
-  }
-  case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, 0.0);
-    break;
-  case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, 0.0);
-    break;
-  default:
-    assert(!"unsupported report categorization");
-    break;
-  }
+  const size_t footprint = profilingFootprint(
+    data, sortcategory, entryidx, SbProfilingData::VIDEO_MEMORY_SIZE);
+  string.sprintf(formatstring, static_cast<double>(footprint) / 1024.0);
 }
 
 // *************************************************************************

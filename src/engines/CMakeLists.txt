@@ -43,16 +43,6 @@ set(OBOL_ENGINES_FILES
 	#       (it may come from the build directory when bison/flex regenerate it).
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_ENGINES_INTERNAL_FILES
-	SoConvertAll.h
-	SoConvertAll.cpp
-	evaluator.h
-	evaluator.cpp
-	evaluator_tab.cpp
-	SoSubEngineP.h
-	SoSubNodeEngineP.h
-)
 
 # ############################################################################
 # SoCalculator expression parser: bison + flex regeneration
@@ -182,11 +172,3 @@ obol_add_source_module(engines ${_obol_engine_sources})
 if(TARGET obol_parser_gen)
   add_dependencies(obol_engines_objects obol_parser_gen)
 endif()
-
-# define documentation
-foreach(SRCFILE ${OBOL_ENGINES_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/engines/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_ENGINES_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/engines/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

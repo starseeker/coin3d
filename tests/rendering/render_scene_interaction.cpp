@@ -436,45 +436,11 @@ static bool test5_trackballManipLifecycle(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_scene_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createSceneInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== Dynamic scene + interaction tests ===\n");
-
-    if (!test1_addRemoveChildren(basepath))      ++failures;
-    if (!test2_replaceShape(basepath))           ++failures;
-    if (!test3_switchWithKeyboard(basepath))     ++failures;
-    if (!test4_incrementalAnimation(basepath))   ++failures;
-    if (!test5_trackballManipLifecycle(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_scene_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_scene_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(SceneInteractionRenderTest, AddRemoveChildren, "scene_children", test1_addRemoveChildren(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SceneInteractionRenderTest, ReplaceShape, "scene_replace", test2_replaceShape(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SceneInteractionRenderTest, KeyboardSwitch, "scene_switch", test3_switchWithKeyboard(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SceneInteractionRenderTest, IncrementalAnimation, "scene_animation", test4_incrementalAnimation(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SceneInteractionRenderTest, TrackballLifecycle, "scene_trackball", test5_trackballManipLifecycle(outputStem.c_str()))

@@ -168,8 +168,19 @@ static bool test1_perspectiveVV()
                                SbVec3f(-1,-1,-10), SbVec3f(1,1,-5));
     printf("  outsideTest=%d\n", (int)out);
 
-    printf("  PASS test1_perspectiveVV\n");
-    return true;
+    const bool finiteMatrices = std::isfinite(mat[0][0]) &&
+        std::isfinite(camMat[0][0]) && std::isfinite(proj[0][0]);
+    return vv.getProjectionType() == SbViewVolume::PERSPECTIVE &&
+        fabsf(vv.getNearDist() - 0.5f) < 0.001f &&
+        vv.getWidth() > 0.0f && vv.getHeight() > 0.0f &&
+        finiteMatrices && fabsf(ndc[0] - 0.5f) < 0.001f &&
+        fabsf(ndc[1] - 0.5f) < 0.001f &&
+        line.getDirection().length() > 0.99f &&
+        (l1 - l0).length() > 1.0f &&
+        fabsf(sp[2] + 10.0f) < 0.001f && scale > 0.0f &&
+        bboxProj[0] > 0.0f && bboxProj[1] > 0.0f &&
+        z.length() > 0.99f && up.length() > 0.99f &&
+        dir.length() > 0.99f && hit1 && hit2 && hit3;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,8 +204,13 @@ static bool test2_orthoVV()
     SbPlane planes[6];
     vv.getViewVolumePlanes(planes);
 
-    printf("  PASS test2_orthoVV\n");
-    return true;
+    return vv.getProjectionType() == SbViewVolume::ORTHOGRAPHIC &&
+        fabsf(vv.getNearDist() - 0.5f) < 0.001f &&
+        fabsf(vv.getWidth() - 10.0f) < 0.001f &&
+        fabsf(vv.getHeight() - 10.0f) < 0.001f &&
+        fabsf(ndc[0] - 0.5f) < 0.001f &&
+        fabsf(ndc[1] - 0.5f) < 0.001f &&
+        std::isfinite(proj[0][0]) && planes[0].getNormal().length() > 0.99f;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,8 +229,12 @@ static bool test3_frustumVV()
     const SbDPViewVolume &dpvv = vv.getDPViewVolume();
     (void)dpvv; // silence unused warning
 
-    printf("  PASS test3_frustumVV\n");
-    return true;
+    return vv.getProjectionType() == SbViewVolume::PERSPECTIVE &&
+        fabsf(vv.getNearDist() - 1.0f) < 0.001f &&
+        fabsf(vv.getWidth() - 2.0f) < 0.001f &&
+        fabsf(vv.getHeight() - 2.0f) < 0.001f &&
+        std::isfinite(proj[0][0]) &&
+        dpvv.getProjectionType() == SbDPViewVolume::PERSPECTIVE;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,8 +297,17 @@ static bool test4_dpViewVolume()
     SbDPViewVolume dpfrustum;
     dpfrustum.frustum(-1.0, 1.0, -1.0, 1.0, 1.0, 100.0);
 
-    printf("  PASS test4_dpViewVolume\n");
-    return true;
+    return dpvv.getProjectionType() == SbDPViewVolume::PERSPECTIVE &&
+        fabs(dpvv.getNearDist() - 0.5) < 0.000001 &&
+        dpvv.getWidth() > 0.0 && std::isfinite(mat[0][0]) &&
+        fabs(ndc[0] - 0.5) < 0.000001 &&
+        fabs(ndc[1] - 0.5) < 0.000001 &&
+        fabs(sp[2] + 10.0) < 0.000001 &&
+        fabs(pp[2] + 10.0) < 0.000001 &&
+        z.length() > 0.99 && up.length() > 0.99 &&
+        dpplanes[0].getNormal().length() > 0.99f &&
+        dportho.getProjectionType() == SbDPViewVolume::ORTHOGRAPHIC &&
+        dpfrustum.getProjectionType() == SbDPViewVolume::PERSPECTIVE;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,48 +405,28 @@ static bool test6_orthoCamera(const char *basepath)
     return ok;
 }
 
-// ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_view_volume_ops";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createViewVolumeOps(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SbViewVolume / SbDPViewVolume operation tests ===\n");
-
-    if (!test1_perspectiveVV())              ++failures;
-    if (!test2_orthoVV())                    ++failures;
-    if (!test3_frustumVV())                  ++failures;
-    if (!test4_dpViewVolume())               ++failures;
-    if (!test5_cameraVVRendering(basepath))  ++failures;
-    if (!test6_orthoCamera(basepath))        ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_view_volume_ops) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_view_volume_ops");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+class ViewVolumeOperationsTest : public ::testing::Test {
+protected:
+    void SetUp() override { initCoinHeadless(); }
+};
+
+TEST_F(ViewVolumeOperationsTest, PerspectiveContracts)
+{ EXPECT_TRUE(test1_perspectiveVV()); }
+TEST_F(ViewVolumeOperationsTest, OrthographicContracts)
+{ EXPECT_TRUE(test2_orthoVV()); }
+TEST_F(ViewVolumeOperationsTest, FrustumContracts)
+{ EXPECT_TRUE(test3_frustumVV()); }
+TEST_F(ViewVolumeOperationsTest, DoublePrecisionContracts)
+{ EXPECT_TRUE(test4_dpViewVolume()); }
+TEST_F(ViewVolumeOperationsTest, PerspectiveCameraRenders)
+{
+    const auto stem = ObolTest::renderingOutputStem("view_volume_perspective");
+    EXPECT_TRUE(test5_cameraVVRendering(stem.c_str()));
+}
+TEST_F(ViewVolumeOperationsTest, OrthographicCameraRenders)
+{
+    const auto stem = ObolTest::renderingOutputStem("view_volume_orthographic");
+    EXPECT_TRUE(test6_orthoCamera(stem.c_str()));
 }

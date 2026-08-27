@@ -352,47 +352,12 @@ static bool test6_multiSensorRenderLoop(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_sensors_rendering";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createSensorsRendering(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== Sensor + rendering integration tests ===\n");
-
-    if (!test1_fieldSensor(basepath))         ++failures;
-    if (!test2_nodeSensor())                   ++failures;
-    if (!test3_idleOneshot())                  ++failures;
-    if (!test4_alarmSensor())                  ++failures;
-    if (!test5_timerSensor())                  ++failures;
-    if (!test6_multiSensorRenderLoop(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_sensors_rendering) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_sensors_rendering");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, FieldSensor, "sensors_field", test1_fieldSensor(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, NodeSensor, "sensors_node", test2_nodeSensor())
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, IdleOneShot, "sensors_idle", test3_idleOneshot())
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, AlarmSensor, "sensors_alarm", test4_alarmSensor())
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, TimerSensor, "sensors_timer", test5_timerSensor())
+OBOL_RENDER_TEST_CASE(SensorRenderingTest, RenderLoop, "sensors_loop", test6_multiSensorRenderLoop(outputStem.c_str()))

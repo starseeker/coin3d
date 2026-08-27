@@ -15,6 +15,7 @@
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/sensors/SoSensorManager.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -278,6 +279,35 @@ TEST(SceneIo, FixedOutputBuffersCanBeResetAndReused)
     ASSERT_TRUE(output.getBuffer(second_data, second_size));
     EXPECT_EQ(second_data, static_cast<void *>(buffer));
     EXPECT_GT(second_size, 0u);
+}
+
+TEST(SceneIo, CopiedOutputsPreserveReferenceIdsWithoutSharingNewEntries)
+{
+    auto * first = new SoCube;
+    auto * second = new SoCube;
+    auto * added_to_copy = new SoCube;
+    first->ref();
+    second->ref();
+    added_to_copy->ref();
+
+    {
+        SoOutput original;
+        const int first_id = original.addReference(first);
+        const int second_id = original.addReference(second);
+        ASSERT_NE(first_id, second_id);
+
+        SoOutput copy(&original);
+        EXPECT_EQ(copy.findReference(first), first_id);
+        EXPECT_EQ(copy.findReference(second), second_id);
+
+        const int copied_id = copy.addReference(added_to_copy);
+        EXPECT_GT(copied_id, std::max(first_id, second_id));
+        EXPECT_EQ(original.findReference(added_to_copy), -1);
+    }
+
+    first->unref();
+    second->unref();
+    added_to_copy->unref();
 }
 
 TEST(SceneIo, FileRoundTripRetainsStructuredMaterialTransformAndShapeScenes)

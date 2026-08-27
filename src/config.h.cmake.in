@@ -94,9 +94,6 @@
 /* Define for Mac OS X builds */
 #cmakedefine OBOL_MACOS_10
 
-/* Define when building Mac OS X framework */
-#cmakedefine OBOL_MACOSX_FRAMEWORK
-
 /* Define to 1 if you have the <direct.h> header file. */
 #cmakedefine HAVE_DIRECT_H 1
 

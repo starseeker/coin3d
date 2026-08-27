@@ -1832,12 +1832,12 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
   }
   
   // Get extensions and add them to the list
-  auto extensions = handler->getExtensions();
+  const auto & extensions = handler->getExtensions();
   for (const auto& ext : extensions) {
-    // Store extensions as static strings to ensure lifetime
-    static std::vector<std::string> static_extensions;
-    static_extensions.push_back(ext);
-    extlist.append(const_cast<void*>(static_cast<const void*>(static_extensions.back().c_str())));
+    // Handlers own immutable extension strings for their entire lifetime.
+    // Registry handlers are never removed, so these compatibility pointers
+    // remain valid for the lifetime of the registry.
+    extlist.append(const_cast<void*>(static_cast<const void*>(ext.c_str())));
   }
   
   fullname = handler->getFormatName();

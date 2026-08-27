@@ -156,10 +156,22 @@ static const int ORANGE_MIN_GREEN =  30;  // G moderate
 static const int ORANGE_MAX_BLUE  =  80;  // B low
 #endif
 
-static int runScenario(const char *outputStem)
+static bool renderProceduralFactoryScene(const char * outputStem)
 {
-  initCoinHeadless();
+  char outpath[1024];
+  snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
+  SoSeparator * root = ObolTest::Scenes::createProceduralShape(256, 256);
+  SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+  renderer.setComponents(SoOffscreenRenderer::RGB);
+  renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+  const bool ok = renderer.render(root) && renderer.getBuffer() != nullptr &&
+    renderer.writeToRGB(outpath);
+  root->unref();
+  return ok;
+}
 
+static bool renderProceduralShapeVariants(const char * outputStem)
+{
   SoProceduralShape::registerShapeType("TruncatedCone_render",
                                        kSchema, cone_bbox, cone_geom);
 
@@ -215,25 +227,7 @@ static int runScenario(const char *outputStem)
   cam->position.setValue(cam->position.getValue() * 1.2f);
 
   char outpath[1024];
-  if (outputStem != nullptr)
-    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
-  else
-    snprintf(outpath, sizeof(outpath), "render_procedural_shape.rgb");
-
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createProceduralShape(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            fRen.writeToRGB(outpath);
-        }
-        fRoot->unref();
-    }
+  snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
   bool ok = renderToFile(root, outpath);
 
 #ifdef OBOL_NANORT_BUILD
@@ -269,12 +263,12 @@ static int runScenario(const char *outputStem)
 #endif
 
   root->unref();
-  return ok ? 0 : 1;
+  return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_procedural_shape) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_procedural_shape");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ProceduralShapeRenderTest, FactorySceneRenders,
+  "procedural_shape_factory", renderProceduralFactoryScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ProceduralShapeRenderTest, SolidAndWireVariantsRender,
+  "procedural_shape_variants", renderProceduralShapeVariants(outputStem.c_str()))

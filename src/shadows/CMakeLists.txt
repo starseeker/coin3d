@@ -37,8 +37,5 @@ set(OBOL_SHADOWS_FILES
 
 # build module object library
 obol_add_source_module(shadows ${OBOL_SHADOWS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_SHADOWS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/shadows/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
+target_include_directories(obol_shadows_objects PRIVATE
+  "${CMAKE_CURRENT_BINARY_DIR}")

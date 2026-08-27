@@ -33,8 +33,8 @@
 #include "io/SoWriterefCounter.h"
 
 #include <cassert>
+#include <mutex>
 
-#include "CoinTidbits.h"
 #include <Inventor/SoOutput.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoBase.h>
@@ -66,18 +66,7 @@ public:
   SoBase2SoWriterefCounterBaseDataMap writerefdict;
 
   SoWriterefCounterOutputData()
-    : writerefdict(1051), refcount(0) {
-  }
-
-  // need refcounter since dict can be shared among several SoOutputs
-  void ref(void) {
-    this->refcount++;
-  }
-  void unref(void) {
-    if (--this->refcount == 0) {
-      this->cleanup();
-      delete this;
-    }
+    : writerefdict(1051) {
   }
   void debugCleanup(void) {
 #if OBOL_DEBUG
@@ -103,13 +92,11 @@ public:
     this->cleanup();
   }
 
-protected:
   ~SoWriterefCounterOutputData() {
+    this->cleanup();
   }
 
 private:
-  int refcount;
-
   void cleanup(void) {
     for(
        SoBase2SoWriterefCounterBaseDataMap::const_iterator iter =
@@ -127,7 +114,6 @@ private:
 
 // *************************************************************************
 
-typedef SbHash<SoOutput *, SoWriterefCounter *> SoOutput2SoWriterefCounterMap;
 typedef SbHash<const SoBase *, int> SoBase2Id;
 
 class SoWriterefCounterP {
@@ -135,32 +121,38 @@ public:
   SoWriterefCounterP(SoWriterefCounter * pub, SoOutput * output, SoWriterefCounterP * dataCopy)
     : master(pub), out(output)
   {
+    // Reference counts are traversal state and must not be shared between
+    // SoOutput instances.  A copied output inherits only the persistent
+    // DEF/reference identifiers below.
+    this->outputdata = new SoWriterefCounterOutputData;
     if (dataCopy) {
-      this->outputdata = dataCopy->outputdata;
       this->sobase2id = new SoBase2Id(*dataCopy->sobase2id);
     }
     else {
-      this->outputdata = new SoWriterefCounterOutputData;
       this->sobase2id = new SoBase2Id;
     }
-    this->outputdata->ref();
-    this->nextreferenceid = 0;
+    // The copied dictionary and its allocator position form one persistent
+    // namespace.  Restarting at zero would let the first new reference in the
+    // copy reuse an identifier that already belongs to an inherited entry.
+    this->nextreferenceid = dataCopy ? dataCopy->nextreferenceid : 0;
   }
   ~SoWriterefCounterP() {
-    this->outputdata->unref();
+    delete this->outputdata;
     delete this->sobase2id;
   }
   void appendPostfix(const SoBase *base, SbString &name, int refid)
   {
+    std::lock_guard<std::mutex> lock(SoWriterefCounterP::prefixMutex());
+    const SbString & prefix = SoWriterefCounterP::refwriteprefix();
     // Fix to avoid writing DEFs starting with an illegal
     // character (e.g. '+') 
     if (name.getLength() == 0 &&
         base->isOfType(SoNode::getClassTypeId()) &&
-        !SbName::isBaseNameStartChar((*refwriteprefix)[0])) {
+        !SbName::isBaseNameStartChar(prefix[0])) {
       name += "_";
     }
 
-    name += SoWriterefCounterP::refwriteprefix->getString();
+    name += prefix.getString();
     name.addIntString(refid);
   }
 
@@ -170,23 +162,19 @@ public:
   SoBase2Id * sobase2id;
   int nextreferenceid;
 
-  static SoOutput2SoWriterefCounterMap * outputdict;
-  static SoWriterefCounter * current; // used to be backwards compatible
-  static SbString * refwriteprefix;
+  static thread_local SoWriterefCounter * current;
 
-  static void atexit_cleanup(void) {
-    current = NULL;
-    delete refwriteprefix;
-    refwriteprefix = NULL;
-    delete outputdict;
-    outputdict = NULL;
+  static SbString & refwriteprefix(void) {
+    static SbString prefix("+");
+    return prefix;
   }
-
+  static std::mutex & prefixMutex(void) {
+    static std::mutex mutex;
+    return mutex;
+  }
 };
 
-SoOutput2SoWriterefCounterMap *  SoWriterefCounterP::outputdict;
-SoWriterefCounter *  SoWriterefCounterP::current = NULL; // used to be backwards compatible
-SbString *  SoWriterefCounterP::refwriteprefix;
+thread_local SoWriterefCounter * SoWriterefCounterP::current = NULL;
 
 #define PRIVATE(obj) obj->pimpl
 
@@ -208,30 +196,13 @@ SoWriterefCounter::~SoWriterefCounter()
 }
 
 void
-SoWriterefCounter::create(SoOutput * out, SoOutput * copyfrom)
-{
-  SoWriterefCounter * inst = new SoWriterefCounter(out, copyfrom);
-  SbBool ret = SoWriterefCounterP::outputdict->put(out, inst);
-  assert(ret && "writeref instance already exists!");
-  (void)ret; /* avoid unused variable warning in release builds */
-}
-
-void
-SoWriterefCounter::destruct(SoOutput * out)
-{
-  SoWriterefCounter * inst = SoWriterefCounter::instance(out);
-  assert(inst && "instance not found!");
-
-  (void) SoWriterefCounterP::outputdict->erase(out);
-  delete inst;
-}
-
-void
 SoWriterefCounter::initClass(void)
 {
-  SoWriterefCounterP::outputdict = new SoOutput2SoWriterefCounterMap;
-  SoWriterefCounterP::refwriteprefix = new SbString("+");
-  coin_atexit((coin_atexit_f*) SoWriterefCounterP::atexit_cleanup, CC_ATEXIT_NORMAL);
+  // Force construction while SoDB is initialized.  Function-local static
+  // initialization is synchronized by C++11 and avoids a separate cleanup
+  // registry for this process-lifetime compatibility setting.
+  (void) SoWriterefCounterP::refwriteprefix();
+  (void) SoWriterefCounterP::prefixMutex();
 }
 
 void
@@ -244,7 +215,8 @@ SoWriterefCounter::debugCleanup(void)
 void
 SoWriterefCounter::setInstancePrefix(const SbString & s)
 {
-  (*SoWriterefCounterP::refwriteprefix) = s;
+  std::lock_guard<std::mutex> lock(SoWriterefCounterP::prefixMutex());
+  SoWriterefCounterP::refwriteprefix() = s;
 }
 
 SoWriterefCounter *
@@ -254,15 +226,13 @@ SoWriterefCounter::instance(SoOutput * out)
     // to be backwards compatible with old code
     return SoWriterefCounterP::current;
   }
+  return out->getWriterefCounter();
+}
 
-  SoWriterefCounter * inst = NULL;
-
-  const SbBool ok = SoWriterefCounterP::outputdict->get(out, inst);
-  assert(ok && "no instance");
-  (void)ok; /* avoid unused variable warning in release builds */
-
-  SoWriterefCounterP::current = inst;
-  return inst;
+void
+SoWriterefCounter::setCurrent(SoWriterefCounter * counter)
+{
+  SoWriterefCounterP::current = counter;
 }
 
 SbBool
@@ -392,13 +362,10 @@ SoWriterefCounter::removeWriteref(const SoBase * base)
 static SbBool
 dont_mangle_output_names(const SoBase * /*base*/)
 {
-  static int OBOL_DONT_MANGLE_OUTPUT_NAMES = -1;
-
-  if (OBOL_DONT_MANGLE_OUTPUT_NAMES < 0) {
-    OBOL_DONT_MANGLE_OUTPUT_NAMES = 0;
+  static const int OBOL_DONT_MANGLE_OUTPUT_NAMES = [] {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_DONT_MANGLE_OUTPUT_NAMES");
-    if (env.has_value()) OBOL_DONT_MANGLE_OUTPUT_NAMES = std::atoi(env->c_str());
-  }
+    return env.has_value() ? std::atoi(env->c_str()) : 0;
+  }();
   return OBOL_DONT_MANGLE_OUTPUT_NAMES ? TRUE : FALSE;
 }
 
@@ -501,11 +468,10 @@ SoWriterefCounter::removeSoBase2IdRef(const SoBase * base)
 SbBool
 SoWriterefCounter::debugWriterefs(void)
 {
-  static int dbg = -1;
-  if (dbg == -1) {
+  static const int dbg = [] {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_WRITEREFS");
-    dbg = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? 1 : 0;
-  }
+    return (env.has_value() && (std::atoi(env->c_str()) > 0)) ? 1 : 0;
+  }();
   return dbg;
 }
 

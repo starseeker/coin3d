@@ -17,8 +17,3 @@ endif()
 
 # build module object library
 obol_add_source_module(details ${OBOL_DETAILS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_DETAILS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/details/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

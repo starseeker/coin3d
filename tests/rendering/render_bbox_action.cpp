@@ -310,47 +310,13 @@ static bool test7_hudKitBBox()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_bbox_action";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createBBoxAction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoGetBoundingBoxAction interaction tests ===\n");
-
-    if (!test1_sphereBBox())            ++failures;
-    if (!test2_translatedBBox())        ++failures;
-    if (!test3_groupBBox())             ++failures;
-    if (!test4_progressiveGrowth())     ++failures;
-    if (!test5_viewAllFromBBox(basepath)) ++failures;
-    if (!test6_subgraphBBox())          ++failures;
-    if (!test7_hudKitBBox())            ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_bbox_action) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_bbox_action");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, SphereBounds, "bbox_sphere", test1_sphereBBox())
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, TranslatedBounds, "bbox_translated", test2_translatedBBox())
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, GroupBounds, "bbox_group", test3_groupBBox())
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, ProgressiveGrowth, "bbox_growth", test4_progressiveGrowth())
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, ViewAllFromBounds, "bbox_view_all", test5_viewAllFromBBox(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, SubgraphBounds, "bbox_subgraph", test6_subgraphBBox())
+OBOL_RENDER_TEST_CASE(BoundingBoxActionRenderTest, HudKitBounds, "bbox_hud", test7_hudKitBBox())

@@ -153,6 +153,14 @@ static void dummy_bbox(const float*, int, SbVec3f& mn, SbVec3f& mx, void*)
 { mn.setValue(-1,-1,-1); mx.setValue(1,1,1); }
 static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWireframe*, void*) {}
 
+static const char* kMiniSchema = R"({
+  "type": "Mini_test",
+  "params": [
+    {"name":"width",  "type":"float","default":2.0},
+    {"name":"height", "type":"float","default":3.0}
+  ]
+})";
+
 // ============================================================================
 // GTest cases// ============================================================================
 
@@ -162,6 +170,8 @@ protected:
     {
         (void)SoProceduralShape::registerShapeType(
             "UnitBox_test", kBoxSchema, unitBox_bbox, unitBox_geom);
+        (void)SoProceduralShape::registerShapeType(
+            "Mini_test", kMiniSchema, dummy_bbox, dummy_geom);
     // ------------------------------------------------------------------
     // Handle/dragger API tests
     // ------------------------------------------------------------------
@@ -793,13 +803,6 @@ TEST_F(ProceduralShapeTest, ObjectValidateCBReceivesJSONWithNamedParamKeys)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
-        static const char* kMiniSchema = R"({
-            "type": "Mini_test",
-            "params": [
-                {"name":"width",  "type":"float","default":2.0},
-                {"name":"height", "type":"float","default":3.0}
-            ]
-        })";
         static std::string sLastJSON;
         static const auto miniBbox = [](const float*, int, SbVec3f& mn, SbVec3f& mx, void*){
             mn.setValue(-2,-2,-2); mx.setValue(2,2,2);

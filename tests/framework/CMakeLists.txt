@@ -105,7 +105,8 @@ if(USE_PTHREAD)
 endif()
 
 function(obol_add_gtest target label)
-    cmake_parse_arguments(OBOL_GTEST "" "TIMEOUT;ENVIRONMENT;TEST_PREFIX" "" ${ARGN})
+    cmake_parse_arguments(OBOL_GTEST ""
+        "TIMEOUT;ENVIRONMENT;TEST_PREFIX;SKIP_REGULAR_EXPRESSION" "" ${ARGN})
     if(OBOL_GTEST_TIMEOUT)
         set(_obol_gtest_timeout ${OBOL_GTEST_TIMEOUT})
     else()
@@ -132,6 +133,11 @@ function(obol_add_gtest target label)
     if(OBOL_GTEST_ENVIRONMENT)
         list(APPEND _obol_gtest_properties
             ENVIRONMENT "${OBOL_GTEST_ENVIRONMENT}")
+    endif()
+    if(OBOL_GTEST_SKIP_REGULAR_EXPRESSION)
+        list(APPEND _obol_gtest_properties
+            SKIP_REGULAR_EXPRESSION
+            "${OBOL_GTEST_SKIP_REGULAR_EXPRESSION}")
     endif()
     set(_obol_gtest_discovery_options)
     if(OBOL_GTEST_TEST_PREFIX)
@@ -370,6 +376,7 @@ if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
         TEST_PREFIX "system-gl."
+        SKIP_REGULAR_EXPRESSION "system OpenGL backend is unavailable"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     obol_configure_render_target(obol_system_gl_render_tests)
 elseif(OBOL_USE_SYSTEM_GL)
@@ -389,6 +396,8 @@ if(OBOL_BUILD_STRESS_TESTS)
     obol_add_gtest(obol_stress_tests "stress;threads" TIMEOUT 120
         ${PROJECT_SOURCE_DIR}/tests/threads/test_thread_safety.cpp
     )
+    # The sanitizer suite exercises private cache-ID infrastructure directly.
+    target_compile_definitions(obol_stress_tests PRIVATE OBOL_INTERNAL)
 endif()
 
 # -----------------------------------------------------------------------------

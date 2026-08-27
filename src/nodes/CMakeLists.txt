@@ -108,21 +108,6 @@ set(OBOL_NODES_FILES
 	SoWWWInline.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_NODES_INTERNAL_FILES
-	SoSoundElementHelper.h
-	SoSubNodeP.h
-	SoUnknownNode.h
-	SoUnknownNode.cpp
-)
 
 # build module object library
 obol_add_source_module(nodes ${OBOL_NODES_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_NODES_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/nodes/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_NODES_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/nodes/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

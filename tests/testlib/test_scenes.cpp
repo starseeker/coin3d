@@ -5802,6 +5802,9 @@ SoSeparator* createQuadViewport(int width, int height)
     SbVec3f pos = cam->position.getValue();
     pos.normalize();
     cam->position.setValue(pos * 8.0f);
+    cam->pointAt(SbVec3f(0.0f, 0.0f, 0.0f));
+    cam->nearDistance.setValue(0.1f);
+    cam->farDistance.setValue(20.0f);
     return root;
 }
 

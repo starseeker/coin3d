@@ -56,10 +56,8 @@ static bool validatePixels(const unsigned char * buf, int w, int h)
     return pct >= 1.0;
 }
 
-static int runScenario(const char *outputStem)
+static bool renderCollectedScene(const char * outputStem)
 {
-    initCoinHeadless();
-
     // ---- Build scene -------------------------------------------------------
     SoSeparator * root = new SoSeparator;
     root->ref();
@@ -158,21 +156,18 @@ static int runScenario(const char *outputStem)
         if (collector.getTriangles().empty()) {
             fprintf(stderr, "render_embree: FAIL — no triangles collected\n");
             root->unref();
-            return 1;
+            return false;
         }
         if (collector.getLights().empty()) {
             fprintf(stderr, "render_embree: FAIL — no lights collected\n");
             root->unref();
-            return 1;
+            return false;
         }
     }
 
     // ---- Render via Embree context manager ---------------------------------
     char outpath[1024];
-    if (outputStem != nullptr)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
-    else
-        snprintf(outpath, sizeof(outpath), "render_embree.rgb");
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
 
 #ifdef OBOL_EMBREE_BUILD
     SoOffscreenRenderer renderer(vp);
@@ -182,20 +177,20 @@ static int runScenario(const char *outputStem)
     if (!renderer.render(root)) {
         fprintf(stderr, "render_embree: render() failed\n");
         root->unref();
-        return 1;
+        return false;
     }
 
     const unsigned char * buf = renderer.getBuffer();
     if (!buf || !validatePixels(buf, DEFAULT_WIDTH, DEFAULT_HEIGHT)) {
         fprintf(stderr, "render_embree: FAIL — image is empty or blank\n");
         root->unref();
-        return 1;
+        return false;
     }
 
     if (!renderer.writeToRGB(outpath)) {
         fprintf(stderr, "render_embree: FAIL — could not write %s\n", outpath);
         root->unref();
-        return 1;
+        return false;
     }
 
     printf("render_embree: PASS — wrote %s\n", outpath);
@@ -203,17 +198,15 @@ static int runScenario(const char *outputStem)
     // GL/OSMesa path: basic non-blank check only (no pixel validation)
     if (!renderToFile(root, outpath)) {
         root->unref();
-        return 1;
+        return false;
     }
 #endif
 
     root->unref();
-    return 0;
+    return true;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_embree) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_embree");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(EmbreeFallbackRenderTest, CollectedLitPrimitivesRender,
+    "embree_fallback", renderCollectedScene(outputStem.c_str()))

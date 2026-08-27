@@ -57,7 +57,10 @@ public:
   // Format identification
   virtual const char* getFormatName() const = 0;
   virtual const char* getDescription() const = 0;
-  virtual std::vector<std::string> getExtensions() const = 0;
+  // The returned collection and its strings must remain valid for the
+  // lifetime of the handler.  SoOffscreenRenderer's compatibility API
+  // exposes pointers into these strings to callers.
+  virtual const std::vector<std::string> & getExtensions() const = 0;
   virtual bool canHandleExtension(const std::string& extension) const;
   
   // Image I/O operations

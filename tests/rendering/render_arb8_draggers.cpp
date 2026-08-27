@@ -137,28 +137,22 @@ static const char* kArb8SchemaR = R"({
   ]
 })";
 
-static int runScenario(const char *outputStem)
+static bool renderArb8DraggerFactoryScene(const char * outputStem)
 {
-  initCoinHeadless();
+  char outpath[1024];
+  snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
+  SoSeparator * root = ObolTest::Scenes::createArb8Draggers(256, 256);
+  SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+  renderer.setComponents(SoOffscreenRenderer::RGB);
+  renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+  const bool ok = renderer.render(root) && renderer.getBuffer() != nullptr &&
+    renderer.writeToRGB(outpath);
+  root->unref();
+  return ok;
+}
 
-  /* Render the canonical factory scene as the primary output image.
-   * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-  {
-      const char *primaryBase = (outputStem != nullptr) ? outputStem : "render_arb8_draggers";
-      SoSeparator *fRoot = ObolTest::Scenes::createArb8Draggers(256, 256);
-      SbViewportRegion fVp(256, 256);
-      SoOffscreenRenderer fRen(fVp);
-      fRen.setComponents(SoOffscreenRenderer::RGB);
-      fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-      if (fRen.render(fRoot)) {
-          char primaryPath[4096];
-          snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", primaryBase);
-          fRen.writeToRGB(primaryPath);
-      }
-      fRoot->unref();
-  }
-
-
+static bool renderArb8DraggerVariants(const char * outputStem)
+{
   // Topology-driven registration: only bbox + geom callbacks needed.
   // Handles (DRAG_NO_INTERSECT + DRAG_ON_PLANE), positions, and
   // constraint checks all come from the JSON schema above.
@@ -195,6 +189,8 @@ static int runScenario(const char *outputStem)
     root->addChild(sep);
   }
 
+  bool handlesBuilt = false;
+
   // Centre: sheared box + vertex/edge/face dragger handles
   {
     SoSeparator* sep=new SoSeparator;
@@ -209,7 +205,10 @@ static int runScenario(const char *outputStem)
 
     // Add handle draggers — the core feature under test
     SoSeparator* handles = s->buildHandleDraggers();
-    if(handles) sep->addChild(handles);
+    if(handles) {
+      sep->addChild(handles);
+      handlesBuilt = true;
+    }
 
     root->addChild(sep);
   }
@@ -232,17 +231,16 @@ static int runScenario(const char *outputStem)
   cam->position.setValue(cam->position.getValue()*1.3f);
 
   char outpath[1024];
-  if(outputStem != nullptr) snprintf(outpath,sizeof(outpath),"%s.rgb",outputStem);
-  else       snprintf(outpath,sizeof(outpath),"render_arb8_draggers.rgb");
+  snprintf(outpath,sizeof(outpath),"%s.rgb",outputStem);
 
-  bool ok=renderToFile(root,outpath);
+  bool ok = handlesBuilt && renderToFile(root,outpath);
   root->unref();
-  return ok?0:1;
+  return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_arb8_draggers) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_arb8_draggers");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(Arb8DraggerRenderTest, FactorySceneRenders,
+  "arb8_dragger_factory", renderArb8DraggerFactoryScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(Arb8DraggerRenderTest, SolidHandlesAndWireframeRender,
+  "arb8_dragger_variants", renderArb8DraggerVariants(outputStem.c_str()))

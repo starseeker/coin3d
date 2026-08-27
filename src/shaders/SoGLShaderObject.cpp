@@ -33,6 +33,7 @@
 #include "SoGLShaderObject.h"
 #include "config.h"
 
+#include <atomic>
 #include <cassert>
 
 #include "SoGLARBShaderObject.h"
@@ -40,7 +41,7 @@
 #include "SoGLSLShaderObject.h"
 
 
-static uint32_t shaderid = 0;
+static std::atomic<uint64_t> nextshaderid{1};
 
 // *************************************************************************
 
@@ -51,7 +52,21 @@ SoGLShaderObject::SoGLShaderObject(const uint32_t cc)
   this->paramsdirty = TRUE;
   this->glctx = SoGLContext_instance(cc);
   this->cachecontext = cc;
-  this->id = ++shaderid;
+  this->id = SoGLShaderObject::allocateShaderObjectId();
+}
+
+uint64_t
+SoGLShaderObject::allocateShaderObjectId(void)
+{
+  // Zero remains the invalid value.  Exhausting 64 bits would require
+  // constructing hundreds of billions of shader objects per second for
+  // years; if wrap nevertheless occurs, skip zero without terminating the
+  // embedding application.
+  uint64_t id;
+  do {
+    id = nextshaderid.fetch_add(1, std::memory_order_relaxed);
+  } while (id == 0);
+  return id;
 }
 
 const SoGLContext *
@@ -109,7 +124,7 @@ SoGLShaderObject::updateCoinParameter(SoState * OBOL_UNUSED_ARG(state), const Sb
 {
 }
 
-uint32_t 
+uint64_t
 SoGLShaderObject::getShaderObjectId(void) const
 {
   return this->id;
