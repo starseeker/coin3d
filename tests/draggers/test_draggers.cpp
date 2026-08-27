@@ -109,785 +109,821 @@ static bool matrixIsIdentity(const SbMatrix & m)
     return true;
 }
 
-TEST(UpstreamDraggersDraggers, RetainedCoverage)
+TEST(DraggersDraggers, SoTranslate1DraggerInstantiationAndTypeCheck)
 {
-    CheckRecorder runner;
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate1Dragger bad type or not SoDragger subtype";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTranslate1Dragger: instantiation and type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate1Dragger: instantiation and type check");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate1Dragger bad type or not SoDragger subtype");
-    }
+// -----------------------------------------------------------------------
+// SoTranslate1Dragger: translation field default is (0,0,0)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTranslate1Dragger: translation field default is (0,0,0)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate1Dragger: translation default is (0,0,0)");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        SbVec3f t = d->translation.getValue();
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate1Dragger default translation is not (0,0,0)");
-    }
+TEST(DraggersDraggers, SoTranslate1DraggerTranslationDefaultIs000)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    SbVec3f t = d->translation.getValue();
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate1Dragger default translation is not (0,0,0)";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTranslate1Dragger: set/get translation field
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate1Dragger: set/get translation field");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        d->translation.setValue(1.0f, 2.0f, 3.0f);
-        SbVec3f t = d->translation.getValue();
-        bool pass = (fabsf(t[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(t[1] - 2.0f) < 1e-5f) &&
-                    (fabsf(t[2] - 3.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate1Dragger translation set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoTranslate1Dragger: set/get translation field
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTranslate2Dragger: instantiation and type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate2Dragger: instantiation and type check");
-    {
-        SoTranslate2Dragger *d = new SoTranslate2Dragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate2Dragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoTranslate1DraggerSetGetTranslationField)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    d->translation.setValue(1.0f, 2.0f, 3.0f);
+    SbVec3f t = d->translation.getValue();
+    bool pass = (fabsf(t[0] - 1.0f) < 1e-5f) &&
+                (fabsf(t[1] - 2.0f) < 1e-5f) &&
+                (fabsf(t[2] - 3.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate1Dragger translation set/get failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTranslate2Dragger: translation field default is (0,0,0)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate2Dragger: translation default is (0,0,0)");
-    {
-        SoTranslate2Dragger *d = new SoTranslate2Dragger;
-        d->ref();
-        SbVec3f t = d->translation.getValue();
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate2Dragger default translation not (0,0,0)");
-    }
+// -----------------------------------------------------------------------
+// SoTranslate2Dragger: instantiation and type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTranslate2Dragger: set/get translation field
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate2Dragger: set/get translation field");
-    {
-        SoTranslate2Dragger *d = new SoTranslate2Dragger;
-        d->ref();
-        d->translation.setValue(4.0f, 5.0f, 0.0f);
-        SbVec3f t = d->translation.getValue();
-        bool pass = (fabsf(t[0] - 4.0f) < 1e-5f) &&
-                    (fabsf(t[1] - 5.0f) < 1e-5f) &&
-                    (fabsf(t[2])        < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate2Dragger translation set/get failed");
-    }
+TEST(DraggersDraggers, SoTranslate2DraggerInstantiationAndTypeCheck)
+{
+    SoTranslate2Dragger *d = new SoTranslate2Dragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate2Dragger bad type or not SoDragger subtype";
+}
 
-    // -----------------------------------------------------------------------
-    // SoScale1Dragger: instantiation and type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoScale1Dragger: instantiation and type check");
-    {
-        SoScale1Dragger *d = new SoScale1Dragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoScale1Dragger bad type or not SoDragger subtype");
-    }
+// -----------------------------------------------------------------------
+// SoTranslate2Dragger: translation field default is (0,0,0)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoScale1Dragger: scaleFactor field default is (1,1,1)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoScale1Dragger: scaleFactor default is (1,1,1)");
-    {
-        SoScale1Dragger *d = new SoScale1Dragger;
-        d->ref();
-        SbVec3f sf = d->scaleFactor.getValue();
-        bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 1.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoScale1Dragger default scaleFactor is not (1,1,1)");
-    }
+TEST(DraggersDraggers, SoTranslate2DraggerTranslationDefaultIs000)
+{
+    SoTranslate2Dragger *d = new SoTranslate2Dragger;
+    d->ref();
+    SbVec3f t = d->translation.getValue();
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate2Dragger default translation not (0,0,0)";
+}
 
-    // -----------------------------------------------------------------------
-    // SoScale1Dragger: set/get scaleFactor field
-    // -----------------------------------------------------------------------
-    runner.startTest("SoScale1Dragger: set/get scaleFactor field");
-    {
-        SoScale1Dragger *d = new SoScale1Dragger;
-        d->ref();
-        d->scaleFactor.setValue(2.0f, 2.0f, 2.0f);
-        SbVec3f sf = d->scaleFactor.getValue();
-        bool pass = (fabsf(sf[0] - 2.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 2.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 2.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoScale1Dragger scaleFactor set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoTranslate2Dragger: set/get translation field
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoRotateDiscDragger: instantiation and type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRotateDiscDragger: instantiation and type check");
-    {
-        SoRotateDiscDragger *d = new SoRotateDiscDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoRotateDiscDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoTranslate2DraggerSetGetTranslationField)
+{
+    SoTranslate2Dragger *d = new SoTranslate2Dragger;
+    d->ref();
+    d->translation.setValue(4.0f, 5.0f, 0.0f);
+    SbVec3f t = d->translation.getValue();
+    bool pass = (fabsf(t[0] - 4.0f) < 1e-5f) &&
+                (fabsf(t[1] - 5.0f) < 1e-5f) &&
+                (fabsf(t[2])        < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate2Dragger translation set/get failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoRotateDiscDragger: rotation field default is identity
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRotateDiscDragger: rotation default is identity");
-    {
-        SoRotateDiscDragger *d = new SoRotateDiscDragger;
-        d->ref();
-        SbRotation rot = d->rotation.getValue();
-        SbVec3f axis;
-        float   angle;
-        rot.getValue(axis, angle);
-        bool pass = fabsf(angle) < 1e-5f;
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoRotateDiscDragger default rotation is not identity");
-    }
+// -----------------------------------------------------------------------
+// SoScale1Dragger: instantiation and type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger base: isActive defaults to FALSE
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: isActive defaults to FALSE");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        bool pass = (d->isActive.getValue() == FALSE);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoDragger isActive should default to FALSE");
-    }
+TEST(DraggersDraggers, SoScale1DraggerInstantiationAndTypeCheck)
+{
+    SoScale1Dragger *d = new SoScale1Dragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoScale1Dragger bad type or not SoDragger subtype";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDragger: getMotionMatrix returns identity by default
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: getMotionMatrix returns identity by default");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        const SbMatrix &m = d->getMotionMatrix();
-        bool pass = matrixIsIdentity(m);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoDragger getMotionMatrix should be identity by default");
-    }
+// -----------------------------------------------------------------------
+// SoScale1Dragger: scaleFactor field default is (1,1,1)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: setMotionMatrix / getMotionMatrix round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: setMotionMatrix / getMotionMatrix round-trip");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
+TEST(DraggersDraggers, SoScale1DraggerScaleFactorDefaultIs111)
+{
+    SoScale1Dragger *d = new SoScale1Dragger;
+    d->ref();
+    SbVec3f sf = d->scaleFactor.getValue();
+    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 1.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoScale1Dragger default scaleFactor is not (1,1,1)";
+}
 
-        // Build a translation-only matrix
-        SbMatrix mat = SbMatrix::identity();
-        mat[3][0] = 1.5f;
-        mat[3][1] = 2.5f;
-        mat[3][2] = 3.5f;
+// -----------------------------------------------------------------------
+// SoScale1Dragger: set/get scaleFactor field
+// -----------------------------------------------------------------------
 
-        // setMotionMatrix is public on the SoDragger base; cast to use it
-        SoDragger *base = d;
-        base->setMotionMatrix(mat);
-        const SbMatrix &got = base->getMotionMatrix();
+TEST(DraggersDraggers, SoScale1DraggerSetGetScaleFactorField)
+{
+    SoScale1Dragger *d = new SoScale1Dragger;
+    d->ref();
+    d->scaleFactor.setValue(2.0f, 2.0f, 2.0f);
+    SbVec3f sf = d->scaleFactor.getValue();
+    bool pass = (fabsf(sf[0] - 2.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 2.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 2.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoScale1Dragger scaleFactor set/get failed";
+}
 
-        bool pass = (fabsf(got[3][0] - 1.5f) < 1e-4f) &&
-                    (fabsf(got[3][1] - 2.5f) < 1e-4f) &&
-                    (fabsf(got[3][2] - 3.5f) < 1e-4f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoDragger setMotionMatrix/getMotionMatrix round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoRotateDiscDragger: instantiation and type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: setMinGesture / getMinGesture
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: setMinGesture / getMinGesture");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        d->setMinGesture(8);
-        bool pass = (d->getMinGesture() == 8);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoDragger setMinGesture/getMinGesture mismatch");
-    }
+TEST(DraggersDraggers, SoRotateDiscDraggerInstantiationAndTypeCheck)
+{
+    SoRotateDiscDragger *d = new SoRotateDiscDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoRotateDiscDragger bad type or not SoDragger subtype";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDragger: setProjectorEpsilon / getProjectorEpsilon
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: setProjectorEpsilon / getProjectorEpsilon");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        d->setProjectorEpsilon(0.001f);
-        bool pass = fabsf(d->getProjectorEpsilon() - 0.001f) < 1e-6f;
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoDragger projectorEpsilon set/get mismatch");
-    }
+// -----------------------------------------------------------------------
+// SoRotateDiscDragger: rotation field default is identity
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: addStartCallback / removeStartCallback
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: add/removeStartCallback");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        s_start_count = 0;
-        // Adding callback must not crash
-        d->addStartCallback(countStartCB, nullptr);
-        // Removing the same callback must not crash
-        d->removeStartCallback(countStartCB, nullptr);
-        bool pass = (s_start_count == 0); // callback was never invoked
-        d->unref();
-        runner.endTest(pass, pass ? "" : "start callback counter unexpectedly non-zero");
-    }
+TEST(DraggersDraggers, SoRotateDiscDraggerRotationDefaultIsIdentity)
+{
+    SoRotateDiscDragger *d = new SoRotateDiscDragger;
+    d->ref();
+    SbRotation rot = d->rotation.getValue();
+    SbVec3f axis;
+    float   angle;
+    rot.getValue(axis, angle);
+    bool pass = fabsf(angle) < 1e-5f;
+    d->unref();
+    EXPECT_TRUE(pass) << "SoRotateDiscDragger default rotation is not identity";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDragger: addMotionCallback / removeMotionCallback
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: add/removeMotionCallback");
-    {
-        SoTranslate2Dragger *d = new SoTranslate2Dragger;
-        d->ref();
-        s_motion_count = 0;
-        d->addMotionCallback(countMotionCB, nullptr);
-        d->removeMotionCallback(countMotionCB, nullptr);
-        bool pass = (s_motion_count == 0);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "motion callback counter unexpectedly non-zero");
-    }
+// -----------------------------------------------------------------------
+// SoDragger base: isActive defaults to FALSE
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: addFinishCallback / removeFinishCallback
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: add/removeFinishCallback");
-    {
-        SoScale1Dragger *d = new SoScale1Dragger;
-        d->ref();
-        s_finish_count = 0;
-        d->addFinishCallback(countFinishCB, nullptr);
-        d->removeFinishCallback(countFinishCB, nullptr);
-        bool pass = (s_finish_count == 0);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "finish callback counter unexpectedly non-zero");
-    }
+TEST(DraggersDraggers, SoDraggerIsActiveDefaultsToFALSE)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    bool pass = (d->isActive.getValue() == FALSE);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoDragger isActive should default to FALSE";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDragger: addValueChangedCallback / removeValueChangedCallback
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: add/removeValueChangedCallback");
-    {
-        SoRotateDiscDragger *d = new SoRotateDiscDragger;
-        d->ref();
-        s_changed_count = 0;
-        d->addValueChangedCallback(countChangedCB, nullptr);
-        d->removeValueChangedCallback(countChangedCB, nullptr);
-        bool pass = (s_changed_count == 0);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "valueChanged callback counter unexpectedly non-zero");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: getMotionMatrix returns identity by default
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: enableValueChangedCallbacks returns previous state
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: enableValueChangedCallbacks returns previous state");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        // Default should be TRUE (enabled)
-        SbBool prev = d->enableValueChangedCallbacks(FALSE);
-        bool pass = (prev == TRUE);
-        // Restore
-        d->enableValueChangedCallbacks(TRUE);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "enableValueChangedCallbacks should return TRUE by default");
-    }
+TEST(DraggersDraggers, SoDraggerGetMotionMatrixReturnsIdentityByDefault)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    const SbMatrix &m = d->getMotionMatrix();
+    bool pass = matrixIsIdentity(m);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoDragger getMotionMatrix should be identity by default";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDragger: setMinScale / getMinScale (static)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: setMinScale / getMinScale (static)");
-    {
-        float old = SoDragger::getMinScale();
-        SoDragger::setMinScale(0.05f);
-        bool pass = fabsf(SoDragger::getMinScale() - 0.05f) < 1e-6f;
-        SoDragger::setMinScale(old); // restore
-        runner.endTest(pass, pass ? "" : "SoDragger static setMinScale/getMinScale mismatch");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: setMotionMatrix / getMotionMatrix round-trip
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: static appendTranslation
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: appendTranslation produces correct matrix");
-    {
-        SbMatrix m = SbMatrix::identity();
-        SbVec3f  t(3.0f, 0.0f, 0.0f);
-        SbMatrix result = SoDragger::appendTranslation(m, t);
-        // The translation should appear in the last row
-        bool pass = fabsf(result[3][0] - 3.0f) < 1e-5f &&
-                    fabsf(result[3][1])          < 1e-5f &&
-                    fabsf(result[3][2])          < 1e-5f;
-        runner.endTest(pass, pass ? "" : "appendTranslation produced unexpected matrix");
-    }
+TEST(DraggersDraggers, SoDraggerSetMotionMatrixGetMotionMatrixRoundTrip)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
 
-    // -----------------------------------------------------------------------
-    // SoDragger: static appendScale
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: appendScale produces correct matrix");
-    {
-        SbMatrix m    = SbMatrix::identity();
-        SbVec3f  sc(2.0f, 2.0f, 2.0f);
-        SbVec3f  ctr(0.0f, 0.0f, 0.0f);
-        SbMatrix result = SoDragger::appendScale(m, sc, ctr);
-        // Diagonal should be scaled
-        bool pass = fabsf(result[0][0] - 2.0f) < 1e-5f &&
-                    fabsf(result[1][1] - 2.0f) < 1e-5f &&
-                    fabsf(result[2][2] - 2.0f) < 1e-5f;
-        runner.endTest(pass, pass ? "" : "appendScale produced unexpected matrix");
-    }
+    // Build a translation-only matrix
+    SbMatrix mat = SbMatrix::identity();
+    mat[3][0] = 1.5f;
+    mat[3][1] = 2.5f;
+    mat[3][2] = 3.5f;
 
-    // -----------------------------------------------------------------------
-    // SoDragger: static appendRotation
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDragger: appendRotation produces correct matrix");
-    {
-        SbMatrix m = SbMatrix::identity();
-        // 90-degree rotation around Z
-        SbRotation rot(SbVec3f(0.0f, 0.0f, 1.0f),
-                       static_cast<float>(M_PI) / 2.0f);
-        SbVec3f ctr(0.0f, 0.0f, 0.0f);
-        SbMatrix result = SoDragger::appendRotation(m, rot, ctr);
-        // Applying to X-axis unit vector should give Y-axis
-        SbVec3f xhat(1.0f, 0.0f, 0.0f);
-        SbVec3f rotated;
-        result.multDirMatrix(xhat, rotated);
-        bool pass = fabsf(rotated[0])        < 1e-4f &&
-                    fabsf(rotated[1] - 1.0f) < 1e-4f &&
-                    fabsf(rotated[2])        < 1e-4f;
-        runner.endTest(pass, pass ? "" : "appendRotation produced unexpected rotation");
-    }
+    // setMotionMatrix is public on the SoDragger base; cast to use it
+    SoDragger *base = d;
+    base->setMotionMatrix(mat);
+    const SbMatrix &got = base->getMotionMatrix();
 
-    // -----------------------------------------------------------------------
-    // SoSearchAction traversal over a scene containing a dragger
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSearchAction finds SoTranslate1Dragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
+    bool pass = (fabsf(got[3][0] - 1.5f) < 1e-4f) &&
+                (fabsf(got[3][1] - 2.5f) < 1e-4f) &&
+                (fabsf(got[3][2] - 3.5f) < 1e-4f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoDragger setMotionMatrix/getMotionMatrix round-trip failed";
+}
 
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        root->addChild(d);
+// -----------------------------------------------------------------------
+// SoDragger: setMinGesture / getMinGesture
+// -----------------------------------------------------------------------
 
-        SoSearchAction sa;
-        sa.setType(SoTranslate1Dragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
+TEST(DraggersDraggers, SoDraggerSetMinGestureGetMinGesture)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    d->setMinGesture(8);
+    bool pass = (d->getMinGesture() == 8);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoDragger setMinGesture/getMinGesture mismatch";
+}
 
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoTranslate1Dragger");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: setProjectorEpsilon / getProjectorEpsilon
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoSearchAction traversal for SoTranslate2Dragger
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSearchAction finds SoTranslate2Dragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
+TEST(DraggersDraggers, SoDraggerSetProjectorEpsilonGetProjectorEpsilon)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    d->setProjectorEpsilon(0.001f);
+    bool pass = fabsf(d->getProjectorEpsilon() - 0.001f) < 1e-6f;
+    d->unref();
+    EXPECT_TRUE(pass) << "SoDragger projectorEpsilon set/get mismatch";
+}
 
-        SoTranslate2Dragger *d = new SoTranslate2Dragger;
-        root->addChild(d);
+// -----------------------------------------------------------------------
+// SoDragger: addStartCallback / removeStartCallback
+// -----------------------------------------------------------------------
 
-        SoSearchAction sa;
-        sa.setType(SoTranslate2Dragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
+TEST(DraggersDraggers, SoDraggerAddRemoveStartCallback)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    s_start_count = 0;
+    // Adding callback must not crash
+    d->addStartCallback(countStartCB, nullptr);
+    // Removing the same callback must not crash
+    d->removeStartCallback(countStartCB, nullptr);
+    bool pass = (s_start_count == 0); // callback was never invoked
+    d->unref();
+    EXPECT_TRUE(pass) << "start callback counter unexpectedly non-zero";
+}
 
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoTranslate2Dragger");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: addMotionCallback / removeMotionCallback
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDragger: dragger nodekit catalog is non-null
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTranslate1Dragger: nodekit catalog is non-null");
-    {
-        SoTranslate1Dragger *d = new SoTranslate1Dragger;
-        d->ref();
-        const SoNodekitCatalog *cat = d->getNodekitCatalog();
-        bool pass = (cat != nullptr) && (cat->getNumEntries() > 0);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTranslate1Dragger nodekit catalog null or empty");
-    }
+TEST(DraggersDraggers, SoDraggerAddRemoveMotionCallback)
+{
+    SoTranslate2Dragger *d = new SoTranslate2Dragger;
+    d->ref();
+    s_motion_count = 0;
+    d->addMotionCallback(countMotionCB, nullptr);
+    d->removeMotionCallback(countMotionCB, nullptr);
+    bool pass = (s_motion_count == 0);
+    d->unref();
+    EXPECT_TRUE(pass) << "motion callback counter unexpectedly non-zero";
+}
 
-    // =======================================================================
-    // Complex draggers (previously crashing due to SbString::vsprintf bug)
-    // =======================================================================
+// -----------------------------------------------------------------------
+// SoDragger: addFinishCallback / removeFinishCallback
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: instantiation and type check");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoDraggerAddRemoveFinishCallback)
+{
+    SoScale1Dragger *d = new SoScale1Dragger;
+    d->ref();
+    s_finish_count = 0;
+    d->addFinishCallback(countFinishCB, nullptr);
+    d->removeFinishCallback(countFinishCB, nullptr);
+    bool pass = (s_finish_count == 0);
+    d->unref();
+    EXPECT_TRUE(pass) << "finish callback counter unexpectedly non-zero";
+}
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: scaleFactor field default is (1,1,1)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: scaleFactor default is (1,1,1)");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        SbVec3f sf = d->scaleFactor.getValue();
-        bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 1.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger default scaleFactor is not (1,1,1)");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: addValueChangedCallback / removeValueChangedCallback
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: translation field default is (0,0,0)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: translation default is (0,0,0)");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        SbVec3f t = d->translation.getValue();
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger default translation is not (0,0,0)");
-    }
+TEST(DraggersDraggers, SoDraggerAddRemoveValueChangedCallback)
+{
+    SoRotateDiscDragger *d = new SoRotateDiscDragger;
+    d->ref();
+    s_changed_count = 0;
+    d->addValueChangedCallback(countChangedCB, nullptr);
+    d->removeValueChangedCallback(countChangedCB, nullptr);
+    bool pass = (s_changed_count == 0);
+    d->unref();
+    EXPECT_TRUE(pass) << "valueChanged callback counter unexpectedly non-zero";
+}
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: nodekit catalog has expected parts
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: nodekit catalog has switch parts");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        const SoNodekitCatalog *cat = d->getNodekitCatalog();
-        bool pass = (cat != nullptr) &&
-                    (cat->getPartNumber("translator1Switch") != SO_CATALOG_NAME_NOT_FOUND) &&
-                    (cat->getPartNumber("extruder1Switch")   != SO_CATALOG_NAME_NOT_FOUND) &&
-                    (cat->getPartNumber("uniform1Switch")    != SO_CATALOG_NAME_NOT_FOUND);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger catalog missing expected switch parts");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: enableValueChangedCallbacks returns previous state
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: set/get translation and scaleFactor fields
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: set/get translation and scaleFactor");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        d->translation.setValue(1.0f, 2.0f, 3.0f);
-        d->scaleFactor.setValue(2.0f, 3.0f, 4.0f);
-        SbVec3f t  = d->translation.getValue();
-        SbVec3f sf = d->scaleFactor.getValue();
-        bool pass = (fabsf(t[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(t[1] - 2.0f) < 1e-5f) &&
-                    (fabsf(t[2] - 3.0f) < 1e-5f) &&
-                    (fabsf(sf[0] - 2.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 3.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 4.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger field set/get failed");
-    }
+TEST(DraggersDraggers, SoDraggerEnableValueChangedCallbacksReturnsPreviousState)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    // Default should be TRUE (enabled)
+    SbBool prev = d->enableValueChangedCallbacks(FALSE);
+    bool pass = (prev == TRUE);
+    // Restore
+    d->enableValueChangedCallbacks(TRUE);
+    d->unref();
+    EXPECT_TRUE(pass) << "enableValueChangedCallbacks should return TRUE by default";
+}
 
-    // -----------------------------------------------------------------------
-    // SoHandleBoxDragger: callback registration does not crash
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleBoxDragger: callback registration/removal");
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        d->ref();
-        s_start_count = 0;
-        d->addStartCallback(countStartCB, nullptr);
-        d->removeStartCallback(countStartCB, nullptr);
-        bool pass = (s_start_count == 0);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoHandleBoxDragger callback registration crashed or misfired");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: setMinScale / getMinScale (static)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTabBoxDragger: instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTabBoxDragger: instantiation and type check");
-    {
-        SoTabBoxDragger *d = new SoTabBoxDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTabBoxDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoDraggerSetMinScaleGetMinScaleStatic)
+{
+    float old = SoDragger::getMinScale();
+    SoDragger::setMinScale(0.05f);
+    bool pass = fabsf(SoDragger::getMinScale() - 0.05f) < 1e-6f;
+    SoDragger::setMinScale(old); // restore
+    EXPECT_TRUE(pass) << "SoDragger static setMinScale/getMinScale mismatch";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTabBoxDragger: scaleFactor and translation fields default values
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTabBoxDragger: default field values");
-    {
-        SoTabBoxDragger *d = new SoTabBoxDragger;
-        d->ref();
-        SbVec3f t  = d->translation.getValue();
-        SbVec3f sf = d->scaleFactor.getValue();
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f) &&
-                    (fabsf(sf[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 1.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTabBoxDragger default field values incorrect");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: static appendTranslation
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTabBoxDragger: nodekit catalog includes tabPlane sub-draggers
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTabBoxDragger: nodekit catalog has tabPlane parts");
-    {
-        SoTabBoxDragger *d = new SoTabBoxDragger;
-        d->ref();
-        const SoNodekitCatalog *cat = d->getNodekitCatalog();
-        bool pass = (cat != nullptr) &&
-                    (cat->getPartNumber("tabPlane1") != SO_CATALOG_NAME_NOT_FOUND) &&
-                    (cat->getPartNumber("tabPlane6") != SO_CATALOG_NAME_NOT_FOUND);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTabBoxDragger catalog missing tabPlane parts");
-    }
+TEST(DraggersDraggers, SoDraggerAppendTranslationProducesCorrectMatrix)
+{
+    SbMatrix m = SbMatrix::identity();
+    SbVec3f  t(3.0f, 0.0f, 0.0f);
+    SbMatrix result = SoDragger::appendTranslation(m, t);
+    // The translation should appear in the last row
+    bool pass = fabsf(result[3][0] - 3.0f) < 1e-5f &&
+                fabsf(result[3][1])          < 1e-5f &&
+                fabsf(result[3][2])          < 1e-5f;
+    EXPECT_TRUE(pass) << "appendTranslation produced unexpected matrix";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTabBoxDragger: SoSearchAction traversal
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSearchAction finds SoTabBoxDragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-        SoTabBoxDragger *d = new SoTabBoxDragger;
-        root->addChild(d);
-        SoSearchAction sa;
-        sa.setType(SoTabBoxDragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoTabBoxDragger");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: static appendScale
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTransformBoxDragger: instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransformBoxDragger: instantiation and type check");
-    {
-        SoTransformBoxDragger *d = new SoTransformBoxDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTransformBoxDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoDraggerAppendScaleProducesCorrectMatrix)
+{
+    SbMatrix m    = SbMatrix::identity();
+    SbVec3f  sc(2.0f, 2.0f, 2.0f);
+    SbVec3f  ctr(0.0f, 0.0f, 0.0f);
+    SbMatrix result = SoDragger::appendScale(m, sc, ctr);
+    // Diagonal should be scaled
+    bool pass = fabsf(result[0][0] - 2.0f) < 1e-5f &&
+                fabsf(result[1][1] - 2.0f) < 1e-5f &&
+                fabsf(result[2][2] - 2.0f) < 1e-5f;
+    EXPECT_TRUE(pass) << "appendScale produced unexpected matrix";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTransformBoxDragger: rotation/translation/scaleFactor field defaults
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransformBoxDragger: default field values");
-    {
-        SoTransformBoxDragger *d = new SoTransformBoxDragger;
-        d->ref();
-        SbVec3f  t    = d->translation.getValue();
-        SbVec3f  sf   = d->scaleFactor.getValue();
-        SbRotation rot = d->rotation.getValue();
-        SbVec3f   ax; float ang;
-        rot.getValue(ax, ang);
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f) &&
-                    (fabsf(sf[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[1] - 1.0f) < 1e-5f) &&
-                    (fabsf(sf[2] - 1.0f) < 1e-5f) &&
-                    (fabsf(ang) < 1e-5f); // identity rotation
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTransformBoxDragger default field values incorrect");
-    }
+// -----------------------------------------------------------------------
+// SoDragger: static appendRotation
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTransformerDragger: instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransformerDragger: instantiation and type check");
-    {
-        SoTransformerDragger *d = new SoTransformerDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTransformerDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoDraggerAppendRotationProducesCorrectMatrix)
+{
+    SbMatrix m = SbMatrix::identity();
+    // 90-degree rotation around Z
+    SbRotation rot(SbVec3f(0.0f, 0.0f, 1.0f),
+                   static_cast<float>(M_PI) / 2.0f);
+    SbVec3f ctr(0.0f, 0.0f, 0.0f);
+    SbMatrix result = SoDragger::appendRotation(m, rot, ctr);
+    // Applying to X-axis unit vector should give Y-axis
+    SbVec3f xhat(1.0f, 0.0f, 0.0f);
+    SbVec3f rotated;
+    result.multDirMatrix(xhat, rotated);
+    bool pass = fabsf(rotated[0])        < 1e-4f &&
+                fabsf(rotated[1] - 1.0f) < 1e-4f &&
+                fabsf(rotated[2])        < 1e-4f;
+    EXPECT_TRUE(pass) << "appendRotation produced unexpected rotation";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTransformerDragger: field defaults
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransformerDragger: default field values");
-    {
-        SoTransformerDragger *d = new SoTransformerDragger;
-        d->ref();
-        SbVec3f  t    = d->translation.getValue();
-        SbVec3f  sf   = d->scaleFactor.getValue();
-        SbRotation rot = d->rotation.getValue();
-        SbVec3f ax; float ang;
-        rot.getValue(ax, ang);
-        // minDiscRotDot default is 0.025f per the Coin source
-        float minDot = d->minDiscRotDot.getValue();
-        bool pass = (fabsf(t[0]) < 1e-5f) &&
-                    (fabsf(t[1]) < 1e-5f) &&
-                    (fabsf(t[2]) < 1e-5f) &&
-                    (fabsf(sf[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(ang) < 1e-5f) &&
-                    (minDot > 0.0f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoTransformerDragger default field values incorrect");
-    }
+// -----------------------------------------------------------------------
+// SoSearchAction traversal over a scene containing a dragger
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoCenterballDragger: instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCenterballDragger: instantiation and type check");
-    {
-        SoCenterballDragger *d = new SoCenterballDragger;
-        d->ref();
-        bool pass = (d->getTypeId() != SoType::badType()) &&
-                    d->isOfType(SoDragger::getClassTypeId());
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoCenterballDragger bad type or not SoDragger subtype");
-    }
+TEST(DraggersDraggers, SoSearchActionFindsSoTranslate1DraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
 
-    // -----------------------------------------------------------------------
-    // SoCenterballDragger: rotation and center field defaults
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCenterballDragger: default rotation is identity, center is (0,0,0)");
-    {
-        SoCenterballDragger *d = new SoCenterballDragger;
-        d->ref();
-        SbRotation rot = d->rotation.getValue();
-        SbVec3f    ctr = d->center.getValue();
-        SbVec3f ax; float ang;
-        rot.getValue(ax, ang);
-        bool pass = (fabsf(ang) < 1e-5f) &&
-                    (fabsf(ctr[0]) < 1e-5f) &&
-                    (fabsf(ctr[1]) < 1e-5f) &&
-                    (fabsf(ctr[2]) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoCenterballDragger default rotation/center incorrect");
-    }
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    root->addChild(d);
 
-    // -----------------------------------------------------------------------
-    // SoCenterballDragger: set/get rotation and center fields
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCenterballDragger: set/get rotation and center fields");
-    {
-        SoCenterballDragger *d = new SoCenterballDragger;
-        d->ref();
-        SbRotation rot(SbVec3f(0.0f, 1.0f, 0.0f),
-                       static_cast<float>(M_PI) / 3.0f);
-        d->rotation.setValue(rot);
-        d->center.setValue(1.0f, 2.0f, 3.0f);
-        SbRotation gotRot = d->rotation.getValue();
-        SbVec3f    gotCtr = d->center.getValue();
-        SbVec3f ax; float ang;
-        SbVec3f rax; float rang;
-        gotRot.getValue(ax, ang);
-        rot.getValue(rax, rang);
-        bool pass = (fabsf(ang - rang) < 1e-4f) &&
-                    (fabsf(gotCtr[0] - 1.0f) < 1e-5f) &&
-                    (fabsf(gotCtr[1] - 2.0f) < 1e-5f) &&
-                    (fabsf(gotCtr[2] - 3.0f) < 1e-5f);
-        d->unref();
-        runner.endTest(pass, pass ? "" : "SoCenterballDragger field set/get failed");
-    }
+    SoSearchAction sa;
+    sa.setType(SoTranslate1Dragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
 
-    // -----------------------------------------------------------------------
-    // SoSearchAction finds complex draggers in a scene graph
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSearchAction finds SoHandleBoxDragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        root->addChild(d);
-        SoSearchAction sa;
-        sa.setType(SoHandleBoxDragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoHandleBoxDragger");
-    }
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoTranslate1Dragger";
+}
 
-    runner.startTest("SoSearchAction finds SoTransformerDragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-        SoTransformerDragger *d = new SoTransformerDragger;
-        root->addChild(d);
-        SoSearchAction sa;
-        sa.setType(SoTransformerDragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoTransformerDragger");
-    }
+// -----------------------------------------------------------------------
+// SoSearchAction traversal for SoTranslate2Dragger
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoSearchAction finds SoCenterballDragger in scene graph");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-        SoCenterballDragger *d = new SoCenterballDragger;
-        root->addChild(d);
-        SoSearchAction sa;
-        sa.setType(SoCenterballDragger::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction did not find SoCenterballDragger");
-    }
+TEST(DraggersDraggers, SoSearchActionFindsSoTranslate2DraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
 
+    SoTranslate2Dragger *d = new SoTranslate2Dragger;
+    root->addChild(d);
+
+    SoSearchAction sa;
+    sa.setType(SoTranslate2Dragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoTranslate2Dragger";
+}
+
+// -----------------------------------------------------------------------
+// SoDragger: dragger nodekit catalog is non-null
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTranslate1DraggerNodekitCatalogIsNonNull)
+{
+    SoTranslate1Dragger *d = new SoTranslate1Dragger;
+    d->ref();
+    const SoNodekitCatalog *cat = d->getNodekitCatalog();
+    bool pass = (cat != nullptr) && (cat->getNumEntries() > 0);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTranslate1Dragger nodekit catalog null or empty";
+}
+
+// =======================================================================
+// Complex draggers (previously crashing due to SbString::vsprintf bug)
+// =======================================================================
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: instantiation and type check
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerInstantiationAndTypeCheck)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger bad type or not SoDragger subtype";
+}
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: scaleFactor field default is (1,1,1)
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerScaleFactorDefaultIs111)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    SbVec3f sf = d->scaleFactor.getValue();
+    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 1.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger default scaleFactor is not (1,1,1)";
+}
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: translation field default is (0,0,0)
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerTranslationDefaultIs000)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    SbVec3f t = d->translation.getValue();
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger default translation is not (0,0,0)";
+}
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: nodekit catalog has expected parts
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerNodekitCatalogHasSwitchParts)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    const SoNodekitCatalog *cat = d->getNodekitCatalog();
+    bool pass = (cat != nullptr) &&
+                (cat->getPartNumber("translator1Switch") != SO_CATALOG_NAME_NOT_FOUND) &&
+                (cat->getPartNumber("extruder1Switch")   != SO_CATALOG_NAME_NOT_FOUND) &&
+                (cat->getPartNumber("uniform1Switch")    != SO_CATALOG_NAME_NOT_FOUND);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger catalog missing expected switch parts";
+}
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: set/get translation and scaleFactor fields
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerSetGetTranslationAndScaleFactor)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    d->translation.setValue(1.0f, 2.0f, 3.0f);
+    d->scaleFactor.setValue(2.0f, 3.0f, 4.0f);
+    SbVec3f t  = d->translation.getValue();
+    SbVec3f sf = d->scaleFactor.getValue();
+    bool pass = (fabsf(t[0] - 1.0f) < 1e-5f) &&
+                (fabsf(t[1] - 2.0f) < 1e-5f) &&
+                (fabsf(t[2] - 3.0f) < 1e-5f) &&
+                (fabsf(sf[0] - 2.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 3.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 4.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger field set/get failed";
+}
+
+// -----------------------------------------------------------------------
+// SoHandleBoxDragger: callback registration does not crash
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoHandleBoxDraggerCallbackRegistrationRemoval)
+{
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    d->ref();
+    s_start_count = 0;
+    d->addStartCallback(countStartCB, nullptr);
+    d->removeStartCallback(countStartCB, nullptr);
+    bool pass = (s_start_count == 0);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoHandleBoxDragger callback registration crashed or misfired";
+}
+
+// -----------------------------------------------------------------------
+// SoTabBoxDragger: instantiation and type check
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTabBoxDraggerInstantiationAndTypeCheck)
+{
+    SoTabBoxDragger *d = new SoTabBoxDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTabBoxDragger bad type or not SoDragger subtype";
+}
+
+// -----------------------------------------------------------------------
+// SoTabBoxDragger: scaleFactor and translation fields default values
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTabBoxDraggerDefaultFieldValues)
+{
+    SoTabBoxDragger *d = new SoTabBoxDragger;
+    d->ref();
+    SbVec3f t  = d->translation.getValue();
+    SbVec3f sf = d->scaleFactor.getValue();
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f) &&
+                (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 1.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTabBoxDragger default field values incorrect";
+}
+
+// -----------------------------------------------------------------------
+// SoTabBoxDragger: nodekit catalog includes tabPlane sub-draggers
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTabBoxDraggerNodekitCatalogHasTabPlaneParts)
+{
+    SoTabBoxDragger *d = new SoTabBoxDragger;
+    d->ref();
+    const SoNodekitCatalog *cat = d->getNodekitCatalog();
+    bool pass = (cat != nullptr) &&
+                (cat->getPartNumber("tabPlane1") != SO_CATALOG_NAME_NOT_FOUND) &&
+                (cat->getPartNumber("tabPlane6") != SO_CATALOG_NAME_NOT_FOUND);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTabBoxDragger catalog missing tabPlane parts";
+}
+
+// -----------------------------------------------------------------------
+// SoTabBoxDragger: SoSearchAction traversal
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoSearchActionFindsSoTabBoxDraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoTabBoxDragger *d = new SoTabBoxDragger;
+    root->addChild(d);
+    SoSearchAction sa;
+    sa.setType(SoTabBoxDragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoTabBoxDragger";
+}
+
+// -----------------------------------------------------------------------
+// SoTransformBoxDragger: instantiation and type check
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTransformBoxDraggerInstantiationAndTypeCheck)
+{
+    SoTransformBoxDragger *d = new SoTransformBoxDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTransformBoxDragger bad type or not SoDragger subtype";
+}
+
+// -----------------------------------------------------------------------
+// SoTransformBoxDragger: rotation/translation/scaleFactor field defaults
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTransformBoxDraggerDefaultFieldValues)
+{
+    SoTransformBoxDragger *d = new SoTransformBoxDragger;
+    d->ref();
+    SbVec3f  t    = d->translation.getValue();
+    SbVec3f  sf   = d->scaleFactor.getValue();
+    SbRotation rot = d->rotation.getValue();
+    SbVec3f   ax; float ang;
+    rot.getValue(ax, ang);
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f) &&
+                (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[1] - 1.0f) < 1e-5f) &&
+                (fabsf(sf[2] - 1.0f) < 1e-5f) &&
+                (fabsf(ang) < 1e-5f); // identity rotation
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTransformBoxDragger default field values incorrect";
+}
+
+// -----------------------------------------------------------------------
+// SoTransformerDragger: instantiation and type check
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTransformerDraggerInstantiationAndTypeCheck)
+{
+    SoTransformerDragger *d = new SoTransformerDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTransformerDragger bad type or not SoDragger subtype";
+}
+
+// -----------------------------------------------------------------------
+// SoTransformerDragger: field defaults
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoTransformerDraggerDefaultFieldValues)
+{
+    SoTransformerDragger *d = new SoTransformerDragger;
+    d->ref();
+    SbVec3f  t    = d->translation.getValue();
+    SbVec3f  sf   = d->scaleFactor.getValue();
+    SbRotation rot = d->rotation.getValue();
+    SbVec3f ax; float ang;
+    rot.getValue(ax, ang);
+    // minDiscRotDot default is 0.025f per the Coin source
+    float minDot = d->minDiscRotDot.getValue();
+    bool pass = (fabsf(t[0]) < 1e-5f) &&
+                (fabsf(t[1]) < 1e-5f) &&
+                (fabsf(t[2]) < 1e-5f) &&
+                (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+                (fabsf(ang) < 1e-5f) &&
+                (minDot > 0.0f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoTransformerDragger default field values incorrect";
+}
+
+// -----------------------------------------------------------------------
+// SoCenterballDragger: instantiation and type check
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoCenterballDraggerInstantiationAndTypeCheck)
+{
+    SoCenterballDragger *d = new SoCenterballDragger;
+    d->ref();
+    bool pass = (d->getTypeId() != SoType::badType()) &&
+                d->isOfType(SoDragger::getClassTypeId());
+    d->unref();
+    EXPECT_TRUE(pass) << "SoCenterballDragger bad type or not SoDragger subtype";
+}
+
+// -----------------------------------------------------------------------
+// SoCenterballDragger: rotation and center field defaults
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoCenterballDraggerDefaultRotationIsIdentityCenterIs000)
+{
+    SoCenterballDragger *d = new SoCenterballDragger;
+    d->ref();
+    SbRotation rot = d->rotation.getValue();
+    SbVec3f    ctr = d->center.getValue();
+    SbVec3f ax; float ang;
+    rot.getValue(ax, ang);
+    bool pass = (fabsf(ang) < 1e-5f) &&
+                (fabsf(ctr[0]) < 1e-5f) &&
+                (fabsf(ctr[1]) < 1e-5f) &&
+                (fabsf(ctr[2]) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoCenterballDragger default rotation/center incorrect";
+}
+
+// -----------------------------------------------------------------------
+// SoCenterballDragger: set/get rotation and center fields
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoCenterballDraggerSetGetRotationAndCenterFields)
+{
+    SoCenterballDragger *d = new SoCenterballDragger;
+    d->ref();
+    SbRotation rot(SbVec3f(0.0f, 1.0f, 0.0f),
+                   static_cast<float>(M_PI) / 3.0f);
+    d->rotation.setValue(rot);
+    d->center.setValue(1.0f, 2.0f, 3.0f);
+    SbRotation gotRot = d->rotation.getValue();
+    SbVec3f    gotCtr = d->center.getValue();
+    SbVec3f ax; float ang;
+    SbVec3f rax; float rang;
+    gotRot.getValue(ax, ang);
+    rot.getValue(rax, rang);
+    bool pass = (fabsf(ang - rang) < 1e-4f) &&
+                (fabsf(gotCtr[0] - 1.0f) < 1e-5f) &&
+                (fabsf(gotCtr[1] - 2.0f) < 1e-5f) &&
+                (fabsf(gotCtr[2] - 3.0f) < 1e-5f);
+    d->unref();
+    EXPECT_TRUE(pass) << "SoCenterballDragger field set/get failed";
+}
+
+// -----------------------------------------------------------------------
+// SoSearchAction finds complex draggers in a scene graph
+// -----------------------------------------------------------------------
+
+TEST(DraggersDraggers, SoSearchActionFindsSoHandleBoxDraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoHandleBoxDragger *d = new SoHandleBoxDragger;
+    root->addChild(d);
+    SoSearchAction sa;
+    sa.setType(SoHandleBoxDragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoHandleBoxDragger";
+}
+
+TEST(DraggersDraggers, SoSearchActionFindsSoTransformerDraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoTransformerDragger *d = new SoTransformerDragger;
+    root->addChild(d);
+    SoSearchAction sa;
+    sa.setType(SoTransformerDragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoTransformerDragger";
+}
+
+TEST(DraggersDraggers, SoSearchActionFindsSoCenterballDraggerInSceneGraph)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoCenterballDragger *d = new SoCenterballDragger;
+    root->addChild(d);
+    SoSearchAction sa;
+    sa.setType(SoCenterballDragger::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoCenterballDragger";
 }

@@ -73,266 +73,247 @@ static void onDeselected(void * /*userdata*/, SoPath * /*path*/)
     ++g_deselectionCount;
 }
 
-TEST(UpstreamNodesSelectionNodes, RetainedCoverage)
+TEST(NodesSelectionNodes, SoSelectionClassTypeIdValid)
 {
-    CheckRecorder runner;
+    bool pass = (SoSelection::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoSelection has bad class type";
+}
 
-    // =========================================================================
-    // SoSelection
-    // =========================================================================
-    runner.startTest("SoSelection: class type id valid");
-    {
-        bool pass = (SoSelection::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoSelection has bad class type");
-    }
+TEST(NodesSelectionNodes, SoSelectionIsOfTypeSoSeparator)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    bool pass = sel->isOfType(SoSeparator::getClassTypeId());
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection not a SoSeparator subtype";
+}
 
-    runner.startTest("SoSelection: isOfType SoSeparator");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        bool pass = sel->isOfType(SoSeparator::getClassTypeId());
-        sel->unref();
-        runner.endTest(pass, pass ? "" : "SoSelection not a SoSeparator subtype");
-    }
+TEST(NodesSelectionNodes, SoSelectionDefaultPolicyIsSHIFT)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    // Default policy in Open Inventor is SHIFT
+    bool pass = (sel->policy.getValue() == SoSelection::SHIFT);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection default policy is not SHIFT";
+}
 
-    runner.startTest("SoSelection: default policy is SHIFT");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        // Default policy in Open Inventor is SHIFT
-        bool pass = (sel->policy.getValue() == SoSelection::SHIFT);
-        sel->unref();
-        runner.endTest(pass, pass ? "" : "SoSelection default policy is not SHIFT");
-    }
+TEST(NodesSelectionNodes, SoSelectionSelectIsSelectedGetNumSelected)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoSelection * sel = new SoSelection;
+    sel->policy = SoSelection::SINGLE;
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
+    root->addChild(sel);
 
-    runner.startTest("SoSelection: select/isSelected/getNumSelected");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoSelection * sel = new SoSelection;
-        sel->policy = SoSelection::SINGLE;
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
-        root->addChild(sel);
+    // Select the cube via the convenience node API
+    sel->select(cube);
+    bool pass = sel->isSelected(cube) &&
+                (sel->getNumSelected() == 1);
 
-        // Select the cube via the convenience node API
-        sel->select(cube);
-        bool pass = sel->isSelected(cube) &&
-                    (sel->getNumSelected() == 1);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSelection select/isSelected/getNumSelected failed";
+}
 
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSelection select/isSelected/getNumSelected failed");
-    }
+TEST(NodesSelectionNodes, SoSelectionDeselectDecrementsCount)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->policy = SoSelection::SINGLE;
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
 
-    runner.startTest("SoSelection: deselect decrements count");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->policy = SoSelection::SINGLE;
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
+    sel->select(cube);
+    sel->deselect(cube);
+    bool pass = !sel->isSelected(cube) &&
+                (sel->getNumSelected() == 0);
 
-        sel->select(cube);
-        sel->deselect(cube);
-        bool pass = !sel->isSelected(cube) &&
-                    (sel->getNumSelected() == 0);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection deselect did not decrement count";
+}
 
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSelection deselect did not decrement count");
-    }
+TEST(NodesSelectionNodes, SoSelectionToggleSelectsThenDeselects)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->policy = SoSelection::TOGGLE;
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
 
-    runner.startTest("SoSelection: toggle selects then deselects");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->policy = SoSelection::TOGGLE;
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
+    sel->toggle(cube);          // first call: select
+    bool selected = sel->isSelected(cube);
+    sel->toggle(cube);          // second call: deselect
+    bool deselected = !sel->isSelected(cube);
 
-        sel->toggle(cube);          // first call: select
-        bool selected = sel->isSelected(cube);
-        sel->toggle(cube);          // second call: deselect
-        bool deselected = !sel->isSelected(cube);
+    sel->unref();
+    EXPECT_TRUE((selected && deselected)) << (selected && deselected ? "" :
+        "SoSelection toggle did not work correctly");
+}
 
-        sel->unref();
-        runner.endTest(selected && deselected, selected && deselected ? "" :
-            "SoSelection toggle did not work correctly");
-    }
+TEST(NodesSelectionNodes, SoSelectionDeselectAllClearsSelection)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->policy = SoSelection::SHIFT;
+    SoCube * c1 = new SoCube;
+    SoCube * c2 = new SoCube;
+    sel->addChild(c1);
+    sel->addChild(c2);
 
-    runner.startTest("SoSelection: deselectAll clears selection");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->policy = SoSelection::SHIFT;
-        SoCube * c1 = new SoCube;
-        SoCube * c2 = new SoCube;
-        sel->addChild(c1);
-        sel->addChild(c2);
+    sel->select(c1);
+    sel->select(c2);
+    sel->deselectAll();
+    bool pass = (sel->getNumSelected() == 0);
 
-        sel->select(c1);
-        sel->select(c2);
-        sel->deselectAll();
-        bool pass = (sel->getNumSelected() == 0);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection deselectAll did not clear selection";
+}
 
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSelection deselectAll did not clear selection");
-    }
+TEST(NodesSelectionNodes, SoSelectionAddSelectionCallbackFiresOnSelect)
+{
+    g_selectionCount = 0;
 
-    runner.startTest("SoSelection: addSelectionCallback fires on select");
-    {
-        g_selectionCount = 0;
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->policy = SoSelection::SINGLE;
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
 
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->policy = SoSelection::SINGLE;
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
+    sel->addSelectionCallback(onSelected, nullptr);
+    sel->select(cube);
 
-        sel->addSelectionCallback(onSelected, nullptr);
-        sel->select(cube);
+    // Callback fires synchronously
+    bool pass = (g_selectionCount == 1);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection addSelectionCallback did not fire";
+}
 
-        // Callback fires synchronously
-        bool pass = (g_selectionCount == 1);
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSelection addSelectionCallback did not fire");
-    }
+TEST(NodesSelectionNodes, SoSelectionAddDeselectionCallbackFiresOnDeselect)
+{
+    g_deselectionCount = 0;
 
-    runner.startTest("SoSelection: addDeselectionCallback fires on deselect");
-    {
-        g_deselectionCount = 0;
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->policy = SoSelection::SINGLE;
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
 
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->policy = SoSelection::SINGLE;
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
+    sel->addDeselectionCallback(onDeselected, nullptr);
+    sel->select(cube);
+    sel->deselect(cube);
 
-        sel->addDeselectionCallback(onDeselected, nullptr);
-        sel->select(cube);
-        sel->deselect(cube);
+    bool pass = (g_deselectionCount == 1);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection addDeselectionCallback did not fire";
+}
 
-        bool pass = (g_deselectionCount == 1);
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSelection addDeselectionCallback did not fire");
-    }
+TEST(NodesSelectionNodes, SoSelectionSoGetBoundingBoxActionDoesNotCrash)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->addChild(new SoCube);
+    SbViewportRegion vp(100, 100);
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(sel);
+    sel->unref();
+    SUCCEED();
+}
 
-    runner.startTest("SoSelection: SoGetBoundingBoxAction does not crash");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->addChild(new SoCube);
-        SbViewportRegion vp(100, 100);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(sel);
-        sel->unref();
-        runner.endTest(true, "");
-    }
+TEST(NodesSelectionNodes, SoSelectionGetListReturnsNonNull)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    bool pass = (sel->getList() != nullptr);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection getList() returned null";
+}
 
-    runner.startTest("SoSelection: getList returns non-null");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        bool pass = (sel->getList() != nullptr);
-        sel->unref();
-        runner.endTest(pass, pass ? "" : "SoSelection getList() returned null");
-    }
+// =========================================================================
+// SoExtSelection
+// =========================================================================
 
-    // =========================================================================
-    // SoExtSelection
-    // =========================================================================
-    runner.startTest("SoExtSelection: class type id valid");
-    {
-        bool pass = (SoExtSelection::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoExtSelection has bad class type");
-    }
+TEST(NodesSelectionNodes, SoExtSelectionClassTypeIdValid)
+{
+    bool pass = (SoExtSelection::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoExtSelection has bad class type";
+}
 
-    runner.startTest("SoExtSelection: isOfType SoSelection");
-    {
-        SoExtSelection * sel = new SoExtSelection;
-        sel->ref();
-        bool pass = sel->isOfType(SoSelection::getClassTypeId());
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoExtSelection not a SoSelection subtype");
-    }
+TEST(NodesSelectionNodes, SoExtSelectionIsOfTypeSoSelection)
+{
+    SoExtSelection * sel = new SoExtSelection;
+    sel->ref();
+    bool pass = sel->isOfType(SoSelection::getClassTypeId());
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoExtSelection not a SoSelection subtype";
+}
 
-    runner.startTest("SoExtSelection: lassoType field accessible");
-    {
-        SoExtSelection * sel = new SoExtSelection;
-        sel->ref();
-        // Default lassoType should be NOLASSO or similar
-        int lt = sel->lassoType.getValue();
-        bool pass = (lt >= 0); // any valid enum value
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoExtSelection lassoType field returned invalid value");
-    }
+TEST(NodesSelectionNodes, SoExtSelectionLassoTypeFieldAccessible)
+{
+    SoExtSelection * sel = new SoExtSelection;
+    sel->ref();
+    // Default lassoType should be NOLASSO or similar
+    int lt = sel->lassoType.getValue();
+    bool pass = (lt >= 0); // any valid enum value
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoExtSelection lassoType field returned invalid value";
+}
 
-    runner.startTest("SoExtSelection: lassoPolicy field accessible");
-    {
-        SoExtSelection * sel = new SoExtSelection;
-        sel->ref();
-        int lp = sel->lassoPolicy.getValue();
-        bool pass = (lp >= 0);
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoExtSelection lassoPolicy field returned invalid value");
-    }
+TEST(NodesSelectionNodes, SoExtSelectionLassoPolicyFieldAccessible)
+{
+    SoExtSelection * sel = new SoExtSelection;
+    sel->ref();
+    int lp = sel->lassoPolicy.getValue();
+    bool pass = (lp >= 0);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoExtSelection lassoPolicy field returned invalid value";
+}
 
-    runner.startTest("SoExtSelection: lassoMode field accessible");
-    {
-        SoExtSelection * sel = new SoExtSelection;
-        sel->ref();
-        int lm = sel->lassoMode.getValue();
-        bool pass = (lm >= 0);
-        sel->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoExtSelection lassoMode field returned invalid value");
-    }
+TEST(NodesSelectionNodes, SoExtSelectionLassoModeFieldAccessible)
+{
+    SoExtSelection * sel = new SoExtSelection;
+    sel->ref();
+    int lm = sel->lassoMode.getValue();
+    bool pass = (lm >= 0);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoExtSelection lassoMode field returned invalid value";
+}
 
-    runner.startTest("SoExtSelection: select with 2D lasso does not crash");
-    {
-        SoExtSelection * sel = new SoExtSelection;
-        sel->ref();
-        SoCube * cube = new SoCube;
-        sel->addChild(cube);
+TEST(NodesSelectionNodes, SoExtSelectionSelectWith2DLassoDoesNotCrash)
+{
+    SoExtSelection * sel = new SoExtSelection;
+    sel->ref();
+    SoCube * cube = new SoCube;
+    sel->addChild(cube);
 
-        // select() with a small lasso around the centre; needs a viewport
-        SbVec2f lasso[4] = {
-            SbVec2f(0.4f, 0.4f),
-            SbVec2f(0.6f, 0.4f),
-            SbVec2f(0.6f, 0.6f),
-            SbVec2f(0.4f, 0.6f)
-        };
-        SbViewportRegion vp(256, 256);
-        // The root argument to select() is the scene to pick from
-        sel->select(sel, 4, lasso, vp, TRUE);
-        bool pass = true; // reaching here without crash = pass
-        sel->unref();
-        runner.endTest(pass, "");
-    }
+    // select() with a small lasso around the centre; needs a viewport
+    SbVec2f lasso[4] = {
+        SbVec2f(0.4f, 0.4f),
+        SbVec2f(0.6f, 0.4f),
+        SbVec2f(0.6f, 0.6f),
+        SbVec2f(0.4f, 0.6f)
+    };
+    SbViewportRegion vp(256, 256);
+    // The root argument to select() is the scene to pick from
+    sel->select(sel, 4, lasso, vp, TRUE);
+    sel->unref();
+    SUCCEED();
+}
 
-    runner.startTest("SoExtSelection: SoSearchAction finds SoExtSelection");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoExtSelection * sel = new SoExtSelection;
-        root->addChild(sel);
+TEST(NodesSelectionNodes, SoExtSelectionSoSearchActionFindsSoExtSelection)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoExtSelection * sel = new SoExtSelection;
+    root->addChild(sel);
 
-        SoSearchAction sa;
-        sa.setType(SoExtSelection::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
+    SoSearchAction sa;
+    sa.setType(SoExtSelection::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
 
-        bool pass = (sa.getPath() != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSearchAction did not find SoExtSelection");
-    }
-
+    bool pass = (sa.getPath() != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction did not find SoExtSelection";
 }

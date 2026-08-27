@@ -15,7 +15,7 @@
  * Scene setup uses ObolTest::Scenes::buildDraggerTestScene() so the
  * viewer (obol_viewer) and this test start from the same base scene.
  *
- * Writes one RGB image per dragger/manip to argv[1]_<name>.rgb.
+ * Writes one RGB image per dragger/manip to outputStem_<name>.rgb.
  */
 
 #include "headless_utils.h"
@@ -223,13 +223,12 @@ static bool testManipInteraction(SoTransformManip *manip,
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_draggers(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_draggers";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_draggers";
 
     int failures = 0;
 
@@ -313,6 +312,7 @@ static int obol_run_render_render_draggers(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_draggers) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_draggers, "render_draggers"), 0);
+TEST(RenderingScenarios, render_draggers) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_draggers");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

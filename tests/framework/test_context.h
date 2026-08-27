@@ -8,9 +8,9 @@ namespace ObolTestSupport {
 /**
  * Initialise the database for a normal, non-rendering test process.
  *
- * The manager intentionally cannot create a GL context.  Rendering tests use
- * an explicit per-renderer manager instead, which keeps backend selection out
- * of global test state.
+ * The manager intentionally cannot create a GL context. Rendering test
+ * processes instead install their CTest-selected backend once at startup;
+ * fixture-backed renderers additionally receive that backend explicitly.
  */
 void initializeObol();
 

@@ -202,5 +202,5 @@ system GL is available the function returns `nullptr`.
 - `docs/CONTEXT_MANAGEMENT_API.md` — Full ContextManager implementation guide
 - `src/glue/gl_osmesa.cpp` — The compilation-unit trick
 - `src/glue/gl.cpp` — The dispatch layer (`coingl_is_osmesa_context`)
-- `tests/utils/osmesa_context_manager.h` — Reference OSMesa implementation
-- `tests/utils/fltk_context_manager.h` — Reference system-GL implementation
+- `SoDB::createOSMesaContextManager()` — supported OSMesa manager factory
+- `examples/demo_support/fltk_context_manager.h` — reference system-GL implementation

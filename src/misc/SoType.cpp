@@ -137,6 +137,7 @@
 #include <cctype>   // toupper()
 #include <shared_mutex>
 #include <atomic>
+#include <limits>
 #include <mutex>
 
 #include <Inventor/errors/SoDebugError.h>
@@ -319,7 +320,16 @@ SoType::createType(const SoType parent, const SbName name,
 #endif // debug
 
   SoType newType;
-  newType.index = SoType::typedatalist->getLength();
+  const int nextindex = SoType::typedatalist->getLength();
+  if (nextindex > static_cast<int>(std::numeric_limits<int16_t>::max())) {
+    SoDebugError::post("SoType::createType",
+                       "type registry is full (maximum key %d); cannot "
+                       "register type \"%s\"",
+                       std::numeric_limits<int16_t>::max(),
+                       name.getString());
+    return SoType::badType();
+  }
+  newType.index = static_cast<int16_t>(nextindex);
   SoTypeData * typeData = new SoTypeData(name, newType, TRUE, data, parent, method);
   SoType::typedatalist->append(typeData);
   type_parent_key[newType.getKey()].store(parent.getKey(),
@@ -642,12 +652,29 @@ SoType::fromName(const SbName name)
     if (alreadytried) continue;
 
     cc_libhandle handle = cc_dl_open(module.getString());
-    if (handle == NULL) continue;
+    if (handle == NULL) {
+      // A plugin may be installed after an earlier lookup.  Failed opens do
+      // not create library-owned registrations and are therefore safe to
+      // retry on a later fromName() call.
+      std::unique_lock<std::shared_mutex> lock(type_mutex);
+      dynload_tries->erase(module.getString());
+      continue;
+    }
+
+    // dlopen/LoadLibrary may run module constructors, and initClass() may
+    // register one or more factories before throwing or before we discover
+    // that it registered a different type.  There is no transactional way to
+    // undo arbitrary foreign registration.  Pin every successfully opened
+    // extension for the remainder of the process so registered function
+    // pointers can never refer to an unloaded image.
+    {
+      std::unique_lock<std::shared_mutex> lock(type_mutex);
+      module_dict->put(module.getString(), handle);
+    }
 
     // A regular createType() may have completed while dlopen was running.
     registered = findregistered();
     if (registered != SoType::badType()) {
-      cc_dl_close(handle);
       return registered;
     }
 
@@ -661,7 +688,6 @@ SoType::fromName(const SbName name)
                                 "compiler-settings or something similar.",
                                 mangled.getString(), modulenamestring.getString());
 #endif
-      cc_dl_close(handle);
       continue;
     }
 
@@ -673,19 +699,12 @@ SoType::fromName(const SbName name)
                                 "initClass() function threw an exception for type %s",
                                 name.getString());
 #endif
-      cc_dl_close(handle);
       continue;
     }
 
     registered = findregistered();
     if (registered == SoType::badType()) {
-      cc_dl_close(handle);
       continue;
-    }
-
-    {
-      std::unique_lock<std::shared_mutex> lock(type_mutex);
-      module_dict->put(module.getString(), handle);
     }
     return registered;
   }

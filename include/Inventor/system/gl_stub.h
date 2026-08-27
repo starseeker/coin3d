@@ -54,6 +54,7 @@ typedef signed   long     GLsizeiptr;
 /* GLSL handle type */
 typedef char              OBOL_GLchar;
 typedef OBOL_GLchar       GLcharARB;
+typedef unsigned int      GLhandleARB;
 
 /* -------------------------------------------------------------------------
  * Core GL 1.0 / 1.1 constants
@@ -310,6 +311,12 @@ typedef OBOL_GLchar       GLcharARB;
 #endif
 #ifndef GL_COLOR_CLEAR_VALUE
 #  define GL_COLOR_CLEAR_VALUE            0x0C22
+#endif
+#ifndef GL_COLOR_WRITEMASK
+#  define GL_COLOR_WRITEMASK               0x0C23
+#endif
+#ifndef GL_BUFFER_SIZE
+#  define GL_BUFFER_SIZE                   0x8764
 #endif
 
 /* Alpha test */
@@ -1367,72 +1374,41 @@ extern "C" {
 #endif
 
 /* glGetError() – return GL_NO_ERROR; no actual GL call */
-static inline GLenum obol_stub_glGetError(void) { return GL_NO_ERROR; }
-#ifndef glGetError
-#  define glGetError() obol_stub_glGetError()
-#endif
+static inline GLenum glGetError(void) { return GL_NO_ERROR; }
 
 /* glIsEnabled() – return GL_FALSE; no actual GL call */
-static inline GLboolean obol_stub_glIsEnabled(GLenum cap)
+static inline GLboolean glIsEnabled(GLenum cap)
 { (void)cap; return GL_FALSE; }
-#ifndef glIsEnabled
-#  define glIsEnabled(cap) obol_stub_glIsEnabled(cap)
-#endif
 
 /* glGetIntegerv() – write zero; no actual GL call */
-static inline void obol_stub_glGetIntegerv(GLenum pname, GLint * params)
+static inline void glGetIntegerv(GLenum pname, GLint * params)
 { (void)pname; if (params) *params = 0; }
-#ifndef glGetIntegerv
-#  define glGetIntegerv(pname, params) obol_stub_glGetIntegerv(pname, params)
-#endif
 
 /* glGetFloatv() – write zeros; no actual GL call */
-static inline void obol_stub_glGetFloatv(GLenum pname, GLfloat * params)
+static inline void glGetFloatv(GLenum pname, GLfloat * params)
 { (void)pname; if (params) *params = 0.0f; }
-#ifndef glGetFloatv
-#  define glGetFloatv(pname, params) obol_stub_glGetFloatv(pname, params)
-#endif
 
 /* glGetString() – return empty string; no actual GL call */
-static inline const GLubyte * obol_stub_glGetString(GLenum name)
+static inline const GLubyte * glGetString(GLenum name)
 { (void)name; return (const GLubyte *)""; }
-#ifndef glGetString
-#  define glGetString(name) obol_stub_glGetString(name)
-#endif
 
 /* glGetStringi() – return empty string; no actual GL call */
-static inline const GLubyte * obol_stub_glGetStringi(GLenum name, GLuint index)
+static inline const GLubyte * glGetStringi(GLenum name, GLuint index)
 { (void)name; (void)index; return (const GLubyte *)""; }
-#ifndef glGetStringi
-#  define glGetStringi(name, index) obol_stub_glGetStringi(name, index)
-#endif
 
 /* glFinish() – no-op; no actual GL call */
-static inline void obol_stub_glFinish(void) {}
-#ifndef glFinish
-#  define glFinish() obol_stub_glFinish()
-#endif
+static inline void glFinish(void) {}
 
 /* glFlush() – no-op; no actual GL call */
-static inline void obol_stub_glFlush(void) {}
-#ifndef glFlush
-#  define glFlush() obol_stub_glFlush()
-#endif
+static inline void glFlush(void) {}
 
 /* glShadeModel() – no-op; no actual GL call */
-static inline void obol_stub_glShadeModel(GLenum mode) { (void)mode; }
-#ifndef glShadeModel
-#  define glShadeModel(mode) obol_stub_glShadeModel(mode)
-#endif
+static inline void glShadeModel(GLenum mode) { (void)mode; }
 
 /* glGetTexLevelParameteriv() – write zero; no actual GL call */
-static inline void obol_stub_glGetTexLevelParameteriv(GLenum target, GLint level,
-                                                       GLenum pname, GLint * params)
+static inline void glGetTexLevelParameteriv(GLenum target, GLint level,
+                                             GLenum pname, GLint * params)
 { (void)target; (void)level; (void)pname; if (params) *params = 0; }
-#ifndef glGetTexLevelParameteriv
-#  define glGetTexLevelParameteriv(target, level, pname, params) \
-     obol_stub_glGetTexLevelParameteriv(target, level, pname, params)
-#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

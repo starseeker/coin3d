@@ -255,6 +255,9 @@ SoContextHandler::addContextDestructionCallback(ContextDestructionCB * func,
     // by setting priority to -1
     coin_atexit((coin_atexit_f *)socontexthandler_cleanup, CC_ATEXIT_NORMAL_LOWPRIORITY);
   }
+  // Callback-internal removal leaves an inactive tombstone so a later call
+  // from outside dispatch can provide the closure-lifetime barrier.  Treat it
+  // as an existing registration until that second removal has completed.
   const auto existing = std::find_if(
     socontexthandler_callbacks->begin(), socontexthandler_callbacks->end(),
     [func, closure](const ContextCallbackPtr & callback) {
@@ -275,14 +278,24 @@ void
 SoContextHandler::removeContextDestructionCallback(ContextDestructionCB * func, void * closure)
 {
   ContextCallbackPtr removed;
+  const bool callbackinternal =
+    socontexthandler_current_invocation != NULL;
   {
     std::lock_guard<std::mutex> lock(socontexthandler_mutex);
     assert(socontexthandler_callbacks);
-    const auto iter = std::find_if(
-      socontexthandler_callbacks->begin(), socontexthandler_callbacks->end(),
-      [func, closure](const ContextCallbackPtr & callback) {
-        return callback->matches(func, closure);
-      });
+    auto iter = socontexthandler_callbacks->end();
+    auto inactive = socontexthandler_callbacks->end();
+    for (auto candidate = socontexthandler_callbacks->begin();
+         candidate != socontexthandler_callbacks->end(); ++candidate) {
+      if (!(*candidate)->matches(func, closure)) continue;
+      std::lock_guard<std::mutex> statelock((*candidate)->state_mutex);
+      if ((*candidate)->active) {
+        iter = candidate;
+        break;
+      }
+      if (inactive == socontexthandler_callbacks->end()) inactive = candidate;
+    }
+    if (iter == socontexthandler_callbacks->end()) iter = inactive;
     assert(iter != socontexthandler_callbacks->end());
     if (iter == socontexthandler_callbacks->end()) return;
     removed = *iter;
@@ -290,8 +303,18 @@ SoContextHandler::removeContextDestructionCallback(ContextDestructionCB * func, 
       std::lock_guard<std::mutex> statelock(removed->state_mutex);
       removed->active = false;
     }
-    socontexthandler_callbacks->erase(iter);
+    // Keep callback-internal removals as inactive tombstones.  This both
+    // prevents future dispatch and lets the owner repeat removal after it has
+    // left callback dispatch to obtain the synchronous lifetime barrier.
+    if (!callbackinternal) socontexthandler_callbacks->erase(iter);
   }
+
+  // A callback must never wait for another callback while it is itself being
+  // dispatched: two dispatch threads can otherwise remove one another and
+  // form a wait cycle.  Snapshot and invocation shared_ptrs keep the entry
+  // alive until all active dispatches leave.  Calls made outside callback
+  // dispatch retain the synchronous closure-lifetime guarantee below.
+  if (callbackinternal) return;
 
   const size_t selfcount = socontexthandler_current_count(removed.get());
   std::unique_lock<std::mutex> lock(removed->state_mutex);

@@ -15,12 +15,11 @@
  *   Bottom-right: Gold  SoCylinder (reference solid geometry)
  *
  * When rendered via the NanoRT context manager the line and point nodes are
- * intercepted by pre-callbacks in nanort_context_manager.h, which call the
- * new createCylinderProxy() / createSphereProxy() methods and collect the
- * resulting triangles.  The test passes if the rendered image contains pixels
- * from each of the four colour families (red, green, blue, gold).
- *
- * Writes argv[1]+".rgb" (SGI RGB format) and returns 0 on pass, 1 on fail.
+ * intercepted by the backend's pre-callbacks, which call
+ * createCylinderProxy() / createSphereProxy() and collect the resulting
+ * triangles.  The test passes if the rendered image contains pixels from each
+ * of the four colour families (red, green, blue, gold).  A diagnostic SGI RGB
+ * image is written under the build tree.
  */
 
 #include "headless_utils.h"
@@ -218,14 +217,14 @@ static bool validateScaleCompensation(const char * outpath)
 }
 #endif // OBOL_NANORT_BUILD
 
-static int obol_run_render_render_rt_proxy_shapes(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
-        const char *primaryBase = (argc > 1) ? argv[1] : "render_rt_proxy_shapes";
+        const char *primaryBase = (outputStem != nullptr) ? outputStem : "render_rt_proxy_shapes";
         SoSeparator *fRoot = ObolTest::Scenes::createRTProxyShapes(256, 256);
         SbViewportRegion fVp(256, 256);
         SoOffscreenRenderer fRen(fVp);
@@ -346,8 +345,8 @@ static int obol_run_render_render_rt_proxy_shapes(int argc, char **argv)
     cam->position.setValue(cam->position.getValue() * 1.1f);
 
     char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
     else
         snprintf(outpath, sizeof(outpath), "render_rt_proxy_shapes.rgb");
 
@@ -367,7 +366,7 @@ static int obol_run_render_render_rt_proxy_shapes(int argc, char **argv)
     }
 
     // Additional test: verify that Scale nodes do not inflate proxy cylinder radii.
-    const char * scaleBase = (argc > 1) ? argv[1] : "render_rt_proxy_shapes";
+    const char * scaleBase = (outputStem != nullptr) ? outputStem : "render_rt_proxy_shapes";
     if (!validateScaleCompensation(scaleBase))
         ok = false;
 #else
@@ -380,6 +379,7 @@ static int obol_run_render_render_rt_proxy_shapes(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_rt_proxy_shapes) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_rt_proxy_shapes, "render_rt_proxy_shapes"), 0);
+TEST(RenderingScenarios, render_rt_proxy_shapes) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_rt_proxy_shapes");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

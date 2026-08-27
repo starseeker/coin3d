@@ -15,7 +15,7 @@
  * On drivers that do not support GLSL (e.g. old Mesa) the render still
  * passes because Coin falls back to fixed-function rendering.
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -523,16 +523,15 @@ static bool test6_twoPrograms(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_shader_program(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_shader_program";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_shader_program";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createShaderProgram(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -572,6 +571,7 @@ static int obol_run_render_render_shader_program(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_shader_program) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_shader_program, "render_shader_program"), 0);
+TEST(RenderingScenarios, render_shader_program) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_shader_program");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

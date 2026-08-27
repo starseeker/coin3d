@@ -14,7 +14,7 @@ Obol's test and demonstration code are deliberately separate:
 ## Normal commands
 
 ```sh
-cmake -S . -B .build
+cmake -S . -B .build -DOBOL_BUILD_TESTS=ON
 cmake --build .build
 ctest --test-dir .build -L unit --output-on-failure
 ctest --test-dir .build -L integration --output-on-failure
@@ -30,7 +30,8 @@ Stress and sanitizer-oriented checks are built explicitly, so a normal CTest
 run stays fast and repeatable:
 
 ```sh
-cmake -S . -B .build-stress -DOBOL_BUILD_STRESS_TESTS=ON
+cmake -S . -B .build-stress \
+  -DOBOL_BUILD_TESTS=ON -DOBOL_BUILD_STRESS_TESTS=ON
 cmake --build .build-stress --target obol_stress_tests
 ctest --test-dir .build-stress -L stress --output-on-failure
 ```
@@ -59,22 +60,26 @@ pixel-region contracts. New backend-specific references belong below
 `tests/rendering/golden/<backend>/`; update either set only through a reviewed,
 intentional render change.
 
-The CAD IDs, assembly records, resolved-draw oracle, CPU-picking tests, base
-math, geometry, value types, and base utilities, fields, core engines, nodes,
-actions (including ray picking), scene management, paths, events, in-memory
-scene-I/O, sensor, and offscreen-renderer API suites, plus the high-contention
-thread suite, have completed their primary migration. The former primitives,
+The CAD IDs, assembly records, resolved-draw oracle, CPU-picking tests,
+subpixel/progressive rendering contracts, base math, geometry, value types,
+and base utilities, fields, core engines, nodes, actions (including ray
+picking), scene management, paths, events, in-memory scene-I/O, sensor, and
+offscreen-renderer API suites, plus the high-contention thread suite, have
+completed their primary migration. The former primitives,
 materials, transforms, and offscreen-rendering wrappers are now fixture-backed
 OSMesa feature contracts; their viewer scenes live only in
 `examples/demo_scenes`.
 
-The former standalone rendering sources now register GTest cases directly in
-`obol_render_tests`; their original scene construction, rendering, picking,
-interaction, and return-code checks remain covered.  The upstream-derived
-non-rendering sources likewise register directly in `obol_unit_tests`, so all
-of the preserved coverage uses the same GTest/CTest discovery and support
-library as the focused suites.  There are no per-source executables or
-generated test-main adapters in the active test graph.
+The former standalone rendering sources now register one independently
+discoverable GTest scenario per source in each enabled backend target. Their
+scene construction, rendering, picking, interaction, and pixel contracts
+remain covered. They call scenario code directly and use build-local output
+stems only for optional diagnostic images; there is no command-line or
+standalone-program compatibility adapter. Non-rendering source coverage is
+split into ordinary independently filterable tests in `obol_unit_tests`,
+including typed tests for the field initialization matrix. There are no
+aggregate result recorders, per-source executables, or generated test-main
+adapters in the active test graph.
 
 Run the complete modern lanes explicitly when needed:
 
@@ -83,11 +88,16 @@ cmake --build .build --target obol_unit_tests obol_render_tests
 ctest --test-dir .build -L 'unit|render' --output-on-failure
 ```
 
+Performance characterization remains outside CTest. Configure with
+`OBOL_BUILD_BENCHMARKS=ON` to build `obol_scalability_benchmark` and, when a
+rendering backend is available, `obol_cad_render_benchmark`.
+
 Native OpenGL conformance requires an X server.  On headless Linux, run the
 system-GL lane through Xvfb:
 
 ```sh
-cmake -S . -B .build-glx -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF
+cmake -S . -B .build-glx -DOBOL_BUILD_TESTS=ON \
+  -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF
 cmake --build .build-glx --target obol_system_gl_render_tests
 xvfb-run -a ctest --test-dir .build-glx -L system-gl --output-on-failure
 ```

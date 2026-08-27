@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(ObolPackageConsumer LANGUAGES CXX)
 
-find_package(Obol 1.0 REQUIRED CONFIG)
+find_package(Obol 2.0 REQUIRED CONFIG)
 
 add_executable(obol_package_consumer main.cpp)
 target_link_libraries(obol_package_consumer PRIVATE Obol::Obol)

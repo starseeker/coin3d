@@ -319,7 +319,8 @@ static void swapToOrthoCamera(SoSeparator *root)
 
 int main(int argc, char **argv)
 {
-    const char *outprefix = (argc > 1) ? argv[1] : "test_cad_benchmark";
+    const char *outprefix =
+        (argc > 1) ? argv[1] : "obol_cad_render_benchmark";
     const int grid = argc > 2 ? std::max(1, std::atoi(argv[2])) :
         INSTANCES_PER_AXIS;
     const int repeats = argc > 3 ? std::max(1, std::atoi(argv[3])) : 10;
@@ -330,9 +331,10 @@ int main(int argc, char **argv)
     // Register CAD node types (not part of core SoDB)
     SoCADAssembly::initClass();
 
-    printf("test_cad_benchmark: instances_per_axis=%d  total_instances=%d\n",
+    printf("obol_cad_render_benchmark: instances_per_axis=%d  "
+           "total_instances=%d\n",
            grid, grid * grid * grid);
-    printf("test_cad_benchmark: viewport=%dx%d\n", W, H);
+    printf("obol_cad_render_benchmark: viewport=%dx%d\n", W, H);
     printf("\n");
 
     using Clock = std::chrono::high_resolution_clock;

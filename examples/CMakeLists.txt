@@ -26,6 +26,8 @@
 # disabled and so test fixtures cannot become the viewer's implementation.
 # =============================================================================
 
+set(OBOL_DEMO_SUPPORT_DIR "${PROJECT_SOURCE_DIR}/examples/demo_support")
+
 add_subdirectory(demo_scenes)
 
 # Mentor programs are retained as educational examples.  Their image
@@ -69,7 +71,7 @@ if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
 # arb8_dragger_example: SoProceduralShape with interactive SoDragger handles
 add_executable(arb8_dragger_example arb8_dragger_example.cpp)
 target_include_directories(arb8_dragger_example PRIVATE
-    ${PROJECT_SOURCE_DIR}/tests/utils   # headless_utils.h
+    ${OBOL_DEMO_SUPPORT_DIR}
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include
@@ -103,7 +105,7 @@ endif()
 # truncated_cone_example: SoProceduralShape with a custom frustum geometry type
 add_executable(truncated_cone_example truncated_cone_example.cpp)
 target_include_directories(truncated_cone_example PRIVATE
-    ${PROJECT_SOURCE_DIR}/tests/utils   # headless_utils.h
+    ${OBOL_DEMO_SUPPORT_DIR}
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include

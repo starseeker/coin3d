@@ -76,353 +76,355 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamNodesAnimMisc, RetainedCoverage)
+TEST(NodesAnimMisc, SoBlinkerClassTypeRegistered)
 {
-    CheckRecorder runner;
+    bool pass = (SoBlinker::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoBlinker bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoBlinker
-    // -----------------------------------------------------------------------
-    runner.startTest("SoBlinker class type registered");
-    {
-        bool pass = (SoBlinker::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoBlinker bad class type");
-    }
+TEST(NodesAnimMisc, SoBlinkerIsOfTypeSoSwitch)
+{
+    SoBlinker * node = new SoBlinker;
+    node->ref();
+    bool pass = node->isOfType(SoSwitch::getClassTypeId());
+    node->unref();
+    EXPECT_TRUE(pass) << "SoBlinker should be derived from SoSwitch";
+}
 
-    runner.startTest("SoBlinker isOfType SoSwitch");
-    {
-        SoBlinker * node = new SoBlinker;
-        node->ref();
-        bool pass = node->isOfType(SoSwitch::getClassTypeId());
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoBlinker should be derived from SoSwitch");
-    }
+TEST(NodesAnimMisc, SoBlinkerSpeedDefaultIs10)
+{
+    SoBlinker * node = new SoBlinker;
+    node->ref();
+    bool pass = (node->speed.getValue() == 1.0f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoBlinker speed default != 1.0";
+}
 
-    runner.startTest("SoBlinker speed default is 1.0");
-    {
-        SoBlinker * node = new SoBlinker;
-        node->ref();
-        bool pass = (node->speed.getValue() == 1.0f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoBlinker speed default != 1.0");
-    }
+TEST(NodesAnimMisc, SoBlinkerOnFieldRoundTrip)
+{
+    SoBlinker * node = new SoBlinker;
+    node->ref();
+    node->on.setValue(FALSE);
+    bool pass = (node->on.getValue() == FALSE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoBlinker on field round-trip failed";
+}
 
-    runner.startTest("SoBlinker on field round-trip");
-    {
-        SoBlinker * node = new SoBlinker;
-        node->ref();
-        node->on.setValue(FALSE);
-        bool pass = (node->on.getValue() == FALSE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoBlinker on field round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoRotor
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoRotor
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRotor class type registered");
-    {
-        bool pass = (SoRotor::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoRotor bad class type");
-    }
+TEST(NodesAnimMisc, SoRotorClassTypeRegistered)
+{
+    bool pass = (SoRotor::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoRotor bad class type";
+}
 
-    runner.startTest("SoRotor isOfType SoRotation");
-    {
-        SoRotor * node = new SoRotor;
-        node->ref();
-        bool pass = node->isOfType(SoRotation::getClassTypeId());
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoRotor should be derived from SoRotation");
-    }
+TEST(NodesAnimMisc, SoRotorIsOfTypeSoRotation)
+{
+    SoRotor * node = new SoRotor;
+    node->ref();
+    bool pass = node->isOfType(SoRotation::getClassTypeId());
+    node->unref();
+    EXPECT_TRUE(pass) << "SoRotor should be derived from SoRotation";
+}
 
-    runner.startTest("SoRotor speed default is 1.0");
-    {
-        SoRotor * node = new SoRotor;
-        node->ref();
-        bool pass = (node->speed.getValue() == 1.0f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoRotor speed default != 1.0");
-    }
+TEST(NodesAnimMisc, SoRotorSpeedDefaultIs10)
+{
+    SoRotor * node = new SoRotor;
+    node->ref();
+    bool pass = (node->speed.getValue() == 1.0f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoRotor speed default != 1.0";
+}
 
-    runner.startTest("SoRotor on field default is TRUE");
-    {
-        SoRotor * node = new SoRotor;
-        node->ref();
-        bool pass = (node->on.getValue() == TRUE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoRotor on default != TRUE");
-    }
+TEST(NodesAnimMisc, SoRotorOnFieldDefaultIsTRUE)
+{
+    SoRotor * node = new SoRotor;
+    node->ref();
+    bool pass = (node->on.getValue() == TRUE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoRotor on default != TRUE";
+}
 
-    // -----------------------------------------------------------------------
-    // SoInfo
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInfo class type registered");
-    {
-        bool pass = (SoInfo::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoInfo bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoInfo
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoInfo string field set/get round-trip");
-    {
-        SoInfo * node = new SoInfo;
-        node->ref();
-        node->string.setValue("test info");
-        bool pass = (strcmp(node->string.getValue().getString(), "test info") == 0);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoInfo string field set/get failed");
-    }
+TEST(NodesAnimMisc, SoInfoClassTypeRegistered)
+{
+    bool pass = (SoInfo::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoInfo bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoLabel
-    // -----------------------------------------------------------------------
-    runner.startTest("SoLabel class type registered");
-    {
-        bool pass = (SoLabel::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoLabel bad class type");
-    }
+TEST(NodesAnimMisc, SoInfoStringFieldSetGetRoundTrip)
+{
+    SoInfo * node = new SoInfo;
+    node->ref();
+    node->string.setValue("test info");
+    bool pass = (strcmp(node->string.getValue().getString(), "test info") == 0);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoInfo string field set/get failed";
+}
 
-    runner.startTest("SoLabel label field set/get round-trip");
-    {
-        SoLabel * node = new SoLabel;
-        node->ref();
-        node->label.setValue(SbName("myLabel"));
-        bool pass = (strcmp(node->label.getValue().getString(), "myLabel") == 0);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoLabel label field set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoLabel
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoArray
-    // -----------------------------------------------------------------------
-    runner.startTest("SoArray class type registered");
-    {
-        bool pass = (SoArray::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoArray bad class type");
-    }
+TEST(NodesAnimMisc, SoLabelClassTypeRegistered)
+{
+    bool pass = (SoLabel::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoLabel bad class type";
+}
 
-    runner.startTest("SoArray numElements1/2/3 defaults are 1");
-    {
-        SoArray * node = new SoArray;
-        node->ref();
-        bool pass = (node->numElements1.getValue() == 1) &&
-                    (node->numElements2.getValue() == 1) &&
-                    (node->numElements3.getValue() == 1);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoArray numElements defaults != 1");
-    }
+TEST(NodesAnimMisc, SoLabelLabelFieldSetGetRoundTrip)
+{
+    SoLabel * node = new SoLabel;
+    node->ref();
+    node->label.setValue(SbName("myLabel"));
+    bool pass = (strcmp(node->label.getValue().getString(), "myLabel") == 0);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoLabel label field set/get failed";
+}
 
-    runner.startTest("SoArray numElements1 set/get round-trip");
-    {
-        SoArray * node = new SoArray;
-        node->ref();
-        node->numElements1.setValue(5);
-        bool pass = (node->numElements1.getValue() == 5);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoArray numElements1 set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoArray
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoArray origin field set/get round-trip");
-    {
-        SoArray * node = new SoArray;
-        node->ref();
-        node->origin.setValue(SoArray::CENTER);
-        bool pass = (node->origin.getValue() == (int)SoArray::CENTER);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoArray origin CENTER round-trip failed");
-    }
+TEST(NodesAnimMisc, SoArrayClassTypeRegistered)
+{
+    bool pass = (SoArray::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoArray bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoEnvironment
-    // -----------------------------------------------------------------------
-    runner.startTest("SoEnvironment class type registered");
-    {
-        bool pass = (SoEnvironment::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoEnvironment bad class type");
-    }
+TEST(NodesAnimMisc, SoArrayNumElements123DefaultsAre1)
+{
+    SoArray * node = new SoArray;
+    node->ref();
+    bool pass = (node->numElements1.getValue() == 1) &&
+                (node->numElements2.getValue() == 1) &&
+                (node->numElements3.getValue() == 1);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoArray numElements defaults != 1";
+}
 
-    runner.startTest("SoEnvironment fogType NONE default");
-    {
-        SoEnvironment * node = new SoEnvironment;
-        node->ref();
-        bool pass = (node->fogType.getValue() == (int)SoEnvironment::NONE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoEnvironment fogType default != NONE");
-    }
+TEST(NodesAnimMisc, SoArrayNumElements1SetGetRoundTrip)
+{
+    SoArray * node = new SoArray;
+    node->ref();
+    node->numElements1.setValue(5);
+    bool pass = (node->numElements1.getValue() == 5);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoArray numElements1 set/get failed";
+}
 
-    runner.startTest("SoEnvironment fogType FOG round-trip");
-    {
-        SoEnvironment * node = new SoEnvironment;
-        node->ref();
-        node->fogType.setValue(SoEnvironment::FOG);
-        bool pass = (node->fogType.getValue() == (int)SoEnvironment::FOG);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoEnvironment fogType FOG round-trip failed");
-    }
+TEST(NodesAnimMisc, SoArrayOriginFieldSetGetRoundTrip)
+{
+    SoArray * node = new SoArray;
+    node->ref();
+    node->origin.setValue(SoArray::CENTER);
+    bool pass = (node->origin.getValue() == (int)SoArray::CENTER);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoArray origin CENTER round-trip failed";
+}
 
-    runner.startTest("SoEnvironment ambientIntensity set/get round-trip");
-    {
-        SoEnvironment * node = new SoEnvironment;
-        node->ref();
-        node->ambientIntensity.setValue(0.3f);
-        bool pass = (node->ambientIntensity.getValue() == 0.3f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoEnvironment ambientIntensity round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoEnvironment
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDrawStyle
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDrawStyle class type registered");
-    {
-        bool pass = (SoDrawStyle::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoDrawStyle bad class type");
-    }
+TEST(NodesAnimMisc, SoEnvironmentClassTypeRegistered)
+{
+    bool pass = (SoEnvironment::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoEnvironment bad class type";
+}
 
-    runner.startTest("SoDrawStyle style LINES round-trip");
-    {
-        SoDrawStyle * node = new SoDrawStyle;
-        node->ref();
-        node->style.setValue(SoDrawStyle::LINES);
-        bool pass = (node->style.getValue() == (int)SoDrawStyle::LINES);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoDrawStyle style LINES round-trip failed");
-    }
+TEST(NodesAnimMisc, SoEnvironmentFogTypeNONEDefault)
+{
+    SoEnvironment * node = new SoEnvironment;
+    node->ref();
+    bool pass = (node->fogType.getValue() == (int)SoEnvironment::NONE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoEnvironment fogType default != NONE";
+}
 
-    runner.startTest("SoDrawStyle lineWidth set/get round-trip");
-    {
-        SoDrawStyle * node = new SoDrawStyle;
-        node->ref();
-        node->lineWidth.setValue(2.0f);
-        bool pass = (node->lineWidth.getValue() == 2.0f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoDrawStyle lineWidth set/get failed");
-    }
+TEST(NodesAnimMisc, SoEnvironmentFogTypeFOGRoundTrip)
+{
+    SoEnvironment * node = new SoEnvironment;
+    node->ref();
+    node->fogType.setValue(SoEnvironment::FOG);
+    bool pass = (node->fogType.getValue() == (int)SoEnvironment::FOG);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoEnvironment fogType FOG round-trip failed";
+}
 
-    runner.startTest("SoDrawStyle pointSize set/get round-trip");
-    {
-        SoDrawStyle * node = new SoDrawStyle;
-        node->ref();
-        node->pointSize.setValue(4.0f);
-        bool pass = (node->pointSize.getValue() == 4.0f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoDrawStyle pointSize set/get failed");
-    }
+TEST(NodesAnimMisc, SoEnvironmentAmbientIntensitySetGetRoundTrip)
+{
+    SoEnvironment * node = new SoEnvironment;
+    node->ref();
+    node->ambientIntensity.setValue(0.3f);
+    bool pass = (node->ambientIntensity.getValue() == 0.3f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoEnvironment ambientIntensity round-trip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoPickStyle
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPickStyle class type registered");
-    {
-        bool pass = (SoPickStyle::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoPickStyle bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoDrawStyle
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoPickStyle style UNPICKABLE round-trip");
-    {
-        SoPickStyle * node = new SoPickStyle;
-        node->ref();
-        node->style.setValue(SoPickStyle::UNPICKABLE);
-        bool pass = (node->style.getValue() == (int)SoPickStyle::UNPICKABLE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoPickStyle UNPICKABLE round-trip failed");
-    }
+TEST(NodesAnimMisc, SoDrawStyleClassTypeRegistered)
+{
+    bool pass = (SoDrawStyle::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoDrawStyle bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoPackedColor
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPackedColor class type registered");
-    {
-        bool pass = (SoPackedColor::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoPackedColor bad class type");
-    }
+TEST(NodesAnimMisc, SoDrawStyleStyleLINESRoundTrip)
+{
+    SoDrawStyle * node = new SoDrawStyle;
+    node->ref();
+    node->style.setValue(SoDrawStyle::LINES);
+    bool pass = (node->style.getValue() == (int)SoDrawStyle::LINES);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoDrawStyle style LINES round-trip failed";
+}
 
-    runner.startTest("SoPackedColor orderedRGBA set/get round-trip");
-    {
-        SoPackedColor * node = new SoPackedColor;
-        node->ref();
-        node->orderedRGBA.set1Value(0, 0xFF0000FF); // red, fully opaque
-        bool pass = (node->orderedRGBA.getNum() == 1) &&
-                    (node->orderedRGBA[0] == 0xFF0000FF);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoPackedColor orderedRGBA set/get failed");
-    }
+TEST(NodesAnimMisc, SoDrawStyleLineWidthSetGetRoundTrip)
+{
+    SoDrawStyle * node = new SoDrawStyle;
+    node->ref();
+    node->lineWidth.setValue(2.0f);
+    bool pass = (node->lineWidth.getValue() == 2.0f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoDrawStyle lineWidth set/get failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMatrixTransform
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMatrixTransform class type registered");
-    {
-        bool pass = (SoMatrixTransform::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoMatrixTransform bad class type");
-    }
+TEST(NodesAnimMisc, SoDrawStylePointSizeSetGetRoundTrip)
+{
+    SoDrawStyle * node = new SoDrawStyle;
+    node->ref();
+    node->pointSize.setValue(4.0f);
+    bool pass = (node->pointSize.getValue() == 4.0f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoDrawStyle pointSize set/get failed";
+}
 
-    runner.startTest("SoMatrixTransform matrix default is identity");
-    {
-        SoMatrixTransform * node = new SoMatrixTransform;
-        node->ref();
-        bool pass = (node->matrix.getValue() == SbMatrix::identity());
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoMatrixTransform default matrix is not identity");
-    }
+// -----------------------------------------------------------------------
+// SoPickStyle
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoMatrixTransform matrix set/get round-trip");
-    {
-        SoMatrixTransform * node = new SoMatrixTransform;
-        node->ref();
-        SbMatrix m = SbMatrix::identity();
-        m[3][0] = 5.0f; // translation x=5
-        node->matrix.setValue(m);
-        bool pass = (node->matrix.getValue() == m);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoMatrixTransform matrix set/get failed");
-    }
+TEST(NodesAnimMisc, SoPickStyleClassTypeRegistered)
+{
+    bool pass = (SoPickStyle::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoPickStyle bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoRotationXYZ
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRotationXYZ class type registered");
-    {
-        bool pass = (SoRotationXYZ::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoRotationXYZ bad class type");
-    }
+TEST(NodesAnimMisc, SoPickStyleStyleUNPICKABLERoundTrip)
+{
+    SoPickStyle * node = new SoPickStyle;
+    node->ref();
+    node->style.setValue(SoPickStyle::UNPICKABLE);
+    bool pass = (node->style.getValue() == (int)SoPickStyle::UNPICKABLE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoPickStyle UNPICKABLE round-trip failed";
+}
 
-    runner.startTest("SoRotationXYZ axis field round-trip");
-    {
-        SoRotationXYZ * node = new SoRotationXYZ;
-        node->ref();
-        node->axis.setValue(SoRotationXYZ::Y);
-        bool pass = (node->axis.getValue() == (int)SoRotationXYZ::Y);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoRotationXYZ axis Y round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoPackedColor
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoRotationXYZ angle field round-trip");
-    {
-        SoRotationXYZ * node = new SoRotationXYZ;
-        node->ref();
-        node->angle.setValue(1.5708f); // π/2
-        bool pass = (std::fabs(node->angle.getValue() - 1.5708f) < 1e-4f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoRotationXYZ angle round-trip failed");
-    }
+TEST(NodesAnimMisc, SoPackedColorClassTypeRegistered)
+{
+    bool pass = (SoPackedColor::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoPackedColor bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoSelection
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSelection class type registered");
-    {
-        bool pass = (SoSelection::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoSelection bad class type");
-    }
+TEST(NodesAnimMisc, SoPackedColorOrderedRGBASetGetRoundTrip)
+{
+    SoPackedColor * node = new SoPackedColor;
+    node->ref();
+    node->orderedRGBA.set1Value(0, 0xFF0000FF); // red, fully opaque
+    bool pass = (node->orderedRGBA.getNum() == 1) &&
+                (node->orderedRGBA[0] == 0xFF0000FF);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoPackedColor orderedRGBA set/get failed";
+}
 
-    runner.startTest("SoSelection addChild / getNumSelected (0 initially)");
-    {
-        SoSelection * sel = new SoSelection;
-        sel->ref();
-        sel->addChild(new SoCube);
-        bool pass = (sel->getNumSelected() == 0);
-        sel->unref();
-        runner.endTest(pass, pass ? "" : "SoSelection initial getNumSelected should be 0");
-    }
+// -----------------------------------------------------------------------
+// SoMatrixTransform
+// -----------------------------------------------------------------------
 
+TEST(NodesAnimMisc, SoMatrixTransformClassTypeRegistered)
+{
+    bool pass = (SoMatrixTransform::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoMatrixTransform bad class type";
+}
+
+TEST(NodesAnimMisc, SoMatrixTransformMatrixDefaultIsIdentity)
+{
+    SoMatrixTransform * node = new SoMatrixTransform;
+    node->ref();
+    bool pass = (node->matrix.getValue() == SbMatrix::identity());
+    node->unref();
+    EXPECT_TRUE(pass) << "SoMatrixTransform default matrix is not identity";
+}
+
+TEST(NodesAnimMisc, SoMatrixTransformMatrixSetGetRoundTrip)
+{
+    SoMatrixTransform * node = new SoMatrixTransform;
+    node->ref();
+    SbMatrix m = SbMatrix::identity();
+    m[3][0] = 5.0f; // translation x=5
+    node->matrix.setValue(m);
+    bool pass = (node->matrix.getValue() == m);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoMatrixTransform matrix set/get failed";
+}
+
+// -----------------------------------------------------------------------
+// SoRotationXYZ
+// -----------------------------------------------------------------------
+
+TEST(NodesAnimMisc, SoRotationXYZClassTypeRegistered)
+{
+    bool pass = (SoRotationXYZ::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoRotationXYZ bad class type";
+}
+
+TEST(NodesAnimMisc, SoRotationXYZAxisFieldRoundTrip)
+{
+    SoRotationXYZ * node = new SoRotationXYZ;
+    node->ref();
+    node->axis.setValue(SoRotationXYZ::Y);
+    bool pass = (node->axis.getValue() == (int)SoRotationXYZ::Y);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoRotationXYZ axis Y round-trip failed";
+}
+
+TEST(NodesAnimMisc, SoRotationXYZAngleFieldRoundTrip)
+{
+    SoRotationXYZ * node = new SoRotationXYZ;
+    node->ref();
+    node->angle.setValue(1.5708f); // π/2
+    bool pass = (std::fabs(node->angle.getValue() - 1.5708f) < 1e-4f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoRotationXYZ angle round-trip failed";
+}
+
+// -----------------------------------------------------------------------
+// SoSelection
+// -----------------------------------------------------------------------
+
+TEST(NodesAnimMisc, SoSelectionClassTypeRegistered)
+{
+    bool pass = (SoSelection::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoSelection bad class type";
+}
+
+TEST(NodesAnimMisc, SoSelectionAddChildGetNumSelected0Initially)
+{
+    SoSelection * sel = new SoSelection;
+    sel->ref();
+    sel->addChild(new SoCube);
+    bool pass = (sel->getNumSelected() == 0);
+    sel->unref();
+    EXPECT_TRUE(pass) << "SoSelection initial getNumSelected should be 0";
 }

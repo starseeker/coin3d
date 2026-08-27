@@ -101,161 +101,172 @@ static void writeNodeBinary(SoNode * root, char ** outBuf, size_t * outSize)
 // Silent callback used to suppress error output during negative tests
 static void silentErrCb(const SoError * /*err*/, void * /*data*/) {}
 
-TEST(UpstreamIoEdgeCases, RetainedCoverage)
+TEST(IoEdgeCases, BinaryWriteBufferStartsWithInventorV21Binary)
 {
-    CheckRecorder runner;
-
-    // Build a simple scene: Separator > Cube
     SoSeparator * root = new SoSeparator;
     root->ref();
     root->addChild(new SoCube);
+    char * buf = nullptr; size_t sz = 0;
+    writeNodeBinary(root, &buf, &sz);
 
-    // -----------------------------------------------------------------------
-    // Binary write: output buffer starts with binary Inventor header
-    // -----------------------------------------------------------------------
-    runner.startTest("Binary write: buffer starts with '#Inventor V2.1 binary'");
-    {
-        char * buf = nullptr; size_t sz = 0;
-        writeNodeBinary(root, &buf, &sz);
+    static const char header[] = "#Inventor V2.1 binary";
+    bool pass = (buf != nullptr) &&
+                (sz  >= std::strlen(header)) &&
+                (std::memcmp(buf, header, std::strlen(header)) == 0);
+    EXPECT_TRUE(pass) << "Binary output does not start with '#Inventor V2.1 binary'";
+    root->unref();
+}
 
-        static const char header[] = "#Inventor V2.1 binary";
-        bool pass = (buf != nullptr) &&
-                    (sz  >= std::strlen(header)) &&
-                    (std::memcmp(buf, header, std::strlen(header)) == 0);
-        runner.endTest(pass, pass ? "" :
-            "Binary output does not start with '#Inventor V2.1 binary'");
-    }
+// -----------------------------------------------------------------------
+// SoOutput::getBuffer: returns non-null pointer and size > 0
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoOutput::getBuffer: returns non-null pointer and size > 0
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOutput::getBuffer returns non-null and positive size");
-    {
-        char * buf = nullptr; size_t sz = 0;
-        writeNode(root, &buf, &sz);
-        bool pass = (buf != nullptr) && (sz > 0);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput::getBuffer returned null or zero size");
-    }
+TEST(IoEdgeCases, SoOutputGetBufferReturnsNonNullAndPositiveSize)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    char * buf = nullptr; size_t sz = 0;
+    writeNode(root, &buf, &sz);
+    bool pass = (buf != nullptr) && (sz > 0);
+    EXPECT_TRUE(pass) << "SoOutput::getBuffer returned null or zero size";
+    root->unref();
+}
 
-    // -----------------------------------------------------------------------
-    // Binary read round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("Binary round-trip: write binary then read back non-null root");
-    {
-        char * buf = nullptr; size_t sz = 0;
-        writeNodeBinary(root, &buf, &sz);
+// -----------------------------------------------------------------------
+// Binary read round-trip
+// -----------------------------------------------------------------------
 
-        bool pass = false;
-        if (buf != nullptr && sz > 0) {
-            SoInput in;
-            in.setBuffer(buf, sz);
-            SoSeparator * r2 = SoDB::readAll(&in);
-            pass = (r2 != nullptr);
-            if (r2) {
-                r2->ref();
-                r2->unref();
-            }
-        }
-        runner.endTest(pass, pass ? "" :
-            "Binary round-trip: SoDB::readAll returned null for binary scene");
-    }
+TEST(IoEdgeCases, BinaryRoundTripWriteBinaryThenReadBackNonNullRoot)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    char * buf = nullptr; size_t sz = 0;
+    writeNodeBinary(root, &buf, &sz);
 
-    runner.startTest("Binary round-trip: root has expected children");
-    {
-        char * buf = nullptr; size_t sz = 0;
-        writeNodeBinary(root, &buf, &sz);
-
-        bool pass = false;
-        if (buf != nullptr && sz > 0) {
-            SoInput in;
-            in.setBuffer(buf, sz);
-            SoSeparator * r2 = SoDB::readAll(&in);
-            if (r2) {
-                r2->ref();
-                pass = (r2->getNumChildren() > 0);
-                r2->unref();
-            }
-        }
-        runner.endTest(pass, pass ? "" :
-            "Binary round-trip: root has no children after read-back");
-    }
-
-    // -----------------------------------------------------------------------
-    // Multiple sequential setBuffer calls on same SoInput
-    // -----------------------------------------------------------------------
-    runner.startTest("Multiple sequential setBuffer reads on one SoInput");
-    {
-        static const char scene1[] =
-            "#Inventor V2.1 ascii\nSeparator { Cube {} }\n";
-        static const char scene2[] =
-            "#Inventor V2.1 ascii\nSeparator { Sphere {} }\n";
-
+    bool pass = false;
+    if (buf != nullptr && sz > 0) {
         SoInput in;
-        in.setBuffer(const_cast<char *>(scene1), std::strlen(scene1));
-        SoSeparator * r1 = SoDB::readAll(&in);
-        if (r1) r1->ref();
-
-        in.setBuffer(const_cast<char *>(scene2), std::strlen(scene2));
+        in.setBuffer(buf, sz);
         SoSeparator * r2 = SoDB::readAll(&in);
-        if (r2) r2->ref();
-
-        bool pass = (r1 != nullptr) && (r2 != nullptr);
-        if (r1) r1->unref();
-        if (r2) r2->unref();
-        runner.endTest(pass, pass ? "" :
-            "Sequential setBuffer reads: one or both reads returned null");
-    }
-
-    // -----------------------------------------------------------------------
-    // Corrupt header: SoDB::readAll should return null gracefully
-    // -----------------------------------------------------------------------
-    runner.startTest("Corrupt header: SoDB::readAll returns null");
-    {
-        static const char garbage[] = "THIS IS NOT AN INVENTOR FILE\n{ garbage }\n";
-
-        // Suppress error output for this negative test
-        SoErrorCB * oldCb = SoError::getHandlerCallback();
-        SoError::setHandlerCallback(silentErrCb, nullptr);
-
-        SoInput in;
-        in.setBuffer(const_cast<char *>(garbage), std::strlen(garbage));
-        SoSeparator * r = SoDB::readAll(&in);
-
-        SoError::setHandlerCallback(oldCb, nullptr);
-
-        bool pass = (r == nullptr);
-        if (r) {
-            r->ref();
-            r->unref();
+        pass = (r2 != nullptr);
+        if (r2) {
+            r2->ref();
+            r2->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "Corrupt header: SoDB::readAll should return null");
     }
+    EXPECT_TRUE(pass) << "Binary round-trip: SoDB::readAll returned null for binary scene";
+    root->unref();
+}
 
-    // -----------------------------------------------------------------------
-    // Empty buffer: SoDB::readAll returns null
-    // -----------------------------------------------------------------------
-    runner.startTest("Empty buffer: SoDB::readAll returns null");
-    {
-        SoErrorCB * oldCb = SoError::getHandlerCallback();
-        SoError::setHandlerCallback(silentErrCb, nullptr);
+TEST(IoEdgeCases, BinaryRoundTripRootHasExpectedChildren)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    char * buf = nullptr; size_t sz = 0;
+    writeNodeBinary(root, &buf, &sz);
 
-        static const char empty[] = "";
+    bool pass = false;
+    if (buf != nullptr && sz > 0) {
         SoInput in;
-        in.setBuffer(const_cast<char *>(empty), 0);
-        SoSeparator * r = SoDB::readAll(&in);
-
-        SoError::setHandlerCallback(oldCb, nullptr);
-
-        bool pass = (r == nullptr);
-        if (r) {
-            r->ref();
-            r->unref();
+        in.setBuffer(buf, sz);
+        SoSeparator * r2 = SoDB::readAll(&in);
+        if (r2) {
+            r2->ref();
+            pass = (r2->getNumChildren() > 0);
+            r2->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "Empty buffer: SoDB::readAll should return null");
     }
+    EXPECT_TRUE(pass) << "Binary round-trip: root has no children after read-back";
+    root->unref();
+}
 
+// -----------------------------------------------------------------------
+// Multiple sequential setBuffer calls on same SoInput
+// -----------------------------------------------------------------------
+
+TEST(IoEdgeCases, MultipleSequentialSetBufferReadsOnOneSoInput)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    static const char scene1[] =
+        "#Inventor V2.1 ascii\nSeparator { Cube {} }\n";
+    static const char scene2[] =
+        "#Inventor V2.1 ascii\nSeparator { Sphere {} }\n";
+
+    SoInput in;
+    in.setBuffer(const_cast<char *>(scene1), std::strlen(scene1));
+    SoSeparator * r1 = SoDB::readAll(&in);
+    if (r1) r1->ref();
+
+    in.setBuffer(const_cast<char *>(scene2), std::strlen(scene2));
+    SoSeparator * r2 = SoDB::readAll(&in);
+    if (r2) r2->ref();
+
+    bool pass = (r1 != nullptr) && (r2 != nullptr);
+    if (r1) r1->unref();
+    if (r2) r2->unref();
+    EXPECT_TRUE(pass) << "Sequential setBuffer reads: one or both reads returned null";
+    root->unref();
+}
+
+// -----------------------------------------------------------------------
+// Corrupt header: SoDB::readAll should return null gracefully
+// -----------------------------------------------------------------------
+
+TEST(IoEdgeCases, CorruptHeaderSoDBReadAllReturnsNull)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    static const char garbage[] = "THIS IS NOT AN INVENTOR FILE\n{ garbage }\n";
+
+    // Suppress error output for this negative test
+    SoErrorCB * oldCb = SoError::getHandlerCallback();
+    SoError::setHandlerCallback(silentErrCb, nullptr);
+
+    SoInput in;
+    in.setBuffer(const_cast<char *>(garbage), std::strlen(garbage));
+    SoSeparator * r = SoDB::readAll(&in);
+
+    SoError::setHandlerCallback(oldCb, nullptr);
+
+    bool pass = (r == nullptr);
+    if (r) {
+        r->ref();
+        r->unref();
+    }
+    EXPECT_TRUE(pass) << "Corrupt header: SoDB::readAll should return null";
+    root->unref();
+}
+
+// -----------------------------------------------------------------------
+// Empty buffer: SoDB::readAll returns null
+// -----------------------------------------------------------------------
+
+TEST(IoEdgeCases, EmptyBufferSoDBReadAllReturnsNull)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    SoErrorCB * oldCb = SoError::getHandlerCallback();
+    SoError::setHandlerCallback(silentErrCb, nullptr);
+
+    static const char empty[] = "";
+    SoInput in;
+    in.setBuffer(const_cast<char *>(empty), 0);
+    SoSeparator * r = SoDB::readAll(&in);
+
+    SoError::setHandlerCallback(oldCb, nullptr);
+
+    bool pass = (r == nullptr);
+    if (r) {
+        r->ref();
+        r->unref();
+    }
+    EXPECT_TRUE(pass) << "Empty buffer: SoDB::readAll should return null";
     root->unref();
 }

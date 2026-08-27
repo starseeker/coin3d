@@ -16,7 +16,7 @@
  * Test 1 (SoDirectionalLightManip) uses ObolTest::Scenes::createLightManips()
  * for scene setup so the viewer and the test start from the same scene.
  *
- * Returns 0 on pass, non-0 on failure.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -255,13 +255,12 @@ static bool testClipPlaneManip(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_light_manips(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_light_manips";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_light_manips";
     int failures = 0;
 
     printf("\n=== Light manipulator interaction tests ===\n");
@@ -277,6 +276,7 @@ static int obol_run_render_render_light_manips(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_light_manips) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_light_manips, "render_light_manips"), 0);
+TEST(RenderingScenarios, render_light_manips) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_light_manips");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

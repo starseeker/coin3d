@@ -965,13 +965,14 @@ bypasses the entire OpenGL pipeline.  `pixels` is a pre-allocated buffer of
 `SoOffscreenRenderer::getBuffer()`.
 
 Implement this to provide a CPU raytracing backend (NanoRT, Embree, OptiX) or a
-Vulkan rasterization backend.  Obol ships three reference implementations:
+Vulkan rasterization backend.  Obol ships NanoRT as a supported library
+backend and keeps Embree and Vulkan examples with the rendering tests:
 
 | Class | Backend | Header |
 |-------|---------|--------|
-| `SoNanoRTContextManager` | NanoRT CPU raytracing (bundled) | `tests/utils/nanort_context_manager.h` |
-| `SoEmbreeContextManager` | Intel Embree 4 (system library) | `tests/utils/embree_context_manager.h` |
-| `SoVulkanContextManager` | Vulkan rasterization | `tests/utils/vulkan_context_manager.h` |
+| `SoNanoRTContextManager` | NanoRT CPU raytracing (bundled) | `include/Obol/render/SoNanoRTContextManager.h` |
+| `SoEmbreeContextManager` | Intel Embree 4 (system library) | `examples/demo_support/embree_context_manager.h` |
+| `SoVulkanContextManager` | Vulkan rasterization | `examples/demo_support/vulkan_context_manager.h` |
 
 All three delegate scene collection to `SoSceneCollector`; see
 `docs/CONTEXT_MANAGEMENT_API.md` for the full integration guide.

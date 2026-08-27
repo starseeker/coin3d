@@ -62,8 +62,9 @@
  * 16. context_handler_dispatch     — Removal waits for active callback dispatch
  * 17. context_handler_cross_remove — A callback may remove a later callback
  * 18. context_handler_nested_remove — Nested invocation can remove itself
- * 19. auditorlist_concurrent_notification — SoAuditorList snapshot-then-deliver (no crash)
- * 20. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
+ * 19. context_handler_mutual_remove — Concurrent callbacks may remove one another
+ * 20. auditorlist_concurrent_notification — SoAuditorList snapshot-then-deliver (no crash)
+ * 21. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
  */
 
 #include <gtest/gtest.h>
@@ -95,7 +96,6 @@
 #include <future>
 #include <set>
 #include <mutex>
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
@@ -900,6 +900,10 @@ static bool test_context_handler_cross_removal()
 
   SoContextHandler::destructingContext(
     SoGLCacheContextElement::getUniqueCacheContext());
+  // Complete the cancellation-only removal from outside callback dispatch so
+  // the stack-owned closure has a synchronous lifetime barrier.
+  SoContextHandler::removeContextDestructionCallback(cross_removal_victim,
+                                                      &state);
   SoContextHandler::removeContextDestructionCallback(cross_removal_callback,
                                                       &state);
   return state.victim_calls.load(std::memory_order_relaxed) == 0;
@@ -933,7 +937,68 @@ static bool test_context_handler_nested_self_removal()
                                                    &state);
   SoContextHandler::destructingContext(
     SoGLCacheContextElement::getUniqueCacheContext());
-  return state.calls == 2;
+  const bool result = state.calls == 2;
+  SoContextHandler::removeContextDestructionCallback(nested_removal_callback,
+                                                      &state);
+  return result;
+}
+
+struct MutualContextRemovalState {
+  std::mutex mutex;
+  std::condition_variable changed;
+  int arrivals = 0;
+};
+
+static void mutual_context_callback_a(uint32_t contextid, void * closure);
+static void mutual_context_callback_b(uint32_t contextid, void * closure);
+
+static void wait_for_mutual_context_callback(MutualContextRemovalState * state)
+{
+  std::unique_lock<std::mutex> lock(state->mutex);
+  ++state->arrivals;
+  state->changed.notify_all();
+  state->changed.wait(lock, [state] { return state->arrivals == 2; });
+}
+
+static void mutual_context_callback_a(uint32_t contextid, void * closure)
+{
+  if (contextid != 2) return;
+  auto * state = static_cast<MutualContextRemovalState *>(closure);
+  wait_for_mutual_context_callback(state);
+  SoContextHandler::removeContextDestructionCallback(
+    mutual_context_callback_b, closure);
+}
+
+static void mutual_context_callback_b(uint32_t contextid, void * closure)
+{
+  if (contextid != 1) return;
+  auto * state = static_cast<MutualContextRemovalState *>(closure);
+  wait_for_mutual_context_callback(state);
+  SoContextHandler::removeContextDestructionCallback(
+    mutual_context_callback_a, closure);
+}
+
+static bool test_context_handler_mutual_cross_removal()
+{
+  MutualContextRemovalState state;
+  SoContextHandler::addContextDestructionCallback(mutual_context_callback_a,
+                                                   &state);
+  SoContextHandler::addContextDestructionCallback(mutual_context_callback_b,
+                                                   &state);
+
+  // FILO dispatch makes B run first.  Context 2 lets B pass through to A,
+  // while context 1 blocks in B, so the two active callbacks remove each
+  // other concurrently.
+  std::thread first([] { SoContextHandler::destructingContext(1); });
+  std::thread second([] { SoContextHandler::destructingContext(2); });
+  first.join();
+  second.join();
+
+  SoContextHandler::removeContextDestructionCallback(mutual_context_callback_a,
+                                                      &state);
+  SoContextHandler::removeContextDestructionCallback(mutual_context_callback_b,
+                                                      &state);
+  return state.arrivals == 2;
 }
 
 // ============================================================================
@@ -1111,6 +1176,8 @@ OBOL_THREAD_STRESS_TEST(ContextHandlerAllowsCrossRemoval,
                         test_context_handler_cross_removal)
 OBOL_THREAD_STRESS_TEST(ContextHandlerAllowsNestedSelfRemoval,
                         test_context_handler_nested_self_removal)
+OBOL_THREAD_STRESS_TEST(ContextHandlerAllowsConcurrentMutualRemoval,
+                        test_context_handler_mutual_cross_removal)
 OBOL_THREAD_STRESS_TEST(AuditorListConcurrentNotification,
                         test_auditorlist_concurrent_notification)
 OBOL_THREAD_STRESS_TEST(FieldConnectDisconnect,

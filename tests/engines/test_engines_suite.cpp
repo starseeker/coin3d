@@ -73,265 +73,267 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamEnginesSuite, RetainedCoverage)
+TEST(EnginesSuite, SoCalculatorClassInitialized)
 {
-    CheckRecorder runner;
+    SoCalculator* calc = new SoCalculator;
+    calc->ref();
+    bool pass = (calc->getTypeId() != SoType::badType());
+    calc->unref();
+    EXPECT_TRUE(pass) << "SoCalculator has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoCalculator: simple arithmetic via expression
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCalculator class initialized");
-    {
-        SoCalculator* calc = new SoCalculator;
-        calc->ref();
-        bool pass = (calc->getTypeId() != SoType::badType());
-        calc->unref();
-        runner.endTest(pass, pass ? "" : "SoCalculator has bad type");
-    }
+TEST(EnginesSuite, SoCalculatorConstantExpression)
+{
+    // To read engine output we connect it to a field, then read the field.
+    SoCalculator* calc = new SoCalculator;
+    calc->ref();
+    calc->expression.setValue("oa = 6.0 * 7.0");
 
-    runner.startTest("SoCalculator constant expression");
-    {
-        // To read engine output we connect it to a field, then read the field.
-        SoCalculator* calc = new SoCalculator;
-        calc->ref();
-        calc->expression.setValue("oa = 6.0 * 7.0");
+    SoMFFloat result;
+    result.connectFrom(&calc->oa);
+    result.evaluate();
 
-        SoMFFloat result;
-        result.connectFrom(&calc->oa);
-        result.evaluate();
+    bool pass = (result.getNum() > 0) && (result[0] == 42.0f);
+    calc->unref();
+    EXPECT_TRUE(pass) << "SoCalculator 6*7 should equal 42";
+}
 
-        bool pass = (result.getNum() > 0) && (result[0] == 42.0f);
-        calc->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoCalculator 6*7 should equal 42");
-    }
+TEST(EnginesSuite, SoCalculatorUsingInputFieldA)
+{
+    SoCalculator* calc = new SoCalculator;
+    calc->ref();
+    calc->a.set1Value(0, 10.0f);
+    calc->expression.setValue("oa = a * 3.0");
 
-    runner.startTest("SoCalculator using input field a");
-    {
-        SoCalculator* calc = new SoCalculator;
-        calc->ref();
-        calc->a.set1Value(0, 10.0f);
-        calc->expression.setValue("oa = a * 3.0");
+    SoMFFloat result;
+    result.connectFrom(&calc->oa);
+    result.evaluate();
 
-        SoMFFloat result;
-        result.connectFrom(&calc->oa);
-        result.evaluate();
+    bool pass = (result.getNum() > 0) && (result[0] == 30.0f);
+    calc->unref();
+    EXPECT_TRUE(pass) << "SoCalculator a*3 should equal 30";
+}
 
-        bool pass = (result.getNum() > 0) && (result[0] == 30.0f);
-        calc->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoCalculator a*3 should equal 30");
-    }
+// -----------------------------------------------------------------------
+// SoComposeVec3f: combine three floats into a Vec3f
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec3f: combine three floats into a Vec3f
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec3f class initialized");
-    {
-        SoComposeVec3f* eng = new SoComposeVec3f;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec3f has bad type");
-    }
+TEST(EnginesSuite, SoComposeVec3fClassInitialized)
+{
+    SoComposeVec3f* eng = new SoComposeVec3f;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec3f has bad type";
+}
 
-    runner.startTest("SoComposeVec3f compose");
-    {
-        SoComposeVec3f* eng = new SoComposeVec3f;
-        eng->ref();
-        eng->x.set1Value(0, 1.0f);
-        eng->y.set1Value(0, 2.0f);
-        eng->z.set1Value(0, 3.0f);
+TEST(EnginesSuite, SoComposeVec3fCompose)
+{
+    SoComposeVec3f* eng = new SoComposeVec3f;
+    eng->ref();
+    eng->x.set1Value(0, 1.0f);
+    eng->y.set1Value(0, 2.0f);
+    eng->z.set1Value(0, 3.0f);
 
-        SoMFVec3f result;
-        result.connectFrom(&eng->vector);
-        result.evaluate();
+    SoMFVec3f result;
+    result.connectFrom(&eng->vector);
+    result.evaluate();
 
-        bool pass = (result.getNum() > 0) &&
-                    (result[0][0] == 1.0f) &&
-                    (result[0][1] == 2.0f) &&
-                    (result[0][2] == 3.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoComposeVec3f did not compose (1,2,3) correctly");
-    }
+    bool pass = (result.getNum() > 0) &&
+                (result[0][0] == 1.0f) &&
+                (result[0][1] == 2.0f) &&
+                (result[0][2] == 3.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec3f did not compose (1,2,3) correctly";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDecomposeVec3f: split a Vec3f into three floats
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDecomposeVec3f decompose");
-    {
-        SoDecomposeVec3f* eng = new SoDecomposeVec3f;
-        eng->ref();
-        eng->vector.set1Value(0, SbVec3f(4.0f, 5.0f, 6.0f));
+// -----------------------------------------------------------------------
+// SoDecomposeVec3f: split a Vec3f into three floats
+// -----------------------------------------------------------------------
 
-        SoMFFloat rx, ry, rz;
-        rx.connectFrom(&eng->x);
-        ry.connectFrom(&eng->y);
-        rz.connectFrom(&eng->z);
-        rx.evaluate(); ry.evaluate(); rz.evaluate();
+TEST(EnginesSuite, SoDecomposeVec3fDecompose)
+{
+    SoDecomposeVec3f* eng = new SoDecomposeVec3f;
+    eng->ref();
+    eng->vector.set1Value(0, SbVec3f(4.0f, 5.0f, 6.0f));
 
-        bool pass = (rx.getNum() > 0) && (ry.getNum() > 0) && (rz.getNum() > 0) &&
-                    (rx[0] == 4.0f) && (ry[0] == 5.0f) && (rz[0] == 6.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDecomposeVec3f did not decompose (4,5,6) correctly");
-    }
+    SoMFFloat rx, ry, rz;
+    rx.connectFrom(&eng->x);
+    ry.connectFrom(&eng->y);
+    rz.connectFrom(&eng->z);
+    rx.evaluate(); ry.evaluate(); rz.evaluate();
 
-    // -----------------------------------------------------------------------
-    // SoBoolOperation: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoBoolOperation class initialized");
-    {
-        SoBoolOperation* eng = new SoBoolOperation;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation has bad type");
-    }
+    bool pass = (rx.getNum() > 0) && (ry.getNum() > 0) && (rz.getNum() > 0) &&
+                (rx[0] == 4.0f) && (ry[0] == 5.0f) && (rz[0] == 6.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeVec3f did not decompose (4,5,6) correctly";
+}
 
-    // -----------------------------------------------------------------------
-    // SoElapsedTime: class type check and output field type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoElapsedTime class initialized");
-    {
-        SoElapsedTime* eng = new SoElapsedTime;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoElapsedTime has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoBoolOperation: class type check
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoConcatenate: concatenate two MF fields
-    // -----------------------------------------------------------------------
-    runner.startTest("SoConcatenate class initialized");
-    {
-        SoConcatenate* eng = new SoConcatenate(SoMFFloat::getClassTypeId());
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoConcatenate has bad type");
-    }
+TEST(EnginesSuite, SoBoolOperationClassInitialized)
+{
+    SoBoolOperation* eng = new SoBoolOperation;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoComposeMatrix: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeMatrix class initialized");
-    {
-        SoComposeMatrix* eng = new SoComposeMatrix;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeMatrix has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoElapsedTime: class type check and output field type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoComposeRotation: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeRotation class initialized");
-    {
-        SoComposeRotation* eng = new SoComposeRotation;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeRotation has bad type");
-    }
+TEST(EnginesSuite, SoElapsedTimeClassInitialized)
+{
+    SoElapsedTime* eng = new SoElapsedTime;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoElapsedTime has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec2f: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec2f class initialized");
-    {
-        SoComposeVec2f* eng = new SoComposeVec2f;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec2f has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoConcatenate: concatenate two MF fields
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec4f: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec4f class initialized");
-    {
-        SoComposeVec4f* eng = new SoComposeVec4f;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec4f has bad type");
-    }
+TEST(EnginesSuite, SoConcatenateClassInitialized)
+{
+    SoConcatenate* eng = new SoConcatenate(SoMFFloat::getClassTypeId());
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoConcatenate has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoGate: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoGate class initialized");
-    {
-        SoGate* eng = new SoGate(SoMFFloat::getClassTypeId());
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoGate has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoComposeMatrix: class type check
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoInterpolateFloat: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInterpolateFloat class initialized");
-    {
-        SoInterpolateFloat* eng = new SoInterpolateFloat;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoInterpolateFloat has bad type");
-    }
+TEST(EnginesSuite, SoComposeMatrixClassInitialized)
+{
+    SoComposeMatrix* eng = new SoComposeMatrix;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeMatrix has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoSelectOne: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSelectOne class initialized");
-    {
-        SoSelectOne* eng = new SoSelectOne(SoMFFloat::getClassTypeId());
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoSelectOne has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoComposeRotation: class type check
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoCounter: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCounter class initialized");
-    {
-        SoCounter* eng = new SoCounter;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoCounter has bad type");
-    }
+TEST(EnginesSuite, SoComposeRotationClassInitialized)
+{
+    SoComposeRotation* eng = new SoComposeRotation;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeRotation has bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTimeCounter: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTimeCounter class initialized");
-    {
-        SoTimeCounter* eng = new SoTimeCounter;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoTimeCounter has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoComposeVec2f: class type check
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoComputeBoundingBox: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComputeBoundingBox class initialized");
-    {
-        SoComputeBoundingBox* eng = new SoComputeBoundingBox;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComputeBoundingBox has bad type");
-    }
+TEST(EnginesSuite, SoComposeVec2fClassInitialized)
+{
+    SoComposeVec2f* eng = new SoComposeVec2f;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec2f has bad type";
+}
 
+// -----------------------------------------------------------------------
+// SoComposeVec4f: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoComposeVec4fClassInitialized)
+{
+    SoComposeVec4f* eng = new SoComposeVec4f;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec4f has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoGate: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoGateClassInitialized)
+{
+    SoGate* eng = new SoGate(SoMFFloat::getClassTypeId());
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoGate has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoInterpolateFloat: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoInterpolateFloatClassInitialized)
+{
+    SoInterpolateFloat* eng = new SoInterpolateFloat;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoInterpolateFloat has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoSelectOne: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoSelectOneClassInitialized)
+{
+    SoSelectOne* eng = new SoSelectOne(SoMFFloat::getClassTypeId());
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoSelectOne has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoCounter: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoCounterClassInitialized)
+{
+    SoCounter* eng = new SoCounter;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoCounter has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoTimeCounter: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoTimeCounterClassInitialized)
+{
+    SoTimeCounter* eng = new SoTimeCounter;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoTimeCounter has bad type";
+}
+
+// -----------------------------------------------------------------------
+// SoComputeBoundingBox: class type check
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite, SoComputeBoundingBoxClassInitialized)
+{
+    SoComputeBoundingBox* eng = new SoComputeBoundingBox;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComputeBoundingBox has bad type";
 }

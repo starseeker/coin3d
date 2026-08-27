@@ -8,7 +8,8 @@
 #include <Inventor/SbViewportRegion.h>
 #include <cstdio>
 
-static int obol_run_render_test_shadow_direct() {
+static int runScenario(const char *outputStem) {
+    (void)outputStem;
     initCoinHeadless();
     printf("Init OK\n");
 
@@ -54,6 +55,7 @@ static int obol_run_render_test_shadow_direct() {
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, test_shadow_direct) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_test_shadow_direct, "test_shadow_direct"), 0);
+TEST(RenderingScenarios, test_shadow_direct) {
+    const std::string outputStem = ObolTest::renderingOutputStem("test_shadow_direct");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

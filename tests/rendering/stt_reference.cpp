@@ -76,9 +76,9 @@ static const TextSpec k_rows[] = {
     {  0.0f, NULL,           0,   0,   0,   0,   0 }
 };
 
-static int obol_run_render_stt_reference(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
-    const char *outpath = (argc > 1) ? argv[1] : "/tmp/stt_reference.png";
+    const char *outpath = (outputStem != nullptr) ? outputStem : "/tmp/stt_reference.png";
 
     unsigned char *canvas =
         (unsigned char *)malloc((size_t)IMG_W * IMG_H * CHANNELS);
@@ -136,6 +136,7 @@ static int obol_run_render_stt_reference(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, stt_reference) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_stt_reference, "stt_reference"), 0);
+TEST(RenderingScenarios, stt_reference) {
+    const std::string outputStem = ObolTest::renderingOutputStem("stt_reference");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

@@ -233,110 +233,76 @@ static SoSeparator * buildTriSceneWithNormals()
     return root;
 }
 
-// =========================================================================
-TEST(UpstreamBundlesSuite, RetainedCoverage)
+class NormalBundleTest : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+        g_nbr = NormalBundleResults{};
+        g_sgr = SetGetResults{};
+
+        SoSeparator * triScene = buildTriScene();
+        triScene->ref();
+        SoCallbackAction generateAction;
+        generateAction.addTriangleCallback(SoFaceSet::getClassTypeId(),
+                                           triangleCB, nullptr);
+        generateAction.apply(triScene);
+        triScene->unref();
+
+        SoSeparator * normalScene = buildTriSceneWithNormals();
+        normalScene->ref();
+        SoCallbackAction setGetAction;
+        setGetAction.addTriangleCallback(SoFaceSet::getClassTypeId(),
+                                         triangleCBWithNormals, nullptr);
+        setGetAction.apply(normalScene);
+        normalScene->unref();
+    }
+};
+
+TEST_F(NormalBundleTest, ConstructsInsideCallback)
 {
-    CheckRecorder runner;
+    EXPECT_TRUE(g_nbr.constructOk);
+}
 
-    // -----------------------------------------------------------------------
-    // SoNormalBundle: construction + generation path (no normals on state)
-    // -----------------------------------------------------------------------
+TEST_F(NormalBundleTest, GeneratesWhenStateHasNoNormals)
+{
+    EXPECT_TRUE(g_nbr.shouldGenOk);
+}
 
-    SoSeparator * triScene = buildTriScene();
-    triScene->ref();
+TEST_F(NormalBundleTest, InitializesGenerator)
+{
+    EXPECT_TRUE(g_nbr.initGenOk);
+}
 
-    {
-        SoCallbackAction cba;
-        cba.addTriangleCallback(SoFaceSet::getClassTypeId(), triangleCB, nullptr);
-        cba.apply(triScene);
-    }
+TEST_F(NormalBundleTest, AccumulatesPolygon)
+{
+    EXPECT_TRUE(g_nbr.polygonOk);
+}
 
-    runner.startTest("SoNormalBundle: construct inside callback");
-    runner.endTest(g_nbr.constructOk, g_nbr.constructOk ? "" :
-        "SoNormalBundle construction failed");
+TEST_F(NormalBundleTest, AcceptsTriangle)
+{
+    EXPECT_TRUE(g_nbr.triangleOk);
+}
 
-    runner.startTest("SoNormalBundle: shouldGenerate returns TRUE when no normals on state");
-    runner.endTest(g_nbr.shouldGenOk, g_nbr.shouldGenOk ? "" :
-        "shouldGenerate did not return TRUE");
+TEST_F(NormalBundleTest, GeneratesNormals)
+{
+    EXPECT_TRUE(g_nbr.generateOk);
+    EXPECT_TRUE(g_nbr.getCountOk);
+    EXPECT_TRUE(g_nbr.getNormalsOk);
+    EXPECT_TRUE(g_nbr.getVecOk);
+}
 
-    runner.startTest("SoNormalBundle: initGenerator creates generator");
-    runner.endTest(g_nbr.initGenOk, g_nbr.initGenOk ? "" :
-        "generator pointer is null after shouldGenerate");
+TEST_F(NormalBundleTest, ReusesNormalsAlreadyOnState)
+{
+    EXPECT_TRUE(g_sgr.shouldGenFalse);
+}
 
-    runner.startTest("SoNormalBundle: beginPolygon/polygonVertex/endPolygon does not crash");
-    runner.endTest(g_nbr.polygonOk, g_nbr.polygonOk ? "" :
-        "polygon accumulation crashed");
+TEST_F(NormalBundleTest, SetAndGetRoundTrip)
+{
+    EXPECT_TRUE(g_sgr.getOk);
+}
 
-    runner.startTest("SoNormalBundle: triangle() does not crash");
-    runner.endTest(g_nbr.triangleOk, g_nbr.triangleOk ? "" :
-        "triangle() crashed");
-
-    runner.startTest("SoNormalBundle: generate() succeeds");
-    runner.endTest(g_nbr.generateOk, g_nbr.generateOk ? "" :
-        "generate() crashed or was not called");
-
-    runner.startTest("SoNormalBundle: getNumGeneratedNormals > 0");
-    runner.endTest(g_nbr.getCountOk, g_nbr.getCountOk ? "" :
-        "getNumGeneratedNormals returned 0");
-
-    runner.startTest("SoNormalBundle: getGeneratedNormals returns non-null");
-    runner.endTest(g_nbr.getNormalsOk, g_nbr.getNormalsOk ? "" :
-        "getGeneratedNormals returned null");
-
-    runner.startTest("SoNormalBundle: generated normals are unit vectors");
-    runner.endTest(g_nbr.getVecOk, g_nbr.getVecOk ? "" :
-        "first generated normal is not a unit vector");
-
-    triScene->unref();
-
-    // -----------------------------------------------------------------------
-    // SoNormalBundle: shouldGenerate returns FALSE + set/get round-trip
-    // -----------------------------------------------------------------------
-
-    SoSeparator * triNormScene = buildTriSceneWithNormals();
-    triNormScene->ref();
-
-    {
-        SoCallbackAction cba;
-        cba.addTriangleCallback(SoFaceSet::getClassTypeId(),
-                                triangleCBWithNormals, nullptr);
-        cba.apply(triNormScene);
-    }
-
-    runner.startTest("SoNormalBundle: shouldGenerate returns FALSE when normals present");
-    runner.endTest(g_sgr.shouldGenFalse, g_sgr.shouldGenFalse ? "" :
-        "shouldGenerate returned TRUE even though normals are on state");
-
-    runner.startTest("SoNormalBundle: set() + get() round-trip");
-    runner.endTest(g_sgr.getOk, g_sgr.getOk ? "" :
-        "get(0) did not return the value passed to set()");
-
-    triNormScene->unref();
-
-    // -----------------------------------------------------------------------
-    // SoMaterialBundle: sendFirst() does not crash
-    // (SoMaterialBundle requires a GL state to call send(); we only test
-    //  the constructor + sendFirst which reads material from state)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMaterialBundle: SoNormalBundle has no static type (instantiation only)");
-    {
-        // SoBundle subclasses are not independently type-registered in Coin.
-        // Verify that the shared GTest environment initialized SoDB and
-        // that SoNormalBundle objects can be constructed/destructed when state
-        // is available (already tested above via SoCallbackAction).
-        bool pass = true;
-        runner.endTest(pass, "");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoVertexAttributeBundle: class type registered
-    // -----------------------------------------------------------------------
-    runner.startTest("SoVertexAttributeBundle: SoDB::init completed without crash");
-    {
-        // SoVertexAttributeBundle is not independently type-registered.
-        // We verify the library initialised properly.
-        bool pass = (SoType::fromName("SoVertexAttributeBinding") != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoVertexAttributeBinding type not found");
-    }
-
+TEST(BundlesSuite, VertexAttributeBindingTypeIsRegistered)
+{
+    EXPECT_NE(SoType::fromName("SoVertexAttributeBinding"), SoType::badType());
+    EXPECT_NE(SoType::fromName("SoVertexAttributeBinding"), SoType::badType());
 }

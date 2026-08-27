@@ -35,3 +35,28 @@ TEST(TypeDynamicLoading, RejectsNamesThatCannotBeClassOrModuleNames)
   EXPECT_EQ(SoType::fromName(SbName("9Probe")), SoType::badType());
   EXPECT_EQ(SoType::fromName(SbName("Probe-name")), SoType::badType());
 }
+
+TEST(TypeDynamicLoading, PinsModuleWhenInitializationThrowsAfterRegistration)
+{
+  EXPECT_EQ(SoType::fromName(SbName("ThrowProbe")), SoType::badType());
+
+  const SoType partiallyRegistered =
+    SoType::fromName(SbName("ThrowProbe"));
+  ASSERT_NE(partiallyRegistered, SoType::badType());
+  int * value = static_cast<int *>(partiallyRegistered.createInstance());
+  ASSERT_NE(value, nullptr);
+  EXPECT_EQ(*value, 42);
+  delete value;
+}
+
+TEST(TypeDynamicLoading, PinsModuleThatRegistersADifferentType)
+{
+  EXPECT_EQ(SoType::fromName(SbName("WrongProbe")), SoType::badType());
+
+  const SoType different = SoType::fromName(SbName("DifferentProbe"));
+  ASSERT_NE(different, SoType::badType());
+  int * value = static_cast<int *>(different.createInstance());
+  ASSERT_NE(value, nullptr);
+  EXPECT_EQ(*value, 7);
+  delete value;
+}

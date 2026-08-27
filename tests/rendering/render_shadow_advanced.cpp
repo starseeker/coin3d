@@ -2,7 +2,7 @@
  * render_shadow_advanced.cpp — Extended SoShadowGroup coverage test
  *
  * Uses the shared ObolTest::Scenes::createShadowAdvanced scene factory so that
- * the CLI image-generation path (the migrated render adapter) and the interactive viewer
+ * the rendering GTest and the interactive viewer
  * (obol_viewer) render an identical scene.
  *
  * The scene exercises:
@@ -16,7 +16,7 @@
  *   - Shadow contrast check (informational): when SoShadowGroup::isSupported()
  *     returns TRUE the image should contain both bright and darker neutral pixels.
  *
- * Writes argv[1]+".rgb" (or "render_shadow_advanced.rgb") and returns 0 on pass.
+ * A diagnostic RGB image is written under the build tree.
  */
 
 #include "headless_utils.h"
@@ -81,7 +81,7 @@ static void reportShadowContrast(const unsigned char *buf)
                "(GLSL shadow maps may not be active on this driver)\n");
 }
 
-static int obol_run_render_render_shadow_advanced(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
@@ -93,8 +93,8 @@ static int obol_run_render_render_shadow_advanced(int argc, char **argv)
            (int)shadSupported);
 
     char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
     else
         snprintf(outpath, sizeof(outpath), "render_shadow_advanced.rgb");
 
@@ -122,6 +122,7 @@ static int obol_run_render_render_shadow_advanced(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_shadow_advanced) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_shadow_advanced, "render_shadow_advanced"), 0);
+TEST(RenderingScenarios, render_shadow_advanced) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_shadow_advanced");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

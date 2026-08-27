@@ -172,9 +172,9 @@ https://github.com/lighttransport/nanort
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-stb_image  (external/nanort/stb_image.h)
+stb_image  (external/stb/stb_image.h)
 ------------------------------------------------------------------------------
-stb_image v2.19 — public domain image loader.
+stb_image v2.30 — public domain image loader.
 https://github.com/nothings/stb
 
 Available under either of the following licenses (choose one):
@@ -218,7 +218,7 @@ Available under either of the following licenses (choose one):
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-stb_image_write  (external/nanort/stb_image_write.h)
+stb_image_write  (external/stb/stb_image_write.h)
 ------------------------------------------------------------------------------
 stb_image_write v1.09 — public domain image writer.
 https://github.com/nothings/stb

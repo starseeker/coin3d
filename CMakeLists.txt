@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Modern CMake project definition with metadata
 project(Obol
-  VERSION 1.0.0
+  VERSION 2.0.0
   DESCRIPTION "A 3D visualization library implementing a subset of the Open Inventor 2.1 API (with some variations)"
   HOMEPAGE_URL "https://github.com/starseeker/obol"
   LANGUAGES C CXX
@@ -176,7 +176,16 @@ if(OBOL_BUILD_EXAMPLES)
         set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
       endif()
       set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
+      # CMAKE_UNITY_BUILD is a project-wide default, but vendored FLTK 1.3
+      # contains translation-unit-local helpers with repeated names.  Combining
+      # those implementation files changes their linkage domain and fails the
+      # build.  Keep unity enabled for Obol while creating third-party targets
+      # with their upstream compilation boundaries intact.
+      set(_obol_unity_build "${CMAKE_UNITY_BUILD}")
+      set(CMAKE_UNITY_BUILD OFF)
       add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
+      set(CMAKE_UNITY_BUILD "${_obol_unity_build}")
+      unset(_obol_unity_build)
       set(FLTK_FOUND TRUE)
       set(FLTK_LIBRARIES fltk)
       if(TARGET fltk_gl)

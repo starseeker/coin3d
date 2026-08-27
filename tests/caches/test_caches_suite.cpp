@@ -51,120 +51,105 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamCachesSuite, RetainedCoverage)
+TEST(CachesSuite, SoBoundingBoxCacheConstructWithNullState)
 {
-    CheckRecorder runner;
+    SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
+    bool pass = (cache != nullptr);
+    delete cache;
+    EXPECT_TRUE(pass);
+}
 
-    // -----------------------------------------------------------------------
-    // SoBoundingBoxCache: construct, set, getBox, isCenterSet
-    // Note: state=nullptr is used since we are not inside an action traversal.
-    // The cache is immediately invalidated; we only test the accessors.
-    // -----------------------------------------------------------------------
-    runner.startTest("SoBoundingBoxCache: construct with null state");
-    {
-        SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
-        bool pass = (cache != nullptr);
-        delete cache;
-        runner.endTest(pass, "");
-    }
+TEST(CachesSuite, SoBoundingBoxCacheSetAndGetBoxIsNonEmpty)
+{
+    SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
+    SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
+                  SbVec3f( 1.0f,  1.0f,  1.0f));
+    SbXfBox3f xb(inner);
+    cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
 
-    runner.startTest("SoBoundingBoxCache: set and getBox is non-empty");
-    {
-        SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
-        SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
-                      SbVec3f( 1.0f,  1.0f,  1.0f));
-        SbXfBox3f xb(inner);
-        cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
+    bool pass = !cache->getBox().isEmpty();
+    delete cache;
+    EXPECT_TRUE(pass) << "SoBoundingBoxCache: getBox should not be empty after set()";
+}
 
-        bool pass = !cache->getBox().isEmpty();
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoBoundingBoxCache: getBox should not be empty after set()");
-    }
+TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsFALSEWhenNotSet)
+{
+    SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
+    SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
+                  SbVec3f( 1.0f,  1.0f,  1.0f));
+    SbXfBox3f xb(inner);
+    cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
 
-    runner.startTest("SoBoundingBoxCache: isCenterSet returns FALSE when not set");
-    {
-        SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
-        SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
-                      SbVec3f( 1.0f,  1.0f,  1.0f));
-        SbXfBox3f xb(inner);
-        cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
+    bool pass = (cache->isCenterSet() == FALSE);
+    delete cache;
+    EXPECT_TRUE(pass) << "SoBoundingBoxCache: isCenterSet should be FALSE";
+}
 
-        bool pass = (cache->isCenterSet() == FALSE);
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoBoundingBoxCache: isCenterSet should be FALSE");
-    }
+TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsTRUEWhenSet)
+{
+    SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
+    SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
+                  SbVec3f( 1.0f,  1.0f,  1.0f));
+    SbXfBox3f xb(inner);
+    cache->set(xb, TRUE, SbVec3f(0.5f, 0.5f, 0.5f));
 
-    runner.startTest("SoBoundingBoxCache: isCenterSet returns TRUE when set");
-    {
-        SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
-        SbBox3f inner(SbVec3f(-1.0f, -1.0f, -1.0f),
-                      SbVec3f( 1.0f,  1.0f,  1.0f));
-        SbXfBox3f xb(inner);
-        cache->set(xb, TRUE, SbVec3f(0.5f, 0.5f, 0.5f));
+    bool pass = (cache->isCenterSet() == TRUE);
+    delete cache;
+    EXPECT_TRUE(pass) << "SoBoundingBoxCache: isCenterSet should be TRUE when center was set";
+}
 
-        bool pass = (cache->isCenterSet() == TRUE);
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoBoundingBoxCache: isCenterSet should be TRUE when center was set");
-    }
+// -----------------------------------------------------------------------
+// SoNormalCache: construct, set normals, getNum, getNormals
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoNormalCache: construct, set normals, getNum, getNormals
-    // -----------------------------------------------------------------------
-    runner.startTest("SoNormalCache: construct with null state");
-    {
-        SoNormalCache * cache = new SoNormalCache(nullptr);
-        bool pass = (cache != nullptr);
-        delete cache;
-        runner.endTest(pass, "");
-    }
+TEST(CachesSuite, SoNormalCacheConstructWithNullState)
+{
+    SoNormalCache * cache = new SoNormalCache(nullptr);
+    bool pass = (cache != nullptr);
+    delete cache;
+    EXPECT_TRUE(pass);
+}
 
-    runner.startTest("SoNormalCache: set(3, normals) → getNum() == 3");
-    {
-        SoNormalCache * cache = new SoNormalCache(nullptr);
-        SbVec3f normals[3] = {
-            SbVec3f(1.0f, 0.0f, 0.0f),
-            SbVec3f(0.0f, 1.0f, 0.0f),
-            SbVec3f(0.0f, 0.0f, 1.0f)
-        };
-        cache->set(3, normals);
+TEST(CachesSuite, SoNormalCacheSet3NormalsGetNum3)
+{
+    SoNormalCache * cache = new SoNormalCache(nullptr);
+    SbVec3f normals[3] = {
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f),
+        SbVec3f(0.0f, 0.0f, 1.0f)
+    };
+    cache->set(3, normals);
 
-        bool pass = (cache->getNum() == 3);
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoNormalCache: getNum() should be 3 after set(3, ...)");
-    }
+    bool pass = (cache->getNum() == 3);
+    delete cache;
+    EXPECT_TRUE(pass) << "SoNormalCache: getNum() should be 3 after set(3, ...)";
+}
 
-    runner.startTest("SoNormalCache: getNormals()[0] matches what was set");
-    {
-        SoNormalCache * cache = new SoNormalCache(nullptr);
-        SbVec3f normals[3] = {
-            SbVec3f(1.0f, 0.0f, 0.0f),
-            SbVec3f(0.0f, 1.0f, 0.0f),
-            SbVec3f(0.0f, 0.0f, 1.0f)
-        };
-        cache->set(3, normals);
+TEST(CachesSuite, SoNormalCacheGetNormals0MatchesWhatWasSet)
+{
+    SoNormalCache * cache = new SoNormalCache(nullptr);
+    SbVec3f normals[3] = {
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f),
+        SbVec3f(0.0f, 0.0f, 1.0f)
+    };
+    cache->set(3, normals);
 
-        const SbVec3f * got = cache->getNormals();
-        bool pass = (got != nullptr) &&
-                    (got[0] == SbVec3f(1.0f, 0.0f, 0.0f));
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoNormalCache: getNormals()[0] should match (1,0,0)");
-    }
+    const SbVec3f * got = cache->getNormals();
+    bool pass = (got != nullptr) &&
+                (got[0] == SbVec3f(1.0f, 0.0f, 0.0f));
+    delete cache;
+    EXPECT_TRUE(pass) << "SoNormalCache: getNormals()[0] should match (1,0,0)";
+}
 
-    // -----------------------------------------------------------------------
-    // SoConvexDataCache: construct and destroy (class type not exposed)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoConvexDataCache: can construct with null state");
-    {
-        SoConvexDataCache * cache = new SoConvexDataCache(nullptr);
-        bool pass = (cache != nullptr);
-        delete cache;
-        runner.endTest(pass, pass ? "" :
-            "SoConvexDataCache: failed to construct");
-    }
+// -----------------------------------------------------------------------
+// SoConvexDataCache: construct and destroy (class type not exposed)
+// -----------------------------------------------------------------------
 
+TEST(CachesSuite, SoConvexDataCacheCanConstructWithNullState)
+{
+    SoConvexDataCache * cache = new SoConvexDataCache(nullptr);
+    bool pass = (cache != nullptr);
+    delete cache;
+    EXPECT_TRUE(pass) << "SoConvexDataCache: failed to construct";
 }

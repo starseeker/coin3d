@@ -19,12 +19,12 @@
 
 #ifdef OBOL_NO_OPENGL  /* guard: only compile in no-GL builds */
 
-#define OBOL_INTERNAL
-
 #include "config.h"
 #include "glue/glp.h"   /* includes SoGLDispatch.h and gl_stub.h types */
 #include "glue/dlp.h"   /* coin_gl_getstring_ptr */
 #include <Inventor/SbBasic.h>
+
+#include <string>
 
 /* Callback typedef used by SoGLContext_add_instance_created_callback */
 typedef void SoGLContext_instance_created_cb(uint32_t contextid, void * closure);
@@ -4668,6 +4668,30 @@ void SoGLContext_win32_updateHDCBitmap(void * ctx)
 void * coin_gl_current_context(void)
 {
   return nullptr;
+}
+
+/* Keep the non-dispatch GL diagnostics available to code that is compiled in
+ * every configuration.  No-GL calls should normally only observe
+ * GL_NO_ERROR, but naming a supplied error code is still useful in diagnostics
+ * and makes this translation unit a complete replacement for gl.cpp. */
+const char * coin_glerror_string(GLenum errorcode)
+{
+  switch (errorcode) {
+  case GL_NO_ERROR: return "GL_NO_ERROR";
+  case GL_INVALID_VALUE: return "GL_INVALID_VALUE";
+  case GL_INVALID_ENUM: return "GL_INVALID_ENUM";
+  case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
+  case GL_STACK_OVERFLOW: return "GL_STACK_OVERFLOW";
+  case GL_STACK_UNDERFLOW: return "GL_STACK_UNDERFLOW";
+  case GL_OUT_OF_MEMORY: return "GL_OUT_OF_MEMORY";
+  default: return "Unknown OpenGL error";
+  }
+}
+
+unsigned int coin_catch_gl_errors(std::string * str)
+{
+  (void)str;
+  return 0;
 }
 
 /* coin_gl_getstring_ptr: return NULL – no GL function lookup */

@@ -31,8 +31,8 @@
 \**************************************************************************/
 
 /*
- * Utility functions for headless rendering of Coin examples
- * 
+ * Shared utility functions for headless Obol demos and rendering tests
+ *
  * This provides common functionality for converting interactive
  * Mentor examples to headless, offscreen rendering tests that
  * produce reference images for validation.
@@ -66,11 +66,11 @@
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
-#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <cmath>
 #include <memory>
+#include <stdexcept>
 
 // Default image dimensions
 #define DEFAULT_WIDTH 800
@@ -84,9 +84,9 @@
 // so that SoOffscreenRenderer::render() calls the nanort raytracing pipeline
 // instead of the GL pipeline.  All existing test code (renderToFile,
 // writeToRGB, etc.) works unchanged with this backend.
-#include "nanort_context_manager.h"
+#include <Obol/render/SoNanoRTContextManager.h>
 
-namespace {
+namespace ObolHeadlessDetail {
     /* Meyer's singleton for the NanoRT context manager.  Shared between
        initCoinHeadless() and getSharedRenderer() so neither function needs
        to consult SoDB::getContextManager(). */
@@ -94,14 +94,14 @@ namespace {
         static SoNanoRTContextManager instance;
         return instance;
     }
-} // anonymous namespace
+} // namespace ObolHeadlessDetail
 
 /**
  * Initialize Coin database for headless operation (NanoRT backend).
  * No OpenGL context is required.
  */
 inline void initCoinHeadless() {
-    SoDB::init(&nrt_context_manager_singleton());
+    SoDB::init(&ObolHeadlessDetail::nrt_context_manager_singleton());
     SoNodeKit::init();
     SoInteraction::init();
 }
@@ -114,7 +114,8 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(&nrt_context_manager_singleton(), vp);
+        s_renderer = new SoOffscreenRenderer(
+            &ObolHeadlessDetail::nrt_context_manager_singleton(), vp);
     }
     return s_renderer;
 }
@@ -123,7 +124,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
  * Return the context manager installed by initCoinHeadless() (NanoRT backend).
  */
 inline SoDB::ContextManager * getCoinHeadlessContextManager() {
-    return &nrt_context_manager_singleton();
+    return &ObolHeadlessDetail::nrt_context_manager_singleton();
 }
 
 /**
@@ -167,20 +168,20 @@ inline bool renderToFile(
 // ============================================================================
 // Embree Backend: CPU raytracing via Intel Embree 4, no OpenGL required
 // ============================================================================
-// Uses SoEmbreeContextManager (see tests/utils/embree_context_manager.h) which
+// Uses SoEmbreeContextManager (see embree_context_manager.h) which
 // delegates scene collection to SoSceneCollector and performs ray-
 // triangle intersection via Embree's high-performance BVH.
 #include "embree_context_manager.h"
 
-namespace {
+namespace ObolHeadlessDetail {
     inline SoEmbreeContextManager & emb_context_manager_singleton() {
         static SoEmbreeContextManager instance;
         return instance;
     }
-} // anonymous namespace
+} // namespace ObolHeadlessDetail
 
 inline void initCoinHeadless() {
-    SoDB::init(&emb_context_manager_singleton());
+    SoDB::init(&ObolHeadlessDetail::emb_context_manager_singleton());
     SoNodeKit::init();
     SoInteraction::init();
 }
@@ -189,13 +190,14 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(&emb_context_manager_singleton(), vp);
+        s_renderer = new SoOffscreenRenderer(
+            &ObolHeadlessDetail::emb_context_manager_singleton(), vp);
     }
     return s_renderer;
 }
 
 inline SoDB::ContextManager * getCoinHeadlessContextManager() {
-    return &emb_context_manager_singleton();
+    return &ObolHeadlessDetail::emb_context_manager_singleton();
 }
 
 inline bool renderToFile(
@@ -238,22 +240,25 @@ inline bool renderToFile(
 // without a display server.  Also used for Windows dual-GL tests because
 // Windows has no GLX/Xvfb context; the interactive viewer still uses WGL.
 // ============================================================================
-namespace {
+namespace ObolHeadlessDetail {
     /* Use Obol's context manager so this helper exercises the same OSMesa
        lifecycle and dual-dispatch path as applications. */
     inline SoDB::ContextManager & headless_context_manager_singleton() {
         static std::unique_ptr<SoDB::ContextManager> instance(
             SoDB::createOSMesaContextManager());
-        assert(instance && "Obol was built without OSMesa context support");
+        if (!instance) {
+            throw std::runtime_error(
+                "Obol was built without OSMesa context support");
+        }
         return *instance;
     }
-} // anonymous namespace
+} // namespace ObolHeadlessDetail
 
 /**
  * Initialize Coin database for headless operation (OSMesa backend)
  */
 inline void initCoinHeadless() {
-    SoDB::init(&headless_context_manager_singleton());
+    SoDB::init(&ObolHeadlessDetail::headless_context_manager_singleton());
     SoNodeKit::init();
     SoInteraction::init();
 }
@@ -267,7 +272,7 @@ inline void initCoinHeadless() {
  * of relying on the global singleton.
  */
 inline SoDB::ContextManager * getCoinHeadlessContextManager() {
-    return &headless_context_manager_singleton();
+    return &ObolHeadlessDetail::headless_context_manager_singleton();
 }
 
 /**
@@ -280,7 +285,8 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(&headless_context_manager_singleton(), vp);
+        s_renderer = new SoOffscreenRenderer(
+            &ObolHeadlessDetail::headless_context_manager_singleton(), vp);
     }
     return s_renderer;
 }
@@ -332,8 +338,7 @@ inline bool renderToFile(
 // ============================================================================
 // No-OpenGL build: headless rendering is not supported.
 // Stubs are provided so code that includes headless_utils.h compiles, but
-// any attempt to call initCoinHeadless() or renderToFile() will fail/assert
-// at runtime (the library itself has no GL renderer).
+// rendering calls fail explicitly at runtime (the library has no GL renderer).
 // ============================================================================
 #include <cstdlib>
 
@@ -637,7 +642,7 @@ private:
  * native context manager for this platform.
  */
 
-namespace {
+namespace ObolHeadlessDetail {
 #if defined(OBOL_DUAL_GL_BUILD)
     inline bool use_swrast_backend() {
         const char * requested = getenv("OBOL_TEST_RENDER_BACKEND");
@@ -650,12 +655,13 @@ namespace {
         return manager.get();
     }
 #endif
-} // anonymous namespace
+} // namespace ObolHeadlessDetail
 
 inline void initCoinHeadless() {
 #if defined(OBOL_DUAL_GL_BUILD)
-    if (use_swrast_backend()) {
-        SoDB::ContextManager * manager = dual_swrast_context_manager();
+    if (ObolHeadlessDetail::use_swrast_backend()) {
+        SoDB::ContextManager * manager =
+            ObolHeadlessDetail::dual_swrast_context_manager();
         SoDB::init(manager);
         SoNodeKit::init();
         SoInteraction::init();
@@ -697,7 +703,10 @@ inline void initCoinHeadless() {
  */
 inline SoDB::ContextManager * getCoinHeadlessContextManager() {
     SoDB::ContextManager * mgr = SoDB::getContextManager();
-    assert(mgr && "getCoinHeadlessContextManager: call initCoinHeadless() first");
+    if (!mgr) {
+        throw std::logic_error(
+            "getCoinHeadlessContextManager: call initCoinHeadless() first");
+    }
     return mgr;
 }
 
@@ -762,7 +771,7 @@ inline SoCamera* findCamera(SoNode *root) {
     search.setType(SoCamera::getClassTypeId());
     search.setInterest(SoSearchAction::FIRST);
     search.apply(root);
-    
+
     if (search.getPath()) {
         return (SoCamera*)search.getPath()->getTail();
     }
@@ -777,7 +786,7 @@ inline SoCamera* ensureCamera(SoSeparator *root) {
     if (camera) {
         return camera;
     }
-    
+
     SoPerspectiveCamera *newCam = new SoPerspectiveCamera;
     root->insertChild(newCam, 0);
     return newCam;
@@ -791,7 +800,7 @@ inline void ensureLight(SoSeparator *root) {
     search.setType(SoDirectionalLight::getClassTypeId());
     search.setInterest(SoSearchAction::FIRST);
     search.apply(root);
-    
+
     if (!search.getPath()) {
         SoDirectionalLight *light = new SoDirectionalLight;
         SoCamera *cam = findCamera(root);
@@ -869,7 +878,7 @@ inline void simulateMousePress(
     event.setState(SoButtonEvent::DOWN);
     event.setPosition(SbVec2s((short)x, (short)y));
     event.setTime(SbTime::getTimeOfDay());
-    
+
     SoHandleEventAction action(viewport);
     action.setEvent(&event);
     action.apply(root);
@@ -889,7 +898,7 @@ inline void simulateMouseRelease(
     event.setState(SoButtonEvent::UP);
     event.setPosition(SbVec2s((short)x, (short)y));
     event.setTime(SbTime::getTimeOfDay());
-    
+
     SoHandleEventAction action(viewport);
     action.setEvent(&event);
     action.apply(root);
@@ -906,7 +915,7 @@ inline void simulateMouseMotion(
     SoLocation2Event event;
     event.setPosition(SbVec2s((short)x, (short)y));
     event.setTime(SbTime::getTimeOfDay());
-    
+
     SoHandleEventAction action(viewport);
     action.setEvent(&event);
     action.apply(root);
@@ -924,14 +933,14 @@ inline void simulateMouseDrag(
     SoMouseButtonEvent::Button button = SoMouseButtonEvent::BUTTON1)
 {
     simulateMousePress(root, viewport, startX, startY, button);
-    
+
     for (int i = 1; i <= steps; i++) {
         float t = (float)i / (float)steps;
         int x = (int)(startX + t * (endX - startX));
         int y = (int)(startY + t * (endY - startY));
         simulateMouseMotion(root, viewport, x, y);
     }
-    
+
     simulateMouseRelease(root, viewport, endX, endY, button);
 }
 
@@ -947,7 +956,7 @@ inline void simulateKeyPress(
     event.setKey(key);
     event.setState(SoButtonEvent::DOWN);
     event.setTime(SbTime::getTimeOfDay());
-    
+
     SoHandleEventAction action(viewport);
     action.setEvent(&event);
     action.apply(root);
@@ -965,7 +974,7 @@ inline void simulateKeyRelease(
     event.setKey(key);
     event.setState(SoButtonEvent::UP);
     event.setTime(SbTime::getTimeOfDay());
-    
+
     SoHandleEventAction action(viewport);
     action.setEvent(&event);
     action.apply(root);

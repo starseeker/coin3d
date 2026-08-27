@@ -83,339 +83,339 @@ static bool floatNear(float a, float b, float eps = 1e-5f)
     return std::fabs(a - b) < eps;
 }
 
-TEST(UpstreamEnginesSuite2, RetainedCoverage)
+TEST(EnginesSuite2, SoBoolOperationClassTypeRegistered)
 {
-    CheckRecorder runner;
+    bool pass = (SoBoolOperation::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoBoolOperation bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoBoolOperation
-    // -----------------------------------------------------------------------
-    runner.startTest("SoBoolOperation class type registered");
-    {
-        bool pass = (SoBoolOperation::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoBoolOperation bad class type");
-    }
+TEST(EnginesSuite2, SoBoolOperationAOperationPassesAThrough)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, TRUE);
+    eng->b.set1Value(0, FALSE);
+    eng->operation.set1Value(0, SoBoolOperation::A);
 
-    runner.startTest("SoBoolOperation A operation passes a through");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, TRUE);
-        eng->b.set1Value(0, FALSE);
-        eng->operation.set1Value(0, SoBoolOperation::A);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == TRUE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::A failed";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == TRUE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::A failed");
-    }
+TEST(EnginesSuite2, SoBoolOperationAANDBTRUEANDFALSEFALSE)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, TRUE);
+    eng->b.set1Value(0, FALSE);
+    eng->operation.set1Value(0, SoBoolOperation::A_AND_B);
 
-    runner.startTest("SoBoolOperation A_AND_B: TRUE AND FALSE = FALSE");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, TRUE);
-        eng->b.set1Value(0, FALSE);
-        eng->operation.set1Value(0, SoBoolOperation::A_AND_B);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == FALSE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::A_AND_B failed";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == FALSE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::A_AND_B failed");
-    }
+TEST(EnginesSuite2, SoBoolOperationAORBFALSEORTRUETRUE)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, FALSE);
+    eng->b.set1Value(0, TRUE);
+    eng->operation.set1Value(0, SoBoolOperation::A_OR_B);
 
-    runner.startTest("SoBoolOperation A_OR_B: FALSE OR TRUE = TRUE");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, FALSE);
-        eng->b.set1Value(0, TRUE);
-        eng->operation.set1Value(0, SoBoolOperation::A_OR_B);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == TRUE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::A_OR_B failed";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == TRUE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::A_OR_B failed");
-    }
+TEST(EnginesSuite2, SoBoolOperationNOTANOTTRUEFALSE)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, TRUE);
+    eng->operation.set1Value(0, SoBoolOperation::NOT_A);
 
-    runner.startTest("SoBoolOperation NOT_A: NOT TRUE = FALSE");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, TRUE);
-        eng->operation.set1Value(0, SoBoolOperation::NOT_A);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == FALSE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::NOT_A failed";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == FALSE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::NOT_A failed");
-    }
+TEST(EnginesSuite2, SoBoolOperationCLEARAlwaysProducesFALSE)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, TRUE);
+    eng->operation.set1Value(0, SoBoolOperation::CLEAR);
 
-    runner.startTest("SoBoolOperation CLEAR always produces FALSE");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, TRUE);
-        eng->operation.set1Value(0, SoBoolOperation::CLEAR);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == FALSE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::CLEAR should produce FALSE";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == FALSE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::CLEAR should produce FALSE");
-    }
+TEST(EnginesSuite2, SoBoolOperationSETAlwaysProducesTRUE)
+{
+    SoBoolOperation * eng = new SoBoolOperation;
+    eng->ref();
+    eng->a.set1Value(0, FALSE);
+    eng->operation.set1Value(0, SoBoolOperation::SET);
 
-    runner.startTest("SoBoolOperation SET always produces TRUE");
-    {
-        SoBoolOperation * eng = new SoBoolOperation;
-        eng->ref();
-        eng->a.set1Value(0, FALSE);
-        eng->operation.set1Value(0, SoBoolOperation::SET);
+    SoMFBool out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() > 0) && (out[0] == TRUE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoBoolOperation::SET should produce TRUE";
+}
 
-        SoMFBool out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() > 0) && (out[0] == TRUE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoBoolOperation::SET should produce TRUE");
-    }
+// -----------------------------------------------------------------------
+// SoConcatenate
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoConcatenate
-    // -----------------------------------------------------------------------
-    runner.startTest("SoConcatenate combines two float inputs");
-    {
-        SoConcatenate * eng = new SoConcatenate(SoMFFloat::getClassTypeId());
-        eng->ref();
+TEST(EnginesSuite2, SoConcatenateCombinesTwoFloatInputs)
+{
+    SoConcatenate * eng = new SoConcatenate(SoMFFloat::getClassTypeId());
+    eng->ref();
 
-        SoMFFloat * in0 = static_cast<SoMFFloat *>(eng->input[0]);
-        SoMFFloat * in1 = static_cast<SoMFFloat *>(eng->input[1]);
-        in0->set1Value(0, 1.0f);
-        in0->set1Value(1, 2.0f);
-        in1->set1Value(0, 3.0f);
+    SoMFFloat * in0 = static_cast<SoMFFloat *>(eng->input[0]);
+    SoMFFloat * in1 = static_cast<SoMFFloat *>(eng->input[1]);
+    in0->set1Value(0, 1.0f);
+    in0->set1Value(1, 2.0f);
+    in1->set1Value(0, 3.0f);
 
-        SoMFFloat out;
-        out.connectFrom(eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() == 3) &&
-                    floatNear(out[0], 1.0f) &&
-                    floatNear(out[1], 2.0f) &&
-                    floatNear(out[2], 3.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoConcatenate float combine failed");
-    }
+    SoMFFloat out;
+    out.connectFrom(eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() == 3) &&
+                floatNear(out[0], 1.0f) &&
+                floatNear(out[1], 2.0f) &&
+                floatNear(out[2], 3.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoConcatenate float combine failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoSelectOne
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSelectOne selects by index");
-    {
-        SoSelectOne * eng = new SoSelectOne(SoMFFloat::getClassTypeId());
-        eng->ref();
+// -----------------------------------------------------------------------
+// SoSelectOne
+// -----------------------------------------------------------------------
 
-        SoMFFloat * input = static_cast<SoMFFloat *>(eng->input);
-        input->set1Value(0, 10.0f);
-        input->set1Value(1, 20.0f);
-        input->set1Value(2, 30.0f);
-        eng->index.setValue(1); // select element at index 1
+TEST(EnginesSuite2, SoSelectOneSelectsByIndex)
+{
+    SoSelectOne * eng = new SoSelectOne(SoMFFloat::getClassTypeId());
+    eng->ref();
 
-        SoSFFloat out;
-        out.connectFrom(eng->output);
-        out.evaluate();
-        bool pass = floatNear(out.getValue(), 20.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoSelectOne index selection failed");
-    }
+    SoMFFloat * input = static_cast<SoMFFloat *>(eng->input);
+    input->set1Value(0, 10.0f);
+    input->set1Value(1, 20.0f);
+    input->set1Value(2, 30.0f);
+    eng->index.setValue(1); // select element at index 1
 
-    // -----------------------------------------------------------------------
-    // SoGate
-    // -----------------------------------------------------------------------
-    runner.startTest("SoGate passes input when enabled");
-    {
-        SoGate * eng = new SoGate(SoMFFloat::getClassTypeId());
-        eng->ref();
-        eng->enable.setValue(TRUE);
+    SoSFFloat out;
+    out.connectFrom(eng->output);
+    out.evaluate();
+    bool pass = floatNear(out.getValue(), 20.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoSelectOne index selection failed";
+}
 
-        SoMFFloat * input = static_cast<SoMFFloat *>(eng->input);
-        input->set1Value(0, 42.0f);
-        eng->trigger.touch(); // trigger pass-through
+// -----------------------------------------------------------------------
+// SoGate
+// -----------------------------------------------------------------------
 
-        SoMFFloat out;
-        out.connectFrom(eng->output);
-        out.evaluate();
-        bool pass = (out.getNum() == 1) && floatNear(out[0], 42.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoGate pass-through when enabled failed");
-    }
+TEST(EnginesSuite2, SoGatePassesInputWhenEnabled)
+{
+    SoGate * eng = new SoGate(SoMFFloat::getClassTypeId());
+    eng->ref();
+    eng->enable.setValue(TRUE);
 
-    // -----------------------------------------------------------------------
-    // SoCounter
-    // -----------------------------------------------------------------------
-    runner.startTest("SoCounter class type registered");
-    {
-        bool pass = (SoCounter::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoCounter bad class type");
-    }
+    SoMFFloat * input = static_cast<SoMFFloat *>(eng->input);
+    input->set1Value(0, 42.0f);
+    eng->trigger.touch(); // trigger pass-through
 
-    runner.startTest("SoCounter defaults: min=0 max=1 step=1");
-    {
-        SoCounter * eng = new SoCounter;
-        eng->ref();
-        bool pass = (eng->min.getValue() == 0) &&
-                    (eng->max.getValue() == 1) &&
-                    (eng->step.getValue() == 1);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoCounter default fields wrong");
-    }
+    SoMFFloat out;
+    out.connectFrom(eng->output);
+    out.evaluate();
+    bool pass = (out.getNum() == 1) && floatNear(out[0], 42.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoGate pass-through when enabled failed";
+}
 
-    runner.startTest("SoCounter increments on trigger");
-    {
-        SoCounter * eng = new SoCounter;
-        eng->ref();
-        eng->min.setValue(0);
-        eng->max.setValue(9);
-        eng->step.setValue(1);
+// -----------------------------------------------------------------------
+// SoCounter
+// -----------------------------------------------------------------------
 
-        SoSFShort out;
-        out.connectFrom(&eng->output);
-        out.evaluate();
-        short before = out.getValue();
+TEST(EnginesSuite2, SoCounterClassTypeRegistered)
+{
+    bool pass = (SoCounter::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoCounter bad class type";
+}
 
-        eng->trigger.touch(); // fire trigger
-        out.evaluate();
-        short after = out.getValue();
+TEST(EnginesSuite2, SoCounterDefaultsMin0Max1Step1)
+{
+    SoCounter * eng = new SoCounter;
+    eng->ref();
+    bool pass = (eng->min.getValue() == 0) &&
+                (eng->max.getValue() == 1) &&
+                (eng->step.getValue() == 1);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoCounter default fields wrong";
+}
 
-        bool pass = (after == before + 1) || (after == eng->min.getValue()); // wraps at max
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoCounter trigger increment failed");
-    }
+TEST(EnginesSuite2, SoCounterIncrementsOnTrigger)
+{
+    SoCounter * eng = new SoCounter;
+    eng->ref();
+    eng->min.setValue(0);
+    eng->max.setValue(9);
+    eng->step.setValue(1);
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec2f / SoDecomposeVec2f
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec2f composes from x and y");
-    {
-        SoComposeVec2f * eng = new SoComposeVec2f;
-        eng->ref();
-        eng->x.set1Value(0, 3.0f);
-        eng->y.set1Value(0, 4.0f);
+    SoSFShort out;
+    out.connectFrom(&eng->output);
+    out.evaluate();
+    short before = out.getValue();
 
-        SoMFVec2f out;
-        out.connectFrom(&eng->vector);
-        out.evaluate();
-        bool pass = (out.getNum() == 1) &&
-                    floatNear(out[0][0], 3.0f) &&
-                    floatNear(out[0][1], 4.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec2f composition failed");
-    }
+    eng->trigger.touch(); // fire trigger
+    out.evaluate();
+    short after = out.getValue();
 
-    runner.startTest("SoDecomposeVec2f decomposes to x and y");
-    {
-        SoDecomposeVec2f * eng = new SoDecomposeVec2f;
-        eng->ref();
-        SbVec2f v(5.0f, 6.0f);
-        eng->vector.set1Value(0, v);
+    bool pass = (after == before + 1) || (after == eng->min.getValue()); // wraps at max
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoCounter trigger increment failed";
+}
 
-        SoMFFloat outX, outY;
-        outX.connectFrom(&eng->x);
-        outY.connectFrom(&eng->y);
-        outX.evaluate();
-        outY.evaluate();
+// -----------------------------------------------------------------------
+// SoComposeVec2f / SoDecomposeVec2f
+// -----------------------------------------------------------------------
 
-        bool pass = (outX.getNum() == 1) && floatNear(outX[0], 5.0f) &&
-                    (outY.getNum() == 1) && floatNear(outY[0], 6.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoDecomposeVec2f decomposition failed");
-    }
+TEST(EnginesSuite2, SoComposeVec2fComposesFromXAndY)
+{
+    SoComposeVec2f * eng = new SoComposeVec2f;
+    eng->ref();
+    eng->x.set1Value(0, 3.0f);
+    eng->y.set1Value(0, 4.0f);
 
-    // -----------------------------------------------------------------------
-    // SoDecomposeVec3f
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDecomposeVec3f decomposes to x/y/z");
-    {
-        SoDecomposeVec3f * eng = new SoDecomposeVec3f;
-        eng->ref();
-        SbVec3f v(1.0f, 2.0f, 3.0f);
-        eng->vector.set1Value(0, v);
+    SoMFVec2f out;
+    out.connectFrom(&eng->vector);
+    out.evaluate();
+    bool pass = (out.getNum() == 1) &&
+                floatNear(out[0][0], 3.0f) &&
+                floatNear(out[0][1], 4.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec2f composition failed";
+}
 
-        SoMFFloat outX, outY, outZ;
-        outX.connectFrom(&eng->x);
-        outY.connectFrom(&eng->y);
-        outZ.connectFrom(&eng->z);
-        outX.evaluate();
-        outY.evaluate();
-        outZ.evaluate();
+TEST(EnginesSuite2, SoDecomposeVec2fDecomposesToXAndY)
+{
+    SoDecomposeVec2f * eng = new SoDecomposeVec2f;
+    eng->ref();
+    SbVec2f v(5.0f, 6.0f);
+    eng->vector.set1Value(0, v);
 
-        bool pass = floatNear(outX[0], 1.0f) &&
-                    floatNear(outY[0], 2.0f) &&
-                    floatNear(outZ[0], 3.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoDecomposeVec3f decomposition failed");
-    }
+    SoMFFloat outX, outY;
+    outX.connectFrom(&eng->x);
+    outY.connectFrom(&eng->y);
+    outX.evaluate();
+    outY.evaluate();
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec4f
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec4f composes from x/y/z/w");
-    {
-        SoComposeVec4f * eng = new SoComposeVec4f;
-        eng->ref();
-        eng->x.set1Value(0, 1.0f);
-        eng->y.set1Value(0, 2.0f);
-        eng->z.set1Value(0, 3.0f);
-        eng->w.set1Value(0, 4.0f);
+    bool pass = (outX.getNum() == 1) && floatNear(outX[0], 5.0f) &&
+                (outY.getNum() == 1) && floatNear(outY[0], 6.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeVec2f decomposition failed";
+}
 
-        SoMFVec4f out;
-        out.connectFrom(&eng->vector);
-        out.evaluate();
+// -----------------------------------------------------------------------
+// SoDecomposeVec3f
+// -----------------------------------------------------------------------
 
-        bool pass = (out.getNum() == 1) &&
-                    floatNear(out[0][0], 1.0f) && floatNear(out[0][1], 2.0f) &&
-                    floatNear(out[0][2], 3.0f) && floatNear(out[0][3], 4.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec4f composition failed");
-    }
+TEST(EnginesSuite2, SoDecomposeVec3fDecomposesToXYZ)
+{
+    SoDecomposeVec3f * eng = new SoDecomposeVec3f;
+    eng->ref();
+    SbVec3f v(1.0f, 2.0f, 3.0f);
+    eng->vector.set1Value(0, v);
 
-    // -----------------------------------------------------------------------
-    // SoComposeVec3f
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeVec3f composes from x/y/z");
-    {
-        SoComposeVec3f * eng = new SoComposeVec3f;
-        eng->ref();
-        eng->x.set1Value(0, 7.0f);
-        eng->y.set1Value(0, 8.0f);
-        eng->z.set1Value(0, 9.0f);
+    SoMFFloat outX, outY, outZ;
+    outX.connectFrom(&eng->x);
+    outY.connectFrom(&eng->y);
+    outZ.connectFrom(&eng->z);
+    outX.evaluate();
+    outY.evaluate();
+    outZ.evaluate();
 
-        SoMFVec3f out;
-        out.connectFrom(&eng->vector);
-        out.evaluate();
+    bool pass = floatNear(outX[0], 1.0f) &&
+                floatNear(outY[0], 2.0f) &&
+                floatNear(outZ[0], 3.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeVec3f decomposition failed";
+}
 
-        bool pass = (out.getNum() == 1) &&
-                    floatNear(out[0][0], 7.0f) &&
-                    floatNear(out[0][1], 8.0f) &&
-                    floatNear(out[0][2], 9.0f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoComposeVec3f composition failed");
-    }
+// -----------------------------------------------------------------------
+// SoComposeVec4f
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoComposeMatrix
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeMatrix class type registered");
-    {
-        bool pass = (SoComposeMatrix::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoComposeMatrix bad class type");
-    }
+TEST(EnginesSuite2, SoComposeVec4fComposesFromXYZW)
+{
+    SoComposeVec4f * eng = new SoComposeVec4f;
+    eng->ref();
+    eng->x.set1Value(0, 1.0f);
+    eng->y.set1Value(0, 2.0f);
+    eng->z.set1Value(0, 3.0f);
+    eng->w.set1Value(0, 4.0f);
 
+    SoMFVec4f out;
+    out.connectFrom(&eng->vector);
+    out.evaluate();
+
+    bool pass = (out.getNum() == 1) &&
+                floatNear(out[0][0], 1.0f) && floatNear(out[0][1], 2.0f) &&
+                floatNear(out[0][2], 3.0f) && floatNear(out[0][3], 4.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec4f composition failed";
+}
+
+// -----------------------------------------------------------------------
+// SoComposeVec3f
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite2, SoComposeVec3fComposesFromXYZ)
+{
+    SoComposeVec3f * eng = new SoComposeVec3f;
+    eng->ref();
+    eng->x.set1Value(0, 7.0f);
+    eng->y.set1Value(0, 8.0f);
+    eng->z.set1Value(0, 9.0f);
+
+    SoMFVec3f out;
+    out.connectFrom(&eng->vector);
+    out.evaluate();
+
+    bool pass = (out.getNum() == 1) &&
+                floatNear(out[0][0], 7.0f) &&
+                floatNear(out[0][1], 8.0f) &&
+                floatNear(out[0][2], 9.0f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeVec3f composition failed";
+}
+
+// -----------------------------------------------------------------------
+// SoComposeMatrix
+// -----------------------------------------------------------------------
+
+TEST(EnginesSuite2, SoComposeMatrixClassTypeRegistered)
+{
+    bool pass = (SoComposeMatrix::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoComposeMatrix bad class type";
 }

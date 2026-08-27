@@ -56,7 +56,7 @@ static bool validatePixels(const unsigned char * buf, int w, int h)
     return pct >= 1.0;
 }
 
-static int obol_run_render_render_embree(int argc, char ** argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
@@ -169,8 +169,8 @@ static int obol_run_render_render_embree(int argc, char ** argv)
 
     // ---- Render via Embree context manager ---------------------------------
     char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
     else
         snprintf(outpath, sizeof(outpath), "render_embree.rgb");
 
@@ -213,6 +213,7 @@ static int obol_run_render_render_embree(int argc, char ** argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_embree) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_embree, "render_embree"), 0);
+TEST(RenderingScenarios, render_embree) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_embree");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

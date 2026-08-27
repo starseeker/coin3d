@@ -14,8 +14,8 @@
  *  10. getRoot() returns the internal SoSeparator (non-null).
  *  11. setCamera(nullptr) removes the camera cleanly.
  *
- * The rendered image is written to argv[1]+".rgb".
- * Returns 0 on pass, 1 on fail.
+ * The rendered image is written to outputStem+".rgb".
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -72,18 +72,17 @@ static SoSeparator * buildScene()
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_viewport(int argc, char ** argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char * basepath = (argc > 1) ? argv[1] : "render_viewport";
+    const char * basepath = (outputStem != nullptr) ? outputStem : "render_viewport";
     char outpath[1024];
     snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createViewport(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -348,6 +347,7 @@ static int obol_run_render_render_viewport(int argc, char ** argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_viewport) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_viewport, "render_viewport"), 0);
+TEST(RenderingScenarios, render_viewport) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_viewport");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

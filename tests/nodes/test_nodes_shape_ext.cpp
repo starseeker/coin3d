@@ -67,324 +67,324 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamNodesShapeExt, RetainedCoverage)
+TEST(NodesShapeExt, SoComplexityClassTypeRegistered)
 {
-    CheckRecorder runner;
+    bool pass = (SoComplexity::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoComplexity bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoComplexity
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComplexity class type registered");
-    {
-        bool pass = (SoComplexity::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoComplexity bad class type");
-    }
+TEST(NodesShapeExt, SoComplexityTypeFieldDefaultIsOBJECTSPACE)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    bool pass = (node->type.getValue() == (int)SoComplexity::OBJECT_SPACE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity type default != OBJECT_SPACE";
+}
 
-    runner.startTest("SoComplexity type field default is OBJECT_SPACE");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        bool pass = (node->type.getValue() == (int)SoComplexity::OBJECT_SPACE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity type default != OBJECT_SPACE");
-    }
+TEST(NodesShapeExt, SoComplexityValueFieldDefaultIs05)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    bool pass = (node->value.getValue() == 0.5f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity value default != 0.5";
+}
 
-    runner.startTest("SoComplexity value field default is 0.5");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        bool pass = (node->value.getValue() == 0.5f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity value default != 0.5");
-    }
+TEST(NodesShapeExt, SoComplexityTypeSCREENSPACERoundTrip)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    node->type.setValue(SoComplexity::SCREEN_SPACE);
+    bool pass = (node->type.getValue() == (int)SoComplexity::SCREEN_SPACE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity SCREEN_SPACE round-trip failed";
+}
 
-    runner.startTest("SoComplexity type SCREEN_SPACE round-trip");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        node->type.setValue(SoComplexity::SCREEN_SPACE);
-        bool pass = (node->type.getValue() == (int)SoComplexity::SCREEN_SPACE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity SCREEN_SPACE round-trip failed");
-    }
+TEST(NodesShapeExt, SoComplexityTypeBOUNDINGBOXRoundTrip)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    node->type.setValue(SoComplexity::BOUNDING_BOX);
+    bool pass = (node->type.getValue() == (int)SoComplexity::BOUNDING_BOX);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity BOUNDING_BOX round-trip failed";
+}
 
-    runner.startTest("SoComplexity type BOUNDING_BOX round-trip");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        node->type.setValue(SoComplexity::BOUNDING_BOX);
-        bool pass = (node->type.getValue() == (int)SoComplexity::BOUNDING_BOX);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity BOUNDING_BOX round-trip failed");
-    }
+TEST(NodesShapeExt, SoComplexityValueFieldSetGetRoundTrip)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    node->value.setValue(0.8f);
+    bool pass = (node->value.getValue() == 0.8f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity value set/get failed";
+}
 
-    runner.startTest("SoComplexity value field set/get round-trip");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        node->value.setValue(0.8f);
-        bool pass = (node->value.getValue() == 0.8f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity value set/get failed");
-    }
+TEST(NodesShapeExt, SoComplexityTextureQualityFieldSetGetRoundTrip)
+{
+    SoComplexity * node = new SoComplexity;
+    node->ref();
+    node->textureQuality.setValue(0.7f);
+    bool pass = (node->textureQuality.getValue() == 0.7f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoComplexity textureQuality set/get failed";
+}
 
-    runner.startTest("SoComplexity textureQuality field set/get round-trip");
-    {
-        SoComplexity * node = new SoComplexity;
-        node->ref();
-        node->textureQuality.setValue(0.7f);
-        bool pass = (node->textureQuality.getValue() == 0.7f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoComplexity textureQuality set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoLightModel
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoLightModel
-    // -----------------------------------------------------------------------
-    runner.startTest("SoLightModel class type registered");
-    {
-        bool pass = (SoLightModel::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoLightModel bad class type");
-    }
+TEST(NodesShapeExt, SoLightModelClassTypeRegistered)
+{
+    bool pass = (SoLightModel::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoLightModel bad class type";
+}
 
-    runner.startTest("SoLightModel model default is PHONG");
-    {
-        SoLightModel * node = new SoLightModel;
-        node->ref();
-        bool pass = (node->model.getValue() == (int)SoLightModel::PHONG);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoLightModel model default != PHONG");
-    }
+TEST(NodesShapeExt, SoLightModelModelDefaultIsPHONG)
+{
+    SoLightModel * node = new SoLightModel;
+    node->ref();
+    bool pass = (node->model.getValue() == (int)SoLightModel::PHONG);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoLightModel model default != PHONG";
+}
 
-    runner.startTest("SoLightModel BASE_COLOR round-trip");
-    {
-        SoLightModel * node = new SoLightModel;
-        node->ref();
-        node->model.setValue(SoLightModel::BASE_COLOR);
-        bool pass = (node->model.getValue() == (int)SoLightModel::BASE_COLOR);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoLightModel BASE_COLOR round-trip failed");
-    }
+TEST(NodesShapeExt, SoLightModelBASECOLORRoundTrip)
+{
+    SoLightModel * node = new SoLightModel;
+    node->ref();
+    node->model.setValue(SoLightModel::BASE_COLOR);
+    bool pass = (node->model.getValue() == (int)SoLightModel::BASE_COLOR);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoLightModel BASE_COLOR round-trip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoClipPlane
-    // -----------------------------------------------------------------------
-    runner.startTest("SoClipPlane class type registered");
-    {
-        bool pass = (SoClipPlane::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoClipPlane bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoClipPlane
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoClipPlane on field default is TRUE");
-    {
-        SoClipPlane * node = new SoClipPlane;
-        node->ref();
-        bool pass = (node->on.getValue() == TRUE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoClipPlane on default != TRUE");
-    }
+TEST(NodesShapeExt, SoClipPlaneClassTypeRegistered)
+{
+    bool pass = (SoClipPlane::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoClipPlane bad class type";
+}
 
-    runner.startTest("SoClipPlane plane field set/get round-trip");
-    {
-        SoClipPlane * node = new SoClipPlane;
-        node->ref();
-        SbPlane p(SbVec3f(0, 1, 0), 2.0f);
-        node->plane.setValue(p);
-        bool pass = (node->plane.getValue() == p);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoClipPlane plane set/get failed");
-    }
+TEST(NodesShapeExt, SoClipPlaneOnFieldDefaultIsTRUE)
+{
+    SoClipPlane * node = new SoClipPlane;
+    node->ref();
+    bool pass = (node->on.getValue() == TRUE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoClipPlane on default != TRUE";
+}
 
-    // -----------------------------------------------------------------------
-    // SoShapeHints
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeHints class type registered");
-    {
-        bool pass = (SoShapeHints::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoShapeHints bad class type");
-    }
+TEST(NodesShapeExt, SoClipPlanePlaneFieldSetGetRoundTrip)
+{
+    SoClipPlane * node = new SoClipPlane;
+    node->ref();
+    SbPlane p(SbVec3f(0, 1, 0), 2.0f);
+    node->plane.setValue(p);
+    bool pass = (node->plane.getValue() == p);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoClipPlane plane set/get failed";
+}
 
-    runner.startTest("SoShapeHints vertexOrdering default is UNKNOWN_ORDERING");
-    {
-        SoShapeHints * node = new SoShapeHints;
-        node->ref();
-        bool pass = (node->vertexOrdering.getValue() == (int)SoShapeHints::UNKNOWN_ORDERING);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeHints vertexOrdering default wrong");
-    }
+// -----------------------------------------------------------------------
+// SoShapeHints
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoShapeHints shapeType round-trip");
-    {
-        SoShapeHints * node = new SoShapeHints;
-        node->ref();
-        node->shapeType.setValue(SoShapeHints::SOLID);
-        bool pass = (node->shapeType.getValue() == (int)SoShapeHints::SOLID);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeHints shapeType round-trip failed");
-    }
+TEST(NodesShapeExt, SoShapeHintsClassTypeRegistered)
+{
+    bool pass = (SoShapeHints::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoShapeHints bad class type";
+}
 
-    runner.startTest("SoShapeHints faceType round-trip");
-    {
-        SoShapeHints * node = new SoShapeHints;
-        node->ref();
-        node->faceType.setValue(SoShapeHints::CONVEX);
-        bool pass = (node->faceType.getValue() == (int)SoShapeHints::CONVEX);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeHints faceType round-trip failed");
-    }
+TEST(NodesShapeExt, SoShapeHintsVertexOrderingDefaultIsUNKNOWNORDERING)
+{
+    SoShapeHints * node = new SoShapeHints;
+    node->ref();
+    bool pass = (node->vertexOrdering.getValue() == (int)SoShapeHints::UNKNOWN_ORDERING);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoShapeHints vertexOrdering default wrong";
+}
 
-    runner.startTest("SoShapeHints creaseAngle default is 0.0");
-    {
-        SoShapeHints * node = new SoShapeHints;
-        node->ref();
-        bool pass = (node->creaseAngle.getValue() == 0.0f);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeHints creaseAngle default != 0.0");
-    }
+TEST(NodesShapeExt, SoShapeHintsShapeTypeRoundTrip)
+{
+    SoShapeHints * node = new SoShapeHints;
+    node->ref();
+    node->shapeType.setValue(SoShapeHints::SOLID);
+    bool pass = (node->shapeType.getValue() == (int)SoShapeHints::SOLID);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoShapeHints shapeType round-trip failed";
+}
 
-    runner.startTest("SoShapeHints vertexOrdering COUNTERCLOCKWISE round-trip");
-    {
-        SoShapeHints * node = new SoShapeHints;
-        node->ref();
-        node->vertexOrdering.setValue(SoShapeHints::COUNTERCLOCKWISE);
-        bool pass = (node->vertexOrdering.getValue() == (int)SoShapeHints::COUNTERCLOCKWISE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeHints COUNTERCLOCKWISE round-trip failed");
-    }
+TEST(NodesShapeExt, SoShapeHintsFaceTypeRoundTrip)
+{
+    SoShapeHints * node = new SoShapeHints;
+    node->ref();
+    node->faceType.setValue(SoShapeHints::CONVEX);
+    bool pass = (node->faceType.getValue() == (int)SoShapeHints::CONVEX);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoShapeHints faceType round-trip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoNormalBinding
-    // -----------------------------------------------------------------------
-    runner.startTest("SoNormalBinding class type registered");
-    {
-        bool pass = (SoNormalBinding::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoNormalBinding bad class type");
-    }
+TEST(NodesShapeExt, SoShapeHintsCreaseAngleDefaultIs00)
+{
+    SoShapeHints * node = new SoShapeHints;
+    node->ref();
+    bool pass = (node->creaseAngle.getValue() == 0.0f);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoShapeHints creaseAngle default != 0.0";
+}
 
-    runner.startTest("SoNormalBinding value field round-trip PER_VERTEX_INDEXED");
-    {
-        SoNormalBinding * node = new SoNormalBinding;
-        node->ref();
-        node->value.setValue(SoNormalBinding::PER_VERTEX_INDEXED);
-        bool pass = (node->value.getValue() == (int)SoNormalBinding::PER_VERTEX_INDEXED);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoNormalBinding PER_VERTEX_INDEXED round-trip failed");
-    }
+TEST(NodesShapeExt, SoShapeHintsVertexOrderingCOUNTERCLOCKWISERoundTrip)
+{
+    SoShapeHints * node = new SoShapeHints;
+    node->ref();
+    node->vertexOrdering.setValue(SoShapeHints::COUNTERCLOCKWISE);
+    bool pass = (node->vertexOrdering.getValue() == (int)SoShapeHints::COUNTERCLOCKWISE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoShapeHints COUNTERCLOCKWISE round-trip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMaterialBinding
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMaterialBinding class type registered");
-    {
-        bool pass = (SoMaterialBinding::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoMaterialBinding bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoNormalBinding
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoMaterialBinding value field PER_FACE_INDEXED round-trip");
-    {
-        SoMaterialBinding * node = new SoMaterialBinding;
-        node->ref();
-        node->value.setValue(SoMaterialBinding::PER_FACE_INDEXED);
-        bool pass = (node->value.getValue() == (int)SoMaterialBinding::PER_FACE_INDEXED);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoMaterialBinding PER_FACE_INDEXED round-trip failed");
-    }
+TEST(NodesShapeExt, SoNormalBindingClassTypeRegistered)
+{
+    bool pass = (SoNormalBinding::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoNormalBinding bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTextureCoordinateBinding
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTextureCoordinateBinding class type registered");
-    {
-        bool pass = (SoTextureCoordinateBinding::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoTextureCoordinateBinding bad class type");
-    }
+TEST(NodesShapeExt, SoNormalBindingValueFieldRoundTripPERVERTEXINDEXED)
+{
+    SoNormalBinding * node = new SoNormalBinding;
+    node->ref();
+    node->value.setValue(SoNormalBinding::PER_VERTEX_INDEXED);
+    bool pass = (node->value.getValue() == (int)SoNormalBinding::PER_VERTEX_INDEXED);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoNormalBinding PER_VERTEX_INDEXED round-trip failed";
+}
 
-    runner.startTest("SoTextureCoordinateBinding value PER_VERTEX_INDEXED round-trip");
-    {
-        SoTextureCoordinateBinding * node = new SoTextureCoordinateBinding;
-        node->ref();
-        node->value.setValue(SoTextureCoordinateBinding::PER_VERTEX_INDEXED);
-        bool pass = (node->value.getValue() == (int)SoTextureCoordinateBinding::PER_VERTEX_INDEXED);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoTextureCoordinateBinding value round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoMaterialBinding
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoLOD
-    // -----------------------------------------------------------------------
-    runner.startTest("SoLOD class type registered");
-    {
-        bool pass = (SoLOD::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoLOD bad class type");
-    }
+TEST(NodesShapeExt, SoMaterialBindingClassTypeRegistered)
+{
+    bool pass = (SoMaterialBinding::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoMaterialBinding bad class type";
+}
 
-    runner.startTest("SoLOD addChild and getNumChildren");
-    {
-        SoLOD * lod = new SoLOD;
-        lod->ref();
-        lod->addChild(new SoSphere);
-        lod->addChild(new SoCube);
-        bool pass = (lod->getNumChildren() == 2);
-        lod->unref();
-        runner.endTest(pass, pass ? "" : "SoLOD addChild/getNumChildren failed");
-    }
+TEST(NodesShapeExt, SoMaterialBindingValueFieldPERFACEINDEXEDRoundTrip)
+{
+    SoMaterialBinding * node = new SoMaterialBinding;
+    node->ref();
+    node->value.setValue(SoMaterialBinding::PER_FACE_INDEXED);
+    bool pass = (node->value.getValue() == (int)SoMaterialBinding::PER_FACE_INDEXED);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoMaterialBinding PER_FACE_INDEXED round-trip failed";
+}
 
-    runner.startTest("SoLOD range field set/get round-trip");
-    {
-        SoLOD * lod = new SoLOD;
-        lod->ref();
-        lod->range.set1Value(0, 10.0f);
-        lod->range.set1Value(1, 50.0f);
-        bool pass = (lod->range.getNum() == 2) &&
-                    (lod->range[0] == 10.0f) &&
-                    (lod->range[1] == 50.0f);
-        lod->unref();
-        runner.endTest(pass, pass ? "" : "SoLOD range set/get failed");
-    }
+// -----------------------------------------------------------------------
+// SoTextureCoordinateBinding
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoDepthBuffer
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDepthBuffer class type registered");
-    {
-        bool pass = (SoDepthBuffer::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoDepthBuffer bad class type");
-    }
+TEST(NodesShapeExt, SoTextureCoordinateBindingClassTypeRegistered)
+{
+    bool pass = (SoTextureCoordinateBinding::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoTextureCoordinateBinding bad class type";
+}
 
-    runner.startTest("SoDepthBuffer test default is TRUE");
-    {
-        SoDepthBuffer * node = new SoDepthBuffer;
-        node->ref();
-        bool pass = (node->test.getValue() == TRUE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoDepthBuffer test default != TRUE");
-    }
+TEST(NodesShapeExt, SoTextureCoordinateBindingValuePERVERTEXINDEXEDRoundTrip)
+{
+    SoTextureCoordinateBinding * node = new SoTextureCoordinateBinding;
+    node->ref();
+    node->value.setValue(SoTextureCoordinateBinding::PER_VERTEX_INDEXED);
+    bool pass = (node->value.getValue() == (int)SoTextureCoordinateBinding::PER_VERTEX_INDEXED);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoTextureCoordinateBinding value round-trip failed";
+}
 
-    runner.startTest("SoDepthBuffer write default is TRUE");
-    {
-        SoDepthBuffer * node = new SoDepthBuffer;
-        node->ref();
-        bool pass = (node->write.getValue() == TRUE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoDepthBuffer write default != TRUE");
-    }
+// -----------------------------------------------------------------------
+// SoLOD
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoPolygonOffset
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPolygonOffset class type registered");
-    {
-        bool pass = (SoPolygonOffset::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoPolygonOffset bad class type");
-    }
+TEST(NodesShapeExt, SoLODClassTypeRegistered)
+{
+    bool pass = (SoLOD::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoLOD bad class type";
+}
 
-    runner.startTest("SoPolygonOffset on default is TRUE");
-    {
-        SoPolygonOffset * node = new SoPolygonOffset;
-        node->ref();
-        bool pass = (node->on.getValue() == TRUE);
-        node->unref();
-        runner.endTest(pass, pass ? "" : "SoPolygonOffset on default != TRUE");
-    }
+TEST(NodesShapeExt, SoLODAddChildAndGetNumChildren)
+{
+    SoLOD * lod = new SoLOD;
+    lod->ref();
+    lod->addChild(new SoSphere);
+    lod->addChild(new SoCube);
+    bool pass = (lod->getNumChildren() == 2);
+    lod->unref();
+    EXPECT_TRUE(pass) << "SoLOD addChild/getNumChildren failed";
+}
 
+TEST(NodesShapeExt, SoLODRangeFieldSetGetRoundTrip)
+{
+    SoLOD * lod = new SoLOD;
+    lod->ref();
+    lod->range.set1Value(0, 10.0f);
+    lod->range.set1Value(1, 50.0f);
+    bool pass = (lod->range.getNum() == 2) &&
+                (lod->range[0] == 10.0f) &&
+                (lod->range[1] == 50.0f);
+    lod->unref();
+    EXPECT_TRUE(pass) << "SoLOD range set/get failed";
+}
+
+// -----------------------------------------------------------------------
+// SoDepthBuffer
+// -----------------------------------------------------------------------
+
+TEST(NodesShapeExt, SoDepthBufferClassTypeRegistered)
+{
+    bool pass = (SoDepthBuffer::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoDepthBuffer bad class type";
+}
+
+TEST(NodesShapeExt, SoDepthBufferTestDefaultIsTRUE)
+{
+    SoDepthBuffer * node = new SoDepthBuffer;
+    node->ref();
+    bool pass = (node->test.getValue() == TRUE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoDepthBuffer test default != TRUE";
+}
+
+TEST(NodesShapeExt, SoDepthBufferWriteDefaultIsTRUE)
+{
+    SoDepthBuffer * node = new SoDepthBuffer;
+    node->ref();
+    bool pass = (node->write.getValue() == TRUE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoDepthBuffer write default != TRUE";
+}
+
+// -----------------------------------------------------------------------
+// SoPolygonOffset
+// -----------------------------------------------------------------------
+
+TEST(NodesShapeExt, SoPolygonOffsetClassTypeRegistered)
+{
+    bool pass = (SoPolygonOffset::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoPolygonOffset bad class type";
+}
+
+TEST(NodesShapeExt, SoPolygonOffsetOnDefaultIsTRUE)
+{
+    SoPolygonOffset * node = new SoPolygonOffset;
+    node->ref();
+    bool pass = (node->on.getValue() == TRUE);
+    node->unref();
+    EXPECT_TRUE(pass) << "SoPolygonOffset on default != TRUE";
 }

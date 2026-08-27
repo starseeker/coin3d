@@ -1,9 +1,9 @@
 #pragma once
 
-// Legacy render cases include this adapter after their scene implementation.
-// A system-GL build may therefore have pulled in Xlib first.  Its generic
-// macros collide with identifiers in GoogleTest and are not needed by the
-// registration code below.
+// Long-form render scenarios include this adapter after their scene
+// implementation. A system-GL build may therefore have pulled in Xlib first.
+// Its generic macros collide with identifiers in GoogleTest and are not needed
+// by the registration code below.
 #ifdef None
 #undef None
 #endif
@@ -14,32 +14,30 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <stdexcept>
 #include <string>
-#include <vector>
 
 namespace ObolTest {
 
-// Run a source-level rendering case inside the shared render test process.
-// The source keeps its historical argv[1] output-stem contract; generated
-// files are redirected to the system temporary area for CTest isolation.
-inline int runRenderingCase(int (*entry)(int, char **), const char *name)
+// Return a build-local output stem for optional diagnostic images.  Rendering
+// scenarios are ordinary GTests; this helper only keeps their artifacts away
+// from the source tree and prevents system-GL/OSMesa jobs from colliding.
+inline std::string renderingOutputStem(const char *name)
 {
-    const std::filesystem::path output =
-        std::filesystem::temp_directory_path() /
-        (std::string("obol_render_") + name);
-    std::string output_string = output.string();
-    std::string program_string = std::string("obol_") + name;
-    std::vector<char> program(program_string.begin(), program_string.end());
-    std::vector<char> output_arg(output_string.begin(), output_string.end());
-    program.push_back('\0');
-    output_arg.push_back('\0');
-    char *argv[] = {program.data(), output_arg.data(), nullptr};
-    return entry(2, argv);
-}
-
-inline int runRenderingCase(int (*entry)(), const char * /*name*/)
-{
-    return entry();
+#ifdef OBOL_TEST_OUTPUT_DIR
+    const std::filesystem::path directory(OBOL_TEST_OUTPUT_DIR);
+#else
+    const std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / "obol-render-tests";
+#endif
+    std::error_code error;
+    std::filesystem::create_directories(directory, error);
+    if (error) {
+        throw std::runtime_error(
+            "cannot create rendering-test output directory '" +
+            directory.string() + "': " + error.message());
+    }
+    return (directory / name).string();
 }
 
 } // namespace ObolTest

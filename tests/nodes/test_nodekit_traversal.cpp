@@ -63,166 +63,158 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamNodesNodekitTraversal, RetainedCoverage)
+TEST(NodesNodekitTraversal, SoShapeKitInstantiationAndTypeCheck)
 {
-    CheckRecorder runner;
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+    bool pass = (kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId());
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit bad type or not SoBaseKit subtype";
+}
 
-    // -----------------------------------------------------------------------
-    // SoShapeKit: basic instantiation and type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit instantiation and type check");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
-        bool pass = (kit->getTypeId() != SoType::badType()) &&
-                    kit->isOfType(SoBaseKit::getClassTypeId());
-        kit->unref();
-        runner.endTest(pass, pass ? "" : "SoShapeKit bad type or not SoBaseKit subtype");
+// -----------------------------------------------------------------------
+// SoShapeKit: getNodekitCatalog is non-null
+// -----------------------------------------------------------------------
+
+TEST(NodesNodekitTraversal, SoShapeKitGetNodekitCatalogIsNonNull)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+    const SoNodekitCatalog *cat = kit->getNodekitCatalog();
+    bool pass = (cat != nullptr) && (cat->getNumEntries() > 0);
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit catalog is null or has no entries";
+}
+
+// -----------------------------------------------------------------------
+// SoShapeKit: getPart returns non-null for "shape" when makeifneeded=TRUE
+// -----------------------------------------------------------------------
+
+TEST(NodesNodekitTraversal, SoShapeKitGetPartShapeTRUEReturnsNonNull)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+    SoNode *part = kit->getPart("shape", TRUE);
+    bool pass = (part != nullptr);
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit getPart(\"shape\", TRUE) returned null";
+}
+
+// -----------------------------------------------------------------------
+// SoShapeKit: setPart replaces the shape part
+// -----------------------------------------------------------------------
+
+TEST(NodesNodekitTraversal, SoShapeKitSetPartReplacesShapePart)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+
+    SoCube *cube = new SoCube;
+    bool setOk = kit->setPart("shape", cube);
+
+    SoNode *retrieved = kit->getPart("shape", FALSE);
+    bool pass = setOk && (retrieved == cube);
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit setPart or getPart(FALSE) failed";
+}
+
+// -----------------------------------------------------------------------
+// SoShapeKit: SoGetBoundingBoxAction on kit with default shape
+// -----------------------------------------------------------------------
+
+TEST(NodesNodekitTraversal, SoGetBoundingBoxActionOnSoShapeKitWithCubeShape)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+
+    // Set a 2×2×2 cube as the shape part
+    SoCube *cube = new SoCube; // default: 2×2×2
+    kit->setPart("shape", cube);
+
+    SoGetBoundingBoxAction bba(SbViewportRegion(100, 100));
+    bba.apply(kit);
+
+    SbBox3f bbox = bba.getBoundingBox();
+    bool pass = !bbox.isEmpty();
+    if (pass) {
+        SbVec3f lo, hi;
+        bbox.getBounds(lo, hi);
+        // Default SoCube is 2×2×2 → bounds should be at least [-1,1]
+        pass = (lo[0] <= -0.9f) && (hi[0] >= 0.9f);
     }
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction on SoShapeKit returned empty/wrong bbox";
+}
 
-    // -----------------------------------------------------------------------
-    // SoShapeKit: getNodekitCatalog is non-null
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit getNodekitCatalog is non-null");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
-        const SoNodekitCatalog *cat = kit->getNodekitCatalog();
-        bool pass = (cat != nullptr) && (cat->getNumEntries() > 0);
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoShapeKit catalog is null or has no entries");
-    }
+// -----------------------------------------------------------------------
+// SoAppearanceKit: basic instantiation
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoShapeKit: getPart returns non-null for "shape" when makeifneeded=TRUE
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit getPart(\"shape\", TRUE) returns non-null");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
-        SoNode *part = kit->getPart("shape", TRUE);
-        bool pass = (part != nullptr);
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoShapeKit getPart(\"shape\", TRUE) returned null");
-    }
+TEST(NodesNodekitTraversal, SoAppearanceKitInstantiationAndTypeCheck)
+{
+    SoAppearanceKit *kit = new SoAppearanceKit;
+    kit->ref();
+    bool pass = (kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId());
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoAppearanceKit bad type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoShapeKit: setPart replaces the shape part
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit setPart replaces shape part");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
+// -----------------------------------------------------------------------
+// SoAppearanceKit: set material part
+// -----------------------------------------------------------------------
 
-        SoCube *cube = new SoCube;
-        bool setOk = kit->setPart("shape", cube);
+TEST(NodesNodekitTraversal, SoAppearanceKitSetPartMaterial)
+{
+    SoAppearanceKit *kit = new SoAppearanceKit;
+    kit->ref();
 
-        SoNode *retrieved = kit->getPart("shape", FALSE);
-        bool pass = setOk && (retrieved == cube);
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoShapeKit setPart or getPart(FALSE) failed");
-    }
+    SoMaterial *mat = new SoMaterial;
+    mat->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
+    bool setOk = kit->setPart("material", mat);
 
-    // -----------------------------------------------------------------------
-    // SoShapeKit: SoGetBoundingBoxAction on kit with default shape
-    // -----------------------------------------------------------------------
-    runner.startTest("SoGetBoundingBoxAction on SoShapeKit with cube shape");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
+    SoNode *retrieved = kit->getPart("material", FALSE);
+    bool pass = setOk && (retrieved == mat);
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoAppearanceKit setPart(material) failed";
+}
 
-        // Set a 2×2×2 cube as the shape part
-        SoCube *cube = new SoCube; // default: 2×2×2
-        kit->setPart("shape", cube);
+// -----------------------------------------------------------------------
+// SoShapeKit inside a separator: bounding box propagates
+// -----------------------------------------------------------------------
 
-        SoGetBoundingBoxAction bba(SbViewportRegion(100, 100));
-        bba.apply(kit);
+TEST(NodesNodekitTraversal, SoShapeKitInsideSeparatorBboxPropagates)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
 
-        SbBox3f bbox = bba.getBoundingBox();
-        bool pass = !bbox.isEmpty();
-        if (pass) {
-            SbVec3f lo, hi;
-            bbox.getBounds(lo, hi);
-            // Default SoCube is 2×2×2 → bounds should be at least [-1,1]
-            pass = (lo[0] <= -0.9f) && (hi[0] >= 0.9f);
-        }
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoGetBoundingBoxAction on SoShapeKit returned empty/wrong bbox");
-    }
+    SoShapeKit *kit = new SoShapeKit;
+    kit->setPart("shape", new SoSphere);  // default radius 1
+    root->addChild(kit);
 
-    // -----------------------------------------------------------------------
-    // SoAppearanceKit: basic instantiation
-    // -----------------------------------------------------------------------
-    runner.startTest("SoAppearanceKit instantiation and type check");
-    {
-        SoAppearanceKit *kit = new SoAppearanceKit;
-        kit->ref();
-        bool pass = (kit->getTypeId() != SoType::badType()) &&
-                    kit->isOfType(SoBaseKit::getClassTypeId());
-        kit->unref();
-        runner.endTest(pass, pass ? "" : "SoAppearanceKit bad type");
-    }
+    SoGetBoundingBoxAction bba(SbViewportRegion(100, 100));
+    bba.apply(root);
 
-    // -----------------------------------------------------------------------
-    // SoAppearanceKit: set material part
-    // -----------------------------------------------------------------------
-    runner.startTest("SoAppearanceKit setPart material");
-    {
-        SoAppearanceKit *kit = new SoAppearanceKit;
-        kit->ref();
+    SbBox3f bbox = bba.getBoundingBox();
+    bool pass = !bbox.isEmpty();
+    root->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit inside separator: bbox is empty";
+}
 
-        SoMaterial *mat = new SoMaterial;
-        mat->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
-        bool setOk = kit->setPart("material", mat);
+// -----------------------------------------------------------------------
+// SoBaseKit::getPartString — round-trip path to part
+// -----------------------------------------------------------------------
 
-        SoNode *retrieved = kit->getPart("material", FALSE);
-        bool pass = setOk && (retrieved == mat);
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoAppearanceKit setPart(material) failed");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoShapeKit inside a separator: bounding box propagates
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit inside separator: bbox propagates");
-    {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-
-        SoShapeKit *kit = new SoShapeKit;
-        kit->setPart("shape", new SoSphere);  // default radius 1
-        root->addChild(kit);
-
-        SoGetBoundingBoxAction bba(SbViewportRegion(100, 100));
-        bba.apply(root);
-
-        SbBox3f bbox = bba.getBoundingBox();
-        bool pass = !bbox.isEmpty();
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoShapeKit inside separator: bbox is empty");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoBaseKit::getPartString — round-trip path to part
-    // -----------------------------------------------------------------------
-    runner.startTest("SoShapeKit getPartString for cube shape part");
-    {
-        SoShapeKit *kit = new SoShapeKit;
-        kit->ref();
-        SoCube *cube = new SoCube;
-        kit->setPart("shape", cube);
-        SbString ps = kit->getPartString(cube);
-        // Should return "shape" (the part name)
-        bool pass = (ps == "shape");
-        kit->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoShapeKit getPartString did not return \"shape\"");
-    }
-
+TEST(NodesNodekitTraversal, SoShapeKitGetPartStringForCubeShapePart)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+    SoCube *cube = new SoCube;
+    kit->setPart("shape", cube);
+    SbString ps = kit->getPartString(cube);
+    // Should return "shape" (the part name)
+    bool pass = (ps == "shape");
+    kit->unref();
+    EXPECT_TRUE(pass) << "SoShapeKit getPartString did not return \"shape\"";
 }

@@ -154,232 +154,14 @@ static void dummy_bbox(const float*, int, SbVec3f& mn, SbVec3f& mx, void*)
 static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWireframe*, void*) {}
 
 // ============================================================================
-// main
-// ============================================================================
+// GTest cases// ============================================================================
 
-TEST(UpstreamNodesProceduralShape, RetainedCoverage)
-{
-    CheckRecorder runner;
-
-    // ------------------------------------------------------------------
-    // Test 1: First registration succeeds
-    // ------------------------------------------------------------------
-    runner.startTest("registerShapeType succeeds for new type");
+class ProceduralShapeTest : public ::testing::Test {
+protected:
+    void SetUp() override
     {
-        SbBool ok = SoProceduralShape::registerShapeType(
-                        "UnitBox_test", kBoxSchema, unitBox_bbox, unitBox_geom);
-        runner.endTest(ok == TRUE,
-                       ok ? "" : "Expected TRUE for first registration");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 2: Duplicate registration is rejected
-    // ------------------------------------------------------------------
-    runner.startTest("registerShapeType rejects duplicate name");
-    {
-        SbBool ok = SoProceduralShape::registerShapeType(
-                        "UnitBox_test", "{}", dummy_bbox, dummy_geom);
-        runner.endTest(ok == FALSE,
-                       ok ? "Expected FALSE for duplicate registration" : "");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 3: isRegistered()
-    // ------------------------------------------------------------------
-    runner.startTest("isRegistered returns correct results");
-    {
-        bool pass = (SoProceduralShape::isRegistered("UnitBox_test") == TRUE)
-                 && (SoProceduralShape::isRegistered("NoSuchShape")  == FALSE);
-        runner.endTest(pass, pass ? "" : "isRegistered returned wrong value");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 4: getSchemaJSON() returns the registered JSON
-    // ------------------------------------------------------------------
-    runner.startTest("getSchemaJSON returns registered schema");
-    {
-        const char* schema = SoProceduralShape::getSchemaJSON("UnitBox_test");
-        bool pass = (schema != nullptr)
-                 && (strstr(schema, "UnitBox") != nullptr)
-                 && (strstr(schema, "halfSize") != nullptr)
-                 && (SoProceduralShape::getSchemaJSON("NoSuchShape") == nullptr);
-        runner.endTest(pass, pass ? "" : "getSchemaJSON returned unexpected value");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 5: setShapeType() populates fields from schema defaults
-    // ------------------------------------------------------------------
-    runner.startTest("setShapeType populates shapeType, schemaJSON, and params");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-
-        shape->setShapeType("UnitBox_test");
-
-        bool pass = (strcmp(shape->shapeType.getValue().getString(),
-                            "UnitBox_test") == 0)
-                 && (shape->schemaJSON.getValue().getLength() > 0)
-                 && (shape->params.getNum() == 1)
-                 && floatNear(shape->params[0], 1.0f);
-
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "setShapeType field population failed");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 6: params field get/set round-trip
-    // ------------------------------------------------------------------
-    runner.startTest("params field set/get round-trip");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-
-        float vals[] = { 0.5f, 2.0f, 3.14f };
-        shape->params.setValues(0, 3, vals);
-
-        bool pass = (shape->params.getNum() == 3)
-                 && floatNear(shape->params[0], 0.5f)
-                 && floatNear(shape->params[1], 2.0f)
-                 && floatNear(shape->params[2], 3.14f, 1e-3f);
-
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "params field round-trip failed");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 7: SoGetBoundingBoxAction invokes the bbox callback
-    // ------------------------------------------------------------------
-    runner.startTest("SoGetBoundingBoxAction calls bbox callback");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->setShapeType("UnitBox_test"); // halfSize=1 → [-1,-1,-1]..[1,1,1]
-        root->addChild(shape);
-
-        SbViewportRegion vp(128, 128);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-
-        SbBox3f box = bba.getBoundingBox();
-        SbVec3f mn  = box.getMin();
-        SbVec3f mx  = box.getMax();
-
-        bool pass = !box.isEmpty()
-                 && floatNear(mn[0], -1.0f) && floatNear(mn[1], -1.0f)
-                 && floatNear(mn[2], -1.0f)
-                 && floatNear(mx[0],  1.0f) && floatNear(mx[1],  1.0f)
-                 && floatNear(mx[2],  1.0f);
-
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Bounding box values incorrect");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 8: Bbox scales with params
-    // ------------------------------------------------------------------
-    runner.startTest("Bbox scales correctly when params change");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->shapeType.setValue("UnitBox_test");
-        float pv = 3.0f;
-        shape->params.setValues(0, 1, &pv); // halfSize = 3
-        root->addChild(shape);
-
-        SbViewportRegion vp(128, 128);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-
-        SbBox3f box = bba.getBoundingBox();
-        SbVec3f mn  = box.getMin();
-        SbVec3f mx  = box.getMax();
-
-        bool pass = floatNear(mn[0], -3.0f) && floatNear(mx[0], 3.0f);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Bbox did not scale with params");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 9: SoGetPrimitiveCountAction counts triangles
-    // ------------------------------------------------------------------
-    runner.startTest("SoGetPrimitiveCountAction reports correct triangle count");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->setShapeType("UnitBox_test"); // unitBox_geom → 12 triangles
-        root->addChild(shape);
-
-        SoGetPrimitiveCountAction pca;
-        pca.apply(root);
-
-        bool pass = (pca.getTriangleCount() == 12);
-        root->unref();
-        runner.endTest(pass,
-                       pass ? "" : "Triangle count did not match expected 12");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 10: Unregistered type — graceful fallback (unit bbox, no crash)
-    // ------------------------------------------------------------------
-    runner.startTest("Unregistered shapeType does not crash, returns fallback bbox");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->shapeType.setValue("DoesNotExist");
-        root->addChild(shape);
-
-        SbViewportRegion vp(128, 128);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root); // must not crash
-
-        bool pass = !bba.getBoundingBox().isEmpty();
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Fallback bbox should not be empty");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 11: Scene-graph ref/unref lifecycle
-    // ------------------------------------------------------------------
-    runner.startTest("Scene-graph ref/unref lifecycle is correct");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->setShapeType("UnitBox_test");
-        root->addChild(shape);
-
-        bool pass = (root->getNumChildren() == 1)
-                 && (root->getChild(0) == shape);
-
-        root->unref(); // should cleanly destroy everything
-        runner.endTest(pass, pass ? "" : "Scene-graph child check failed");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 12: Node type-id checks
-    // ------------------------------------------------------------------
-    runner.startTest("SoProceduralShape type-id checks");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-
-        bool pass = (shape->getTypeId() != SoType::badType())
-                 && shape->isOfType(SoShape::getClassTypeId())
-                 && shape->isOfType(SoNode::getClassTypeId());
-
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "Type-id check failed");
-    }
-
+        (void)SoProceduralShape::registerShapeType(
+            "UnitBox_test", kBoxSchema, unitBox_bbox, unitBox_geom);
     // ------------------------------------------------------------------
     // Handle/dragger API tests
     // ------------------------------------------------------------------
@@ -415,70 +197,6 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         static_cast<SoProceduralHandlesCB>(twoParamHandles),
         static_cast<SoProceduralHandleDragCB>(twoParamDrag));
     (void)hdReg;
-
-    // ------------------------------------------------------------------
-    // Test 13: registerShapeType with handle callbacks succeeds
-    // ------------------------------------------------------------------
-    runner.startTest("registerShapeType with handle callbacks");
-    {
-        bool pass = (SoProceduralShape::isRegistered("TwoParam_test") == TRUE);
-        runner.endTest(pass, pass ? "" : "TwoParam_test should be registered");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 14: buildHandleDraggers() returns non-null for type with handles
-    // ------------------------------------------------------------------
-    runner.startTest("buildHandleDraggers returns non-null for registered handle type");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-        shape->shapeType.setValue("TwoParam_test");
-        float pv[] = { 0.5f, 0.5f };
-        shape->params.setValues(0, 2, pv);
-
-        SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = (handles != nullptr);
-        if (handles) handles->ref(); // adopt ownership
-
-        if (handles) handles->unref();
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "buildHandleDraggers returned nullptr");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 15: buildHandleDraggers() returns nullptr for type without handles
-    // ------------------------------------------------------------------
-    runner.startTest("buildHandleDraggers returns nullptr when no handle callbacks");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-        shape->setShapeType("UnitBox_test"); // registered WITHOUT handle callbacks
-
-        SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = (handles == nullptr);
-
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "Expected nullptr for type without handles");
-    }
-
-    // ------------------------------------------------------------------
-    // Test 16: buildHandleDraggers() produces correct number of child nodes
-    // ------------------------------------------------------------------
-    runner.startTest("buildHandleDraggers produces one sub-separator per handle");
-    {
-        SoProceduralShape* shape = new SoProceduralShape;
-        shape->ref();
-        shape->shapeType.setValue("TwoParam_test");
-        float pv[] = { 1.f, 2.f };
-        shape->params.setValues(0, 2, pv);
-
-        SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = handles && (handles->getNumChildren() == 1); // 1 handle
-
-        if (handles) { handles->ref(); handles->unref(); }
-        shape->unref();
-        runner.endTest(pass, pass ? "" : "Expected 1 child separator for 1 handle");
-    }
 
     // ------------------------------------------------------------------
     // JSON topology parsing tests — use a minimal cube schema
@@ -530,24 +248,431 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         static_cast<SoProceduralBBoxCB>(tetraBbox),
         static_cast<SoProceduralGeomCB>(tetraGeom));
 
+    }
+};
+
+TEST_F(ProceduralShapeTest, RegisterShapeTypeSucceedsForNewType)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SbBool ok = SoProceduralShape::registerShapeType(
+                        "RegistrationSuccess_test", kBoxSchema,
+                        unitBox_bbox, unitBox_geom);
+        EXPECT_TRUE((ok == TRUE)) << (ok ? "" : "Expected TRUE for first registration");
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 2: Duplicate registration is rejected
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, RegisterShapeTypeRejectsDuplicateName)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        (void)SoProceduralShape::registerShapeType(
+            "DuplicateRegistration_test", kBoxSchema,
+            unitBox_bbox, unitBox_geom);
+        SbBool ok = SoProceduralShape::registerShapeType(
+                        "DuplicateRegistration_test", "{}",
+                        dummy_bbox, dummy_geom);
+        EXPECT_TRUE((ok == FALSE)) << (ok ? "Expected FALSE for duplicate registration" : "");
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 3: isRegistered()
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, IsRegisteredReturnsCorrectResults)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        bool pass = (SoProceduralShape::isRegistered("UnitBox_test") == TRUE)
+                 && (SoProceduralShape::isRegistered("NoSuchShape")  == FALSE);
+        EXPECT_TRUE(pass) << "isRegistered returned wrong value";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 4: getSchemaJSON() returns the registered JSON
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, GetSchemaJSONReturnsRegisteredSchema)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        const char* schema = SoProceduralShape::getSchemaJSON("UnitBox_test");
+        bool pass = (schema != nullptr)
+                 && (strstr(schema, "UnitBox") != nullptr)
+                 && (strstr(schema, "halfSize") != nullptr)
+                 && (SoProceduralShape::getSchemaJSON("NoSuchShape") == nullptr);
+        EXPECT_TRUE(pass) << "getSchemaJSON returned unexpected value";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 5: setShapeType() populates fields from schema defaults
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, SetShapeTypePopulatesShapeTypeSchemaJSONAndParams)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+
+        shape->setShapeType("UnitBox_test");
+
+        bool pass = (strcmp(shape->shapeType.getValue().getString(),
+                            "UnitBox_test") == 0)
+                 && (shape->schemaJSON.getValue().getLength() > 0)
+                 && (shape->params.getNum() == 1)
+                 && floatNear(shape->params[0], 1.0f);
+
+        shape->unref();
+        EXPECT_TRUE(pass) << "setShapeType field population failed";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 6: params field get/set round-trip
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, ParamsFieldSetGetRoundTrip)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+
+        float vals[] = { 0.5f, 2.0f, 3.14f };
+        shape->params.setValues(0, 3, vals);
+
+        bool pass = (shape->params.getNum() == 3)
+                 && floatNear(shape->params[0], 0.5f)
+                 && floatNear(shape->params[1], 2.0f)
+                 && floatNear(shape->params[2], 3.14f, 1e-3f);
+
+        shape->unref();
+        EXPECT_TRUE(pass) << "params field round-trip failed";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 7: SoGetBoundingBoxAction invokes the bbox callback
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, SoGetBoundingBoxActionCallsBboxCallback)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->setShapeType("UnitBox_test"); // halfSize=1 → [-1,-1,-1]..[1,1,1]
+        root->addChild(shape);
+
+        SbViewportRegion vp(128, 128);
+        SoGetBoundingBoxAction bba(vp);
+        bba.apply(root);
+
+        SbBox3f box = bba.getBoundingBox();
+        SbVec3f mn  = box.getMin();
+        SbVec3f mx  = box.getMax();
+
+        bool pass = !box.isEmpty()
+                 && floatNear(mn[0], -1.0f) && floatNear(mn[1], -1.0f)
+                 && floatNear(mn[2], -1.0f)
+                 && floatNear(mx[0],  1.0f) && floatNear(mx[1],  1.0f)
+                 && floatNear(mx[2],  1.0f);
+
+        root->unref();
+        EXPECT_TRUE(pass) << "Bounding box values incorrect";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 8: Bbox scales with params
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, BboxScalesCorrectlyWhenParamsChange)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->shapeType.setValue("UnitBox_test");
+        float pv = 3.0f;
+        shape->params.setValues(0, 1, &pv); // halfSize = 3
+        root->addChild(shape);
+
+        SbViewportRegion vp(128, 128);
+        SoGetBoundingBoxAction bba(vp);
+        bba.apply(root);
+
+        SbBox3f box = bba.getBoundingBox();
+        SbVec3f mn  = box.getMin();
+        SbVec3f mx  = box.getMax();
+
+        bool pass = floatNear(mn[0], -3.0f) && floatNear(mx[0], 3.0f);
+        root->unref();
+        EXPECT_TRUE(pass) << "Bbox did not scale with params";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 9: SoGetPrimitiveCountAction counts triangles
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, SoGetPrimitiveCountActionReportsCorrectTriangleCount)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->setShapeType("UnitBox_test"); // unitBox_geom → 12 triangles
+        root->addChild(shape);
+
+        SoGetPrimitiveCountAction pca;
+        pca.apply(root);
+
+        bool pass = (pca.getTriangleCount() == 12);
+        root->unref();
+        EXPECT_TRUE(pass) << "Triangle count did not match expected 12";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 10: Unregistered type — graceful fallback (unit bbox, no crash)
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, UnregisteredShapeTypeDoesNotCrashReturnsFallbackBbox)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->shapeType.setValue("DoesNotExist");
+        root->addChild(shape);
+
+        SbViewportRegion vp(128, 128);
+        SoGetBoundingBoxAction bba(vp);
+        bba.apply(root); // must not crash
+
+        bool pass = !bba.getBoundingBox().isEmpty();
+        root->unref();
+        EXPECT_TRUE(pass) << "Fallback bbox should not be empty";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 11: Scene-graph ref/unref lifecycle
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, SceneGraphRefUnrefLifecycleIsCorrect)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->setShapeType("UnitBox_test");
+        root->addChild(shape);
+
+        bool pass = (root->getNumChildren() == 1)
+                 && (root->getChild(0) == shape);
+
+        root->unref(); // should cleanly destroy everything
+        EXPECT_TRUE(pass) << "Scene-graph child check failed";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 12: Node type-id checks
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, SoProceduralShapeTypeIdChecks)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+
+        bool pass = (shape->getTypeId() != SoType::badType())
+                 && shape->isOfType(SoShape::getClassTypeId())
+                 && shape->isOfType(SoNode::getClassTypeId());
+
+        shape->unref();
+        EXPECT_TRUE(pass) << "Type-id check failed";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 13: registerShapeType with handle callbacks succeeds
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, RegisterShapeTypeWithHandleCallbacks)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        bool pass = (SoProceduralShape::isRegistered("TwoParam_test") == TRUE);
+        EXPECT_TRUE(pass) << "TwoParam_test should be registered";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 14: buildHandleDraggers() returns non-null for type with handles
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, BuildHandleDraggersReturnsNonNullForRegisteredHandleType)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+        shape->shapeType.setValue("TwoParam_test");
+        float pv[] = { 0.5f, 0.5f };
+        shape->params.setValues(0, 2, pv);
+
+        SoSeparator* handles = shape->buildHandleDraggers();
+        bool pass = (handles != nullptr);
+        if (handles) handles->ref(); // adopt ownership
+
+        if (handles) handles->unref();
+        shape->unref();
+        EXPECT_TRUE(pass) << "buildHandleDraggers returned nullptr";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 15: buildHandleDraggers() returns nullptr for type without handles
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, BuildHandleDraggersReturnsNullptrWhenNoHandleCallbacks)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+        shape->setShapeType("UnitBox_test"); // registered WITHOUT handle callbacks
+
+        SoSeparator* handles = shape->buildHandleDraggers();
+        bool pass = (handles == nullptr);
+
+        shape->unref();
+        EXPECT_TRUE(pass) << "Expected nullptr for type without handles";
+
+}
+
+
+
+    // ------------------------------------------------------------------
+    // Test 16: buildHandleDraggers() produces correct number of child nodes
+    // ------------------------------------------------------------------
+
+TEST_F(ProceduralShapeTest, BuildHandleDraggersProducesOneSubSeparatorPerHandle)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
+        SoProceduralShape* shape = new SoProceduralShape;
+        shape->ref();
+        shape->shapeType.setValue("TwoParam_test");
+        float pv[] = { 1.f, 2.f };
+        shape->params.setValues(0, 2, pv);
+
+        SoSeparator* handles = shape->buildHandleDraggers();
+        bool pass = handles && (handles->getNumChildren() == 1); // 1 handle
+
+        if (handles) { handles->ref(); handles->unref(); }
+        shape->unref();
+        EXPECT_TRUE(pass) << "Expected 1 child separator for 1 handle";
+
+}
+
+
+
     // ------------------------------------------------------------------
     // Test 17: JSON topology parsing — params extracted from schema
     // ------------------------------------------------------------------
-    runner.startTest("JSON topology: setShapeType extracts 12 defaults for Tetra_test");
-    {
+
+TEST_F(ProceduralShapeTest, JSONTopologySetShapeTypeExtracts12DefaultsForTetraTest)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
         bool pass = (shape->params.getNum() == 12);
         shape->unref();
-        runner.endTest(pass, pass ? "" : "Expected 12 params from JSON topology");
-    }
+        EXPECT_TRUE(pass) << "Expected 12 params from JSON topology";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 18: buildHandleDraggers() from topology — correct child count
     // ------------------------------------------------------------------
-    runner.startTest("buildHandleDraggers from topology: correct child count");
-    {
+
+TEST_F(ProceduralShapeTest, BuildHandleDraggersFromTopologyCorrectChildCount)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
@@ -557,25 +682,39 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         bool pass = handles && (handles->getNumChildren() == 3);
         if (handles) { handles->ref(); handles->unref(); }
         shape->unref();
-        runner.endTest(pass, pass ? "" : "Expected 3 children from topology handles");
-    }
+        EXPECT_TRUE(pass) << "Expected 3 children from topology handles";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 19: DRAG_NO_INTERSECT enum value is distinct from other types
     // ------------------------------------------------------------------
-    runner.startTest("DRAG_NO_INTERSECT is a distinct DragType value");
-    {
+
+TEST_F(ProceduralShapeTest, DRAGNOINTERSECTIsADistinctDragTypeValue)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         bool pass = (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_POINT)
                  && (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_ALONG_AXIS)
                  && (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_ON_PLANE);
-        runner.endTest(pass, pass ? "" : "DRAG_NO_INTERSECT not distinct");
-    }
+        EXPECT_TRUE(pass) << "DRAG_NO_INTERSECT not distinct";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 20: registerShapeType with handleValidateCB succeeds
     // ------------------------------------------------------------------
-    runner.startTest("registerShapeType with handleValidateCB");
-    {
+
+TEST_F(ProceduralShapeTest, RegisterShapeTypeWithHandleValidateCB)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         static const auto hvCB = [](const float*, int, int, const SbVec3f&,
                                     const SbVec3f& proposed, SbVec3f& accepted,
                                     void*) -> SbBool {
@@ -583,24 +722,31 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         };
         SbBool ok = SoProceduralShape::registerShapeType(
             "HandleValidateTest", "",
-            static_cast<SoProceduralBBoxCB>(tetraBbox),
-            static_cast<SoProceduralGeomCB>(tetraGeom),
+            dummy_bbox,
+            dummy_geom,
             nullptr, nullptr,
             static_cast<SoProceduralHandleValidateCB>(hvCB),
             nullptr);
         bool pass = (ok == TRUE) && SoProceduralShape::isRegistered("HandleValidateTest");
-        runner.endTest(pass, pass ? "" : "handleValidateCB registration failed");
-    }
+        EXPECT_TRUE(pass) << "handleValidateCB registration failed";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 21: setObjectValidateCallback wires objectValidateCB after reg
     // ------------------------------------------------------------------
-    runner.startTest("setObjectValidateCallback after registration");
-    {
+
+TEST_F(ProceduralShapeTest, SetObjectValidateCallbackAfterRegistration)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape::registerShapeType(
             "ObjValidateTest", "",
-            static_cast<SoProceduralBBoxCB>(tetraBbox),
-            static_cast<SoProceduralGeomCB>(tetraGeom));
+            dummy_bbox,
+            dummy_geom);
 
         [[maybe_unused]] static SbBool sCBCalled = FALSE;
         static const auto objCB = [](const char*, void*) -> SbBool {
@@ -611,28 +757,42 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
             "ObjValidateTest",
             static_cast<SoProceduralObjectValidateCB>(objCB));
         bool pass = (setOk == TRUE);
-        runner.endTest(pass, pass ? "" : "setObjectValidateCallback failed");
-    }
+        EXPECT_TRUE(pass) << "setObjectValidateCallback failed";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 22: setObjectValidateCallback returns FALSE for unknown type
     // ------------------------------------------------------------------
-    runner.startTest("setObjectValidateCallback returns FALSE for unknown type");
-    {
+
+TEST_F(ProceduralShapeTest, SetObjectValidateCallbackReturnsFALSEForUnknownType)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SbBool r = SoProceduralShape::setObjectValidateCallback(
             "NoSuchType_xyz",
             nullptr);
         bool pass = (r == FALSE);
-        runner.endTest(pass, pass ? "" : "Expected FALSE for unregistered type");
-    }
+        EXPECT_TRUE(pass) << "Expected FALSE for unregistered type";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 23: buildProposedParamsJSON serialises all named params
     //   (indirect test: registerShapeType with objectValidateCB that
     //    receives JSON containing the expected keys)
     // ------------------------------------------------------------------
-    runner.startTest("objectValidateCB receives JSON with named param keys");
-    {
+
+TEST_F(ProceduralShapeTest, ObjectValidateCBReceivesJSONWithNamedParamKeys)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         static const char* kMiniSchema = R"({
             "type": "Mini_test",
             "params": [
@@ -678,15 +838,21 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         shape->unref();
 
         bool pass = paramCountOK && defaultsOK;
-        runner.endTest(pass, pass ? "" :
-            "Mini_test params or defaults wrong after JSON topology parse");
-    }
+        EXPECT_TRUE(pass) << "Mini_test params or defaults wrong after JSON topology parse";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 24: getCurrentParamsJSON returns JSON with expected format
     // ------------------------------------------------------------------
-    runner.startTest("getCurrentParamsJSON returns JSON with expected format");
-    {
+
+TEST_F(ProceduralShapeTest, GetCurrentParamsJSONReturnsJSONWithExpectedFormat)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Mini_test"); // width=2.0, height=3.0
@@ -701,14 +867,21 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
                  && (strstr(js, "params")    != nullptr);
 
         shape->unref();
-        runner.endTest(pass, pass ? "" : "getCurrentParamsJSON missing expected keys");
-    }
+        EXPECT_TRUE(pass) << "getCurrentParamsJSON missing expected keys";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 25: getCurrentParamsJSON updates after params field change
     // ------------------------------------------------------------------
-    runner.startTest("getCurrentParamsJSON updates after params change");
-    {
+
+TEST_F(ProceduralShapeTest, GetCurrentParamsJSONUpdatesAfterParamsChange)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Mini_test"); // defaults: width=2.0, height=3.0
@@ -726,30 +899,42 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
                  && (strstr(js, "9.25") != nullptr);
 
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "getCurrentParamsJSON did not reflect updated param values");
-    }
+        EXPECT_TRUE(pass) << "getCurrentParamsJSON did not reflect updated param values";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 26: getCurrentParamsJSON returns empty string for unset type
     // ------------------------------------------------------------------
-    runner.startTest("getCurrentParamsJSON returns empty string for unset type");
-    {
+
+TEST_F(ProceduralShapeTest, GetCurrentParamsJSONReturnsEmptyStringForUnsetType)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         // shapeType is empty — no registered type
         SbString json = shape->getCurrentParamsJSON();
         bool pass = (json.getLength() == 0);
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "Expected empty string for shape with no type set");
-    }
+        EXPECT_TRUE(pass) << "Expected empty string for shape with no type set";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 27: buildSelectionDisplay returns non-null for topology type
     // ------------------------------------------------------------------
-    runner.startTest("buildSelectionDisplay returns non-null for topology type");
-    {
+
+TEST_F(ProceduralShapeTest, BuildSelectionDisplayReturnsNonNullForTopologyType)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test"); // has 3 handles in topology
@@ -759,16 +944,23 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         if (selDisp) selDisp->ref();
         if (selDisp) selDisp->unref();
         shape->unref();
-        runner.endTest(pass, pass ? "" : "buildSelectionDisplay returned nullptr");
-    }
+        EXPECT_TRUE(pass) << "buildSelectionDisplay returned nullptr";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 28: buildSelectionDisplay has correct child count
     //   Each handle becomes one sub-separator containing:
     //     SoTranslation + SoSphere + SoText2  (3 children per sub-sep)
     // ------------------------------------------------------------------
-    runner.startTest("buildSelectionDisplay child count matches handle count");
-    {
+
+TEST_F(ProceduralShapeTest, BuildSelectionDisplayChildCountMatchesHandleCount)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test"); // 3 handles
@@ -790,15 +982,21 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         if (selDisp) { selDisp->ref(); selDisp->unref(); }
         shape->unref();
         bool pass = topOK && childOK;
-        runner.endTest(pass, pass ? "" :
-            "buildSelectionDisplay child structure incorrect");
-    }
+        EXPECT_TRUE(pass) << "buildSelectionDisplay child structure incorrect";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 29: buildSelectionDisplay returns nullptr for type without handles
     // ------------------------------------------------------------------
-    runner.startTest("buildSelectionDisplay returns nullptr for type without handles");
-    {
+
+TEST_F(ProceduralShapeTest, BuildSelectionDisplayReturnsNullptrForTypeWithoutHandles)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("UnitBox_test"); // no handles
@@ -806,17 +1004,23 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         SoSeparator* selDisp = shape->buildSelectionDisplay();
         bool pass = (selDisp == nullptr);
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "Expected nullptr for type without handles");
-    }
+        EXPECT_TRUE(pass) << "Expected nullptr for type without handles";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 30: setSelectCallback / pickHandle — built-in proximity test
     //   Use the Tetra_test type and shoot a ray through the expected
     //   handle position for v0_h (vertex v0 at default -1,-1,-1).
     // ------------------------------------------------------------------
-    runner.startTest("pickHandle built-in proximity test hits expected handle");
-    {
+
+TEST_F(ProceduralShapeTest, PickHandleBuiltInProximityTestHitsExpectedHandle)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
@@ -829,17 +1033,23 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
         bool pass = (hitIdx == 0);
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "Expected handle 0 (v0_h) to be hit by ray through (-1,-1,-1)");
-    }
+        EXPECT_TRUE(pass) << "Expected handle 0 (v0_h) to be hit by ray through (-1,-1,-1)";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 31: setSelectCallback with useCustomCB=TRUE bypasses built-in
     //   test.  Install a callback that always returns handle 2 and verify
     //   that pickHandle returns 2 even for a ray aimed at handle 0.
     // ------------------------------------------------------------------
-    runner.startTest("setSelectCallback useCustomCB=TRUE bypasses built-in test");
-    {
+
+TEST_F(ProceduralShapeTest, SetSelectCallbackUseCustomCBTRUEBypassesBuiltInTest)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
@@ -856,16 +1066,22 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
         bool pass = (hitIdx == 2);
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "Custom selectCB should override built-in; expected 2");
-    }
+        EXPECT_TRUE(pass) << "Custom selectCB should override built-in; expected 2";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 32: setSelectCallback with useCustomCB=FALSE: built-in misses,
     //   fallback callback returns 1.
     // ------------------------------------------------------------------
-    runner.startTest("setSelectCallback useCustomCB=FALSE: callback used as fallback");
-    {
+
+TEST_F(ProceduralShapeTest, SetSelectCallbackUseCustomCBFALSECallbackUsedAsFallback)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
@@ -883,9 +1099,11 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
         bool pass = (hitIdx == 1);
         shape->unref();
-        runner.endTest(pass, pass ? "" :
-            "Fallback selectCB should return 1 when built-in misses");
-    }
+        EXPECT_TRUE(pass) << "Fallback selectCB should return 1 when built-in misses";
+
+}
+
+
 
     // ------------------------------------------------------------------
     // Test 33: Full edit cycle
@@ -897,8 +1115,12 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
     //   5. Extracts the current JSON via getCurrentParamsJSON()
     //   6. Verifies the JSON reflects the edited state
     // ------------------------------------------------------------------
-    runner.startTest("Full edit cycle: load JSON, edit params, validate, extract JSON");
-    {
+
+TEST_F(ProceduralShapeTest, FullEditCycleLoadJSONEditParamsValidateExtractJSON)
+{
+    // ------------------------------------------------------------------
+    // Test 1: First registration succeeds
+    // ------------------------------------------------------------------
         // --- Step 1: Register a simple cuboid (ARB8-like) type ---
         static const char* kArb8Schema = R"({
             "type": "EditCube_test",
@@ -1026,7 +1248,6 @@ TEST(UpstreamNodesProceduralShape, RetainedCoverage)
         if (!step2OK) failMsg += "step2 (24 params) FAILED; ";
         if (!step3OK) failMsg += "step3 (selDisp children) FAILED; ";
         if (!step5OK) failMsg += "step5 (JSON content) FAILED; ";
-        runner.endTest(pass, failMsg);
-    }
+        EXPECT_TRUE(pass) << failMsg;
 
 }

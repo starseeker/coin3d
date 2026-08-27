@@ -72,178 +72,173 @@ static void keyboardEventCb(void * userdata, SoEventCallback * /*node*/)
     cap->fired = true;
 }
 
-TEST(UpstreamEventsSuite, RetainedCoverage)
+TEST(EventsSuite, SoKeyboardEventSetGetKeyAndState)
 {
-    CheckRecorder runner;
+    SoKeyboardEvent evt;
+    evt.setKey(SoKeyboardEvent::A);
+    evt.setState(SoButtonEvent::DOWN);
+    bool pass = (evt.getKey() == SoKeyboardEvent::A) &&
+                (evt.getState() == SoButtonEvent::DOWN);
+    EXPECT_TRUE(pass) << "SoKeyboardEvent key or state mismatch";
+}
 
-    // -----------------------------------------------------------------------
-    // SoKeyboardEvent: set/get key, state, position, shift modifier
-    // -----------------------------------------------------------------------
-    runner.startTest("SoKeyboardEvent set/get key and state");
-    {
-        SoKeyboardEvent evt;
-        evt.setKey(SoKeyboardEvent::A);
-        evt.setState(SoButtonEvent::DOWN);
-        bool pass = (evt.getKey() == SoKeyboardEvent::A) &&
-                    (evt.getState() == SoButtonEvent::DOWN);
-        runner.endTest(pass, pass ? "" : "SoKeyboardEvent key or state mismatch");
-    }
+TEST(EventsSuite, SoKeyboardEventSetPositionGetPosition)
+{
+    SoKeyboardEvent evt;
+    evt.setPosition(SbVec2s(100, 200));
+    const SbVec2s & pos = evt.getPosition();
+    bool pass = (pos[0] == 100) && (pos[1] == 200);
+    EXPECT_TRUE(pass) << "SoKeyboardEvent position mismatch";
+}
 
-    runner.startTest("SoKeyboardEvent setPosition / getPosition");
-    {
-        SoKeyboardEvent evt;
-        evt.setPosition(SbVec2s(100, 200));
-        const SbVec2s & pos = evt.getPosition();
-        bool pass = (pos[0] == 100) && (pos[1] == 200);
-        runner.endTest(pass, pass ? "" : "SoKeyboardEvent position mismatch");
-    }
+TEST(EventsSuite, SoKeyboardEventWasShiftDownDefaultFalse)
+{
+    SoKeyboardEvent evt;
+    // No shift modifier set — should be false
+    bool pass = (evt.wasShiftDown() == FALSE);
+    EXPECT_TRUE(pass) << "SoKeyboardEvent wasShiftDown should default to false";
+}
 
-    runner.startTest("SoKeyboardEvent wasShiftDown default false");
-    {
-        SoKeyboardEvent evt;
-        // No shift modifier set — should be false
-        bool pass = (evt.wasShiftDown() == FALSE);
-        runner.endTest(pass, pass ? "" : "SoKeyboardEvent wasShiftDown should default to false");
-    }
+// -----------------------------------------------------------------------
+// SoMouseButtonEvent: button, state, isButtonPressEvent
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoMouseButtonEvent: button, state, isButtonPressEvent
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMouseButtonEvent set/get button and state");
-    {
-        SoMouseButtonEvent evt;
-        evt.setButton(SoMouseButtonEvent::BUTTON1);
-        evt.setState(SoButtonEvent::DOWN);
-        bool pass = (evt.getButton() == SoMouseButtonEvent::BUTTON1) &&
-                    (evt.getState() == SoButtonEvent::DOWN);
-        runner.endTest(pass, pass ? "" : "SoMouseButtonEvent button or state mismatch");
-    }
+TEST(EventsSuite, SoMouseButtonEventSetGetButtonAndState)
+{
+    SoMouseButtonEvent evt;
+    evt.setButton(SoMouseButtonEvent::BUTTON1);
+    evt.setState(SoButtonEvent::DOWN);
+    bool pass = (evt.getButton() == SoMouseButtonEvent::BUTTON1) &&
+                (evt.getState() == SoButtonEvent::DOWN);
+    EXPECT_TRUE(pass) << "SoMouseButtonEvent button or state mismatch";
+}
 
-    runner.startTest("SoMouseButtonEvent isButtonPressEvent");
-    {
-        SoMouseButtonEvent evt;
-        evt.setButton(SoMouseButtonEvent::BUTTON1);
-        evt.setState(SoButtonEvent::DOWN);
-        bool pass = SoMouseButtonEvent::isButtonPressEvent(
-                        &evt, SoMouseButtonEvent::BUTTON1) == TRUE;
-        runner.endTest(pass, pass ? "" : "SoMouseButtonEvent::isButtonPressEvent failed");
-    }
+TEST(EventsSuite, SoMouseButtonEventIsButtonPressEvent)
+{
+    SoMouseButtonEvent evt;
+    evt.setButton(SoMouseButtonEvent::BUTTON1);
+    evt.setState(SoButtonEvent::DOWN);
+    bool pass = SoMouseButtonEvent::isButtonPressEvent(
+                    &evt, SoMouseButtonEvent::BUTTON1) == TRUE;
+    EXPECT_TRUE(pass) << "SoMouseButtonEvent::isButtonPressEvent failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoLocation2Event: setPosition / getPosition
-    // -----------------------------------------------------------------------
-    runner.startTest("SoLocation2Event setPosition / getPosition");
-    {
-        SoLocation2Event evt;
-        evt.setPosition(SbVec2s(42, 17));
-        const SbVec2s & pos = evt.getPosition();
-        bool pass = (pos[0] == 42) && (pos[1] == 17);
-        runner.endTest(pass, pass ? "" : "SoLocation2Event position mismatch");
-    }
+// -----------------------------------------------------------------------
+// SoLocation2Event: setPosition / getPosition
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoMotion3Event: class initialized
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMotion3Event class initialized");
-    {
-        SoMotion3Event evt;
-        bool pass = (evt.getTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoMotion3Event has bad type");
-    }
+TEST(EventsSuite, SoLocation2EventSetPositionGetPosition)
+{
+    SoLocation2Event evt;
+    evt.setPosition(SbVec2s(42, 17));
+    const SbVec2s & pos = evt.getPosition();
+    bool pass = (pos[0] == 42) && (pos[1] == 17);
+    EXPECT_TRUE(pass) << "SoLocation2Event position mismatch";
+}
 
-    // -----------------------------------------------------------------------
-    // SoSpaceballButtonEvent: class initialized
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSpaceballButtonEvent class initialized");
-    {
-        SoSpaceballButtonEvent evt;
-        bool pass = (evt.getTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoSpaceballButtonEvent has bad type");
-    }
+// -----------------------------------------------------------------------
+// SoMotion3Event: class initialized
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoEventCallback: no callback registered — event not handled
-    // -----------------------------------------------------------------------
-    runner.startTest("SoHandleEventAction event not handled without callback");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoEventCallback * ecb = new SoEventCallback;
-        root->addChild(ecb);
+TEST(EventsSuite, SoMotion3EventClassInitialized)
+{
+    SoMotion3Event evt;
+    bool pass = (evt.getTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoMotion3Event has bad type";
+}
 
-        SoKeyboardEvent evt;
-        evt.setKey(SoKeyboardEvent::A);
-        evt.setState(SoButtonEvent::DOWN);
+// -----------------------------------------------------------------------
+// SoSpaceballButtonEvent: class initialized
+// -----------------------------------------------------------------------
 
-        SbViewportRegion vp(256, 256);
-        SoHandleEventAction action(vp);
-        action.setEvent(&evt);
-        action.apply(root);
+TEST(EventsSuite, SoSpaceballButtonEventClassInitialized)
+{
+    SoSpaceballButtonEvent evt;
+    bool pass = (evt.getTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoSpaceballButtonEvent has bad type";
+}
 
-        bool pass = (action.isHandled() == FALSE);
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "Event should not be handled when no callback is registered");
-    }
+// -----------------------------------------------------------------------
+// SoEventCallback: no callback registered — event not handled
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoEventCallback: registered callback fires on matching event type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoEventCallback addEventCallback fires on matching event");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoEventCallback * ecb = new SoEventCallback;
+TEST(EventsSuite, SoHandleEventActionEventNotHandledWithoutCallback)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoEventCallback * ecb = new SoEventCallback;
+    root->addChild(ecb);
 
-        EventCapture cap;
-        ecb->addEventCallback(SoKeyboardEvent::getClassTypeId(),
-                              keyboardEventCb, &cap);
-        root->addChild(ecb);
+    SoKeyboardEvent evt;
+    evt.setKey(SoKeyboardEvent::A);
+    evt.setState(SoButtonEvent::DOWN);
 
-        SoKeyboardEvent evt;
-        evt.setKey(SoKeyboardEvent::A);
-        evt.setState(SoButtonEvent::DOWN);
+    SbViewportRegion vp(256, 256);
+    SoHandleEventAction action(vp);
+    action.setEvent(&evt);
+    action.apply(root);
 
-        SbViewportRegion vp(256, 256);
-        SoHandleEventAction action(vp);
-        action.setEvent(&evt);
-        action.apply(root);
+    bool pass = (action.isHandled() == FALSE);
+    root->unref();
+    EXPECT_TRUE(pass) << "Event should not be handled when no callback is registered";
+}
 
-        bool pass = cap.fired;
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoEventCallback did not fire for matching event type");
-    }
+// -----------------------------------------------------------------------
+// SoEventCallback: registered callback fires on matching event type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoEventCallback: callback does NOT fire for mismatched event type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoEventCallback does not fire for mismatched event type");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoEventCallback * ecb = new SoEventCallback;
+TEST(EventsSuite, SoEventCallbackAddEventCallbackFiresOnMatchingEvent)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoEventCallback * ecb = new SoEventCallback;
 
-        EventCapture cap;
-        // Register only for mouse button events
-        ecb->addEventCallback(SoMouseButtonEvent::getClassTypeId(),
-                              keyboardEventCb, &cap);
-        root->addChild(ecb);
+    EventCapture cap;
+    ecb->addEventCallback(SoKeyboardEvent::getClassTypeId(),
+                          keyboardEventCb, &cap);
+    root->addChild(ecb);
 
-        // Dispatch a keyboard event — should not trigger mouse callback
-        SoKeyboardEvent evt;
-        evt.setKey(SoKeyboardEvent::B);
-        evt.setState(SoButtonEvent::DOWN);
+    SoKeyboardEvent evt;
+    evt.setKey(SoKeyboardEvent::A);
+    evt.setState(SoButtonEvent::DOWN);
 
-        SbViewportRegion vp(256, 256);
-        SoHandleEventAction action(vp);
-        action.setEvent(&evt);
-        action.apply(root);
+    SbViewportRegion vp(256, 256);
+    SoHandleEventAction action(vp);
+    action.setEvent(&evt);
+    action.apply(root);
 
-        bool pass = !cap.fired;
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoEventCallback fired for wrong event type");
-    }
+    bool pass = cap.fired;
+    root->unref();
+    EXPECT_TRUE(pass) << "SoEventCallback did not fire for matching event type";
+}
 
+// -----------------------------------------------------------------------
+// SoEventCallback: callback does NOT fire for mismatched event type
+// -----------------------------------------------------------------------
+
+TEST(EventsSuite, SoEventCallbackDoesNotFireForMismatchedEventType)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoEventCallback * ecb = new SoEventCallback;
+
+    EventCapture cap;
+    // Register only for mouse button events
+    ecb->addEventCallback(SoMouseButtonEvent::getClassTypeId(),
+                          keyboardEventCb, &cap);
+    root->addChild(ecb);
+
+    // Dispatch a keyboard event — should not trigger mouse callback
+    SoKeyboardEvent evt;
+    evt.setKey(SoKeyboardEvent::B);
+    evt.setState(SoButtonEvent::DOWN);
+
+    SbViewportRegion vp(256, 256);
+    SoHandleEventAction action(vp);
+    action.setEvent(&evt);
+    action.apply(root);
+
+    bool pass = !cap.fired;
+    root->unref();
+    EXPECT_TRUE(pass) << "SoEventCallback fired for wrong event type";
 }

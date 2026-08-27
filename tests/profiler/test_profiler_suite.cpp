@@ -71,256 +71,254 @@ public:
 
 } // namespace
 
-TEST(UpstreamProfilerSuite, RetainedCoverage)
+TEST(ProfilerSuite, SoProfilerInitDoesNotCrash)
 {
-    CheckRecorder runner;
+    SoProfiler::init();
+    const bool pass = (SoProfiler::isEnabled() == FALSE);
+    EXPECT_TRUE(pass) << "SoProfiler::init unexpectedly enabled runtime profiling";
+}
 
-    // -----------------------------------------------------------------------
-    // SoProfiler::init can be called without crashing
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::init does not crash");
-    {
-        SoProfiler::init();
-        const bool pass = (SoProfiler::isEnabled() == FALSE);
-        runner.endTest(pass, pass ? "" :
-            "SoProfiler::init unexpectedly enabled runtime profiling");
-    }
+// -----------------------------------------------------------------------
+// SoProfilerStats class type ID is valid (requires SoProfiler::init first)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoProfilerStats class type ID is valid (requires SoProfiler::init first)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfilerStats::getClassTypeId is not badType");
-    {
-        bool pass = (SoProfilerStats::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoProfilerStats has bad class type");
-    }
+TEST(ProfilerSuite, SoProfilerStatsGetClassTypeIdIsNotBadType)
+{
+    bool pass = (SoProfilerStats::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoProfilerStats has bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // isEnabled returns FALSE before any explicit enable call
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::isEnabled returns FALSE before enable");
-    {
-        bool pass = (SoProfiler::isEnabled() == FALSE);
-        runner.endTest(pass, pass ? "" : "SoProfiler::isEnabled should be FALSE before enable");
-    }
+// -----------------------------------------------------------------------
+// isEnabled returns FALSE before any explicit enable call
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // enable(TRUE) / isEnabled
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::enable(TRUE) makes isEnabled return TRUE");
-    {
-        SoProfiler::enable(TRUE);
-        // Profiling is an optional compile-time feature.  In a normal
-        // library build enable(TRUE) is intentionally a no-op from the
-        // public isEnabled() contract's perspective.
+TEST(ProfilerSuite, SoProfilerIsEnabledReturnsFALSEBeforeEnable)
+{
+    bool pass = (SoProfiler::isEnabled() == FALSE);
+    EXPECT_TRUE(pass) << "SoProfiler::isEnabled should be FALSE before enable";
+}
+
+// -----------------------------------------------------------------------
+// enable(TRUE) / isEnabled
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, SoProfilerEnableTRUEMakesIsEnabledReturnTRUE)
+{
+    SoProfiler::enable(TRUE);
+    // Profiling is an optional compile-time feature.  In a normal
+    // library build enable(TRUE) is intentionally a no-op from the
+    // public isEnabled() contract's perspective.
 #ifdef OBOL_PROFILING
-        bool pass = (SoProfiler::isEnabled() == TRUE);
+    bool pass = (SoProfiler::isEnabled() == TRUE);
 #else
-        bool pass = (SoProfiler::isEnabled() == FALSE);
+    bool pass = (SoProfiler::isEnabled() == FALSE);
 #endif
-        SoProfiler::enable(FALSE); // restore
-        runner.endTest(pass, pass ? "" :
-            "SoProfiler::enable(TRUE) did not match the build configuration");
-    }
+    SoProfiler::enable(FALSE); // restore
+    EXPECT_TRUE(pass) << "SoProfiler::enable(TRUE) did not match the build configuration";
+}
 
-    // -----------------------------------------------------------------------
-    // enable(FALSE) / isEnabled
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::enable(FALSE) makes isEnabled return FALSE");
-    {
-        SoProfiler::enable(TRUE);
-        SoProfiler::enable(FALSE);
-        bool pass = (SoProfiler::isEnabled() == FALSE);
-        runner.endTest(pass, pass ? "" : "SoProfiler::isEnabled did not return FALSE after enable(FALSE)");
-    }
+// -----------------------------------------------------------------------
+// enable(FALSE) / isEnabled
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // isOverlayActive returns FALSE when no overlay is configured
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::isOverlayActive returns FALSE with no overlay");
-    {
-        bool pass = (SoProfiler::isOverlayActive() == FALSE);
-        runner.endTest(pass, pass ? "" : "SoProfiler::isOverlayActive should be FALSE when no overlay configured");
-    }
+TEST(ProfilerSuite, SoProfilerEnableFALSEMakesIsEnabledReturnFALSE)
+{
+    SoProfiler::enable(TRUE);
+    SoProfiler::enable(FALSE);
+    bool pass = (SoProfiler::isEnabled() == FALSE);
+    EXPECT_TRUE(pass) << "SoProfiler::isEnabled did not return FALSE after enable(FALSE)";
+}
 
-    // -----------------------------------------------------------------------
-    // isConsoleActive returns FALSE when not configured
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler::isConsoleActive returns FALSE when not configured");
-    {
-        bool pass = (SoProfiler::isConsoleActive() == FALSE);
-        runner.endTest(pass, pass ? "" : "SoProfiler::isConsoleActive should be FALSE when not configured");
-    }
+// -----------------------------------------------------------------------
+// isOverlayActive returns FALSE when no overlay is configured
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SbProfilingData default construction does not crash
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData default construction does not crash");
-    {
-        SbProfilingData data;
-        runner.endTest(true);
-    }
+TEST(ProfilerSuite, SoProfilerIsOverlayActiveReturnsFALSEWithNoOverlay)
+{
+    bool pass = (SoProfiler::isOverlayActive() == FALSE);
+    EXPECT_TRUE(pass) << "SoProfiler::isOverlayActive should be FALSE when no overlay configured";
+}
 
-    // -----------------------------------------------------------------------
-    // setActionType / getActionType round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData::setActionType/getActionType round-trip");
-    {
-        SbProfilingData data;
-        SoType actionType = SoGetBoundingBoxAction::getClassTypeId();
-        data.setActionType(actionType);
-        bool pass = (data.getActionType() == actionType);
-        runner.endTest(pass, pass ? "" : "getActionType did not return the type set by setActionType");
-    }
+// -----------------------------------------------------------------------
+// isConsoleActive returns FALSE when not configured
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // setActionStartTime / setActionStopTime / getActionDuration
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData timing: duration ~0.4s for start=0.1 stop=0.5");
-    {
-        SbProfilingData data;
-        data.setActionStartTime(SbTime(0.1));
-        data.setActionStopTime(SbTime(0.5));
-        double duration = data.getActionDuration().getValue();
-        // Allow a small floating-point tolerance
-        bool pass = (duration > 0.399 && duration < 0.401);
-        runner.endTest(pass, pass ? "" :
-            "getActionDuration did not return ~0.4s for start=0.1, stop=0.5");
-    }
+TEST(ProfilerSuite, SoProfilerIsConsoleActiveReturnsFALSEWhenNotConfigured)
+{
+    bool pass = (SoProfiler::isConsoleActive() == FALSE);
+    EXPECT_TRUE(pass) << "SoProfiler::isConsoleActive should be FALSE when not configured";
+}
 
-    // -----------------------------------------------------------------------
-    // Copy constructor preserves action type
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData copy constructor preserves action type");
-    {
-        SbProfilingData original;
-        SoType actionType = SoGetBoundingBoxAction::getClassTypeId();
-        original.setActionType(actionType);
+// -----------------------------------------------------------------------
+// SbProfilingData default construction does not crash
+// -----------------------------------------------------------------------
 
-        SbProfilingData copy(original);
-        bool pass = (copy.getActionType() == actionType);
-        runner.endTest(pass, pass ? "" :
-            "Copy constructor did not preserve the action type");
-    }
+TEST(ProfilerSuite, SbProfilingDataDefaultConstructionDoesNotCrash)
+{
+    SbProfilingData data;
+    SUCCEED();
+}
 
-    // -----------------------------------------------------------------------
-    // operator+= on two SbProfilingData objects (both with stop times set)
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData::operator+= does not crash with two timed objects");
-    {
-        SbProfilingData lhs;
-        lhs.setActionStartTime(SbTime(0.0));
-        lhs.setActionStopTime(SbTime(0.2));
+// -----------------------------------------------------------------------
+// setActionType / getActionType round-trip
+// -----------------------------------------------------------------------
 
-        SbProfilingData rhs;
-        rhs.setActionStartTime(SbTime(0.0));
-        rhs.setActionStopTime(SbTime(0.3));
+TEST(ProfilerSuite, SbProfilingDataSetActionTypeGetActionTypeRoundTrip)
+{
+    SbProfilingData data;
+    SoType actionType = SoGetBoundingBoxAction::getClassTypeId();
+    data.setActionType(actionType);
+    bool pass = (data.getActionType() == actionType);
+    EXPECT_TRUE(pass) << "getActionType did not return the type set by setActionType";
+}
 
-        lhs += rhs;
-        runner.endTest(true);
-    }
+// -----------------------------------------------------------------------
+// setActionStartTime / setActionStopTime / getActionDuration
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoProfiler enable + isEnabled + enable(FALSE) round-trip (after init)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfiler enable/disable round-trip after init");
-    {
-        // Verify that runtime control remains usable after initialization.
-        SbBool originalState = SoProfiler::isEnabled();
-        SoProfiler::enable(FALSE);
-        bool disabledOk = (SoProfiler::isEnabled() == FALSE);
-        SoProfiler::enable(TRUE);
+TEST(ProfilerSuite, SbProfilingDataTimingDuration04sForStart01Stop05)
+{
+    SbProfilingData data;
+    data.setActionStartTime(SbTime(0.1));
+    data.setActionStopTime(SbTime(0.5));
+    double duration = data.getActionDuration().getValue();
+    // Allow a small floating-point tolerance
+    bool pass = (duration > 0.399 && duration < 0.401);
+    EXPECT_TRUE(pass) << "getActionDuration did not return ~0.4s for start=0.1, stop=0.5";
+}
+
+// -----------------------------------------------------------------------
+// Copy constructor preserves action type
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, SbProfilingDataCopyConstructorPreservesActionType)
+{
+    SbProfilingData original;
+    SoType actionType = SoGetBoundingBoxAction::getClassTypeId();
+    original.setActionType(actionType);
+
+    SbProfilingData copy(original);
+    bool pass = (copy.getActionType() == actionType);
+    EXPECT_TRUE(pass) << "Copy constructor did not preserve the action type";
+}
+
+// -----------------------------------------------------------------------
+// operator+= on two SbProfilingData objects (both with stop times set)
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, SbProfilingDataOperatorDoesNotCrashWithTwoTimedObjects)
+{
+    SbProfilingData lhs;
+    lhs.setActionStartTime(SbTime(0.0));
+    lhs.setActionStopTime(SbTime(0.2));
+
+    SbProfilingData rhs;
+    rhs.setActionStartTime(SbTime(0.0));
+    rhs.setActionStopTime(SbTime(0.3));
+
+    lhs += rhs;
+    SUCCEED();
+}
+
+// -----------------------------------------------------------------------
+// SoProfiler enable + isEnabled + enable(FALSE) round-trip (after init)
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, SoProfilerEnableDisableRoundTripAfterInit)
+{
+    // Verify that runtime control remains usable after initialization.
+    SbBool originalState = SoProfiler::isEnabled();
+    SoProfiler::enable(FALSE);
+    bool disabledOk = (SoProfiler::isEnabled() == FALSE);
+    SoProfiler::enable(TRUE);
 #ifdef OBOL_PROFILING
-        bool enabledOk = (SoProfiler::isEnabled() == TRUE);
+    bool enabledOk = (SoProfiler::isEnabled() == TRUE);
 #else
-        bool enabledOk = (SoProfiler::isEnabled() == FALSE);
+    bool enabledOk = (SoProfiler::isEnabled() == FALSE);
 #endif
-        // Restore original state
-        SoProfiler::enable(originalState);
-        bool pass = disabledOk && enabledOk;
-        runner.endTest(pass, pass ? "" :
-            "enable/disable round-trip failed after SoProfiler::init()");
-    }
+    // Restore original state
+    SoProfiler::enable(originalState);
+    bool pass = disabledOk && enabledOk;
+    EXPECT_TRUE(pass) << "enable/disable round-trip failed after SoProfiler::init()";
+}
 
-    // -----------------------------------------------------------------------
-    // SoProfilerElement is registered for SoGLRenderAction after initialization
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProfilerElement is registered for SoGLRenderAction");
-    {
-        // SoProfilerStats::initClass() calls SO_ENABLE(SoGLRenderAction, SoProfilerElement)
-        // so after SoProfiler::init(), the element must appear in that action's
-        // class metadata even while collection is disabled.
-        SoProfiler::enable(FALSE);
-        const SoTypeList & elements =
-            ProfilerGLRenderActionAccess::enabledElements().getElements();
-        const int stackIndex = SoProfilerElement::getClassStackIndex();
-        const bool pass = stackIndex >= 0 && stackIndex < elements.getLength() &&
-            elements[stackIndex] == SoProfilerElement::getClassTypeId();
-        runner.endTest(pass, pass ? "" :
-            "SoProfilerElement not registered for SoGLRenderAction after profiler init");
-    }
+// -----------------------------------------------------------------------
+// SoProfilerElement is registered for SoGLRenderAction after initialization
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // Internal traversal pauses are local to the current thread
-    // -----------------------------------------------------------------------
-    runner.startTest("Profiler traversal pause is scoped and thread-local");
+TEST(ProfilerSuite, SoProfilerElementIsRegisteredForSoGLRenderAction)
+{
+    // SoProfilerStats::initClass() calls SO_ENABLE(SoGLRenderAction, SoProfilerElement)
+    // so after SoProfiler::init(), the element must appear in that action's
+    // class metadata even while collection is disabled.
+    SoProfiler::enable(FALSE);
+    const SoTypeList & elements =
+        ProfilerGLRenderActionAccess::enabledElements().getElements();
+    const int stackIndex = SoProfilerElement::getClassStackIndex();
+    const bool pass = stackIndex >= 0 && stackIndex < elements.getLength() &&
+        elements[stackIndex] == SoProfilerElement::getClassTypeId();
+    EXPECT_TRUE(pass) << "SoProfilerElement not registered for SoGLRenderAction after profiler init";
+}
+
+// -----------------------------------------------------------------------
+// Internal traversal pauses are local to the current thread
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, ProfilerTraversalPauseIsScopedAndThreadLocal)
+{
+    SoProfiler::enable(TRUE);
+    std::atomic<bool> otherThreadEnabled{false};
+    bool pausedHere = false;
     {
-        SoProfiler::enable(TRUE);
-        std::atomic<bool> otherThreadEnabled{false};
-        bool pausedHere = false;
-        {
-            SoProfilerP::ScopedPause pause;
-            pausedHere = (SoProfiler::isEnabled() == FALSE);
-            std::thread observer([&] {
+        SoProfilerP::ScopedPause pause;
+        pausedHere = (SoProfiler::isEnabled() == FALSE);
+        std::thread observer([&] {
 #ifdef OBOL_PROFILING
-                otherThreadEnabled.store(SoProfiler::isEnabled() == TRUE,
-                                         std::memory_order_release);
+            otherThreadEnabled.store(SoProfiler::isEnabled() == TRUE,
+                                     std::memory_order_release);
 #else
-                otherThreadEnabled.store(SoProfiler::isEnabled() == FALSE,
-                                         std::memory_order_release);
+            otherThreadEnabled.store(SoProfiler::isEnabled() == FALSE,
+                                     std::memory_order_release);
 #endif
-            });
-            observer.join();
-        }
+        });
+        observer.join();
+    }
 #ifdef OBOL_PROFILING
-        const bool restored = (SoProfiler::isEnabled() == TRUE);
+    const bool restored = (SoProfiler::isEnabled() == TRUE);
 #else
-        const bool restored = (SoProfiler::isEnabled() == FALSE);
+    const bool restored = (SoProfiler::isEnabled() == FALSE);
 #endif
-        SoProfiler::enable(FALSE);
-        const bool pass = pausedHere && restored &&
-            otherThreadEnabled.load(std::memory_order_acquire);
-        runner.endTest(pass, pass ? "" :
-            "profiler pause leaked across threads or outlived its scope");
-    }
+    SoProfiler::enable(FALSE);
+    const bool pass = pausedHere && restored &&
+        otherThreadEnabled.load(std::memory_order_acquire);
+    EXPECT_TRUE(pass) << "profiler pause leaked across threads or outlived its scope";
+}
 
-    // -----------------------------------------------------------------------
-    // SbProfilingData::reset clears action type
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData::reset clears action type");
-    {
-        SbProfilingData data;
-        data.setActionType(SoGetBoundingBoxAction::getClassTypeId());
-        data.reset();
-        bool pass = (data.getActionType() == SoType::badType());
-        runner.endTest(pass, pass ? "" :
-            "reset() did not clear the action type");
-    }
+// -----------------------------------------------------------------------
+// SbProfilingData::reset clears action type
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SbProfilingData setActionStartTime/StopTime survive reset
-    // -----------------------------------------------------------------------
-    runner.startTest("SbProfilingData timing reset clears duration");
-    {
-        SbProfilingData data;
-        data.setActionStartTime(SbTime(1.0));
-        data.setActionStopTime(SbTime(2.0));
-        data.reset();
-        // After reset, both start and stop times are SbTime::zero(), so duration == 0.0
-        SbTime duration = data.getActionDuration();
-        bool pass = (duration.getValue() == 0.0);
-        runner.endTest(pass, pass ? "" :
-            "reset() did not clear timing data to zero");
-    }
+TEST(ProfilerSuite, SbProfilingDataResetClearsActionType)
+{
+    SbProfilingData data;
+    data.setActionType(SoGetBoundingBoxAction::getClassTypeId());
+    data.reset();
+    bool pass = (data.getActionType() == SoType::badType());
+    EXPECT_TRUE(pass) << "reset() did not clear the action type";
+}
 
+// -----------------------------------------------------------------------
+// SbProfilingData setActionStartTime/StopTime survive reset
+// -----------------------------------------------------------------------
+
+TEST(ProfilerSuite, SbProfilingDataTimingResetClearsDuration)
+{
+    SbProfilingData data;
+    data.setActionStartTime(SbTime(1.0));
+    data.setActionStopTime(SbTime(2.0));
+    data.reset();
+    // After reset, both start and stop times are SbTime::zero(), so duration == 0.0
+    SbTime duration = data.getActionDuration();
+    bool pass = (duration.getValue() == 0.0);
+    EXPECT_TRUE(pass) << "reset() did not clear timing data to zero";
 }

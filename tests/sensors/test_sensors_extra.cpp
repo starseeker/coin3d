@@ -73,218 +73,206 @@ static void countCB(void * data, SoSensor *)
     (*count)++;
 }
 
-TEST(UpstreamSensorsExtra, RetainedCoverage)
+TEST(SensorsExtra, SoAlarmSensorDefaultConstructionDestruction)
 {
-    CheckRecorder runner;
+    SoAlarmSensor * sensor = new SoAlarmSensor;
+    bool pass = (sensor != nullptr);
+    delete sensor;
+    EXPECT_TRUE(pass) << "SoAlarmSensor default construction failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoAlarmSensor: construction / destruction (class type valid)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoAlarmSensor default construction / destruction");
-    {
-        SoAlarmSensor * sensor = new SoAlarmSensor;
-        bool pass = (sensor != nullptr);
-        delete sensor;
-        runner.endTest(pass, pass ? "" : "SoAlarmSensor default construction failed");
-    }
+TEST(SensorsExtra, SoAlarmSensorCallbackConstructionDestruction)
+{
+    int count = 0;
+    SoAlarmSensor * sensor = new SoAlarmSensor(countCB, &count);
+    bool pass = (sensor != nullptr)
+             && (sensor->getFunction() == countCB)
+             && (sensor->getData()     == &count);
+    delete sensor;
+    EXPECT_TRUE(pass) << "SoAlarmSensor callback construction failed";
+}
 
-    runner.startTest("SoAlarmSensor callback construction / destruction");
-    {
-        int count = 0;
-        SoAlarmSensor * sensor = new SoAlarmSensor(countCB, &count);
-        bool pass = (sensor != nullptr)
-                 && (sensor->getFunction() == countCB)
-                 && (sensor->getData()     == &count);
-        delete sensor;
-        runner.endTest(pass, pass ? "" : "SoAlarmSensor callback construction failed");
-    }
+// -----------------------------------------------------------------------
+// SoTimerSensor: construction / destruction (class type valid)
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoTimerSensor: construction / destruction (class type valid)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTimerSensor default construction / destruction");
-    {
-        SoTimerSensor * sensor = new SoTimerSensor;
-        bool pass = (sensor != nullptr);
-        delete sensor;
-        runner.endTest(pass, pass ? "" : "SoTimerSensor default construction failed");
-    }
+TEST(SensorsExtra, SoTimerSensorDefaultConstructionDestruction)
+{
+    SoTimerSensor * sensor = new SoTimerSensor;
+    bool pass = (sensor != nullptr);
+    delete sensor;
+    EXPECT_TRUE(pass) << "SoTimerSensor default construction failed";
+}
 
-    runner.startTest("SoTimerSensor callback construction / destruction");
-    {
-        int count = 0;
-        SoTimerSensor * sensor = new SoTimerSensor(countCB, &count);
-        bool pass = (sensor != nullptr)
-                 && (sensor->getFunction() == countCB)
-                 && (sensor->getData()     == &count);
-        delete sensor;
-        runner.endTest(pass, pass ? "" : "SoTimerSensor callback construction failed");
-    }
+TEST(SensorsExtra, SoTimerSensorCallbackConstructionDestruction)
+{
+    int count = 0;
+    SoTimerSensor * sensor = new SoTimerSensor(countCB, &count);
+    bool pass = (sensor != nullptr)
+             && (sensor->getFunction() == countCB)
+             && (sensor->getData()     == &count);
+    delete sensor;
+    EXPECT_TRUE(pass) << "SoTimerSensor callback construction failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoFieldSensor: attach to standalone SoSFFloat field
-    // -----------------------------------------------------------------------
-    runner.startTest("SoFieldSensor attach to standalone SoSFFloat");
-    {
-        // SoSFFloat must be owned by a container node for ref-counting, so we
-        // use a SoCube's field which is already a SoSFFloat.
-        SoCube * cube = new SoCube;
-        cube->ref();
-        int count = 0;
-        SoFieldSensor sensor(countCB, &count);
-        sensor.attach(&cube->width);
-        bool attached = (sensor.getAttachedField() == &cube->width);
-        sensor.detach();
-        cube->unref();
-        runner.endTest(attached, attached ? "" :
-            "SoFieldSensor failed to attach to SoSFFloat field");
-    }
+// -----------------------------------------------------------------------
+// SoFieldSensor: attach to standalone SoSFFloat field
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoFieldSensor: no callback fires after detach
-    // -----------------------------------------------------------------------
-    runner.startTest("SoFieldSensor no callback after detach");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        int count = 0;
-        SoFieldSensor sensor(countCB, &count);
-        sensor.attach(&cube->width);
-        sensor.detach();
-        // Modify the field after detach — callback must not fire.
-        cube->width.setValue(99.0f);
-        SoDB::getSensorManager()->processDelayQueue(FALSE);
-        bool pass = (count == 0);
-        cube->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoFieldSensor callback fired after detach — should not have");
-    }
+TEST(SensorsExtra, SoFieldSensorAttachToStandaloneSoSFFloat)
+{
+    // SoSFFloat must be owned by a container node for ref-counting, so we
+    // use a SoCube's field which is already a SoSFFloat.
+    SoCube * cube = new SoCube;
+    cube->ref();
+    int count = 0;
+    SoFieldSensor sensor(countCB, &count);
+    sensor.attach(&cube->width);
+    bool attached = (sensor.getAttachedField() == &cube->width);
+    sensor.detach();
+    cube->unref();
+    EXPECT_TRUE(attached)
+        << "SoFieldSensor failed to attach to SoSFFloat field";
+}
 
-    // -----------------------------------------------------------------------
-    // SoNodeSensor: callback fires on structural change (addChild)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoNodeSensor fires on addChild to SoSeparator");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        int count = 0;
-        SoNodeSensor sensor(countCB, &count);
-        sensor.attach(root);
-        root->addChild(new SoCube);
-        SoDB::getSensorManager()->processDelayQueue(FALSE);
-        bool pass = (count >= 1);
-        sensor.detach();
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoNodeSensor callback did not fire on addChild");
-    }
+// -----------------------------------------------------------------------
+// SoFieldSensor: no callback fires after detach
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoNodeSensor no callback after detach + addChild");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        int count = 0;
-        SoNodeSensor sensor(countCB, &count);
-        sensor.attach(root);
-        sensor.detach();
-        root->addChild(new SoCube);
-        SoDB::getSensorManager()->processDelayQueue(FALSE);
-        bool pass = (count == 0);
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoNodeSensor callback fired after detach — should not have");
-    }
+TEST(SensorsExtra, SoFieldSensorNoCallbackAfterDetach)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    int count = 0;
+    SoFieldSensor sensor(countCB, &count);
+    sensor.attach(&cube->width);
+    sensor.detach();
+    // Modify the field after detach — callback must not fire.
+    cube->width.setValue(99.0f);
+    SoDB::getSensorManager()->processDelayQueue(FALSE);
+    bool pass = (count == 0);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoFieldSensor callback fired after detach — should not have";
+}
 
-    // -----------------------------------------------------------------------
-    // SoPathSensor: setTriggerFilter / getTriggerFilter round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPathSensor setTriggerFilter PATH / getTriggerFilter");
-    {
-        SoPathSensor sensor;
-        sensor.setTriggerFilter(SoPathSensor::PATH);
-        bool pass = (sensor.getTriggerFilter() == SoPathSensor::PATH);
-        runner.endTest(pass, pass ? "" :
-            "SoPathSensor setTriggerFilter(PATH) round-trip failed");
-    }
+// -----------------------------------------------------------------------
+// SoNodeSensor: callback fires on structural change (addChild)
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoPathSensor setTriggerFilter NODES / getTriggerFilter");
-    {
-        SoPathSensor sensor;
-        sensor.setTriggerFilter(SoPathSensor::NODES);
-        bool pass = (sensor.getTriggerFilter() == SoPathSensor::NODES);
-        runner.endTest(pass, pass ? "" :
-            "SoPathSensor setTriggerFilter(NODES) round-trip failed");
-    }
+TEST(SensorsExtra, SoNodeSensorFiresOnAddChildToSoSeparator)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    int count = 0;
+    SoNodeSensor sensor(countCB, &count);
+    sensor.attach(root);
+    root->addChild(new SoCube);
+    SoDB::getSensorManager()->processDelayQueue(FALSE);
+    bool pass = (count >= 1);
+    sensor.detach();
+    root->unref();
+    EXPECT_TRUE(pass) << "SoNodeSensor callback did not fire on addChild";
+}
 
-    runner.startTest("SoPathSensor setTriggerFilter PATH_AND_NODES / getTriggerFilter");
-    {
-        SoPathSensor sensor;
-        sensor.setTriggerFilter(SoPathSensor::PATH_AND_NODES);
-        bool pass = (sensor.getTriggerFilter() == SoPathSensor::PATH_AND_NODES);
-        runner.endTest(pass, pass ? "" :
-            "SoPathSensor setTriggerFilter(PATH_AND_NODES) round-trip failed");
-    }
+TEST(SensorsExtra, SoNodeSensorNoCallbackAfterDetachAddChild)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    int count = 0;
+    SoNodeSensor sensor(countCB, &count);
+    sensor.attach(root);
+    sensor.detach();
+    root->addChild(new SoCube);
+    SoDB::getSensorManager()->processDelayQueue(FALSE);
+    bool pass = (count == 0);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoNodeSensor callback fired after detach — should not have";
+}
 
-    // -----------------------------------------------------------------------
-    // SoOneShotSensor: callback fires after processDelayQueue(FALSE)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOneShotSensor callback fires via processDelayQueue");
-    {
-        int count = 0;
-        SoOneShotSensor sensor(countCB, &count);
-        sensor.schedule();
-        SoDB::getSensorManager()->processDelayQueue(FALSE);
-        bool pass = (count >= 1);
-        if (sensor.isScheduled()) sensor.unschedule();
-        runner.endTest(pass, pass ? "" :
-            "SoOneShotSensor callback did not fire via processDelayQueue");
-    }
+// -----------------------------------------------------------------------
+// SoPathSensor: setTriggerFilter / getTriggerFilter round-trip
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoIdleSensor: callback fires after processDelayQueue(TRUE) (idle pass)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoIdleSensor callback fires via processDelayQueue(idle)");
-    {
-        int count = 0;
-        SoIdleSensor sensor(countCB, &count);
-        sensor.schedule();
-        // SoIdleSensor is idle-only; it fires only when isidle=TRUE.
-        SoDB::getSensorManager()->processDelayQueue(TRUE);
-        bool pass = (count >= 1);
-        if (sensor.isScheduled()) sensor.unschedule();
-        runner.endTest(pass, pass ? "" :
-            "SoIdleSensor callback did not fire via processDelayQueue(TRUE)");
-    }
+TEST(SensorsExtra, SoPathSensorSetTriggerFilterPATHGetTriggerFilter)
+{
+    SoPathSensor sensor;
+    sensor.setTriggerFilter(SoPathSensor::PATH);
+    bool pass = (sensor.getTriggerFilter() == SoPathSensor::PATH);
+    EXPECT_TRUE(pass) << "SoPathSensor setTriggerFilter(PATH) round-trip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDataSensor: getTriggerNode / getTriggerPath null before any trigger
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDataSensor getTriggerNode null before trigger");
-    {
-        // SoFieldSensor IS-A SoDataSensor — use it to reach the base API.
-        SoFieldSensor sensor;
-        SoNode * tn = sensor.getTriggerNode();
-        bool pass = (tn == nullptr);
-        runner.endTest(pass, pass ? "" :
-            "SoDataSensor::getTriggerNode() should be null before any trigger");
-    }
+TEST(SensorsExtra, SoPathSensorSetTriggerFilterNODESGetTriggerFilter)
+{
+    SoPathSensor sensor;
+    sensor.setTriggerFilter(SoPathSensor::NODES);
+    bool pass = (sensor.getTriggerFilter() == SoPathSensor::NODES);
+    EXPECT_TRUE(pass) << "SoPathSensor setTriggerFilter(NODES) round-trip failed";
+}
 
-    runner.startTest("SoDataSensor getTriggerPath null before trigger");
-    {
-        SoFieldSensor sensor;
-        SoPath * tp = sensor.getTriggerPath();
-        bool pass = (tp == nullptr);
-        runner.endTest(pass, pass ? "" :
-            "SoDataSensor::getTriggerPath() should be null before any trigger");
-    }
+TEST(SensorsExtra, SoPathSensorSetTriggerFilterPATHANDNODESGetTriggerFilter)
+{
+    SoPathSensor sensor;
+    sensor.setTriggerFilter(SoPathSensor::PATH_AND_NODES);
+    bool pass = (sensor.getTriggerFilter() == SoPathSensor::PATH_AND_NODES);
+    EXPECT_TRUE(pass) << "SoPathSensor setTriggerFilter(PATH_AND_NODES) round-trip failed";
+}
 
-    runner.startTest("SoDataSensor getTriggerField null before trigger");
-    {
-        SoFieldSensor sensor;
-        SoField * tf = sensor.getTriggerField();
-        bool pass = (tf == nullptr);
-        runner.endTest(pass, pass ? "" :
-            "SoDataSensor::getTriggerField() should be null before any trigger");
-    }
+// -----------------------------------------------------------------------
+// SoOneShotSensor: callback fires after processDelayQueue(FALSE)
+// -----------------------------------------------------------------------
 
+TEST(SensorsExtra, SoOneShotSensorCallbackFiresViaProcessDelayQueue)
+{
+    int count = 0;
+    SoOneShotSensor sensor(countCB, &count);
+    sensor.schedule();
+    SoDB::getSensorManager()->processDelayQueue(FALSE);
+    bool pass = (count >= 1);
+    if (sensor.isScheduled()) sensor.unschedule();
+    EXPECT_TRUE(pass) << "SoOneShotSensor callback did not fire via processDelayQueue";
+}
+
+// -----------------------------------------------------------------------
+// SoIdleSensor: callback fires after processDelayQueue(TRUE) (idle pass)
+// -----------------------------------------------------------------------
+
+TEST(SensorsExtra, SoIdleSensorCallbackFiresViaProcessDelayQueueIdle)
+{
+    int count = 0;
+    SoIdleSensor sensor(countCB, &count);
+    sensor.schedule();
+    // SoIdleSensor is idle-only; it fires only when isidle=TRUE.
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    bool pass = (count >= 1);
+    if (sensor.isScheduled()) sensor.unschedule();
+    EXPECT_TRUE(pass) << "SoIdleSensor callback did not fire via processDelayQueue(TRUE)";
+}
+
+// -----------------------------------------------------------------------
+// SoDataSensor: getTriggerNode / getTriggerPath null before any trigger
+// -----------------------------------------------------------------------
+
+TEST(SensorsExtra, SoDataSensorGetTriggerNodeNullBeforeTrigger)
+{
+    // SoFieldSensor IS-A SoDataSensor — use it to reach the base API.
+    SoFieldSensor sensor;
+    SoNode * tn = sensor.getTriggerNode();
+    bool pass = (tn == nullptr);
+    EXPECT_TRUE(pass) << "SoDataSensor::getTriggerNode() should be null before any trigger";
+}
+
+TEST(SensorsExtra, SoDataSensorGetTriggerPathNullBeforeTrigger)
+{
+    SoFieldSensor sensor;
+    SoPath * tp = sensor.getTriggerPath();
+    bool pass = (tp == nullptr);
+    EXPECT_TRUE(pass) << "SoDataSensor::getTriggerPath() should be null before any trigger";
+}
+
+TEST(SensorsExtra, SoDataSensorGetTriggerFieldNullBeforeTrigger)
+{
+    SoFieldSensor sensor;
+    SoField * tf = sensor.getTriggerField();
+    bool pass = (tf == nullptr);
+    EXPECT_TRUE(pass) << "SoDataSensor::getTriggerField() should be null before any trigger";
 }

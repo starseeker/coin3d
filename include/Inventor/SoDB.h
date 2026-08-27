@@ -123,10 +123,12 @@ public:
   /**
    * Initialize the Obol database and class registry.
    *
-   * Passing NULL is supported for non-rendering and custom-backend use.  In
-   * that mode initialization completes, getContextManager() returns NULL, and
-   * operations requiring the global GL context manager remain unavailable
-   * until a manager is installed.
+   * Passing NULL on the first initialization is supported for non-rendering
+   * and custom-backend use.  In that mode initialization completes,
+   * getContextManager() returns NULL, and operations requiring the global GL
+   * context manager remain unavailable until a manager is installed.  As with
+   * every repeated init() call, passing NULL after initialization does not
+   * replace an already installed manager.
    */
   static void init(ContextManager * context_manager);
   static void finish(void);
@@ -314,8 +316,11 @@ public:
     // --- Optional alternative rendering path -------------------------------
     // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
     // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of
-    // width*height*nrcomponents bytes (RGB or RGBA, values 0-255, top-to-bottom
-    // row order matching SoOffscreenRenderer::getBuffer()).
+    // width*height*nrcomponents bytes.  Components 1 through 4 represent
+    // luminance, luminance-alpha, RGB, and RGBA respectively.  Rows use the
+    // bottom-to-top SoOffscreenRenderer::getBuffer() convention.  The renderer
+    // initializes the buffer to its background (including any gradient) before
+    // this call, so an implementation may leave uncovered pixels unchanged.
     // 'background_rgb' is a 3-element float array [R,G,B] in [0,1].
     // Default implementation returns FALSE (GL path is used).
     virtual SbBool renderScene(SoNode * scene,

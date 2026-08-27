@@ -49,9 +49,6 @@ target_include_directories(obol_internal_config INTERFACE
     "${PROJECT_BINARY_DIR}/src/shadows"
     "${PROJECT_BINARY_DIR}/src/draggers"
     "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cad"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 
@@ -212,15 +209,10 @@ target_include_directories(${PROJECT_NAME}
         # Subdirectory-specific paths (needed in single-lib mode)
         "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
         "${PROJECT_BINARY_DIR}/src/draggers"
-        # CAD subsystem internal headers
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/nanort>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Obol/render>
@@ -229,9 +221,6 @@ target_include_directories(${PROJECT_NAME}
 # Target-specific linking (modern approach)  
 target_link_libraries(${PROJECT_NAME}
     PRIVATE ${OBOL_TARGET_LINK_LIBRARIES}
-    # Public utility headers, including SoNanoRTContextManager, use
-    # std::thread inline.  Consumers therefore need the platform thread link
-    # flags even when Obol itself is shared.
     PUBLIC Threads::Threads)
 
 # For dual-GL builds, link OSMesa so osmesa_SoGLContext_* functions can resolve
@@ -389,15 +378,6 @@ else()
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
-
-  # SoNanoRTContextManager is a supported header-only rendering backend.
-  # Keep its third-party dependency beside it so quoted inclusion works from
-  # both package-manager and relocatable-prefix installs.
-  install(FILES
-          ${PROJECT_SOURCE_DIR}/external/nanort/nanort.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol/render
-          COMPONENT development)
-
 
 # ############################################################################
 # Install target

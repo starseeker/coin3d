@@ -14,7 +14,7 @@
  *   6. SoSelectOne: pick one field from an array with integer selector.
  *   7. Engine output connected to multiple transforms (fan-out).
  *
- * Returns 0 on pass, non-0 on failure.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -303,16 +303,15 @@ static bool test5_fanout(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_engine_interaction(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_engine_interaction";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_engine_interaction";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createEngineInteraction(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -342,6 +341,7 @@ static int obol_run_render_render_engine_interaction(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_engine_interaction) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_engine_interaction, "render_engine_interaction"), 0);
+TEST(RenderingScenarios, render_engine_interaction) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_engine_interaction");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

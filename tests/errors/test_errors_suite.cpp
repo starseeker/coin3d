@@ -70,115 +70,105 @@ static void myErrorCb(const SoError * err, void * data)
 // Silent sink — used to suppress error output during negative tests
 [[maybe_unused]] static void silentCb(const SoError * /*err*/, void * /*data*/) {}
 
-TEST(UpstreamErrorsSuite, RetainedCoverage)
+TEST(ErrorsSuite, SoErrorGetClassTypeIdIsNotBadType)
 {
-    CheckRecorder runner;
+    bool pass = (SoError::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoError has bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // Class type IDs are valid
-    // -----------------------------------------------------------------------
-    runner.startTest("SoError::getClassTypeId is not badType");
-    {
-        bool pass = (SoError::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoError has bad class type");
-    }
+TEST(ErrorsSuite, SoDebugErrorGetClassTypeIdIsNotBadType)
+{
+    bool pass = (SoDebugError::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoDebugError has bad class type";
+}
 
-    runner.startTest("SoDebugError::getClassTypeId is not badType");
-    {
-        bool pass = (SoDebugError::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoDebugError has bad class type");
-    }
+TEST(ErrorsSuite, SoReadErrorGetClassTypeIdIsNotBadType)
+{
+    bool pass = (SoReadError::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoReadError has bad class type";
+}
 
-    runner.startTest("SoReadError::getClassTypeId is not badType");
-    {
-        bool pass = (SoReadError::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoReadError has bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoError::setHandlerCallback / post
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoError::setHandlerCallback / post
-    // -----------------------------------------------------------------------
-    runner.startTest("SoError::post triggers custom handler and message contains value");
-    {
-        ErrorCapture cap;
+TEST(ErrorsSuite, SoErrorPostTriggersCustomHandlerAndMessageContainsValue)
+{
+    ErrorCapture cap;
 
-        // Save old handler (data pointer not retrievable; restore with null)
-        SoErrorCB * oldCb = SoError::getHandlerCallback();
+    // Save old handler (data pointer not retrievable; restore with null)
+    SoErrorCB * oldCb = SoError::getHandlerCallback();
 
-        SoError::setHandlerCallback(myErrorCb, &cap);
-        SoError::post("test message %d", 42);
+    SoError::setHandlerCallback(myErrorCb, &cap);
+    SoError::post("test message %d", 42);
 
-        // Restore original handler
-        SoError::setHandlerCallback(oldCb, nullptr);
+    // Restore original handler
+    SoError::setHandlerCallback(oldCb, nullptr);
 
-        bool pass = cap.fired && (cap.msg.find("42") != std::string::npos);
-        runner.endTest(pass, pass ? "" :
-            "SoError::post did not fire callback or message missing '42'");
-    }
+    bool pass = cap.fired && (cap.msg.find("42") != std::string::npos);
+    EXPECT_TRUE(pass) << "SoError::post did not fire callback or message missing '42'";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDebugError: postWarning fires custom handler
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDebugError::postWarning triggers custom handler");
-    {
-        ErrorCapture cap;
+// -----------------------------------------------------------------------
+// SoDebugError: postWarning fires custom handler
+// -----------------------------------------------------------------------
 
-        SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
+TEST(ErrorsSuite, SoDebugErrorPostWarningTriggersCustomHandler)
+{
+    ErrorCapture cap;
 
-        SoDebugError::setHandlerCallback(myErrorCb, &cap);
-        SoDebugError::postWarning("test_errors_suite", "warning %s", "hello");
+    SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
 
-        SoDebugError::setHandlerCallback(oldCb, nullptr);
+    SoDebugError::setHandlerCallback(myErrorCb, &cap);
+    SoDebugError::postWarning("test_errors_suite", "warning %s", "hello");
 
-        bool pass = cap.fired;
-        runner.endTest(pass, pass ? "" :
-            "SoDebugError::postWarning did not fire custom handler");
-    }
+    SoDebugError::setHandlerCallback(oldCb, nullptr);
 
-    runner.startTest("SoDebugError::postWarning message contains keyword");
-    {
-        ErrorCapture cap;
+    bool pass = cap.fired;
+    EXPECT_TRUE(pass) << "SoDebugError::postWarning did not fire custom handler";
+}
 
-        SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
+TEST(ErrorsSuite, SoDebugErrorPostWarningMessageContainsKeyword)
+{
+    ErrorCapture cap;
 
-        SoDebugError::setHandlerCallback(myErrorCb, &cap);
-        SoDebugError::postWarning("test_errors_suite", "warning %s", "hello");
+    SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
 
-        SoDebugError::setHandlerCallback(oldCb, nullptr);
+    SoDebugError::setHandlerCallback(myErrorCb, &cap);
+    SoDebugError::postWarning("test_errors_suite", "warning %s", "hello");
 
-        bool pass = cap.fired && (cap.msg.find("hello") != std::string::npos);
-        runner.endTest(pass, pass ? "" :
-            "SoDebugError::postWarning message missing 'hello'");
-    }
+    SoDebugError::setHandlerCallback(oldCb, nullptr);
 
-    // -----------------------------------------------------------------------
-    // SoDebugError: postInfo fires custom handler
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDebugError::postInfo triggers custom handler");
-    {
-        ErrorCapture cap;
+    bool pass = cap.fired && (cap.msg.find("hello") != std::string::npos);
+    EXPECT_TRUE(pass) << "SoDebugError::postWarning message missing 'hello'";
+}
 
-        SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
+// -----------------------------------------------------------------------
+// SoDebugError: postInfo fires custom handler
+// -----------------------------------------------------------------------
 
-        SoDebugError::setHandlerCallback(myErrorCb, &cap);
-        SoDebugError::postInfo("test_errors_suite", "info %d", 99);
+TEST(ErrorsSuite, SoDebugErrorPostInfoTriggersCustomHandler)
+{
+    ErrorCapture cap;
 
-        SoDebugError::setHandlerCallback(oldCb, nullptr);
+    SoErrorCB * oldCb = SoDebugError::getHandlerCallback();
 
-        bool pass = cap.fired;
-        runner.endTest(pass, pass ? "" :
-            "SoDebugError::postInfo did not fire custom handler");
-    }
+    SoDebugError::setHandlerCallback(myErrorCb, &cap);
+    SoDebugError::postInfo("test_errors_suite", "info %d", 99);
 
-    // -----------------------------------------------------------------------
-    // SoDebugError is a subtype of SoError
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDebugError is subtype of SoError");
-    {
-        bool pass = SoDebugError::getClassTypeId().isDerivedFrom(
-                        SoError::getClassTypeId());
-        runner.endTest(pass, pass ? "" :
-            "SoDebugError should be derived from SoError");
-    }
+    SoDebugError::setHandlerCallback(oldCb, nullptr);
 
+    bool pass = cap.fired;
+    EXPECT_TRUE(pass) << "SoDebugError::postInfo did not fire custom handler";
+}
+
+// -----------------------------------------------------------------------
+// SoDebugError is a subtype of SoError
+// -----------------------------------------------------------------------
+
+TEST(ErrorsSuite, SoDebugErrorIsSubtypeOfSoError)
+{
+    bool pass = SoDebugError::getClassTypeId().isDerivedFrom(
+                    SoError::getClassTypeId());
+    EXPECT_TRUE(pass) << "SoDebugError should be derived from SoError";
 }

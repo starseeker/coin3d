@@ -69,272 +69,259 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamManipsDeep, RetainedCoverage)
+TEST(ManipsDeep, SoPointLightManipClassTypeIdValid)
 {
-    CheckRecorder runner;
+    bool pass = (SoPointLightManip::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoPointLightManip has bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoPointLightManip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPointLightManip: class type id valid");
-    {
-        bool pass = (SoPointLightManip::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoPointLightManip has bad class type");
-    }
+TEST(ManipsDeep, SoPointLightManipIsOfTypeSoPointLight)
+{
+    SoPointLightManip * m = new SoPointLightManip;
+    m->ref();
+    bool pass = m->isOfType(SoPointLight::getClassTypeId());
+    m->unref();
+    EXPECT_TRUE(pass) << "SoPointLightManip not a SoPointLight subtype";
+}
 
-    runner.startTest("SoPointLightManip: isOfType SoPointLight");
-    {
-        SoPointLightManip * m = new SoPointLightManip;
-        m->ref();
-        bool pass = m->isOfType(SoPointLight::getClassTypeId());
-        m->unref();
-        runner.endTest(pass, pass ? "" : "SoPointLightManip not a SoPointLight subtype");
-    }
+TEST(ManipsDeep, SoPointLightManipGetDraggerReturnsNonNull)
+{
+    SoPointLightManip * m = new SoPointLightManip;
+    m->ref();
+    SoDragger * d = m->getDragger();
+    bool pass = (d != nullptr);
+    m->unref();
+    EXPECT_TRUE(pass) << "SoPointLightManip getDragger returned null";
+}
 
-    runner.startTest("SoPointLightManip: getDragger returns non-null");
-    {
-        SoPointLightManip * m = new SoPointLightManip;
-        m->ref();
-        SoDragger * d = m->getDragger();
-        bool pass = (d != nullptr);
-        m->unref();
-        runner.endTest(pass, pass ? "" : "SoPointLightManip getDragger returned null");
-    }
+TEST(ManipsDeep, SoPointLightManipDefaultLocationIs001)
+{
+    SoPointLightManip * m = new SoPointLightManip;
+    m->ref();
+    SbVec3f loc = m->location.getValue();
+    bool pass = (std::fabs(loc[0]) < 1e-4f) &&
+                (std::fabs(loc[1]) < 1e-4f) &&
+                (std::fabs(loc[2] - 1.0f) < 1e-4f);
+    m->unref();
+    EXPECT_TRUE(pass) << "SoPointLightManip default location is not (0,0,1)";
+}
 
-    runner.startTest("SoPointLightManip: default location is (0,0,1)");
-    {
-        SoPointLightManip * m = new SoPointLightManip;
-        m->ref();
-        SbVec3f loc = m->location.getValue();
-        bool pass = (std::fabs(loc[0]) < 1e-4f) &&
-                    (std::fabs(loc[1]) < 1e-4f) &&
-                    (std::fabs(loc[2] - 1.0f) < 1e-4f);
-        m->unref();
-        runner.endTest(pass, pass ? "" : "SoPointLightManip default location is not (0,0,1)");
-    }
+TEST(ManipsDeep, SoPointLightManipSoGetBoundingBoxActionDoesNotCrash)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoPointLightManip * m = new SoPointLightManip;
+    root->addChild(m);
+    SbViewportRegion vp(100, 100);
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(root);
+    root->unref();
+    SUCCEED();
+}
 
-    runner.startTest("SoPointLightManip: SoGetBoundingBoxAction does not crash");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoPointLightManip * m = new SoPointLightManip;
-        root->addChild(m);
-        SbViewportRegion vp(100, 100);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-        root->unref();
-        runner.endTest(true, "");
-    }
+// Test replaceNode/replaceManip lifecycle
 
-    // Test replaceNode/replaceManip lifecycle
-    runner.startTest("SoPointLightManip: replaceNode/replaceManip lifecycle");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoPointLight * light = new SoPointLight;
-        light->location.setValue(1.0f, 2.0f, 3.0f);
-        root->addChild(light);
+TEST(ManipsDeep, SoPointLightManipReplaceNodeReplaceManipLifecycle)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoPointLight * light = new SoPointLight;
+    light->location.setValue(1.0f, 2.0f, 3.0f);
+    root->addChild(light);
 
-        SoSearchAction sa;
-        sa.setType(SoPointLight::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        SoPath * path = sa.getPath();
+    SoSearchAction sa;
+    sa.setType(SoPointLight::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    SoPath * path = sa.getPath();
 
-        bool pass = false;
-        if (path) {
-            SoPointLightManip * manip = new SoPointLightManip;
-            manip->ref();
-            SbBool ok = manip->replaceNode(path);
-            if (ok) {
-                // Verify location was copied
-                SbVec3f loc = manip->location.getValue();
-                pass = (std::fabs(loc[0] - 1.0f) < 1e-4f);
+    bool pass = false;
+    if (path) {
+        SoPointLightManip * manip = new SoPointLightManip;
+        manip->ref();
+        SbBool ok = manip->replaceNode(path);
+        if (ok) {
+            // Verify location was copied
+            SbVec3f loc = manip->location.getValue();
+            pass = (std::fabs(loc[0] - 1.0f) < 1e-4f);
 
-                // Now replace back
-                SoSearchAction sa2;
-                sa2.setType(SoPointLightManip::getClassTypeId());
-                sa2.setInterest(SoSearchAction::FIRST);
-                sa2.apply(root);
-                SoPath * mpath = sa2.getPath();
-                if (mpath) {
-                    SbBool detached = manip->replaceManip(mpath, nullptr);
-                    pass = pass && detached;
-                }
+            // Now replace back
+            SoSearchAction sa2;
+            sa2.setType(SoPointLightManip::getClassTypeId());
+            sa2.setInterest(SoSearchAction::FIRST);
+            sa2.apply(root);
+            SoPath * mpath = sa2.getPath();
+            if (mpath) {
+                SbBool detached = manip->replaceManip(mpath, nullptr);
+                pass = pass && detached;
             }
-            manip->unref();
         }
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoPointLightManip replaceNode/replaceManip failed");
+        manip->unref();
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "SoPointLightManip replaceNode/replaceManip failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDirectionalLightManip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDirectionalLightManip: class type id valid");
-    {
-        bool pass = (SoDirectionalLightManip::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoDirectionalLightManip has bad class type");
-    }
+// -----------------------------------------------------------------------
+// SoDirectionalLightManip
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoDirectionalLightManip: isOfType SoDirectionalLight");
-    {
-        SoDirectionalLightManip * m = new SoDirectionalLightManip;
-        m->ref();
-        bool pass = m->isOfType(SoDirectionalLight::getClassTypeId());
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDirectionalLightManip not a SoDirectionalLight subtype");
-    }
+TEST(ManipsDeep, SoDirectionalLightManipClassTypeIdValid)
+{
+    bool pass = (SoDirectionalLightManip::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoDirectionalLightManip has bad class type";
+}
 
-    runner.startTest("SoDirectionalLightManip: getDragger returns non-null");
-    {
-        SoDirectionalLightManip * m = new SoDirectionalLightManip;
-        m->ref();
-        SoDragger * d = m->getDragger();
-        bool pass = (d != nullptr);
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDirectionalLightManip getDragger returned null");
-    }
+TEST(ManipsDeep, SoDirectionalLightManipIsOfTypeSoDirectionalLight)
+{
+    SoDirectionalLightManip * m = new SoDirectionalLightManip;
+    m->ref();
+    bool pass = m->isOfType(SoDirectionalLight::getClassTypeId());
+    m->unref();
+    EXPECT_TRUE(pass) << "SoDirectionalLightManip not a SoDirectionalLight subtype";
+}
 
-    runner.startTest("SoDirectionalLightManip: SoGetBoundingBoxAction does not crash");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoDirectionalLightManip * m = new SoDirectionalLightManip;
-        root->addChild(m);
-        SbViewportRegion vp(100, 100);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-        root->unref();
-        runner.endTest(true, "");
-    }
+TEST(ManipsDeep, SoDirectionalLightManipGetDraggerReturnsNonNull)
+{
+    SoDirectionalLightManip * m = new SoDirectionalLightManip;
+    m->ref();
+    SoDragger * d = m->getDragger();
+    bool pass = (d != nullptr);
+    m->unref();
+    EXPECT_TRUE(pass) << "SoDirectionalLightManip getDragger returned null";
+}
 
-    // -----------------------------------------------------------------------
-    // SoSpotLightManip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoSpotLightManip: class type id valid");
-    {
-        bool pass = (SoSpotLightManip::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoSpotLightManip has bad class type");
-    }
+TEST(ManipsDeep, SoDirectionalLightManipSoGetBoundingBoxActionDoesNotCrash)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoDirectionalLightManip * m = new SoDirectionalLightManip;
+    root->addChild(m);
+    SbViewportRegion vp(100, 100);
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(root);
+    root->unref();
+    SUCCEED();
+}
 
-    runner.startTest("SoSpotLightManip: isOfType SoSpotLight");
-    {
-        SoSpotLightManip * m = new SoSpotLightManip;
-        m->ref();
-        bool pass = m->isOfType(SoSpotLight::getClassTypeId());
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSpotLightManip not a SoSpotLight subtype");
-    }
+// -----------------------------------------------------------------------
+// SoSpotLightManip
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoSpotLightManip: getDragger returns non-null");
-    {
-        SoSpotLightManip * m = new SoSpotLightManip;
-        m->ref();
-        SoDragger * d = m->getDragger();
-        bool pass = (d != nullptr);
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoSpotLightManip getDragger returned null");
-    }
+TEST(ManipsDeep, SoSpotLightManipClassTypeIdValid)
+{
+    bool pass = (SoSpotLightManip::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoSpotLightManip has bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoClipPlaneManip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoClipPlaneManip: class type id valid");
-    {
-        bool pass = (SoClipPlaneManip::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoClipPlaneManip has bad class type");
-    }
+TEST(ManipsDeep, SoSpotLightManipIsOfTypeSoSpotLight)
+{
+    SoSpotLightManip * m = new SoSpotLightManip;
+    m->ref();
+    bool pass = m->isOfType(SoSpotLight::getClassTypeId());
+    m->unref();
+    EXPECT_TRUE(pass) << "SoSpotLightManip not a SoSpotLight subtype";
+}
 
-    runner.startTest("SoClipPlaneManip: isOfType SoClipPlane");
-    {
-        SoClipPlaneManip * m = new SoClipPlaneManip;
-        m->ref();
-        bool pass = m->isOfType(SoClipPlane::getClassTypeId());
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoClipPlaneManip not a SoClipPlane subtype");
-    }
+TEST(ManipsDeep, SoSpotLightManipGetDraggerReturnsNonNull)
+{
+    SoSpotLightManip * m = new SoSpotLightManip;
+    m->ref();
+    SoDragger * d = m->getDragger();
+    bool pass = (d != nullptr);
+    m->unref();
+    EXPECT_TRUE(pass) << "SoSpotLightManip getDragger returned null";
+}
 
-    runner.startTest("SoClipPlaneManip: getDragger returns non-null");
-    {
-        SoClipPlaneManip * m = new SoClipPlaneManip;
-        m->ref();
-        SoDragger * d = m->getDragger();
-        bool pass = (d != nullptr);
-        m->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoClipPlaneManip getDragger returned null");
-    }
+// -----------------------------------------------------------------------
+// SoClipPlaneManip
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoClipPlaneManip: setValue sets plane from box + normal");
-    {
-        SoClipPlaneManip * m = new SoClipPlaneManip;
-        m->ref();
-        SbBox3f box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f);
-        SbVec3f normal(0.0f, 1.0f, 0.0f);
-        // setValue sets the dragger and plane from the bounding box.
-        // It should not crash.
-        m->setValue(box, normal, 1.5f);
-        bool pass = true; // reaching here = no crash
-        m->unref();
-        runner.endTest(pass, "");
-    }
+TEST(ManipsDeep, SoClipPlaneManipClassTypeIdValid)
+{
+    bool pass = (SoClipPlaneManip::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoClipPlaneManip has bad class type";
+}
 
-    runner.startTest("SoClipPlaneManip: SoGetBoundingBoxAction does not crash");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoClipPlaneManip * m = new SoClipPlaneManip;
-        root->addChild(m);
-        SbViewportRegion vp(100, 100);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-        root->unref();
-        runner.endTest(true, "");
-    }
+TEST(ManipsDeep, SoClipPlaneManipIsOfTypeSoClipPlane)
+{
+    SoClipPlaneManip * m = new SoClipPlaneManip;
+    m->ref();
+    bool pass = m->isOfType(SoClipPlane::getClassTypeId());
+    m->unref();
+    EXPECT_TRUE(pass) << "SoClipPlaneManip not a SoClipPlane subtype";
+}
 
-    runner.startTest("SoClipPlaneManip: replaceNode/replaceManip lifecycle");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoClipPlane * clip = new SoClipPlane;
-        clip->plane.setValue(SbPlane(SbVec3f(0.0f, 1.0f, 0.0f), 0.5f));
-        root->addChild(clip);
+TEST(ManipsDeep, SoClipPlaneManipGetDraggerReturnsNonNull)
+{
+    SoClipPlaneManip * m = new SoClipPlaneManip;
+    m->ref();
+    SoDragger * d = m->getDragger();
+    bool pass = (d != nullptr);
+    m->unref();
+    EXPECT_TRUE(pass) << "SoClipPlaneManip getDragger returned null";
+}
 
-        SoSearchAction sa;
-        sa.setType(SoClipPlane::getClassTypeId());
-        sa.setInterest(SoSearchAction::FIRST);
-        sa.apply(root);
-        SoPath * path = sa.getPath();
+TEST(ManipsDeep, SoClipPlaneManipSetValueSetsPlaneFromBoxNormal)
+{
+    SoClipPlaneManip * m = new SoClipPlaneManip;
+    m->ref();
+    SbBox3f box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f);
+    SbVec3f normal(0.0f, 1.0f, 0.0f);
+    // setValue sets the dragger and plane from the bounding box.
+    // It should not crash.
+    m->setValue(box, normal, 1.5f);
+    m->unref();
+    SUCCEED();
+}
 
-        bool pass = false;
-        if (path) {
-            SoClipPlaneManip * manip = new SoClipPlaneManip;
-            manip->ref();
-            SbBool ok = manip->replaceNode(path);
-            if (ok) {
-                pass = true;
-                // Detach
-                SoSearchAction sa2;
-                sa2.setType(SoClipPlaneManip::getClassTypeId());
-                sa2.setInterest(SoSearchAction::FIRST);
-                sa2.apply(root);
-                SoPath * mpath = sa2.getPath();
-                if (mpath) {
-                    SbBool detached = manip->replaceManip(mpath, nullptr);
-                    pass = pass && detached;
-                }
+TEST(ManipsDeep, SoClipPlaneManipSoGetBoundingBoxActionDoesNotCrash)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoClipPlaneManip * m = new SoClipPlaneManip;
+    root->addChild(m);
+    SbViewportRegion vp(100, 100);
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(root);
+    root->unref();
+    SUCCEED();
+}
+
+TEST(ManipsDeep, SoClipPlaneManipReplaceNodeReplaceManipLifecycle)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoClipPlane * clip = new SoClipPlane;
+    clip->plane.setValue(SbPlane(SbVec3f(0.0f, 1.0f, 0.0f), 0.5f));
+    root->addChild(clip);
+
+    SoSearchAction sa;
+    sa.setType(SoClipPlane::getClassTypeId());
+    sa.setInterest(SoSearchAction::FIRST);
+    sa.apply(root);
+    SoPath * path = sa.getPath();
+
+    bool pass = false;
+    if (path) {
+        SoClipPlaneManip * manip = new SoClipPlaneManip;
+        manip->ref();
+        SbBool ok = manip->replaceNode(path);
+        if (ok) {
+            pass = true;
+            // Detach
+            SoSearchAction sa2;
+            sa2.setType(SoClipPlaneManip::getClassTypeId());
+            sa2.setInterest(SoSearchAction::FIRST);
+            sa2.apply(root);
+            SoPath * mpath = sa2.getPath();
+            if (mpath) {
+                SbBool detached = manip->replaceManip(mpath, nullptr);
+                pass = pass && detached;
             }
-            manip->unref();
         }
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoClipPlaneManip replaceNode/replaceManip failed");
+        manip->unref();
     }
-
+    root->unref();
+    EXPECT_TRUE(pass) << "SoClipPlaneManip replaceNode/replaceManip failed";
 }

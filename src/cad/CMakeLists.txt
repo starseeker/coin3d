@@ -29,3 +29,7 @@ set(CAD_SOURCES
 )
 
 obol_add_source_module(cad ${CAD_SOURCES})
+target_include_directories(obol_cad_objects PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/lod
+    ${CMAKE_CURRENT_SOURCE_DIR}/picking)

@@ -321,13 +321,14 @@ public:
 };
 ```
 
-Obol ships three reference implementations:
+Obol ships NanoRT as a supported library backend and keeps additional backend
+examples with the rendering tests:
 
 | Class | Backend | Header | Notes |
 |-------|---------|--------|-------|
-| `SoNanoRTContextManager` | [nanort](https://github.com/lighttransport/nanort) (bundled) | `tests/utils/nanort_context_manager.h` | Always available |
-| `SoEmbreeContextManager` | [Intel Embree 4](https://www.embree.org/) (system library) | `tests/utils/embree_context_manager.h` | Requires `libembree-dev` |
-| `SoVulkanContextManager` | Vulkan rasterization (CPU Phong pre-baking) | `tests/utils/vulkan_context_manager.h` | Requires Vulkan SDK; uses `SoRaytracerSceneCollector` for geometry |
+| `SoNanoRTContextManager` | [nanort](https://github.com/lighttransport/nanort) (bundled) | `include/Obol/render/SoNanoRTContextManager.h` | Always available; implemented by the Obol library |
+| `SoEmbreeContextManager` | [Intel Embree 4](https://www.embree.org/) (system library) | `examples/demo_support/embree_context_manager.h` | Requires `libembree-dev` |
+| `SoVulkanContextManager` | Vulkan rasterization (CPU Phong pre-baking) | `examples/demo_support/vulkan_context_manager.h` | Requires Vulkan SDK; uses `SoRaytracerSceneCollector` for geometry |
 
 The raytracing managers delegate **all** scene collection to the generic
 `SoSceneCollector` library class (see below) and differ only in their
@@ -391,7 +392,7 @@ To integrate a new raytracing engine (e.g. OptiX, Embree, BRL-CAD librt):
    - Call `collector_.compositeOverlays()` for text/HUD.
 5. Pass the manager to `SoDB::init()`.
 
-See `tests/utils/embree_context_manager.h` for a complete worked example (~450 lines).
+See `examples/demo_support/embree_context_manager.h` for a complete worked example.
 
 ## Key Points
 

@@ -36,8 +36,8 @@
  * When OBOL_VIEWER_EMBREE is defined at compile time (set by CMake when
  * Embree 4 is found and OBOL_VIEWER_USE_EMBREE=ON), a CPU-raytracing panel
  * is available using SoEmbreeContextManager::renderScene().
- * When OBOL_VIEWER_NANORT is defined (external/nanort/nanort.h found), a
- * NanoRT CPU-raytracing panel is also available.  Both can be compiled in
+ * OBOL_VIEWER_NANORT enables the NanoRT CPU-raytracing panel backed by Obol's
+ * public SoNanoRTContextManager API.  Both CPU backends can be compiled in
  * simultaneously; each has its own runtime toggle checkbox.
  * Demo metadata declares alternative-backend support so unsupported panels
  * show "Not supported".  SoText2 nodes are
@@ -133,7 +133,7 @@
 
 /* ---- Optional NanoRT application-supplied renderer ---- */
 #ifdef OBOL_VIEWER_NANORT
-#  include "nanort_context_manager.h"
+#  include <Obol/render/SoNanoRTContextManager.h>
 /* Single NanoRT renderer instance owned by the viewer application. */
 static SoNanoRTContextManager s_nanort_mgr;
 #endif
@@ -1126,10 +1126,9 @@ private:
  * Embree renderer object and drives it without any Coin involvement beyond
  * the scene graph traversal inside renderScene() itself.
  *
- * Only one of OBOL_VIEWER_EMBREE or OBOL_VIEWER_NANORT can be active at a
- * time (CMake enforces mutual exclusion).  EmbreePanel is a structural mirror
- * of NanoRTPanel; the only differences are the backing context-manager type
- * and the diagnostic strings.
+ * EmbreePanel is a structural mirror of NanoRTPanel; the only differences are
+ * the backing context-manager type and the diagnostic strings.  The two
+ * panels may coexist and are controlled independently at runtime.
  * ======================================================================= */
 #ifdef OBOL_VIEWER_EMBREE
 class EmbreePanel : public Fl_Box {

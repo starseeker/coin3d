@@ -96,328 +96,318 @@ static bool floatNear(float a, float b, float eps = 0.01f)
     return std::fabs(a - b) < eps;
 }
 
-TEST(UpstreamActionsExtended, RetainedCoverage)
+TEST(ActionsExtended, SoGetPrimitiveCountActionGetTriangleCountOnCubeScene)
 {
-    CheckRecorder runner;
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
 
-    // =======================================================================
-    // SoGetPrimitiveCountAction
-    // =======================================================================
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.apply(root);
 
-    runner.startTest("SoGetPrimitiveCountAction::getTriangleCount on cube scene");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube);
+    int tris = action.getTriangleCount();
+    bool pass = (tris > 0);
+    root->unref();
+    EXPECT_TRUE(pass) << "Expected >0 triangles from a cube";
+}
 
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.apply(root);
+TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNoPrimitivesOnEmptySep)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
 
-        int tris = action.getTriangleCount();
-        bool pass = (tris > 0);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Expected >0 triangles from a cube");
-    }
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.apply(root);
 
-    runner.startTest("SoGetPrimitiveCountAction::containsNoPrimitives on empty sep");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
+    bool pass = action.containsNoPrimitives();
+    root->unref();
+    EXPECT_TRUE(pass) << "Empty scene should have no primitives";
+}
 
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.apply(root);
+TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNonTriangleShapesOnLineScene)
+{
+    // A LineSet contains line primitives, not triangles.
+    SoSeparator * root = new SoSeparator;
+    root->ref();
 
-        bool pass = action.containsNoPrimitives();
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Empty scene should have no primitives");
-    }
+    SoVertexProperty * vp_node = new SoVertexProperty;
+    SbVec3f pts[2] = { SbVec3f(0,0,0), SbVec3f(1,0,0) };
+    vp_node->vertex.setValues(0, 2, pts);
+    SoLineSet * ls = new SoLineSet;
+    ls->vertexProperty = vp_node;
+    root->addChild(ls);
 
-    runner.startTest("SoGetPrimitiveCountAction containsNonTriangleShapes on line scene");
-    {
-        // A LineSet contains line primitives, not triangles.
-        SoSeparator * root = new SoSeparator;
-        root->ref();
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.apply(root);
 
-        SoVertexProperty * vp_node = new SoVertexProperty;
-        SbVec3f pts[2] = { SbVec3f(0,0,0), SbVec3f(1,0,0) };
-        vp_node->vertex.setValues(0, 2, pts);
-        SoLineSet * ls = new SoLineSet;
-        ls->vertexProperty = vp_node;
-        root->addChild(ls);
+    bool pass = action.containsNonTriangleShapes();
+    root->unref();
+    EXPECT_TRUE(pass) << "Line scene should have non-triangle shapes";
+}
 
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.apply(root);
+TEST(ActionsExtended, SoGetPrimitiveCountActionSetCanApproximateRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.setCanApproximate(TRUE);
+    bool pass = (action.canApproximateCount() == TRUE);
+    EXPECT_TRUE(pass) << "setCanApproximate/canApproximateCount round-trip failed";
+}
 
-        bool pass = action.containsNonTriangleShapes();
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Line scene should have non-triangle shapes");
-    }
+TEST(ActionsExtended, SoGetPrimitiveCountActionSetDecimationValueRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.setDecimationValue(SoDecimationTypeElement::PERCENTAGE, 0.5f);
+    bool passType = (action.getDecimationType() == SoDecimationTypeElement::PERCENTAGE);
+    bool passPct  = floatNear(action.getDecimationPercentage(), 0.5f);
+    bool pass = passType && passPct;
+    EXPECT_TRUE(pass) << "setDecimationValue/getDecimationType/getDecimationPercentage failed";
+}
 
-    runner.startTest("SoGetPrimitiveCountAction setCanApproximate round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.setCanApproximate(TRUE);
-        bool pass = (action.canApproximateCount() == TRUE);
-        runner.endTest(pass, pass ? "" : "setCanApproximate/canApproximateCount round-trip failed");
-    }
+TEST(ActionsExtended, SoGetPrimitiveCountActionSetCount3DTextAsTrianglesRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    action.setCount3DTextAsTriangles(TRUE);
+    bool pass = (action.is3DTextCountedAsTriangles() == TRUE);
+    EXPECT_TRUE(pass) << "setCount3DTextAsTriangles/is3DTextCountedAsTriangles failed";
+}
 
-    runner.startTest("SoGetPrimitiveCountAction setDecimationValue round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.setDecimationValue(SoDecimationTypeElement::PERCENTAGE, 0.5f);
-        bool passType = (action.getDecimationType() == SoDecimationTypeElement::PERCENTAGE);
-        bool passPct  = floatNear(action.getDecimationPercentage(), 0.5f);
-        bool pass = passType && passPct;
-        runner.endTest(pass, pass ? "" : "setDecimationValue/getDecimationType/getDecimationPercentage failed");
-    }
+TEST(ActionsExtended, SoGetPrimitiveCountActionAddNumTrianglesLinesPoints)
+{
+    SbViewportRegion vp(512, 512);
+    SoGetPrimitiveCountAction action(vp);
+    // Apply to empty scene first to reset counters.
+    SoSeparator * empty = new SoSeparator;
+    empty->ref();
+    action.apply(empty);
+    empty->unref();
 
-    runner.startTest("SoGetPrimitiveCountAction setCount3DTextAsTriangles round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        action.setCount3DTextAsTriangles(TRUE);
-        bool pass = (action.is3DTextCountedAsTriangles() == TRUE);
-        runner.endTest(pass, pass ? "" : "setCount3DTextAsTriangles/is3DTextCountedAsTriangles failed");
-    }
+    // Now add manually.
+    action.addNumTriangles(10);
+    action.addNumLines(5);
+    action.addNumPoints(3);
+    action.addNumText(2);
+    action.addNumImage(1);
 
-    runner.startTest("SoGetPrimitiveCountAction addNumTriangles/Lines/Points");
-    {
-        SbViewportRegion vp(512, 512);
-        SoGetPrimitiveCountAction action(vp);
-        // Apply to empty scene first to reset counters.
-        SoSeparator * empty = new SoSeparator;
-        empty->ref();
-        action.apply(empty);
-        empty->unref();
+    bool pass = (action.getTriangleCount() >= 10) &&
+                (action.getLineCount()     >= 5)  &&
+                (action.getPointCount()    >= 3)  &&
+                (action.getTextCount()     >= 2)  &&
+                (action.getImageCount()    >= 1);
+    EXPECT_TRUE(pass) << "addNum* methods failed";
+}
 
-        // Now add manually.
-        action.addNumTriangles(10);
-        action.addNumLines(5);
-        action.addNumPoints(3);
-        action.addNumText(2);
-        action.addNumImage(1);
+// =======================================================================
+// SoSearchAction
+// =======================================================================
 
-        bool pass = (action.getTriangleCount() >= 10) &&
-                    (action.getLineCount()     >= 5)  &&
-                    (action.getPointCount()    >= 3)  &&
-                    (action.getTextCount()     >= 2)  &&
-                    (action.getImageCount()    >= 1);
-        runner.endTest(pass, pass ? "" : "addNum* methods failed");
-    }
+TEST(ActionsExtended, SoSearchActionFindNodeByInstance)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoCube * cube = new SoCube;
+    root->addChild(new SoSphere);
+    root->addChild(cube);
 
-    // =======================================================================
-    // SoSearchAction
-    // =======================================================================
+    SoSearchAction sa;
+    sa.setNode(cube);
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction: find node by instance");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoCube * cube = new SoCube;
-        root->addChild(new SoSphere);
-        root->addChild(cube);
+    SoPath * path = sa.getPath();
+    bool pass = (path != nullptr) &&
+                (path->getTail() == cube);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction by node failed";
+}
 
-        SoSearchAction sa;
-        sa.setNode(cube);
-        sa.apply(root);
+TEST(ActionsExtended, SoSearchActionFindFirstNodeOfType)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoSphere);
+    SoCube * cube = new SoCube;
+    root->addChild(cube);
 
-        SoPath * path = sa.getPath();
-        bool pass = (path != nullptr) &&
-                    (path->getTail() == cube);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction by node failed");
-    }
+    SoSearchAction sa;
+    sa.setType(SoCube::getClassTypeId());
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction: find first node of type");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoSphere);
-        SoCube * cube = new SoCube;
-        root->addChild(cube);
+    SoPath * path = sa.getPath();
+    bool pass = (path != nullptr) &&
+                (path->getTail() == cube);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction find by type failed";
+}
 
-        SoSearchAction sa;
-        sa.setType(SoCube::getClassTypeId());
-        sa.apply(root);
+TEST(ActionsExtended, SoSearchActionFindALLNodesOfType)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+    root->addChild(new SoCube);
+    root->addChild(new SoCube);
 
-        SoPath * path = sa.getPath();
-        bool pass = (path != nullptr) &&
-                    (path->getTail() == cube);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction find by type failed");
-    }
+    SoSearchAction sa;
+    sa.setType(SoCube::getClassTypeId(), TRUE);
+    sa.setInterest(SoSearchAction::ALL);
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction: find ALL nodes of type");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube);
-        root->addChild(new SoCube);
-        root->addChild(new SoCube);
+    SoPathList & paths = sa.getPaths();
+    bool pass = (paths.getLength() == 3);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction ALL paths count wrong";
+}
 
-        SoSearchAction sa;
-        sa.setType(SoCube::getClassTypeId(), TRUE);
-        sa.setInterest(SoSearchAction::ALL);
-        sa.apply(root);
+TEST(ActionsExtended, SoSearchActionFindNodeByName)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoSphere * sphere = new SoSphere;
+    sphere->setName("named_sphere_search");
+    root->addChild(sphere);
 
-        SoPathList & paths = sa.getPaths();
-        bool pass = (paths.getLength() == 3);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction ALL paths count wrong");
-    }
+    SoSearchAction sa;
+    sa.setName(SbName("named_sphere_search"));
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction: find node by name");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoSphere * sphere = new SoSphere;
-        sphere->setName("named_sphere_search");
-        root->addChild(sphere);
+    SoPath * path = sa.getPath();
+    bool pass = (path != nullptr) && (path->getTail() == sphere);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction find by name failed";
+}
 
-        SoSearchAction sa;
-        sa.setName(SbName("named_sphere_search"));
-        sa.apply(root);
+TEST(ActionsExtended, SoSearchActionSetFindGetterRoundTrip)
+{
+    SoSearchAction sa;
+    sa.setFind(SoSearchAction::TYPE | SoSearchAction::NAME);
+    int find = sa.getFind();
+    bool pass = (find == (SoSearchAction::TYPE | SoSearchAction::NAME));
+    EXPECT_TRUE(pass) << "SoSearchAction setFind/getFind failed";
+}
 
-        SoPath * path = sa.getPath();
-        bool pass = (path != nullptr) && (path->getTail() == sphere);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction find by name failed");
-    }
+TEST(ActionsExtended, SoSearchActionSetInterestGetterRoundTrip)
+{
+    SoSearchAction sa;
+    sa.setInterest(SoSearchAction::LAST);
+    bool pass = (sa.getInterest() == SoSearchAction::LAST);
+    EXPECT_TRUE(pass) << "SoSearchAction setInterest/getInterest failed";
+}
 
-    runner.startTest("SoSearchAction setFind getter round-trip");
-    {
-        SoSearchAction sa;
-        sa.setFind(SoSearchAction::TYPE | SoSearchAction::NAME);
-        int find = sa.getFind();
-        bool pass = (find == (SoSearchAction::TYPE | SoSearchAction::NAME));
-        runner.endTest(pass, pass ? "" : "SoSearchAction setFind/getFind failed");
-    }
+TEST(ActionsExtended, SoSearchActionSetSearchingAllRoundTrip)
+{
+    SoSearchAction sa;
+    sa.setSearchingAll(TRUE);
+    bool pass = (sa.isSearchingAll() == TRUE);
+    EXPECT_TRUE(pass) << "setSearchingAll/isSearchingAll failed";
+}
 
-    runner.startTest("SoSearchAction setInterest getter round-trip");
-    {
-        SoSearchAction sa;
-        sa.setInterest(SoSearchAction::LAST);
-        bool pass = (sa.getInterest() == SoSearchAction::LAST);
-        runner.endTest(pass, pass ? "" : "SoSearchAction setInterest/getInterest failed");
-    }
+TEST(ActionsExtended, SoSearchActionResetClearsPreviousResult)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoCube * cube = new SoCube;
+    root->addChild(cube);
 
-    runner.startTest("SoSearchAction setSearchingAll round-trip");
-    {
-        SoSearchAction sa;
-        sa.setSearchingAll(TRUE);
-        bool pass = (sa.isSearchingAll() == TRUE);
-        runner.endTest(pass, pass ? "" : "setSearchingAll/isSearchingAll failed");
-    }
+    SoSearchAction sa;
+    sa.setType(SoCube::getClassTypeId());
+    sa.apply(root);
+    bool foundBefore = (sa.getPath() != nullptr);
 
-    runner.startTest("SoSearchAction reset() clears previous result");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoCube * cube = new SoCube;
-        root->addChild(cube);
+    sa.reset();
+    bool foundAfter = (sa.getPath() != nullptr);
 
-        SoSearchAction sa;
-        sa.setType(SoCube::getClassTypeId());
-        sa.apply(root);
-        bool foundBefore = (sa.getPath() != nullptr);
+    bool pass = foundBefore && !foundAfter;
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction::reset() did not clear path";
+}
 
-        sa.reset();
-        bool foundAfter = (sa.getPath() != nullptr);
+TEST(ActionsExtended, SoSearchActionIsFoundAfterApply)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
 
-        bool pass = foundBefore && !foundAfter;
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction::reset() did not clear path");
-    }
+    SoSearchAction sa;
+    sa.setType(SoCube::getClassTypeId());
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction isFound() after apply");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube);
+    bool pass = (sa.isFound() == TRUE);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction::isFound() returned FALSE after successful search";
+}
 
-        SoSearchAction sa;
-        sa.setType(SoCube::getClassTypeId());
-        sa.apply(root);
+TEST(ActionsExtended, SoSearchActionReturnsNullPathWhenNotFound)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoSphere);
 
-        bool pass = (sa.isFound() == TRUE);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction::isFound() returned FALSE after successful search");
-    }
+    SoSearchAction sa;
+    sa.setType(SoCube::getClassTypeId()); // search for cube, none present
+    sa.apply(root);
 
-    runner.startTest("SoSearchAction returns null path when not found");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoSphere);
+    bool pass = (sa.getPath() == nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoSearchAction getPath should be null when not found";
+}
 
-        SoSearchAction sa;
-        sa.setType(SoCube::getClassTypeId()); // search for cube, none present
-        sa.apply(root);
+// =======================================================================
+// SoGetMatrixAction
+// =======================================================================
 
-        bool pass = (sa.getPath() == nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoSearchAction getPath should be null when not found");
-    }
+TEST(ActionsExtended, SoGetMatrixActionTranslationMatrixCorrect)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoTranslation * trans = new SoTranslation;
+    trans->translation.setValue(1.0f, 2.0f, 3.0f);
+    root->addChild(trans);
 
-    // =======================================================================
-    // SoGetMatrixAction
-    // =======================================================================
+    SbViewportRegion vp(512, 512);
+    // Apply to the translation node directly (not the root separator)
+    // to get the accumulated matrix from root to that node
+    SoGetMatrixAction ma(vp);
+    ma.apply(trans);
+    SbMatrix mat = ma.getMatrix();
 
-    runner.startTest("SoGetMatrixAction: translation matrix correct");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoTranslation * trans = new SoTranslation;
-        trans->translation.setValue(1.0f, 2.0f, 3.0f);
-        root->addChild(trans);
+    SbVec3f pt(0, 0, 0);
+    SbVec3f result;
+    mat.multVecMatrix(pt, result);
+    bool pass = floatNear(result[0], 1.0f) &&
+                floatNear(result[1], 2.0f) &&
+                floatNear(result[2], 3.0f);
+    root->unref();
+    EXPECT_TRUE(pass) << "SoGetMatrixAction translation matrix incorrect";
+}
 
-        SbViewportRegion vp(512, 512);
-        // Apply to the translation node directly (not the root separator)
-        // to get the accumulated matrix from root to that node
-        SoGetMatrixAction ma(vp);
-        ma.apply(trans);
-        SbMatrix mat = ma.getMatrix();
+// =======================================================================
+// SoGetBoundingBoxAction
+// =======================================================================
 
-        SbVec3f pt(0, 0, 0);
-        SbVec3f result;
-        mat.multVecMatrix(pt, result);
-        bool pass = floatNear(result[0], 1.0f) &&
-                    floatNear(result[1], 2.0f) &&
-                    floatNear(result[2], 3.0f);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "SoGetMatrixAction translation matrix incorrect");
-    }
+TEST(ActionsExtended, SoGetBoundingBoxActionUnitCubeBboxApprox2x2x2)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube); // default 2×2×2
 
-    // =======================================================================
-    // SoGetBoundingBoxAction
-    // =======================================================================
+    SbViewportRegion vp(512, 512);
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(root);
+    SbBox3f bbox = bba.getBoundingBox();
 
-    runner.startTest("SoGetBoundingBoxAction: unit cube bbox approx 2x2x2");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube); // default 2×2×2
-
-        SbViewportRegion vp(512, 512);
-        SoGetBoundingBoxAction bba(vp);
-        bba.apply(root);
-        SbBox3f bbox = bba.getBoundingBox();
-
-        SbVec3f bmin, bmax;
-        bbox.getBounds(bmin, bmax);
-        bool pass = floatNear(bmin[0], -1.0f) &&
-                    floatNear(bmin[1], -1.0f) &&
-                    floatNear(bmin[2], -1.0f) &&
-                    floatNear(bmax[0],  1.0f) &&
-                    floatNear(bmax[1],  1.0f) &&
-                    floatNear(bmax[2],  1.0f);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Unit cube bbox not ±1 in all axes");
-    }
-
+    SbVec3f bmin, bmax;
+    bbox.getBounds(bmin, bmax);
+    bool pass = floatNear(bmin[0], -1.0f) &&
+                floatNear(bmin[1], -1.0f) &&
+                floatNear(bmin[2], -1.0f) &&
+                floatNear(bmax[0],  1.0f) &&
+                floatNear(bmax[1],  1.0f) &&
+                floatNear(bmax[2],  1.0f);
+    root->unref();
+    EXPECT_TRUE(pass) << "Unit cube bbox not ±1 in all axes";
 }

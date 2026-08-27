@@ -33,6 +33,10 @@ jobs:
             cmake_gl_flags: -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF
             unity_build: OFF
             examples: OFF
+          - name: no-gl-static
+            cmake_gl_flags: -DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=OFF -DBUILD_SHARED_LIBS=OFF
+            unity_build: OFF
+            examples: OFF
 
     steps:
       - name: Checkout repository with submodules
@@ -90,7 +94,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y \
             cmake libpng-dev libgl-dev libglu1-mesa-dev \
-            libx11-dev libxext-dev libgtest-dev
+            libx11-dev libxext-dev libgtest-dev xvfb
 
       - name: Configure
         run: |
@@ -108,7 +112,8 @@ jobs:
         run: |
           cmake --build build-sanitized --parallel 2 \
             --target obol_unit_tests obol_integration_tests obol_lifecycle_tests \
-                     obol_dynload_tests obol_stress_tests
+                     obol_dynload_tests obol_stress_tests \
+                     obol_system_gl_render_tests
 
       - name: Run focused test executables
         env:
@@ -119,6 +124,8 @@ jobs:
           build-sanitized/bin/obol_integration_tests
           build-sanitized/bin/obol_lifecycle_tests
           build-sanitized/bin/obol_stress_tests
+          xvfb-run -a build-sanitized/bin/obol_system_gl_render_tests \
+            --gtest_filter='*nanort*:*NanoRT*:*arb_shader_parameter_ranges*'
           ctest --test-dir build-sanitized --output-on-failure \
             -R '^TypeDynamicLoading\.'
 
@@ -199,7 +206,8 @@ jobs:
       - name: Build focused thread tests
         run: |
           cmake --build build-tsan --config RelWithDebInfo --parallel 2 \
-            --target obol_unit_tests obol_integration_tests obol_stress_tests
+            --target obol_unit_tests obol_integration_tests obol_stress_tests \
+                     obol_dynload_tests
 
       - name: Run focused thread tests
         env:
@@ -208,4 +216,4 @@ jobs:
           setarch "$(uname -m)" -R ctest --test-dir build-tsan \
             --output-on-failure \
             --timeout 180 \
-            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords|ImageFormatRegistry|UpstreamProfilerSuite)\.'
+            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords|ImageFormatRegistry|ErrorHandling|TypeDynamicLoading|ProfilerSuite)\.'

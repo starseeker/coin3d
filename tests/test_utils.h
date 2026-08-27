@@ -35,14 +35,9 @@
 
 /**
  * @file test_utils.h
- * @brief Shared support for retained source-level GTest suites
- *
- * Retained checks execute directly inside ordinary GTest suites.  The small
- * recorder keeps their original names and diagnostics while migration to
- * idiomatic EXPECT/ASSERT expressions proceeds incrementally.
+ * @brief Shared support for Obol GTest suites.
  */
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <cstdio>
@@ -50,25 +45,6 @@
 #include <Inventor/SoOffscreenRenderer.h>
 
 namespace ObolTest {
-
-class CheckRecorder {
-private:
-    std::string current_test_name;
-    
-public:
-    void startTest(const std::string& name) {
-        current_test_name = name;
-    }
-    
-    void endTest(bool passed, const std::string& error_msg = "") {
-        if (!passed) {
-            ADD_FAILURE() << current_test_name
-                          << (error_msg.empty() ? "" : ": ")
-                          << error_msg;
-        }
-    }
-    
-};
 
 // RGB output utilities to replace PNG functions
 // Uses SoOffscreenRenderer::writeToRGB() for SGI RGB format
@@ -83,7 +59,7 @@ namespace RGBOutput {
  * @param flip_vertically If true, flip image vertically (for OpenGL output)
  * @return true if successful, false on error
  */
-bool saveRGB(const std::string& filename, const unsigned char* buffer, 
+bool saveRGB(const std::string& filename, const unsigned char* buffer,
              int width, int height, bool flip_vertically = true);
 
 /**
@@ -95,14 +71,14 @@ bool saveRGB(const std::string& filename, const unsigned char* buffer,
  * @param flip_vertically If true, flip image vertically (for OpenGL output)
  * @return true if successful, false on error
  */
-bool saveRGBA_toRGB(const std::string& filename, const unsigned char* buffer, 
+bool saveRGBA_toRGB(const std::string& filename, const unsigned char* buffer,
                     int width, int height, bool flip_vertically = true);
 
 /**
  * @brief Helper to create RGB buffer from framebuffer data
  * Utility function to strip alpha channel from RGBA data
  */
-std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer, 
+std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer,
                                             int width, int height);
 
 } // namespace RGBOutput

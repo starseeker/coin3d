@@ -21,7 +21,7 @@
  *  13. SoCallbackAction::addTriangleCallback for specific shape type
  *  14. Render scene after collecting primitives (verify geometry is correct)
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -563,12 +563,11 @@ static bool test13_vertexProperty()
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_callback_action_deep(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
-    (void)argc; (void)argv;
+    (void)outputStem;
 
     int failures = 0;
 
@@ -594,6 +593,7 @@ static int obol_run_render_render_callback_action_deep(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_callback_action_deep) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_callback_action_deep, "render_callback_action_deep"), 0);
+TEST(RenderingScenarios, render_callback_action_deep) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_callback_action_deep");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

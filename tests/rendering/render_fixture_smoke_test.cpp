@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "headless_utils.h"
+
 #include <Inventor/SoInteraction.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -9,7 +11,25 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
 
+#include <cstdlib>
+#include <string>
+
 namespace {
+
+TEST(RenderBackendSelection, TestProcessUsesTheRequestedContextManager)
+{
+    SoDB::ContextManager * manager = SoDB::getContextManager();
+    ASSERT_NE(manager, nullptr);
+    EXPECT_EQ(getCoinHeadlessContextManager(), manager);
+
+    const char * requested = std::getenv("OBOL_TEST_RENDER_BACKEND");
+    if (requested && std::string(requested) == "swrast") {
+        void * context = manager->createOffscreenContext(8, 8);
+        ASSERT_NE(context, nullptr);
+        EXPECT_TRUE(manager->isOSMesaContext(context));
+        manager->destroyContext(context);
+    }
+}
 
 class Scene final {
 public:

@@ -14,7 +14,7 @@
 #include <string>
 
 #if defined(OBOL_TEST_HAVE_SYSTEM_GL) && defined(__unix__)
-#include "utils/headless_utils.h"
+#include "headless_utils.h"
 #endif
 
 namespace ObolTestSupport {

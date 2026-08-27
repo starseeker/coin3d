@@ -13,7 +13,7 @@
  *   8. SoSFString → SoSFFloat conversion round-trip (exercises conversion
  *      engine path on two distinct source strings)
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -237,12 +237,12 @@ static bool test8_stringToFloat()
 /* -------------------------------------------------------------------------
  * main
  * ----------------------------------------------------------------------- */
-static int obol_run_render_render_field_connections(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     const char *basepath =
-        (argc > 1) ? argv[1] : "render_field_connections";
+        (outputStem != nullptr) ? outputStem : "render_field_connections";
 
     printf("\n=== SoField multi-connection API tests ===\n");
 
@@ -262,6 +262,7 @@ static int obol_run_render_render_field_connections(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_field_connections) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_field_connections, "render_field_connections"), 0);
+TEST(RenderingScenarios, render_field_connections) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_field_connections");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

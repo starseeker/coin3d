@@ -32,6 +32,10 @@ add_library(obol_test_support STATIC
     test_context.cpp
     render_fixture.cpp
 )
+# Test sources deliberately use translation-unit-local helpers with concise
+# names. Parent projects may enable CMAKE_UNITY_BUILD globally, but combining
+# independent GTest sources changes that isolation and causes ODR collisions.
+set_target_properties(obol_test_support PROPERTIES UNITY_BUILD OFF)
 if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
     # The scene catalogue is shared by fixture-backed render contracts.  Keep
     # it in the modern support target so converted cases do not need a second
@@ -46,6 +50,7 @@ endif()
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     target_compile_definitions(obol_test_support PRIVATE OBOL_TEST_HAVE_SYSTEM_GL)
 endif()
+
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
     target_compile_definitions(obol_test_support PRIVATE OBOL_DUAL_GL_BUILD)
 endif()
@@ -81,12 +86,12 @@ target_include_directories(obol_test_support
         ${PROJECT_SOURCE_DIR}/tests
         ${PROJECT_SOURCE_DIR}/tests/utils
         ${PROJECT_SOURCE_DIR}/tests/testlib
+        ${PROJECT_SOURCE_DIR}/examples/demo_support
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_BINARY_DIR}/src
-        ${PROJECT_SOURCE_DIR}/external/nanort
         ${PROJECT_SOURCE_DIR}/external
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
@@ -107,6 +112,7 @@ function(obol_add_gtest target label)
         set(_obol_gtest_timeout 30)
     endif()
     add_executable(${target} test_main.cpp ${OBOL_GTEST_UNPARSED_ARGUMENTS})
+    set_target_properties(${target} PROPERTIES UNITY_BUILD OFF)
     target_link_libraries(${target}
         PRIVATE
             obol_test_support
@@ -145,6 +151,7 @@ endfunction()
 add_executable(obol_lifecycle_tests
     ${PROJECT_SOURCE_DIR}/tests/unit/lifecycle_test.cpp
 )
+set_target_properties(obol_lifecycle_tests PROPERTIES UNITY_BUILD OFF)
 target_link_libraries(obol_lifecycle_tests
     PRIVATE
         ${PROJECT_NAME}
@@ -163,33 +170,75 @@ gtest_discover_tests(obol_lifecycle_tests
         TIMEOUT 30
 )
 
-# Exercise the extension-node loader with a real shared object.  The probe's
-# deliberately short class name guards against heuristic filtering of valid
-# third-party types.
-add_library(obol_dynload_probe MODULE
-    ${PROJECT_SOURCE_DIR}/tests/unit/dynload_probe.cpp)
-set_target_properties(obol_dynload_probe PROPERTIES
-    OUTPUT_NAME Probe
-    WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-target_link_libraries(obol_dynload_probe PRIVATE ${PROJECT_NAME})
-target_include_directories(obol_dynload_probe PRIVATE
+# A loadable extension must bind to the same process-global type registry as
+# its host.  That is the supported shared-library plugin model; linking a
+# module to a static Obol archive would give the module a second registry and
+# cannot exercise dynamic loading correctly.
+if(BUILD_SHARED_LIBS)
+    # Exercise the extension-node loader with a real shared object.  The
+    # deliberately short class name guards against heuristic filtering of
+    # valid third-party types.
+    add_library(obol_dynload_probe MODULE
+        ${PROJECT_SOURCE_DIR}/tests/unit/dynload_probe.cpp)
+    set_target_properties(obol_dynload_probe PROPERTIES
+        OUTPUT_NAME Probe
+        WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    target_link_libraries(obol_dynload_probe PRIVATE ${PROJECT_NAME})
+    target_include_directories(obol_dynload_probe PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_BINARY_DIR}/include)
+
+    function(obol_add_dynload_probe probe source)
+        string(TOLOWER "${probe}" _probe_lower)
+        add_library(obol_dynload_${_probe_lower} MODULE
+            ${source})
+        set_target_properties(obol_dynload_${_probe_lower} PROPERTIES
+            OUTPUT_NAME ${probe}
+            WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+        target_link_libraries(obol_dynload_${_probe_lower} PRIVATE ${PROJECT_NAME})
+        target_include_directories(obol_dynload_${_probe_lower} PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_BINARY_DIR}/include)
+    endfunction()
+    obol_add_dynload_probe(ThrowProbe
+        ${PROJECT_SOURCE_DIR}/tests/unit/dynload_throw_probe.cpp)
+    obol_add_dynload_probe(WrongProbe
+        ${PROJECT_SOURCE_DIR}/tests/unit/dynload_wrong_probe.cpp)
+
+    if(WIN32)
+        set(_obol_dynload_environment
+            "PATH=$<TARGET_FILE_DIR:obol_dynload_probe>;$ENV{PATH}")
+    elseif(APPLE)
+        set(_obol_dynload_environment
+            "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
+    else()
+        set(_obol_dynload_environment
+            "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
+    endif()
+    obol_add_gtest(obol_dynload_tests "unit;dynload"
+        ENVIRONMENT "${_obol_dynload_environment}"
+        ${PROJECT_SOURCE_DIR}/tests/unit/type_dynload_test.cpp)
+    add_dependencies(obol_dynload_tests
+        obol_dynload_probe
+        obol_dynload_throwprobe
+        obol_dynload_wrongprobe)
+endif()
+
+# Exhausting SoType mutates process-global state irreversibly.  Keep this one
+# boundary test isolated from all ordinary unit cases.
+add_executable(obol_type_capacity_tests
+    ${PROJECT_SOURCE_DIR}/tests/unit/type_capacity_test.cpp)
+set_target_properties(obol_type_capacity_tests PROPERTIES UNITY_BUILD OFF)
+target_link_libraries(obol_type_capacity_tests PRIVATE
+    ${PROJECT_NAME}
+    ${OBOL_TARGET_LINK_LIBRARIES}
+    GTest::gtest_main)
+target_include_directories(obol_type_capacity_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_BINARY_DIR}/include)
-
-if(WIN32)
-    set(_obol_dynload_environment
-        "PATH=$<TARGET_FILE_DIR:obol_dynload_probe>;$ENV{PATH}")
-elseif(APPLE)
-    set(_obol_dynload_environment
-        "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
-else()
-    set(_obol_dynload_environment
-        "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:obol_dynload_probe>")
-endif()
-obol_add_gtest(obol_dynload_tests "unit;dynload"
-    ENVIRONMENT "${_obol_dynload_environment}"
-    ${PROJECT_SOURCE_DIR}/tests/unit/type_dynload_test.cpp)
-add_dependencies(obol_dynload_tests obol_dynload_probe)
+gtest_discover_tests(obol_type_capacity_tests
+    DISCOVERY_MODE PRE_TEST
+    PROPERTIES LABELS "unit-capacity" TIMEOUT 60)
 
 obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/base_math_test.cpp
@@ -206,7 +255,9 @@ obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/image_format_registry_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/interaction_kit_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/nodes_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/nanort_context_manager_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/projectors_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/scene_graph_structure_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/sensors_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/tools/test_tools_suite.cpp
     ${PROJECT_SOURCE_DIR}/tests/cad/test_cad_ids.cpp
@@ -298,7 +349,9 @@ function(obol_configure_render_target target)
     target_include_directories(${target} PRIVATE
         ${PROJECT_SOURCE_DIR}/examples/demo_scenes)
     target_compile_definitions(${target} PRIVATE
-        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images")
+        OBOL_CONTROL_IMAGES_DIR="${PROJECT_SOURCE_DIR}/tests/control_images"
+        OBOL_TEST_OUTPUT_DIR="${PROJECT_BINARY_DIR}/test-output/${target}"
+        OBOL_RENDER_TEST_MAIN)
 endfunction()
 
 # OSMesa is the deterministic software lane.  In a dual build its selection
@@ -324,6 +377,11 @@ elseif(OBOL_USE_SYSTEM_GL)
         "System-GL render lane: skipped (the modern native fixture currently requires GLX)")
 endif()
 
+if(NOT OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    obol_add_gtest(obol_nogl_tests "nogl"
+        ${PROJECT_SOURCE_DIR}/tests/rendering/nogl_scenegraph_test.cpp)
+endif()
+
 option(OBOL_BUILD_STRESS_TESTS
     "Build opt-in stress and sanitizer-oriented tests"
     OFF)
@@ -334,12 +392,11 @@ if(OBOL_BUILD_STRESS_TESTS)
 endif()
 
 # -----------------------------------------------------------------------------
-# Upstream-derived unit cases
+# Source-level unit cases
 # -----------------------------------------------------------------------------
-# These files are ordinary source-level GTest suites. Their retained check
-# bodies preserve broad API coverage without a parser-generated registration
-# layer or process-local result cache.
-set(OBOL_UPSTREAM_TEST_SOURCES
+# These files are ordinary source-level GTest suites with independently
+# discoverable cases and no process-local result recorder.
+set(OBOL_DOMAIN_UNIT_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_extended.cpp
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_pick.cpp
     ${PROJECT_SOURCE_DIR}/tests/actions/test_actions_suite.cpp
@@ -404,7 +461,7 @@ set(OBOL_UPSTREAM_TEST_SOURCES
 )
 
 target_sources(obol_unit_tests PRIVATE
-    ${OBOL_UPSTREAM_TEST_SOURCES})
+    ${OBOL_DOMAIN_UNIT_SOURCES})
 target_include_directories(obol_unit_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/tests/utils
     ${PROJECT_SOURCE_DIR}/src
@@ -412,12 +469,14 @@ target_include_directories(obol_unit_tests PRIVATE
 
 
 # -----------------------------------------------------------------------------
-# Retained rendering cases remain in a reviewable manifest.  A new test is an
-# intentional CMake change, and every enabled GL backend receives the same
-# source list.  The shared headless helper selects system GL or OSMesa from the
-# executable's OBOL_TEST_RENDER_BACKEND environment.
-set(OBOL_RETAINED_RENDER_SOURCES
-    ${PROJECT_SOURCE_DIR}/tests/rendering/nogl_scenegraph_test.cpp
+# Rendering cases remain in a reviewable manifest.  A new test is an
+# intentional CMake change, every source registers an ordinary GTest case, and
+# every enabled GL backend receives the same source list.  The shared headless
+# helper selects system GL or OSMesa from the executable's
+# OBOL_TEST_RENDER_BACKEND environment.
+set(OBOL_RENDER_SCENARIO_SOURCES
+    ${PROJECT_SOURCE_DIR}/tests/cad/test_cad_subpixel_proxy.cpp
+    ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb_shader_parameters.cpp
     ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_draggers.cpp
     ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_edit_cycle.cpp
     ${PROJECT_SOURCE_DIR}/tests/rendering/render_basic_context.cpp
@@ -477,16 +536,16 @@ set(OBOL_RETAINED_RENDER_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/rendering/test_shadow_direct.cpp
 )
 
-function(obol_add_retained_render_sources target)
+function(obol_add_render_scenario_sources target)
     target_sources(${target} PRIVATE
-        ${OBOL_RETAINED_RENDER_SOURCES})
+        ${OBOL_RENDER_SCENARIO_SOURCES})
     target_include_directories(${target} PRIVATE
+        ${PROJECT_SOURCE_DIR}/examples/demo_support
         ${PROJECT_SOURCE_DIR}/tests/utils
         ${PROJECT_SOURCE_DIR}/tests/testlib
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_BINARY_DIR}/src
-        ${PROJECT_SOURCE_DIR}/external/nanort
-        ${PROJECT_SOURCE_DIR}/external/nanort/examples/common)
+    )
     if(EXISTS "${PROJECT_SOURCE_DIR}/fonts/Iosevka/IosevkaAile-Regular.ttc")
         target_compile_definitions(${target} PRIVATE
             OBOL_FONTS_DIR="${PROJECT_SOURCE_DIR}/fonts")
@@ -494,7 +553,7 @@ function(obol_add_retained_render_sources target)
 endfunction()
 
 if(TARGET obol_render_tests)
-    obol_add_retained_render_sources(obol_render_tests)
+    obol_add_render_scenario_sources(obol_render_tests)
     target_include_directories(obol_render_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/external/osmesa/include)
     target_compile_definitions(obol_render_tests PRIVATE OBOL_SWRAST_BUILD)
@@ -504,5 +563,5 @@ if(TARGET obol_render_tests)
 endif()
 
 if(TARGET obol_system_gl_render_tests)
-    obol_add_retained_render_sources(obol_system_gl_render_tests)
+    obol_add_render_scenario_sources(obol_system_gl_render_tests)
 endif()

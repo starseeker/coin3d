@@ -58,64 +58,52 @@
 
 using namespace ObolTest;
 
-TEST(UpstreamMiscProto, RetainedCoverage)
+TEST(MiscProto, SoProtoGetClassTypeIdIsNotBadType)
 {
-    CheckRecorder runner;
+    bool pass = (SoProto::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoProto has bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoProto class type system
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProto::getClassTypeId() is not badType");
-    {
-        bool pass = (SoProto::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoProto has bad class type");
-    }
+TEST(MiscProto, SoProtoInstanceGetTypeIdMatchesClassType)
+{
+    SoProto * proto = new SoProto;
+    proto->ref();
+    bool pass = (proto->getTypeId() == SoProto::getClassTypeId());
+    proto->unref();
+    EXPECT_TRUE(pass) << "SoProto instance type does not match class type";
+}
 
-    runner.startTest("SoProto instance getTypeId() matches class type");
-    {
-        SoProto * proto = new SoProto;
-        proto->ref();
-        bool pass = (proto->getTypeId() == SoProto::getClassTypeId());
-        proto->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoProto instance type does not match class type");
-    }
+TEST(MiscProto, SoProtoIsSubtypeOfSoNode)
+{
+    bool pass = SoProto::getClassTypeId().isDerivedFrom(
+                    SoNode::getClassTypeId());
+    EXPECT_TRUE(pass) << "SoProto should be derived from SoNode";
+}
 
-    runner.startTest("SoProto is subtype of SoNode");
-    {
-        bool pass = SoProto::getClassTypeId().isDerivedFrom(
-                        SoNode::getClassTypeId());
-        runner.endTest(pass, pass ? "" :
-            "SoProto should be derived from SoNode");
-    }
+TEST(MiscProto, SoProtoGetProtoNameDefaultIsEmptySbName)
+{
+    SoProto * proto = new SoProto;
+    proto->ref();
+    SbName name = proto->getProtoName();
+    // Default proto name is empty
+    bool pass = (name == SbName("") || name.getLength() == 0);
+    proto->unref();
+    EXPECT_TRUE(pass) << "SoProto default proto name should be empty";
+}
 
-    runner.startTest("SoProto::getProtoName() default is empty SbName");
-    {
-        SoProto * proto = new SoProto;
-        proto->ref();
-        SbName name = proto->getProtoName();
-        // Default proto name is empty
-        bool pass = (name == SbName("") || name.getLength() == 0);
-        proto->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoProto default proto name should be empty");
-    }
+// -----------------------------------------------------------------------
+// SoProtoInstance class type system
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoProtoInstance class type system
-    // -----------------------------------------------------------------------
-    runner.startTest("SoProtoInstance::getClassTypeId() is not badType");
-    {
-        bool pass = (SoProtoInstance::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoProtoInstance has bad class type");
-    }
+TEST(MiscProto, SoProtoInstanceGetClassTypeIdIsNotBadType)
+{
+    bool pass = (SoProtoInstance::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoProtoInstance has bad class type";
+}
 
-    runner.startTest("SoProtoInstance is subtype of SoNode");
-    {
-        bool pass = SoProtoInstance::getClassTypeId().isDerivedFrom(
-                        SoNode::getClassTypeId());
-        runner.endTest(pass, pass ? "" :
-            "SoProtoInstance should be derived from SoNode");
-    }
-
+TEST(MiscProto, SoProtoInstanceIsSubtypeOfSoNode)
+{
+    bool pass = SoProtoInstance::getClassTypeId().isDerivedFrom(
+                    SoNode::getClassTypeId());
+    EXPECT_TRUE(pass) << "SoProtoInstance should be derived from SoNode";
 }

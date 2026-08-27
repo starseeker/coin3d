@@ -17,7 +17,7 @@
  *   7. isActive() query
  *   8. Render image via SoOffscreenRenderer after each SoRenderManager setup
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -284,16 +284,15 @@ static bool test7_glRenderAction(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_render_manager_full(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_render_manager_full";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_render_manager_full";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createRenderManagerFull(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -325,6 +324,7 @@ static int obol_run_render_render_render_manager_full(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_render_manager_full) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_render_manager_full, "render_render_manager_full"), 0);
+TEST(RenderingScenarios, render_render_manager_full) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_render_manager_full");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

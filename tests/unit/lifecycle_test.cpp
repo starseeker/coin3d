@@ -39,6 +39,7 @@ TEST(DatabaseLifecycle, SupportsRepeatedInitFinishCyclesWithoutContextManager)
 
     for (int generation = 0; generation < 3; ++generation) {
         SoDB::init(nullptr);
+        EXPECT_EQ(SoDB::getContextManager(), nullptr);
         exercise_initialized_database();
         SoDB::finish();
         EXPECT_FALSE(SoDB::isInitialized());

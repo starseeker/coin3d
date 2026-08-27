@@ -50,7 +50,7 @@
 #endif
 #define STBI_ONLY_JPEG
 #define STB_IMAGE_IMPLEMENTATION
-#include "../../external/nanort/stb_image.h"
+#include "../../external/stb/stb_image.h"
 #undef STB_IMAGE_IMPLEMENTATION
 #undef STBI_ONLY_JPEG
 #if defined(__clang__)

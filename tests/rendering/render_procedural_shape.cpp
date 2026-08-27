@@ -12,7 +12,7 @@
  * pixels in the right half of the image, confirming that the cylinder-proxy
  * path in SoProceduralShape::generatePrimitives() is working correctly.
  *
- * Output: argv[1]+".rgb"
+ * Output: outputStem+".rgb"
  */
 
 #include "headless_utils.h"
@@ -156,7 +156,7 @@ static const int ORANGE_MIN_GREEN =  30;  // G moderate
 static const int ORANGE_MAX_BLUE  =  80;  // B low
 #endif
 
-static int obol_run_render_render_procedural_shape(int argc, char** argv)
+static int runScenario(const char *outputStem)
 {
   initCoinHeadless();
 
@@ -215,14 +215,14 @@ static int obol_run_render_render_procedural_shape(int argc, char** argv)
   cam->position.setValue(cam->position.getValue() * 1.2f);
 
   char outpath[1024];
-  if (argc > 1)
-    snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+  if (outputStem != nullptr)
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
   else
     snprintf(outpath, sizeof(outpath), "render_procedural_shape.rgb");
 
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createProceduralShape(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -274,6 +274,7 @@ static int obol_run_render_render_procedural_shape(int argc, char** argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_procedural_shape) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_procedural_shape, "render_procedural_shape"), 0);
+TEST(RenderingScenarios, render_procedural_shape) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_procedural_shape");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

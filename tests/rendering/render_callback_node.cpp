@@ -13,7 +13,7 @@
  *   5. SoCallback within a SoSeparator subtree fires only when subtree is rendered.
  *   6. SoCallback::setCallback(NULL) – unregistration stops callback.
  *
- * Returns 0 on pass, non-0 on failure.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -340,16 +340,15 @@ static bool test6_callbackAcrossFrames(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-static int obol_run_render_render_callback_node(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_callback_node";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_callback_node";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and the migrated render adapter produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createCallbackNode(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -380,6 +379,7 @@ static int obol_run_render_render_callback_node(int argc, char **argv)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingCoverage, render_callback_node) {
-    EXPECT_EQ(ObolTest::runRenderingCase(obol_run_render_render_callback_node, "render_callback_node"), 0);
+TEST(RenderingScenarios, render_callback_node) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_callback_node");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }
