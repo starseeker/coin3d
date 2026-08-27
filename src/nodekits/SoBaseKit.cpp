@@ -855,8 +855,9 @@ SoBaseKit::set(const char * namevaluepairliststring)
     if (*start != '{') { // first non-space after partname should be a {
 #if OBOL_DEBUG
       SoDebugError::postWarning("SoBaseKit::set",
-                                "parse error at byte %d in input string",
-                                start-namevaluepairliststring);
+                                "parse error at byte %lld in input string",
+                                static_cast<long long>(
+                                  start - namevaluepairliststring));
 #endif // OBOL_DEBUG
       return FALSE;
     }

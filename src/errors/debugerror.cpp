@@ -34,29 +34,75 @@
 
 #include <cstdarg>
 #include <cstdio>
-#include <cstdlib>
-#include <cstdio>
-#include <cstdarg>
+#include <mutex>
 #include <string>
 
-// Simple consolidated implementation that provides exact C API compatibility
+namespace {
+
+std::mutex cc_debugerror_handler_mutex;
+cc_debugerror_cb * cc_debugerror_callback = NULL;
+void * cc_debugerror_callback_data = NULL;
+
+void
+cc_debugerror_post_arglist(CC_DEBUGERROR_SEVERITY severity,
+                           const char * source,
+                           const char * format,
+                           va_list args)
+{
+  va_list copy;
+  va_copy(copy, args);
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+  const int required = std::vsnprintf(NULL, 0, format, copy);
+  va_end(copy);
+  if (required < 0) return;
+
+  std::string message(static_cast<size_t>(required) + 1, '\0');
+  (void)std::vsnprintf(message.data(), message.size(), format, args);
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+  message.resize(static_cast<size_t>(required));
+
+  const char * kind = severity == CC_DEBUGERROR_ERROR ? "error" :
+                       severity == CC_DEBUGERROR_WARNING ? "warning" : "info";
+  std::string debugstring = "Coin ";
+  debugstring += kind;
+  if (source && source[0]) {
+    debugstring += " in ";
+    debugstring += source;
+    debugstring += "()";
+  }
+  debugstring += ": ";
+  debugstring += message;
+
+  cc_debugerror error;
+  cc_debugerror_init(&error);
+  error.severity = severity;
+  cc_error_set_debug_string(&error.super, debugstring.c_str());
+
+  void * data = NULL;
+  cc_debugerror_cb * function = cc_debugerror_get_handler(&data);
+  if (function) {
+    function(&error, data);
+  }
+  else {
+    cc_error_handle(&error.super);
+  }
+  cc_debugerror_clean(&error);
+}
+
+} // namespace
 
 void
 cc_debugerror_post(const char * source, const char * format, ...)
 {
   va_list args;
   va_start(args, format);
-  
-  char buffer[1024];
-  vsnprintf(buffer, sizeof(buffer), format, args);
+  cc_debugerror_post_arglist(CC_DEBUGERROR_ERROR, source, format, args);
   va_end(args);
-  
-  // Simple stderr output for now
-  if (source) {
-    fprintf(stderr, "Coin error in %s(): %s\n", source, buffer);
-  } else {
-    fprintf(stderr, "Coin error: %s\n", buffer);
-  }
 }
 
 void
@@ -64,17 +110,8 @@ cc_debugerror_postwarning(const char * source, const char * format, ...)
 {
   va_list args;
   va_start(args, format);
-  
-  char buffer[1024];
-  vsnprintf(buffer, sizeof(buffer), format, args);
+  cc_debugerror_post_arglist(CC_DEBUGERROR_WARNING, source, format, args);
   va_end(args);
-  
-  // Simple stderr output for now
-  if (source) {
-    fprintf(stderr, "Coin warning in %s(): %s\n", source, buffer);
-  } else {
-    fprintf(stderr, "Coin warning: %s\n", buffer);
-  }
 }
 
 void
@@ -82,17 +119,8 @@ cc_debugerror_postinfo(const char * source, const char * format, ...)
 {
   va_list args;
   va_start(args, format);
-  
-  char buffer[1024];
-  vsnprintf(buffer, sizeof(buffer), format, args);
+  cc_debugerror_post_arglist(CC_DEBUGERROR_INFO, source, format, args);
   va_end(args);
-  
-  // Simple stderr output for now
-  if (source) {
-    fprintf(stderr, "Coin info in %s(): %s\n", source, buffer);
-  } else {
-    fprintf(stderr, "Coin info: %s\n", buffer);
-  }
 }
 
 void
@@ -114,31 +142,32 @@ cc_debugerror_get_severity(const cc_debugerror * me)
   return me->severity;
 }
 
-static cc_debugerror_cb * debug_callback = NULL;
-static void * debug_callback_data = NULL;
-
 void
 cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data)
 {
-  debug_callback = function;
-  debug_callback_data = data;
+  const std::lock_guard<std::mutex> guard(cc_debugerror_handler_mutex);
+  cc_debugerror_callback = function;
+  cc_debugerror_callback_data = data;
 }
 
 cc_debugerror_cb *
 cc_debugerror_get_handler_callback(void)
 {
-  return debug_callback;
+  const std::lock_guard<std::mutex> guard(cc_debugerror_handler_mutex);
+  return cc_debugerror_callback;
 }
 
 void *
 cc_debugerror_get_handler_data(void)
 {
-  return debug_callback_data;
+  const std::lock_guard<std::mutex> guard(cc_debugerror_handler_mutex);
+  return cc_debugerror_callback_data;
 }
 
 cc_debugerror_cb *
 cc_debugerror_get_handler(void ** data)
 {
-  *data = debug_callback_data;
-  return debug_callback;
+  const std::lock_guard<std::mutex> guard(cc_debugerror_handler_mutex);
+  *data = cc_debugerror_callback_data;
+  return cc_debugerror_callback;
 }

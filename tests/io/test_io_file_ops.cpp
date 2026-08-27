@@ -56,7 +56,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static void silentErrCb(const SoError *, void *) {}
 
@@ -81,180 +81,165 @@ static std::string writeTempIV(const char * suffix)
     return std::string(path);
 }
 
-int main()
+TEST(IoFileOps, SoInputOpenFileReturnsTRUEForValidIVFile)
 {
-    TestFixture fixture;
-    TestRunner runner;
-
-    // -----------------------------------------------------------------------
-    // SoInput::openFile / closeFile
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInput::openFile returns TRUE for valid IV file");
-    {
-        std::string path = writeTempIV("open_valid");
-        bool pass = false;
-        if (!path.empty()) {
-            SoInput in;
-            SbBool ok = in.openFile(path.c_str());
-            pass = (ok == TRUE);
-            if (ok) in.closeFile();
-            remove(path.c_str());
-        }
-        runner.endTest(pass, pass ? "" :
-            "SoInput::openFile failed for a valid IV file");
-    }
-
-    runner.startTest("SoInput::openFile returns FALSE for non-existent file");
-    {
-        // Suppress Coin error output for this test
-        SoErrorCB * old = SoError::getHandlerCallback();
-        SoError::setHandlerCallback(silentErrCb, nullptr);
-
+    std::string path = writeTempIV("open_valid");
+    bool pass = false;
+    if (!path.empty()) {
         SoInput in;
-        SbBool ok = in.openFile("/tmp/does_not_exist_test_io.iv");
-
-        SoError::setHandlerCallback(old, nullptr);
-
-        bool pass = (ok == FALSE);
-        runner.endTest(pass, pass ? "" :
-            "SoInput::openFile should return FALSE for non-existent file");
+        SbBool ok = in.openFile(path.c_str());
+        pass = (ok == TRUE);
+        if (ok) in.closeFile();
+        remove(path.c_str());
     }
+    EXPECT_TRUE(pass) << "SoInput::openFile failed for a valid IV file";
+}
 
-    runner.startTest("SoInput::getCurFileName returns path after openFile");
-    {
-        std::string path = writeTempIV("getcurfilename");
-        bool pass = false;
-        if (!path.empty()) {
-            SoInput in;
-            if (in.openFile(path.c_str())) {
-                SbString name = in.getCurFileName();
-                // The returned name should end with our file path
-                pass = (strstr(name.getString(), "test_io_file_ops_") != nullptr);
-                in.closeFile();
-            }
-            remove(path.c_str());
-        }
-        runner.endTest(pass, pass ? "" :
-            "SoInput::getCurFileName did not return the opened file path");
-    }
+TEST(IoFileOps, SoInputOpenFileReturnsFALSEForNonExistentFile)
+{
+    // Suppress Coin error output for this test
+    SoErrorCB * old = SoError::getHandlerCallback();
+    SoError::setHandlerCallback(silentErrCb, nullptr);
 
-    runner.startTest("SoDB::readAll from openFile loads scene");
-    {
-        std::string path = writeTempIV("readall_file");
-        bool pass = false;
-        if (!path.empty()) {
-            SoInput in;
-            if (in.openFile(path.c_str())) {
-                SoSeparator * root = SoDB::readAll(&in);
-                if (root) {
-                    pass = (root->getNumChildren() > 0);
-                    root->unref();
-                }
-                in.closeFile();
-            }
-            remove(path.c_str());
-        }
-        runner.endTest(pass, pass ? "" :
-            "SoDB::readAll from openFile did not load any children");
-    }
+    SoInput in;
+    SbBool ok = in.openFile("/tmp/does_not_exist_test_io.iv");
 
-    // -----------------------------------------------------------------------
-    // SoInput::isFileURL
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInput::isFileURL is protected (not publicly callable)");
-    {
-        // SoInput::isFileURL is a protected method, used internally.
-        // Just verify that SoInput can be constructed without crash.
+    SoError::setHandlerCallback(old, nullptr);
+
+    bool pass = (ok == FALSE);
+    EXPECT_TRUE(pass) << "SoInput::openFile should return FALSE for non-existent file";
+}
+
+TEST(IoFileOps, SoInputGetCurFileNameReturnsPathAfterOpenFile)
+{
+    std::string path = writeTempIV("getcurfilename");
+    bool pass = false;
+    if (!path.empty()) {
         SoInput in;
-        bool pass = true; // construction without crash = pass
-        runner.endTest(pass, "");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoOutput: setBinary / isBinary round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOutput::setBinary / isBinary round-trip");
-    {
-        SoOutput out;
-        out.setBinary(TRUE);
-        bool pass = (out.isBinary() == TRUE);
-        out.setBinary(FALSE);
-        pass = pass && (out.isBinary() == FALSE);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput setBinary/isBinary round-trip failed");
-    }
-
-    runner.startTest("SoOutput::setHeaderString / getDefaultASCIIHeader");
-    {
-        // getDefaultASCIIHeader returns the standard Inventor header string
-        SbString hdr = SoOutput::getDefaultASCIIHeader();
-        bool pass = (strncmp(hdr.getString(), "#Inventor V2.1 ascii",
-                             strlen("#Inventor V2.1 ascii")) == 0);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput::getDefaultASCIIHeader did not return expected header");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoWriteAction: write scene to a temp file and verify it is non-empty
-    // -----------------------------------------------------------------------
-    runner.startTest("SoWriteAction writes to file successfully");
-    {
-        const char * outPath = "/tmp/test_io_file_ops_writeaction.iv";
-
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube);
-
-        SoOutput out;
-        bool opened = out.openFile(outPath);
-        bool pass = false;
-        if (opened) {
-            SoWriteAction wa(&out);
-            wa.apply(root);
-            out.closeFile();
-
-            // Verify the file was created and is non-empty
-            FILE * f = fopen(outPath, "r");
-            if (f) {
-                fseek(f, 0, SEEK_END);
-                long sz = ftell(f);
-                fclose(f);
-                pass = (sz > 0);
-            }
-            remove(outPath);
+        if (in.openFile(path.c_str())) {
+            SbString name = in.getCurFileName();
+            // The returned name should end with our file path
+            pass = (strstr(name.getString(), "test_io_file_ops_") != nullptr);
+            in.closeFile();
         }
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoWriteAction did not write a non-empty file");
+        remove(path.c_str());
     }
+    EXPECT_TRUE(pass) << "SoInput::getCurFileName did not return the opened file path";
+}
 
-    // -----------------------------------------------------------------------
-    // SoInput stack: pushFile / pop
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInput: multiple openFile calls (stack) and closeFile");
-    {
-        std::string path1 = writeTempIV("stack1");
-        std::string path2 = writeTempIV("stack2");
-        bool pass = false;
-        if (!path1.empty() && !path2.empty()) {
-            SoInput in;
-            SbBool ok1 = in.openFile(path1.c_str());
-            if (ok1) {
-                SbBool ok2 = in.openFile(path2.c_str());
-                if (ok2) {
-                    // Top of stack should be path2
-                    SbString top = in.getCurFileName();
-                    pass = (strstr(top.getString(), "stack2") != nullptr);
-                    in.closeFile();  // pop path2
-                }
-                in.closeFile();     // pop path1
+TEST(IoFileOps, SoDBReadAllFromOpenFileLoadsScene)
+{
+    std::string path = writeTempIV("readall_file");
+    bool pass = false;
+    if (!path.empty()) {
+        SoInput in;
+        if (in.openFile(path.c_str())) {
+            SoSeparator * root = SoDB::readAll(&in);
+            if (root) {
+                root->ref();
+                pass = (root->getNumChildren() > 0);
+                root->unref();
             }
-            remove(path1.c_str());
-            remove(path2.c_str());
+            in.closeFile();
         }
-        runner.endTest(pass, pass ? "" :
-            "SoInput stack getCurFileName did not return top-of-stack file");
+        remove(path.c_str());
     }
+    EXPECT_TRUE(pass) << "SoDB::readAll from openFile did not load any children";
+}
 
-    return runner.getSummary();
+// -----------------------------------------------------------------------
+// SoInput::isFileURL
+// -----------------------------------------------------------------------
+
+TEST(IoFileOps, SoInputIsFileURLIsProtectedNotPubliclyCallable)
+{
+    // SoInput::isFileURL is a protected method, used internally.
+    // Just verify that SoInput can be constructed without crash.
+    SoInput in;
+    SUCCEED();
+}
+
+// -----------------------------------------------------------------------
+// SoOutput: setBinary / isBinary round-trip
+// -----------------------------------------------------------------------
+
+TEST(IoFileOps, SoOutputSetBinaryIsBinaryRoundTrip)
+{
+    SoOutput out;
+    out.setBinary(TRUE);
+    bool pass = (out.isBinary() == TRUE);
+    out.setBinary(FALSE);
+    pass = pass && (out.isBinary() == FALSE);
+    EXPECT_TRUE(pass) << "SoOutput setBinary/isBinary round-trip failed";
+}
+
+TEST(IoFileOps, SoOutputSetHeaderStringGetDefaultASCIIHeader)
+{
+    // getDefaultASCIIHeader returns the standard Inventor header string
+    SbString hdr = SoOutput::getDefaultASCIIHeader();
+    bool pass = (strncmp(hdr.getString(), "#Inventor V2.1 ascii",
+                         strlen("#Inventor V2.1 ascii")) == 0);
+    EXPECT_TRUE(pass) << "SoOutput::getDefaultASCIIHeader did not return expected header";
+}
+
+// -----------------------------------------------------------------------
+// SoWriteAction: write scene to a temp file and verify it is non-empty
+// -----------------------------------------------------------------------
+
+TEST(IoFileOps, SoWriteActionWritesToFileSuccessfully)
+{
+    const char * outPath = "/tmp/test_io_file_ops_writeaction.iv";
+
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+
+    SoOutput out;
+    bool opened = out.openFile(outPath);
+    bool pass = false;
+    if (opened) {
+        SoWriteAction wa(&out);
+        wa.apply(root);
+        out.closeFile();
+
+        // Verify the file was created and is non-empty
+        FILE * f = fopen(outPath, "r");
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            long sz = ftell(f);
+            fclose(f);
+            pass = (sz > 0);
+        }
+        remove(outPath);
+    }
+    root->unref();
+    EXPECT_TRUE(pass) << "SoWriteAction did not write a non-empty file";
+}
+
+// -----------------------------------------------------------------------
+// SoInput stack: pushFile / pop
+// -----------------------------------------------------------------------
+
+TEST(IoFileOps, SoInputMultipleOpenFileCallsStackAndCloseFile)
+{
+    std::string path1 = writeTempIV("stack1");
+    std::string path2 = writeTempIV("stack2");
+    bool pass = false;
+    if (!path1.empty() && !path2.empty()) {
+        SoInput in;
+        SbBool ok1 = in.openFile(path1.c_str());
+        if (ok1) {
+            SbBool ok2 = in.openFile(path2.c_str());
+            if (ok2) {
+                // Top of stack should be path2
+                SbString top = in.getCurFileName();
+                pass = (strstr(top.getString(), "stack2") != nullptr);
+                in.closeFile();  // pop path2
+            }
+            in.closeFile();     // pop path1
+        }
+        remove(path1.c_str());
+        remove(path2.c_str());
+    }
+    EXPECT_TRUE(pass) << "SoInput stack getCurFileName did not return top-of-stack file";
 }

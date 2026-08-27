@@ -79,6 +79,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 #include "errors/CoinInternalError.h"
 #include "misc/SoEnvironment.h"
@@ -125,6 +126,10 @@ using std::memcpy;
 SoType SoDebugError::classTypeId STATIC_SOTYPE_INIT;
 SoErrorCB * SoDebugError::callback = SoError::defaultHandlerCB;
 void * SoDebugError::callbackData = NULL;
+
+namespace {
+std::mutex sodebugerror_callback_mutex;
+}
 
 // *************************************************************************
 
@@ -176,8 +181,12 @@ debug_break_cleanup(void)
 void
 SoDebugError::initClass(void)
 {
-  SoDebugError::callback = SoError::defaultHandlerCB;
-  SoDebugError::callbackData = NULL;
+  {
+    const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
+    SoDebugError::callback = SoError::defaultHandlerCB;
+    SoDebugError::callbackData = NULL;
+    cc_debugerror_set_handler_callback(NULL, NULL);
+  }
   SoDebugError::classTypeId =
     SoType::createType(SoError::getClassTypeId(), "DebugError");
 
@@ -225,13 +234,12 @@ SoDebugError::initClass(void)
 }
 
 void
-SoDebugError::callbackForwarder(const void * error_ptr,
+SoDebugError::callbackForwarder(const cc_debugerror * error,
                             void * OBOL_UNUSED_ARG(data)
                             )
 {
   SoDebugError wrappederr;
 
-  const cc_debugerror * error = static_cast<const cc_debugerror *>(error_ptr);
   switch (cc_debugerror_get_severity(error)) {
   case CC_DEBUGERROR_ERROR:
     wrappederr.severity = SoDebugError::ERROR;
@@ -247,13 +255,20 @@ SoDebugError::callbackForwarder(const void * error_ptr,
     break;
   }
 
-  static std::string dbgstr =
-    cc_error_get_debug_string(reinterpret_cast<const cc_error *>(error));
+  const std::string dbgstr =
+    cc_error_get_debug_string(&error->super);
   const char * dbgstrc = dbgstr.c_str();
   wrappederr.setDebugString(dbgstrc);
 
-  assert(SoDebugError::callback != NULL);
-  SoDebugError::callback(&wrappederr, SoDebugError::callbackData);
+  void * callbackdata = NULL;
+  SoErrorCB * function = NULL;
+  {
+    const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
+    function = SoDebugError::callback;
+    callbackdata = SoDebugError::callbackData;
+  }
+  assert(function != NULL);
+  function(&wrappederr, callbackdata);
 }
 
 /*!
@@ -262,17 +277,15 @@ SoDebugError::callbackForwarder(const void * error_ptr,
 void
 SoDebugError::setHandlerCallback(SoErrorCB * const function, void * const data)
 {
-  if (SoDebugError::callback == SoError::defaultHandlerCB) {
-    // The user is overriding the default handler, so set up a
-    // "converter" callback function that makes an SoDebugError out of
-    // an cc_debugerror and forwards control to the callback function
-    // given as an argument to setHandlerCallback().
-    cc_debugerror_set_handler_callback(
-       reinterpret_cast<cc_debugerror_cb *>(SoDebugError::callbackForwarder), NULL);
-  }
-
-  SoDebugError::callback = function;
+  const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
+  SoDebugError::callback = function ? function : SoError::defaultHandlerCB;
   SoDebugError::callbackData = data;
+  if (SoDebugError::callback == SoError::defaultHandlerCB) {
+    cc_debugerror_set_handler_callback(NULL, NULL);
+  }
+  else {
+    cc_debugerror_set_handler_callback(SoDebugError::callbackForwarder, NULL);
+  }
 }
 
 /*!
@@ -281,6 +294,7 @@ SoDebugError::setHandlerCallback(SoErrorCB * const function, void * const data)
 SoErrorCB *
 SoDebugError::getHandlerCallback(void)
 {
+  const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
   return SoDebugError::callback;
 }
 
@@ -290,6 +304,7 @@ SoDebugError::getHandlerCallback(void)
 void *
 SoDebugError::getHandlerData(void)
 {
+  const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
   return SoDebugError::callbackData;
 }
 
@@ -360,12 +375,7 @@ SoDebugError::commonPostHandling(Severity severity, const char * type,
   error.appendToDebugString("(): ");
   error.appendToDebugString(s.getString());
 
-  if (SoDebugError::callback != SoError::defaultHandlerCB) {
-    SoDebugError::callback(&error, SoDebugError::callbackData);
-  }
-  else {
-    error.handleError();
-  }
+  error.handleError();
 
   check_breakpoints(source);
 }
@@ -417,6 +427,7 @@ SoDebugError::getHandler(void * & data) const
   // FIXME: why the heck isn't this a static method? Looks to me like
   // an API bug. 20020526 mortene.
 
+  const std::lock_guard<std::mutex> guard(sodebugerror_callback_mutex);
   data = SoDebugError::callbackData;
   return SoDebugError::callback;
 }

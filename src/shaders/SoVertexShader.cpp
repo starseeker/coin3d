@@ -105,11 +105,8 @@ SoVertexShader::isSupported(SourceType sourceType)
   // need a guaranteed GL context for this. (We've chosen to be
   // compatible with TGS Inventor, so don't change the signature.)
 
-  void * ptr = coin_gl_current_context();
-  assert(ptr && "No active OpenGL context found!");
-  if (!ptr) return FALSE; // Always bail out. Even when compiled in 'release' mode.
-
-  const SoGLContext * glue = SoGLContext_instance_from_context_ptr(ptr);
+  const SoGLContext * glue = sogl_current_render_glue();
+  if (!glue) return FALSE;
 
   if (sourceType == ARB_PROGRAM) {
     return SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_VERTEX_PROGRAM);
@@ -123,4 +120,3 @@ SoVertexShader::isSupported(SourceType sourceType)
 
   return FALSE;
 }
-

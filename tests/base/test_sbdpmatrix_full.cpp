@@ -51,132 +51,119 @@
 #include <Inventor/SbVec3f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+TEST(BaseSbdpmatrixFull, SbDPMatrixDet3OnIdentityMatrix10)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    SbDPMatrix m = SbDPMatrix::identity();
+    double d = m.det3(0, 1, 2, 0, 1, 2);
+    bool pass = (std::fabs(d - 1.0) < 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix det3 identity should be 1.0";
+}
 
-    // -----------------------------------------------------------------------
-    // det3(): identity matrix → 1.0
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix det3() on identity matrix == 1.0");
-    {
-        SbDPMatrix m = SbDPMatrix::identity();
-        double d = m.det3(0, 1, 2, 0, 1, 2);
-        bool pass = (std::fabs(d - 1.0) < 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix det3 identity should be 1.0");
-    }
+// -----------------------------------------------------------------------
+// det4(): identity matrix → 1.0
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // det4(): identity matrix → 1.0
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix det4() on identity matrix == 1.0");
-    {
-        SbDPMatrix m = SbDPMatrix::identity();
-        double d = m.det4();
-        bool pass = (std::fabs(d - 1.0) < 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix det4 identity should be 1.0");
-    }
+TEST(BaseSbdpmatrixFull, SbDPMatrixDet4OnIdentityMatrix10)
+{
+    SbDPMatrix m = SbDPMatrix::identity();
+    double d = m.det4();
+    bool pass = (std::fabs(d - 1.0) < 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix det4 identity should be 1.0";
+}
 
-    runner.startTest("SbDPMatrix det4() on 2*identity == 16.0");
-    {
-        // 2 * identity: all diagonal elements are 2 → det = 2^4 = 16
-        SbDPMatrix m(2.0, 0.0, 0.0, 0.0,
-                     0.0, 2.0, 0.0, 0.0,
-                     0.0, 0.0, 2.0, 0.0,
-                     0.0, 0.0, 0.0, 2.0);
-        double d = m.det4();
-        bool pass = (std::fabs(d - 16.0) < 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix det4 of 2*identity should be 16.0");
-    }
+TEST(BaseSbdpmatrixFull, SbDPMatrixDet4On2Identity160)
+{
+    // 2 * identity: all diagonal elements are 2 → det = 2^4 = 16
+    SbDPMatrix m(2.0, 0.0, 0.0, 0.0,
+                 0.0, 2.0, 0.0, 0.0,
+                 0.0, 0.0, 2.0, 0.0,
+                 0.0, 0.0, 0.0, 2.0);
+    double d = m.det4();
+    bool pass = (std::fabs(d - 16.0) < 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix det4 of 2*identity should be 16.0";
+}
 
-    // -----------------------------------------------------------------------
-    // inverse(): inverse of pure translation matrix translates back
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix inverse of translation matrix");
-    {
-        SbDPMatrix m = SbDPMatrix::identity();
-        m.setTranslate(SbVec3d(3.0, 4.0, 5.0));
-        SbDPMatrix inv = m.inverse();
-        SbDPMatrix product = m * inv;
+// -----------------------------------------------------------------------
+// inverse(): inverse of pure translation matrix translates back
+// -----------------------------------------------------------------------
 
-        // product should be close to identity
-        SbDPMatrix id = SbDPMatrix::identity();
-        bool pass = product.equals(id, 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix M * M.inverse() should be identity");
-    }
+TEST(BaseSbdpmatrixFull, SbDPMatrixInverseOfTranslationMatrix)
+{
+    SbDPMatrix m = SbDPMatrix::identity();
+    m.setTranslate(SbVec3d(3.0, 4.0, 5.0));
+    SbDPMatrix inv = m.inverse();
+    SbDPMatrix product = m * inv;
 
-    // -----------------------------------------------------------------------
-    // multLeft(): A.multLeft(B) == B * A
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix multLeft: A.multLeft(B) == B*A");
-    {
-        SbDPMatrix A = SbDPMatrix::identity();
-        A.setTranslate(SbVec3d(1.0, 0.0, 0.0));
+    // product should be close to identity
+    SbDPMatrix id = SbDPMatrix::identity();
+    bool pass = product.equals(id, 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix M * M.inverse() should be identity";
+}
 
-        SbDPMatrix B = SbDPMatrix::identity();
-        B.setTranslate(SbVec3d(0.0, 2.0, 0.0));
+// -----------------------------------------------------------------------
+// multLeft(): A.multLeft(B) == B * A
+// -----------------------------------------------------------------------
 
-        // Compute B * A via operator*
-        SbDPMatrix BA = B * A;
+TEST(BaseSbdpmatrixFull, SbDPMatrixMultLeftAMultLeftBBA)
+{
+    SbDPMatrix A = SbDPMatrix::identity();
+    A.setTranslate(SbVec3d(1.0, 0.0, 0.0));
 
-        // Compute via multLeft: result = B * A
-        SbDPMatrix C = A;
-        C.multLeft(B);
+    SbDPMatrix B = SbDPMatrix::identity();
+    B.setTranslate(SbVec3d(0.0, 2.0, 0.0));
 
-        bool pass = C.equals(BA, 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix multLeft did not match B*A");
-    }
+    // Compute B * A via operator*
+    SbDPMatrix BA = B * A;
 
-    // -----------------------------------------------------------------------
-    // setTransform / getTransform round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix setTransform/getTransform round-trip");
-    {
-        SbVec3d    t(1.0, 2.0, 3.0);
-        SbDPRotation r = SbDPRotation::identity();
-        SbVec3d    s(1.0, 1.0, 1.0);
+    // Compute via multLeft: result = B * A
+    SbDPMatrix C = A;
+    C.multLeft(B);
 
-        SbDPMatrix m;
-        m.setTransform(t, r, s);
+    bool pass = C.equals(BA, 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix multLeft did not match B*A";
+}
 
-        SbVec3d    tOut; SbDPRotation rOut; SbVec3d sOut; SbDPRotation soOut;
-        m.getTransform(tOut, rOut, sOut, soOut);
+// -----------------------------------------------------------------------
+// setTransform / getTransform round-trip
+// -----------------------------------------------------------------------
 
-        bool pass = (std::fabs(tOut[0] - 1.0) < 1e-9) &&
-                    (std::fabs(tOut[1] - 2.0) < 1e-9) &&
-                    (std::fabs(tOut[2] - 3.0) < 1e-9) &&
-                    (std::fabs(sOut[0] - 1.0) < 1e-9) &&
-                    (std::fabs(sOut[1] - 1.0) < 1e-9) &&
-                    (std::fabs(sOut[2] - 1.0) < 1e-9);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix setTransform/getTransform round-trip failed");
-    }
+TEST(BaseSbdpmatrixFull, SbDPMatrixSetTransformGetTransformRoundTrip)
+{
+    SbVec3d    t(1.0, 2.0, 3.0);
+    SbDPRotation r = SbDPRotation::identity();
+    SbVec3d    s(1.0, 1.0, 1.0);
 
-    // -----------------------------------------------------------------------
-    // equals(): two near-identical matrices pass with tolerance 1e-9
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix equals() with small perturbation and tolerance");
-    {
-        SbDPMatrix a = SbDPMatrix::identity();
-        SbDPMatrix b = SbDPMatrix::identity();
-        // Perturb b by less than tolerance
-        // Access via operator[] (row, column indexing)
-        const double (*bArr)[4] = b;
-        (void)bArr; // b is effectively unmodified since we only read
+    SbDPMatrix m;
+    m.setTransform(t, r, s);
 
-        // Both are identity — equals should be TRUE
-        bool pass = (a.equals(b, 1e-9) == TRUE);
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix equals() failed for two identity matrices");
-    }
+    SbVec3d    tOut; SbDPRotation rOut; SbVec3d sOut; SbDPRotation soOut;
+    m.getTransform(tOut, rOut, sOut, soOut);
 
-    return runner.getSummary();
+    bool pass = (std::fabs(tOut[0] - 1.0) < 1e-9) &&
+                (std::fabs(tOut[1] - 2.0) < 1e-9) &&
+                (std::fabs(tOut[2] - 3.0) < 1e-9) &&
+                (std::fabs(sOut[0] - 1.0) < 1e-9) &&
+                (std::fabs(sOut[1] - 1.0) < 1e-9) &&
+                (std::fabs(sOut[2] - 1.0) < 1e-9);
+    EXPECT_TRUE(pass) << "SbDPMatrix setTransform/getTransform round-trip failed";
+}
+
+// -----------------------------------------------------------------------
+// equals(): two near-identical matrices pass with tolerance 1e-9
+// -----------------------------------------------------------------------
+
+TEST(BaseSbdpmatrixFull, SbDPMatrixEqualsWithSmallPerturbationAndTolerance)
+{
+    SbDPMatrix a = SbDPMatrix::identity();
+    SbDPMatrix b = SbDPMatrix::identity();
+    // Perturb b by less than tolerance
+    // Access via operator[] (row, column indexing)
+    const double (*bArr)[4] = b;
+    (void)bArr; // b is effectively unmodified since we only read
+
+    // Both are identity — equals should be TRUE
+    bool pass = (a.equals(b, 1e-9) == TRUE);
+    EXPECT_TRUE(pass) << "SbDPMatrix equals() failed for two identity matrices";
 }

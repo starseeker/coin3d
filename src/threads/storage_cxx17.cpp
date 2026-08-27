@@ -45,14 +45,10 @@
 #include "config.h"
 
 #include <cassert>
-#include <exception>
-#include <iostream>
 #include <mutex>
 #include <vector>
 
 #include "threads/threads.h"
-
-#include "base/dict.h"
 
 namespace CoinInternal {
 
@@ -67,79 +63,98 @@ StorageRegistry& StorageRegistry::getInstance() {
 
 void StorageRegistry::registerStorage(cc_storage* storage) {
     if (!storage) return;
-    
-    std::unique_lock<std::shared_mutex> lock(registry_mutex);
-    registered_storages.insert(storage);
+
+    std::lock_guard<std::mutex> lock(registry_mutex);
+    registered_storages[storage] = std::make_shared<StorageRecord>(storage);
 }
 
 void StorageRegistry::unregisterStorage(cc_storage* storage) {
     if (!storage) return;
-    
-    std::unique_lock<std::shared_mutex> lock(registry_mutex);
-    registered_storages.erase(storage);
+
+    std::unique_lock<std::mutex> lock(registry_mutex);
+    const auto it = registered_storages.find(storage);
+    if (it == registered_storages.end()) return;
+
+    // Retire the stable registry record before waiting. Cleanup snapshots own
+    // records, not raw storage pointers, so a snapshot taken before this call
+    // can observe the retirement without dereferencing freed storage.
+    const std::shared_ptr<StorageRecord> record = it->second;
+    record->registered = false;
+    record->storage = nullptr;
+    registered_storages.erase(it);
+    registry_cv.wait(lock, [&record] {
+        return record->active_cleanups == 0;
+    });
 }
 
-void StorageRegistry::cleanupThread(unsigned long threadid) {
-    // Snapshot the set of registered storages under the shared lock, then
-    // release the lock before touching any individual storage.  This avoids
-    // a potential deadlock where a storage destructor calls unregisterStorage()
-    // (exclusive lock) while we are still iterating under the shared lock.
-    std::vector<cc_storage*> snapshot;
+void StorageRegistry::cleanupThread(cc_thread_id_t threadid) {
+    // Snapshot stable records rather than raw storage pointers. A lifetime
+    // lease is acquired for only one storage at a time and is released before
+    // its user destructor is invoked. Consequently a destructor may safely
+    // unregister either its own storage or another storage in this snapshot.
+    std::vector<std::shared_ptr<StorageRecord>> snapshot;
     {
-        std::shared_lock<std::shared_mutex> lock(registry_mutex);
-        snapshot.assign(registered_storages.begin(), registered_storages.end());
-    } // shared lock released before iterating
+        std::lock_guard<std::mutex> lock(registry_mutex);
+        snapshot.reserve(registered_storages.size());
+        for (const auto & item : registered_storages) {
+            snapshot.push_back(item.second);
+        }
+    }
 
-    for (cc_storage* storage : snapshot) {
-        if (!storage || !storage->dict) continue;
-        
-        void* data = nullptr;
-        
-        // Lock the storage mutex to safely access the dictionary
-#ifdef HAVE_THREADS
-        if (storage->mutex) {
-            cc_mutex_lock(storage->mutex);
+    for (const std::shared_ptr<StorageRecord> & record : snapshot) {
+        cc_storage * storage = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(registry_mutex);
+            if (!record->registered || !record->storage) continue;
+            ++record->active_cleanups;
+            storage = record->storage;
         }
+
+        void * data = nullptr;
+        void (*destructor)(void *) = nullptr;
+
+        // Detach this thread's data while the storage lifetime is leased and
+        // its dictionary is locked. No user code runs under either lock.
+#ifdef HAVE_THREADS
+        if (storage->mutex) cc_mutex_lock(storage->mutex);
 #endif /* HAVE_THREADS */
-        
-        try {
-            // Check if this thread has data in this storage
-            if (cc_dict_get(storage->dict, threadid, &data) && data) {
-                // Call destructor if provided
-                if (storage->destructor) {
-                    try {
-                        storage->destructor(data);
-                    } catch (...) {
-                        // Swallow exceptions in destructors to prevent terminate()
-                        // This preserves the behavior expected in C code
-                    }
+        if (storage->dict) {
+            const auto entry = storage->dict->find(threadid);
+            if (entry != storage->dict->end()) {
+                data = entry->second;
+                destructor = storage->destructor;
+                storage->dict->erase(entry);
+            }
+        }
+#ifdef HAVE_THREADS
+        if (storage->mutex) cc_mutex_unlock(storage->mutex);
+#endif /* HAVE_THREADS */
+
+        // The cleanup code will not touch storage after this point. Release
+        // the lease before invoking the callback so reentrant destruction
+        // cannot wait on a lease owned by this same thread.
+        {
+            std::lock_guard<std::mutex> lock(registry_mutex);
+            assert(record->active_cleanups > 0);
+            --record->active_cleanups;
+            registry_cv.notify_all();
+        }
+
+        if (data) {
+            if (destructor) {
+                try {
+                    destructor(data);
                 }
-                
-                // Free the memory
-                free(data);
-                
-                // Remove entry from dictionary
-                cc_dict_remove(storage->dict, threadid);
+                catch (...) {
+                    // Preserve the C callback contract at thread exit.
+                }
             }
-        } catch (...) {
-            // Ensure we always unlock the mutex even if an exception occurs
-#ifdef HAVE_THREADS
-            if (storage->mutex) {
-                cc_mutex_unlock(storage->mutex);
-            }
-#endif /* HAVE_THREADS */
-            throw;
+            free(data);
         }
-        
-#ifdef HAVE_THREADS
-        if (storage->mutex) {
-            cc_mutex_unlock(storage->mutex);
-        }
-#endif /* HAVE_THREADS */
     }
 }
 
-unsigned long StorageRegistry::getCurrentThreadId() {
+cc_thread_id_t StorageRegistry::getCurrentThreadId() {
     // Use the same thread ID mechanism as the existing cc_storage implementation
     return cc_thread_id();
 }
@@ -172,7 +187,7 @@ void ThreadCleanupTrigger::ensureCleanupTrigger() {
 // C API implementation
 extern "C" {
 
-void cc_storage_thread_cleanup_enhanced(unsigned long threadid) {
+void cc_storage_thread_cleanup_enhanced(cc_thread_id_t threadid) {
     try {
         CoinInternal::StorageRegistry::getInstance().cleanupThread(threadid);
     } catch (...) {

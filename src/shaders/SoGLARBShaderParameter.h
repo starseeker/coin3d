@@ -76,10 +76,12 @@ public:
   virtual ~SoGLARBShaderParameter();
 
 private:
-  GLenum target;
-  GLuint identifier;
-
-  SbBool isValid(const SoGLShaderObject * shader, const int idx);
+  SbBool isValid(const SoGLShaderObject * shader, int idx, int count,
+                 GLenum & target) const;
+  void setFloats(const SoGLShaderObject * shader, int count,
+                 const float * values, int components, int idx) const;
+  void setIntegers(const SoGLShaderObject * shader, int count,
+                   const int32_t * values, int components, int idx) const;
 };
 
 #endif /* ! OBOL_SOGLARBSHADERPARAMETER_H */

@@ -74,6 +74,7 @@
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoLightElement.h>
 #include <Inventor/elements/SoEnvironmentElement.h>
+#include <Inventor/elements/SoClipPlaneElement.h>
 #include <Inventor/elements/SoShapeHintsElement.h>
 #include <Inventor/nodes/SoLight.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -96,6 +97,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <limits>
 
 // ---------------------------------------------------------------------------
 // SoCADAssemblyImpl – private implementation (Pimpl pattern)
@@ -1008,6 +1010,13 @@ struct SoCADAssemblyImpl :
                 continue;
             }
             const auto& geom = *partIt->second;
+            /* Structural fallbacks are deliberately wire boxes even while the
+             * requested model representation is shaded.  Omitting their wire
+             * item until a shaded mesh exists leaves a cold large scene blank
+             * despite a valid, visible coverage proxy. */
+            const bool needWireForPart = needWire ||
+                (needShaded && geom.structuralProxy &&
+                 geom.wire.has_value());
             CadPartBinding binding;
             binding.part = pid;
             binding.geometry = partIt->second;
@@ -1056,7 +1065,7 @@ struct SoCADAssemblyImpl :
                     return true;
                 };
             if (count > 0 &&
-                    ((needWire && geom.wire.has_value()) ||
+                    ((needWireForPart && geom.wire.has_value()) ||
                      (needShaded && geom.shaded.has_value()))) {
                 uint8_t maximumCut = 0;
                 for (size_t i = 0; i < groupCount; ++i) {
@@ -1065,7 +1074,8 @@ struct SoCADAssemblyImpl :
                     maximumCut =
                         std::max(maximumCut, visAt(i).lodCut);
                 }
-                plan.maximumRequestedCutByPart[pid] = maximumCut;
+                plan.partPresentation[pid].maximumRequestedCut =
+                    maximumCut;
             }
 
             // Bind each occurrence directly to this plan-owned part payload.
@@ -1076,7 +1086,7 @@ struct SoCADAssemblyImpl :
             }
 
             // Wire draw item
-            if (needWire && geom.wire.has_value()) {
+            if (needWireForPart && geom.wire.has_value()) {
                 CadDrawItem item;
                 item.rep.part  = pid;
                 item.rep.type  = geom.wire->derivesTriangleEdges() ?
@@ -1110,7 +1120,8 @@ struct SoCADAssemblyImpl :
                 }
                 // Each part is visited exactly once by the flat grouped walk.
                 plan.requiredReps.push_back(item.rep);
-                plan.wirePartsWithUncollapsedInstances.insert(pid);
+                plan.partPresentation[pid].
+                    wireHasUncollapsedInstances = true;
             }
 
             if (geom.points.has_value() && !geom.points->positions.empty()) {
@@ -1602,16 +1613,19 @@ struct SoCADAssemblyImpl :
         appendItems(cachedPlan_.shadedItems, delta.shadedItems);
         for (CadRepKey& rep : delta.requiredReps)
             cachedPlan_.requiredReps.push_back(std::move(rep));
-        for (const auto& item : delta.maximumRequestedCutByPart) {
-            auto inserted = cachedPlan_.maximumRequestedCutByPart.emplace(
+        for (const auto& item : delta.partPresentation) {
+            auto inserted = cachedPlan_.partPresentation.emplace(
                 item.first, item.second);
-            if (!inserted.second)
-                inserted.first->second =
-                    std::max(inserted.first->second, item.second);
+            if (!inserted.second) {
+                inserted.first->second.maximumRequestedCut = std::max(
+                    inserted.first->second.maximumRequestedCut,
+                    item.second.maximumRequestedCut);
+                inserted.first->second.wireHasUncollapsedInstances =
+                    inserted.first->second.
+                        wireHasUncollapsedInstances ||
+                    item.second.wireHasUncollapsedInstances;
+            }
         }
-        cachedPlan_.wirePartsWithUncollapsedInstances.insert(
-            delta.wirePartsWithUncollapsedInstances.begin(),
-            delta.wirePartsWithUncollapsedInstances.end());
         cachedPlan_.hasCustomWireStyle =
             cachedPlan_.hasCustomWireStyle || delta.hasCustomWireStyle;
         if (!delta.worldBounds.isEmpty())
@@ -1827,8 +1841,7 @@ struct SoCADAssemblyImpl :
         else
             binding.subpixelProxyCorners = {};
 
-        cachedPlan_.maximumRequestedCutByPart.erase(oldPart);
-        cachedPlan_.wirePartsWithUncollapsedInstances.erase(oldPart);
+        cachedPlan_.partPresentation.erase(oldPart);
         progressiveShadedPlanGroupByInstance_.erase(instance);
 
         CachedPlanPartSpan newSpan;
@@ -1843,13 +1856,17 @@ struct SoCADAssemblyImpl :
             cachedDM_ == SoCADAssembly::SHADED ||
             cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
             cachedDM_ == SoCADAssembly::HIDDEN_LINE;
-        if ((needWire && geometry.wire) ||
+        /* Match the full plan path: a temporary structural proxy remains a
+         * wire extent in shaded mode until a shaded mesh supersedes it. */
+        const bool needWireForPart = needWire ||
+            (needShaded && geometry.structuralProxy && geometry.wire);
+        if ((needWireForPart && geometry.wire) ||
                 (needShaded && geometry.shaded) ||
                 (geometry.points && !geometry.points->positions.empty()))
-            cachedPlan_.maximumRequestedCutByPart[newPart] =
+            cachedPlan_.partPresentation[newPart].maximumRequestedCut =
                 visible.lodCut;
 
-        if (needWire && geometry.wire) {
+        if (needWireForPart && geometry.wire) {
             CadDrawItem item;
             item.rep.part = newPart;
             item.rep.type = geometry.wire->derivesTriangleEdges() ?
@@ -1864,7 +1881,8 @@ struct SoCADAssemblyImpl :
             newSpan.wireItemCount = 1u;
             cachedPlan_.wireItems.push_back(item);
             cachedPlan_.requiredReps.push_back(item.rep);
-            cachedPlan_.wirePartsWithUncollapsedInstances.insert(newPart);
+            cachedPlan_.partPresentation[newPart].
+                wireHasUncollapsedInstances = true;
         }
         if (geometry.points && !geometry.points->positions.empty()) {
             CadDrawItem item;
@@ -1989,11 +2007,8 @@ struct SoCADAssemblyImpl :
                 rebinds.size());
         cachedPlanPartSpansByPart_.reserve(
             cachedPlanPartSpansByPart_.size() + rebinds.size());
-        cachedPlan_.maximumRequestedCutByPart.reserve(
-            cachedPlan_.maximumRequestedCutByPart.size() +
-                rebinds.size());
-        cachedPlan_.wirePartsWithUncollapsedInstances.reserve(
-            cachedPlan_.wirePartsWithUncollapsedInstances.size() +
+        cachedPlan_.partPresentation.reserve(
+            cachedPlan_.partPresentation.size() +
                 rebinds.size());
         for (const auto& rebind : rebinds) {
             if (!patchCachedInstancePartRebind(
@@ -2447,7 +2462,8 @@ struct SoCADAssemblyImpl :
                         std::min<size_t>(bin,
                             Obol::ProgressiveCutLimit - 1));
             }
-            cachedPlan_.maximumRequestedCutByPart[group.part] = maximumCut;
+            cachedPlan_.partPresentation[group.part].maximumRequestedCut =
+                maximumCut;
             if (group.baseInstance <
                     cachedPlan_.visibleInstances.size() &&
                     group.shadedItemBegin <=
@@ -2834,18 +2850,17 @@ struct SoCADAssemblyImpl :
                 uncollapsedStructuralProxyCountByPart_.find(part);
             if (previous !=
                     uncollapsedStructuralProxyCountByPart_.end()) {
-                uncollapsedStructuralProxyCount_ =
-                    previous->second <=
-                            uncollapsedStructuralProxyCount_ ?
-                        uncollapsedStructuralProxyCount_ -
-                            previous->second :
-                        0u;
+                uncollapsedStructuralProxyCount_ = previous->second <=
+                        uncollapsedStructuralProxyCount_ ?
+                    uncollapsedStructuralProxyCount_ - previous->second :
+                    0u;
                 uncollapsedStructuralProxyCountByPart_.erase(previous);
             }
-            plan.wirePartsWithUncollapsedInstances.erase(part);
-
+            auto presentation = plan.partPresentation.find(part);
+            if (presentation != plan.partPresentation.end())
+                presentation->second.wireHasUncollapsedInstances = false;
             bool hasUncollapsed = false;
-            size_t structuralCount = 0;
+            size_t structuralCount = 0u;
             const auto spans = cachedPlanPartSpansByPart_.find(part);
             if (spans == cachedPlanPartSpansByPart_.end())
                 continue;
@@ -2871,8 +2886,7 @@ struct SoCADAssemblyImpl :
                         plan.visibleInstances[visibleIndex];
                     /* The published structural frontier is an occurrence
                      * set.  Sparse box-to-mesh/selection/visibility changes
-                     * update it beside the per-part count without requiring
-                     * a complete camera reclassification. */
+                     * update only the affected occurrence records. */
                     uncollapsedStructuralProxyInstances_.erase(
                         occurrence.instanceId);
                     if (occurrence.partIndex != span.partIndex ||
@@ -2890,8 +2904,9 @@ struct SoCADAssemblyImpl :
                     }
                 }
             }
-            if (hasUncollapsed)
-                plan.wirePartsWithUncollapsedInstances.insert(part);
+            if (presentation != plan.partPresentation.end())
+                presentation->second.wireHasUncollapsedInstances =
+                    hasUncollapsed;
             if (structuralCount) {
                 uncollapsedStructuralProxyCountByPart_[part] =
                     structuralCount;
@@ -3149,14 +3164,122 @@ struct SoCADAssemblyImpl :
             std::numeric_limits<uint32_t>::max();
         subpixelProxyState_.resize(expectedVisibleExtent, 0u);
         subpixelProxyScratchMask_.resize(expectedVisibleExtent, 0u);
+        subpixelProxyScratchPoints_.reserve(expectedVisibleExtent);
+        subpixelProxyScratchVisibleByPoint_.reserve(expectedVisibleExtent);
         subpixelProxyScratchPointByVisible_.resize(
             expectedVisibleExtent, noPoint);
         structuralProjectionScratchBucketByVisible_.resize(
             expectedVisibleExtent, -1);
+        subpixelProxyScratchWireByPart_.resize(
+            plan.partBindings.size(), 0u);
+        subpixelProxyScratchStructuralCountByPart_.resize(
+            plan.partBindings.size(), 0u);
+        subpixelProxyScratchStructuralInstances_.reserve(
+            expectedVisibleExtent);
         subpixelProxyStateInputRevision_ = newestInputRevision;
         subpixelProxyBuildInputRevision_ = newestInputRevision;
         subpixelProxyBuildAppendRevision_ = newestAppendRevision;
         return true;
+    }
+
+    Obol::CadPresentationPreparationTarget subpixelPreparationTarget(
+            const SbMatrix& viewProj, const SbVec2s& viewportSize,
+            float pixelThreshold)
+    {
+        Obol::CadPresentationPreparationTarget target;
+        target.kind =
+            Obol::CadPresentationPreparationKind::SubpixelClassification;
+        target.planRevision = cachedPlan_.revision;
+        target.geometryRevision = cachedPlan_.geometryRevision;
+        target.classifierInputRevision =
+            cachedPlan_.subpixelProxyInputRevision;
+        target.classifierAppendRevision = cachedPlan_.appendRevision;
+        target.viewportWidth = viewportSize[0];
+        target.viewportHeight = viewportSize[1];
+        std::memcpy(&target.pointProxyPixelThresholdBits,
+            &pixelThreshold,
+            sizeof(target.pointProxyPixelThresholdBits));
+        for (size_t i = 0; i < target.viewProjectionBits.size(); ++i)
+            std::memcpy(&target.viewProjectionBits[i],
+                viewProj[0] + i, sizeof(target.viewProjectionBits[i]));
+
+        if (presentationPreparation_.state ==
+                Obol::CadPresentationPreparationState::Preparing) {
+            Obol::CadPresentationPreparationTarget active =
+                presentationPreparation_.target;
+            active.obligationRevision = 0;
+            if (active == target)
+                return presentationPreparation_.target;
+        }
+        target.obligationRevision =
+            nextPresentationPreparationRevision_++;
+        if (!nextPresentationPreparationRevision_)
+            nextPresentationPreparationRevision_ = 1;
+        return target;
+    }
+
+    uint64_t subpixelPreparationReservedBytes() const
+    {
+        uint64_t total = 0;
+        const auto add = [&total](size_t count, size_t elementSize) {
+            const uint64_t bytes = count &&
+                    elementSize > UINT64_MAX / count ?
+                UINT64_MAX :
+                static_cast<uint64_t>(count) * elementSize;
+            total = bytes > UINT64_MAX - total ?
+                UINT64_MAX : total + bytes;
+        };
+        add(subpixelProxyScratchMask_.capacity(), sizeof(uint8_t));
+        add(subpixelProxyScratchPoints_.capacity(),
+            sizeof(Obol::internal::CadSubpixelProxyPoint));
+        add(subpixelProxyScratchVisibleByPoint_.capacity(),
+            sizeof(uint32_t));
+        add(subpixelProxyScratchPointByVisible_.capacity(),
+            sizeof(uint32_t));
+        add(structuralProjectionScratchBucketByVisible_.capacity(),
+            sizeof(int8_t));
+        add(subpixelProxyScratchWireByPart_.capacity(), sizeof(uint8_t));
+        add(subpixelProxyScratchStructuralCountByPart_.capacity(),
+            sizeof(size_t));
+        add(subpixelProxyScratchStructuralInstances_.capacity(),
+            sizeof(Obol::InstanceId));
+        return total;
+    }
+
+    uint64_t subpixelPreparationCompletedUnits() const
+    {
+        const uint64_t visible = std::min<uint64_t>(
+            subpixelProxyBuildVisibleCursor_,
+            cachedPlan_.visibleInstances.size());
+        const uint64_t wire =
+            subpixelProxyBuildWireOffset_ >
+                    UINT64_MAX - subpixelProxyBuildCompletedWireUnits_ ?
+                UINT64_MAX : subpixelProxyBuildCompletedWireUnits_ +
+                    subpixelProxyBuildWireOffset_;
+        const uint64_t completed = wire > UINT64_MAX - visible ?
+            UINT64_MAX : visible + wire;
+        return std::min(completed, subpixelProxyBuildTotalUnits_);
+    }
+
+    void publishSubpixelPreparation(
+            const Obol::CadPresentationPreparationTarget& target,
+            Obol::CadPresentationPreparationState state,
+            uint64_t completedUnits)
+    {
+        Obol::CadPresentationPreparationSnapshot snapshot;
+        snapshot.target = target;
+        snapshot.state = state;
+        snapshot.totalUnits = subpixelProxyBuildTotalUnits_;
+        snapshot.completedUnits = std::min(
+            completedUnits, snapshot.totalUnits);
+        snapshot.reservedBytes = subpixelPreparationReservedBytes();
+        if (presentationPreparation_.target == target &&
+                presentationPreparation_.state ==
+                    Obol::CadPresentationPreparationState::Preparing)
+            snapshot.completedUnits = std::max(
+                snapshot.completedUnits,
+                presentationPreparation_.completedUnits);
+        presentationPreparation_ = snapshot;
     }
 
     bool updateSubpixelProxyPlan(const SbMatrix& viewProj,
@@ -3209,6 +3332,14 @@ struct SoCADAssemblyImpl :
             if (patchSubpixelProxyAppendPlan(
                     viewProj, viewportSize, pixelThreshold)) {
                 subpixelProxyBuildActive_ = false;
+                subpixelProxyBuildTotalUnits_ = 1;
+                const Obol::CadPresentationPreparationTarget target =
+                    subpixelPreparationTarget(
+                        viewProj, viewportSize, pixelThreshold);
+                publishSubpixelPreparation(
+                    target,
+                    Obol::CadPresentationPreparationState::Complete,
+                    1);
                 return !renderAction || !renderAction->abortNow();
             }
         }
@@ -3264,6 +3395,16 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildActive_ &&
             extendSubpixelProxyAppendBuild(
                 viewProj, viewportSize, pixelThreshold);
+        if (extendedBuild) {
+            subpixelProxyBuildTotalUnits_ =
+                static_cast<uint64_t>(plan.visibleInstances.size());
+            for (const CadDrawItem& item : plan.wireItems) {
+                subpixelProxyBuildTotalUnits_ = item.instanceCount >
+                        UINT64_MAX - subpixelProxyBuildTotalUnits_ ?
+                    UINT64_MAX : subpixelProxyBuildTotalUnits_ +
+                        item.instanceCount;
+            }
+        }
         if (!matchingBuild && !extendedBuild) {
             if (preparationPerformed)
                 *preparationPerformed = true;
@@ -3304,16 +3445,31 @@ struct SoCADAssemblyImpl :
             structuralProjectionScratchHistogram_ =
                 Obol::CadStructuralProxyProjectionHistogram();
             points.clear();
+            points.reserve(plan.visibleInstances.size());
             visibleByPoint.clear();
-            subpixelProxyScratchWireParts_.clear();
-            subpixelProxyScratchStructuralCountByPart_.clear();
+            visibleByPoint.reserve(plan.visibleInstances.size());
+            subpixelProxyScratchWireByPart_.assign(
+                plan.partBindings.size(), 0u);
+            subpixelProxyScratchStructuralCountByPart_.assign(
+                plan.partBindings.size(), 0u);
             subpixelProxyScratchStructuralCount_ = 0;
             subpixelProxyScratchStructuralInstances_.clear();
+            subpixelProxyScratchStructuralInstances_.reserve(
+                plan.visibleInstances.size());
             subpixelProxyBuildVisibleCursor_ = 0;
             subpixelProxyBuildWireItemCursor_ = 0;
             subpixelProxyBuildWireOffset_ = 0;
             subpixelProxyBuildWireHasUncollapsed_ = false;
             subpixelProxyBuildWireStructuralCount_ = 0;
+            subpixelProxyBuildCompletedWireUnits_ = 0;
+            subpixelProxyBuildTotalUnits_ =
+                static_cast<uint64_t>(plan.visibleInstances.size());
+            for (const CadDrawItem& item : plan.wireItems) {
+                subpixelProxyBuildTotalUnits_ = item.instanceCount >
+                        UINT64_MAX - subpixelProxyBuildTotalUnits_ ?
+                    UINT64_MAX : subpixelProxyBuildTotalUnits_ +
+                        item.instanceCount;
+            }
             subpixelProxyBuildInputRevision_ =
                 plan.subpixelProxyInputRevision;
             subpixelProxyBuildAppendRevision_ =
@@ -3323,6 +3479,13 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildPixelThreshold_ = pixelThreshold;
             subpixelProxyBuildActive_ = true;
         }
+        const Obol::CadPresentationPreparationTarget preparationTarget =
+            subpixelPreparationTarget(
+                viewProj, viewportSize, pixelThreshold);
+        publishSubpixelPreparation(
+            preparationTarget,
+            Obol::CadPresentationPreparationState::Preparing,
+            subpixelPreparationCompletedUnits());
         if (subpixelProxyBuildVisibleCursor_ <
                 plan.visibleInstances.size() ||
                 subpixelProxyBuildWireItemCursor_ <
@@ -3355,6 +3518,10 @@ struct SoCADAssemblyImpl :
                             subpixelProxyBuildWireItemCursor_,
                             plan.wireItems.size());
                 }
+                publishSubpixelPreparation(
+                    preparationTarget,
+                    Obol::CadPresentationPreparationState::Preparing,
+                    subpixelPreparationCompletedUnits());
                 return false;
             }
             const size_t visibleIndex =
@@ -3381,7 +3548,7 @@ struct SoCADAssemblyImpl :
             if (presentation == CadProxyPresentation::Geometry) {
                 if (instance.flags &
                         CadInstanceLodStructuralProxy)
-                    subpixelProxyScratchStructuralInstances_.insert(
+                    subpixelProxyScratchStructuralInstances_.push_back(
                         instance.instanceId);
                 continue;
             }
@@ -3398,14 +3565,24 @@ struct SoCADAssemblyImpl :
 
         for (; subpixelProxyBuildWireItemCursor_ < plan.wireItems.size();
                 ++subpixelProxyBuildWireItemCursor_) {
-            if (abortRequested())
+            if (abortRequested()) {
+                publishSubpixelPreparation(
+                    preparationTarget,
+                    Obol::CadPresentationPreparationState::Preparing,
+                    subpixelPreparationCompletedUnits());
                 return false;
+            }
             const CadDrawItem& item =
                 plan.wireItems[subpixelProxyBuildWireItemCursor_];
             for (; subpixelProxyBuildWireOffset_ < item.instanceCount;
                     ++subpixelProxyBuildWireOffset_) {
-                if (abortRequested())
+                if (abortRequested()) {
+                    publishSubpixelPreparation(
+                        preparationTarget,
+                        Obol::CadPresentationPreparationState::Preparing,
+                        subpixelPreparationCompletedUnits());
                     return false;
+                }
                 const size_t visibleIndex = item.baseInstance +
                     subpixelProxyBuildWireOffset_;
                 if (visibleIndex >= mask.size())
@@ -3424,23 +3601,29 @@ struct SoCADAssemblyImpl :
                     }
                 }
             }
-            if (subpixelProxyBuildWireHasUncollapsed_)
-                subpixelProxyScratchWireParts_.insert(
-                    item.rep.part);
-            if (subpixelProxyBuildWireStructuralCount_)
-                subpixelProxyScratchStructuralCountByPart_[
-                    item.rep.part] +=
-                        subpixelProxyBuildWireStructuralCount_;
+            if (item.partIndex < subpixelProxyScratchWireByPart_.size()) {
+                if (subpixelProxyBuildWireHasUncollapsed_)
+                    subpixelProxyScratchWireByPart_[item.partIndex] = 1u;
+                if (subpixelProxyBuildWireStructuralCount_)
+                    subpixelProxyScratchStructuralCountByPart_[
+                        item.partIndex] +=
+                            subpixelProxyBuildWireStructuralCount_;
+            }
+            subpixelProxyBuildCompletedWireUnits_ =
+                item.instanceCount >
+                        UINT64_MAX -
+                            subpixelProxyBuildCompletedWireUnits_ ?
+                    UINT64_MAX :
+                    subpixelProxyBuildCompletedWireUnits_ +
+                        item.instanceCount;
             subpixelProxyBuildWireOffset_ = 0;
             subpixelProxyBuildWireHasUncollapsed_ = false;
             subpixelProxyBuildWireStructuralCount_ = 0;
         }
         if (cadPlanDebugEnabled() &&
                 subpixelProxyScratchStructuralCount_) {
-            std::unordered_set<size_t> structuralVisibleIndices;
-            std::unordered_set<Obol::InstanceId,
-                std::hash<Obol::InstanceId>> structuralInstances;
             size_t structuralItemReferences = 0;
+            size_t structuralVisibleReferences = 0;
             size_t structuralHiddenReferences = 0;
             size_t structuralStaleReferences = 0;
             size_t structuralPartCount = 0;
@@ -3468,20 +3651,20 @@ struct SoCADAssemblyImpl :
                         ++structuralHiddenReferences;
                         continue;
                     }
-                    structuralVisibleIndices.insert(visibleIndex);
-                    structuralInstances.insert(instance.instanceId);
+                    ++structuralVisibleReferences;
                 }
             }
             std::fprintf(stderr,
                 "SoCADAssembly structural proxy debug "
                 "uncollapsed=%zu item_refs=%zu hidden_refs=%zu "
                 "stale_refs=%zu "
-                "distinct_visible=%zu distinct_instances=%zu "
+                "visible_refs=%zu classified_instances=%zu "
                 "wire_items=%zu structural_items=%zu visible_records=%zu\n",
                 subpixelProxyScratchStructuralCount_,
                 structuralItemReferences, structuralHiddenReferences,
                 structuralStaleReferences,
-                structuralVisibleIndices.size(), structuralInstances.size(),
+                structuralVisibleReferences,
+                subpixelProxyScratchStructuralInstances_.size(),
                 plan.wireItems.size(), structuralPartCount,
                 plan.visibleInstances.size());
         }
@@ -3492,14 +3675,44 @@ struct SoCADAssemblyImpl :
          * debug instrumentation must not make the resumable production
          * algorithm fail to converge or expose half of a new classification.
          */
-        plan.wirePartsWithUncollapsedInstances.swap(
-            subpixelProxyScratchWireParts_);
-        uncollapsedStructuralProxyCountByPart_.swap(
-            subpixelProxyScratchStructuralCountByPart_);
+        for (auto& entry : plan.partPresentation)
+            entry.second.wireHasUncollapsedInstances = false;
+        for (size_t partIndex = 0;
+                partIndex < subpixelProxyScratchWireByPart_.size() &&
+                partIndex < plan.partBindings.size(); ++partIndex) {
+            if (!subpixelProxyScratchWireByPart_[partIndex])
+                continue;
+            const auto presentation = plan.partPresentation.find(
+                plan.partBindings[partIndex].part);
+            if (presentation != plan.partPresentation.end())
+                presentation->second.wireHasUncollapsedInstances = true;
+        }
+        size_t structuralPartCount = 0u;
+        for (const size_t count :
+                subpixelProxyScratchStructuralCountByPart_)
+            if (count)
+                ++structuralPartCount;
+        uncollapsedStructuralProxyCountByPart_.clear();
+        uncollapsedStructuralProxyCountByPart_.reserve(
+            structuralPartCount);
+        for (size_t partIndex = 0;
+                partIndex <
+                    subpixelProxyScratchStructuralCountByPart_.size() &&
+                partIndex < plan.partBindings.size(); ++partIndex) {
+            const size_t count =
+                subpixelProxyScratchStructuralCountByPart_[partIndex];
+            if (count)
+                uncollapsedStructuralProxyCountByPart_[
+                    plan.partBindings[partIndex].part] += count;
+        }
         uncollapsedStructuralProxyCount_ =
             subpixelProxyScratchStructuralCount_;
-        uncollapsedStructuralProxyInstances_.swap(
-            subpixelProxyScratchStructuralInstances_);
+        uncollapsedStructuralProxyInstances_.clear();
+        uncollapsedStructuralProxyInstances_.reserve(
+            subpixelProxyScratchStructuralInstances_.size());
+        uncollapsedStructuralProxyInstances_.insert(
+            subpixelProxyScratchStructuralInstances_.begin(),
+            subpixelProxyScratchStructuralInstances_.end());
         structuralProjectionBucketByVisible_.swap(
             structuralProjectionScratchBucketByVisible_);
         structuralProjectionHistogram_ =
@@ -3537,6 +3750,10 @@ struct SoCADAssemblyImpl :
             plan.appendRevision;
         subpixelProxyViewValid_ = true;
         subpixelProxyBuildActive_ = false;
+        publishSubpixelPreparation(
+            preparationTarget,
+            Obol::CadPresentationPreparationState::Complete,
+            subpixelProxyBuildTotalUnits_);
         if (cadPlanDebugEnabled()) {
             static unsigned int completeMessageCount = 0;
             if (completeMessageCount++ < 256)
@@ -3587,6 +3804,7 @@ SoCADAssembly::SoCADAssembly()
     SO_NODE_ADD_FIELD(edgePickTolerancePx, (5.0f));
     SO_NODE_ADD_FIELD(wireframeOcclusion,  (FALSE));
     SO_NODE_ADD_FIELD(progressiveCutCeiling, (-1));
+    SO_NODE_ADD_FIELD(progressiveCutNextFraction, (0.0f));
     SO_NODE_ADD_FIELD(pointProxyPixelThreshold, (1.0f));
     SO_NODE_ADD_FIELD(cameraMotionFrameReuse, (FALSE));
 }
@@ -3693,6 +3911,8 @@ SoCADAssembly::clear()
     impl_->subpixelProxyVisibleByPoint_.clear();
     impl_->subpixelProxyScratchVisibleByPoint_.clear();
     impl_->subpixelProxyClassifiedAppendRevision_ = 0;
+    impl_->subpixelProxyScratchWireByPart_.clear();
+    impl_->subpixelProxyScratchStructuralCountByPart_.clear();
     impl_->uncollapsedStructuralProxyCountByPart_.clear();
     impl_->uncollapsedStructuralProxyCount_ = 0;
     impl_->subpixelProxyScratchStructuralInstances_.clear();
@@ -4475,6 +4695,58 @@ uint8_t SoCADAssembly::effectiveProgressiveCut(
     return std::min(requested, static_cast<uint8_t>(ceiling));
 }
 
+namespace {
+
+static uint64_t
+cadProgressiveFractionHash(Obol::PartId part)
+{
+    static constexpr uint64_t hashCombineConstant =
+        0x9e3779b97f4a7c15ULL;
+    static constexpr uint64_t splitMixFirstMultiplier =
+        0xbf58476d1ce4e5b9ULL;
+    static constexpr uint64_t splitMixSecondMultiplier =
+        0x94d049bb133111ebULL;
+    uint64_t value = part.w0 ^
+        (part.w1 + hashCombineConstant +
+         (part.w0 << 6) + (part.w0 >> 2));
+    value ^= value >> 30;
+    value *= splitMixFirstMultiplier;
+    value ^= value >> 27;
+    value *= splitMixSecondMultiplier;
+    value ^= value >> 31;
+    return value;
+}
+
+} // namespace
+
+uint8_t SoCADAssembly::effectiveProgressiveCut(
+    Obol::PartId part, uint8_t requested) const
+{
+    const uint8_t base = effectiveProgressiveCut(requested);
+    const int ceiling = progressiveCutCeiling.getValue();
+    const float fraction = progressiveCutNextFraction.getValue();
+    if (base >= requested || ceiling < 0 ||
+            !std::isfinite(fraction) || fraction <= 0.0f)
+        return base;
+    if (fraction >= 1.0f)
+        return static_cast<uint8_t>(base + 1u);
+
+    const long double normalized = static_cast<long double>(
+        cadProgressiveFractionHash(part)) /
+        static_cast<long double>(std::numeric_limits<uint64_t>::max());
+    return normalized < static_cast<long double>(fraction) ?
+        static_cast<uint8_t>(base + 1u) : base;
+}
+
+uint8_t SoCADAssembly::maximumEffectiveProgressiveCut(
+    uint8_t requested) const
+{
+    const uint8_t base = effectiveProgressiveCut(requested);
+    const float fraction = progressiveCutNextFraction.getValue();
+    return base < requested && std::isfinite(fraction) && fraction > 0.0f ?
+        static_cast<uint8_t>(base + 1u) : base;
+}
+
 const Obol::PartGeometry*
 SoCADAssembly::partGeometry(Obol::PartId pid) const
 {
@@ -4752,6 +5024,15 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 
     const Obol::CadRenderState renderState =
         Obol::resolveCadRenderState(SoCADViewStateElement::get(state));
+    const SoClipPlaneElement *clipPlanes =
+        SoClipPlaneElement::getInstance(state);
+    /* Coin owns the accumulated plane state.  The fixed-function retained
+     * path consumes that exact state, while the shader paths deliberately do
+     * not borrow legacy GL clip state.  Prefer correctness for the optional
+     * sectioning feature until all shader tiers consume an explicit shared
+     * plane contract. */
+    const bool fixedFunctionClipPlanes = clipPlanes &&
+        clipPlanes->getNum() > 0;
 
     const GLboolean lightingEnabled = glue->glIsEnabled(GL_LIGHTING);
     const GLboolean light0Enabled = glue->glIsEnabled(GL_LIGHT0);
@@ -4887,7 +5168,10 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, action, glue, viewProj,
                                  viewMat, projMat, viewVolume,
+				 fixedFunctionClipPlanes,
                                  impl_->partGeneration_);
+        impl_->presentationPreparation_ =
+            impl_->renderer_->presentationPreparationSnapshot();
     }
     if (hasTransparency) {
         glue->glBlendFunc(static_cast<GLenum>(blendSource),
@@ -5224,6 +5508,12 @@ SoCADAssembly::renderPreparationSerial() const
         impl_->renderer_->renderPreparationSerial() : 0;
     return rendererSerial > UINT64_MAX - impl_->renderPreparationSerial_ ?
         UINT64_MAX : rendererSerial + impl_->renderPreparationSerial_;
+}
+
+Obol::CadPresentationPreparationSnapshot
+SoCADAssembly::presentationPreparationSnapshot() const
+{
+    return impl_->presentationPreparation_;
 }
 
 size_t

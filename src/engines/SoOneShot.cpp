@@ -137,13 +137,15 @@ SoOneShot::SoOneShot(void)
   SO_ENGINE_SET_SF_ENUM_TYPE(flags, Flags);
 
 
-  SoField * realtime = SoDB::getGlobalField("realTime");
-  this->timeIn.connectFrom(realtime);
-
+  // Connecting timeIn sends notification synchronously and reaches
+  // inputChanged(), so all state it reads must be initialized first.
   this->running = FALSE;
   this->starttime = SbTime::zero();
   this->holdramp = 0.0f;
   this->holdduration = SbTime::zero();
+
+  SoField * realtime = SoDB::getGlobalField("realTime");
+  this->timeIn.connectFrom(realtime);
 }
 
 /*!

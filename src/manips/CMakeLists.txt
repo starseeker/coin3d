@@ -15,10 +15,8 @@ set(OBOL_MANIPS_FILES
 	commoncode.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_MANIPS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} manips/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(manips ${OBOL_MANIPS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_MANIPS_FILES})

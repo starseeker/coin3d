@@ -8,12 +8,19 @@
 #include <Inventor/SbPList.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SbTime.h>
+#include <Inventor/SbVec2d.h>
+#include <Inventor/SbVec2i32.h>
 #include <Inventor/SbVec2s.h>
+#include <Inventor/SbVec3f.h>
+#include <Inventor/SbVec3i32.h>
 #include <Inventor/SbVec3s.h>
+#include <Inventor/SbVec4d.h>
+#include <Inventor/SbVec4i32.h>
 
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace {
 
@@ -189,4 +196,38 @@ TEST(BaseImage, EqualityIncludesPixelContents)
     EXPECT_EQ(first, second);
     second.setValue(size, 1, changed);
     EXPECT_NE(first, second);
+}
+
+TEST(BaseIntegerVectors, FloatingPointConversionsAreDefinedAndSaturating)
+{
+    constexpr double above_max =
+        static_cast<double>(std::numeric_limits<std::int32_t>::max()) + 1024.0;
+    constexpr double below_min =
+        static_cast<double>(std::numeric_limits<std::int32_t>::min()) - 1024.0;
+
+    SbVec2i32 vector2;
+    vector2.setValue(SbVec2d(above_max, below_min));
+    EXPECT_EQ(vector2[0], std::numeric_limits<std::int32_t>::max());
+    EXPECT_EQ(vector2[1], std::numeric_limits<std::int32_t>::min());
+
+    SbVec3i32 vector3;
+    vector3.setValue(SbVec3f(
+        std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN()));
+    EXPECT_EQ(vector3[0], std::numeric_limits<std::int32_t>::max());
+    EXPECT_EQ(vector3[1], std::numeric_limits<std::int32_t>::min());
+    EXPECT_EQ(vector3[2], 0);
+
+    SbVec4i32 vector4;
+    vector4.setValue(SbVec4d(1.9, -1.9, 42.0, above_max));
+    EXPECT_EQ(vector4, SbVec4i32(1, -1, 42,
+                                std::numeric_limits<std::int32_t>::max()));
+
+    SbVec4i32 scaled(1, -1, 7, -7);
+    scaled *= std::numeric_limits<double>::infinity();
+    EXPECT_EQ(scaled[0], std::numeric_limits<std::int32_t>::max());
+    EXPECT_EQ(scaled[1], std::numeric_limits<std::int32_t>::min());
+    EXPECT_EQ(scaled[2], std::numeric_limits<std::int32_t>::max());
+    EXPECT_EQ(scaled[3], std::numeric_limits<std::int32_t>::min());
 }

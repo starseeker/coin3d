@@ -508,7 +508,8 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
                                 "might be more errors)",
                                 index,
                                 this->coinstate.numdiffuse-1,
-                                tail, name != SbName::empty() ? name.getString() : "<noname>");
+                                static_cast<void *>(tail),
+                                name != SbName::empty() ? name.getString() : "<noname>");
       first = 0;
     }
 
@@ -679,12 +680,20 @@ SoGLLazyElement::send(SoState * stateptr, uint32_t mask) const
   }
 }
 
-//! FIXME: write doc
-
 void
-SoGLLazyElement::sendVPPacked(SoState* OBOL_UNUSED_ARG(stateptr), const unsigned char* OBOL_UNUSED_ARG(pcolor))
+SoGLLazyElement::sendVPPacked(SoState * stateptr, const unsigned char * pcolor)
 {
-  assert(0 && "Not implemented yet. Provided for API compatibility.");
+  if (!stateptr || !pcolor) return;
+
+  // SoPackedColor and SbColor use the portable 0xRRGGBBAA representation.
+  // Build the integer explicitly rather than aliasing the byte pointer so
+  // this remains correct on both little- and big-endian hosts.
+  const uint32_t packed =
+    (static_cast<uint32_t>(pcolor[0]) << 24) |
+    (static_cast<uint32_t>(pcolor[1]) << 16) |
+    (static_cast<uint32_t>(pcolor[2]) << 8) |
+    static_cast<uint32_t>(pcolor[3]);
+  SoGLLazyElement::sendPackedDiffuse(stateptr, packed);
 }
 
 /*!

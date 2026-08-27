@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "headless_utils.h"
+
 #include <Inventor/SoInteraction.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -9,7 +11,25 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
 
+#include <cstdlib>
+#include <string>
+
 namespace {
+
+TEST(RenderBackendSelection, TestProcessUsesTheRequestedContextManager)
+{
+    SoDB::ContextManager * manager = SoDB::getContextManager();
+    ASSERT_NE(manager, nullptr);
+    EXPECT_EQ(getCoinHeadlessContextManager(), manager);
+
+    const char * requested = std::getenv("OBOL_TEST_RENDER_BACKEND");
+    if (requested && std::string(requested) == "swrast") {
+        void * context = manager->createOffscreenContext(8, 8);
+        ASSERT_NE(context, nullptr);
+        EXPECT_TRUE(manager->isOSMesaContext(context));
+        manager->destroyContext(context);
+    }
+}
 
 class Scene final {
 public:
@@ -37,12 +57,12 @@ private:
     SoSeparator * root_;
 };
 
-TEST(OSMesaRenderFixture, RendersVisibleGeometryWithoutGlobalBackendMutation)
+TEST(RenderFixture, RendersVisibleGeometryWithoutGlobalBackendMutation)
 {
     Scene scene;
     ObolTestSupport::RenderFixture fixture(128, 96);
 
-    ASSERT_TRUE(fixture.available()) << "This build has no OSMesa test backend";
+    ASSERT_TRUE(fixture.available()) << "The requested render backend is unavailable";
     ASSERT_TRUE(fixture.render(scene.root()));
     ASSERT_EQ(fixture.pixels().size(), 128u * 96u * 3u);
     EXPECT_GT(fixture.nonBackgroundPixels(), 1000u);

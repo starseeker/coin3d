@@ -15,7 +15,7 @@
  *      shininess, transparency (exercises SoMaterial deeper code paths)
  *  10. Render with SoVertexProperty per-vertex colors
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -524,16 +524,15 @@ static bool test8_perPartIndexed(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_material_binding";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_material_binding";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *root = ObolTest::Scenes::createMaterialBinding(256, 256);
         SbViewportRegion vp(256, 256);
@@ -563,4 +562,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_material_binding) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_material_binding");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

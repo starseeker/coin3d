@@ -41,6 +41,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbName.h>
@@ -182,6 +183,9 @@ public:
 private:
 
   SoInput_Reader * getReader(void);
+  int readDigits(char * str, size_t capacity);
+  int readHexDigits(char * str, size_t capacity);
+  SbBool readUnsignedIntegerString(char * str, size_t capacity);
   SoInput_Reader * reader;
   SbBool readHeaderInternal(SoInput * input);
 

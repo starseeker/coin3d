@@ -20,10 +20,8 @@ set(OBOL_LISTS_FILES
 	SoTypeList.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_LISTS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} lists/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(lists ${OBOL_LISTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_LISTS_FILES})

@@ -16,9 +16,9 @@
  *   - Each quadrant is non-blank (at least 50 lit pixels).
  *   - TOP_LEFT  dominant colour channel is green (G > R, G > B).
  *   - BOTTOM_LEFT dominant colour channel is red   (R > G, R > B).
- *   - The composite file is written as an SGI RGB file at argv[1]+".rgb".
+ *   - The composite file is written as an SGI RGB file at outputStem+".rgb".
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  *
  * This test also serves as the source for the control image used in image-
  * comparison regression tests; generate with:
@@ -125,18 +125,17 @@ static int dominantChannel(const unsigned char * buf, int npix)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char ** argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char * basepath = (argc > 1) ? argv[1] : "render_quad_viewport_lod";
+    const char * basepath = (outputStem != nullptr) ? outputStem : "render_quad_viewport_lod";
     char outpath[1024];
     snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createQuadViewportLOD(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -303,4 +302,11 @@ int main(int argc, char ** argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_quad_viewport_lod) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_quad_viewport_lod");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

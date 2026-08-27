@@ -57,13 +57,19 @@ set(OBOL_MISC_INTERNAL_FILES
 	SoShaderGenerator.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_MISC_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} misc/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+set(_obol_misc_sources ${OBOL_MISC_FILES})
 if(OBOL_USE_SWRAST)
-	set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
+	list(APPEND _obol_misc_sources SoDBOSMesa.cpp)
+	if(OBOL_USE_SYSTEM_GL)
+		# Keep the OSMesa context implementation isolated from system-GL
+		# translation units and give that source access to the private headers.
+		set_source_files_properties(SoDBOSMesa.cpp PROPERTIES
+			SKIP_UNITY_BUILD_INCLUSION ON
+			INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
+	endif()
 endif()
+list(APPEND _obol_misc_sources CoinTidbits.cpp)
+obol_add_source_module(misc ${_obol_misc_sources})
 
 # define documentation
 foreach(SRCFILE ${OBOL_MISC_FILES})

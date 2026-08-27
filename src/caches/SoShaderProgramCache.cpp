@@ -68,7 +68,7 @@ SoShaderProgramCache::SoShaderProgramCache(SoState *state)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoShaderProgramCache::SoShaderProgramCache",
-                           "Cache created: %p", this);
+                           "Cache created: %p", static_cast<void *>(this));
 
   }
 #endif // debug
@@ -82,7 +82,7 @@ SoShaderProgramCache::~SoShaderProgramCache()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoShaderProgramCache::~SoShaderProgramCache",
-                           "Cache destructed: %p", this);
+                           "Cache destructed: %p", static_cast<void *>(this));
   }
 #endif // debug
 

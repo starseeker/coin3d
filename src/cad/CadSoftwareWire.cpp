@@ -374,7 +374,7 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             SbMatrix transform = model;
             transform.multRight(viewProj);
             uint8_t level = assembly.effectiveProgressiveCut(
-                instance.lodCut);
+                item.rep.part, instance.lodCut);
             if (wire.isProgressive()) {
                 if (level == Obol::ProgressiveCutUnspecified)
                     level = wire.progressiveResidentCut;

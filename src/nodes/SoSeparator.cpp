@@ -663,7 +663,7 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
     if (glcachelist->call(action)) {
 #if GLCACHE_DEBUG // debug
       SoDebugError::postInfo("SoSeparator::GLRenderBelowPath",
-                             "%p executed GL cache", this);
+                             "%p executed GL cache", static_cast<void *>(this));
 #endif // debug
       state->pop();
 
@@ -682,7 +682,7 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
     if (!SoCacheElement::anyOpen(state)) {
 #if GLCACHE_DEBUG // debug
       SoDebugError::postInfo("SoSeparator::GLRenderBelowPath",
-                             "%p creating GL cache", this);
+                             "%p creating GL cache", static_cast<void *>(this));
 #endif // debug
       createcache = glcachelist;
     }

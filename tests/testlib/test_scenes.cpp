@@ -128,6 +128,7 @@
 #include <Inventor/gl.h>
 
 #include <cstring>
+#include <cstdlib>
 
 namespace ObolTest {
 namespace Scenes {
@@ -496,7 +497,7 @@ SoSeparator* createTexture(int width, int height)
 // =========================================================================
 // 7. Text (SoText3 — extruded 3-D geometry text)
 // =========================================================================
-SoSeparator* createText(int width, int height)
+SoSeparator* createText3(int width, int height)
 {
     SoSeparator* root = new SoSeparator;
     root->ref();
@@ -545,7 +546,55 @@ SoSeparator* createText(int width, int height)
 }
 
 // =========================================================================
-// 7b. Text2 (SoText2 — 2-D screen-space billboard text)
+// 7b. Text demo — historical mixed SoText3/SoText2 scene
+// =========================================================================
+SoSeparator* createTextDemo(int width, int height)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera* cam = addCameraAndLight(root);
+
+    SoSeparator* t3sep = new SoSeparator;
+    SoTranslation* t3pos = new SoTranslation;
+    t3pos->translation.setValue(-1.0f, 1.0f, 0.0f);
+    t3sep->addChild(t3pos);
+    SoMaterial* t3mat = new SoMaterial;
+    t3mat->diffuseColor.setValue(0.8f, 0.5f, 0.1f);
+    t3sep->addChild(t3mat);
+    SoFont* t3font = new SoFont;
+    t3font->size.setValue(0.6f);
+    t3sep->addChild(t3font);
+    SoText3* text3 = new SoText3;
+    text3->string.setValue("Obol");
+    text3->parts.setValue(SoText3::ALL);
+    t3sep->addChild(text3);
+    root->addChild(t3sep);
+
+    SoSeparator* t2sep = new SoSeparator;
+    SoTranslation* t2pos = new SoTranslation;
+    t2pos->translation.setValue(0.0f, 0.5f, 0.0f);
+    t2sep->addChild(t2pos);
+    SoMaterial* t2mat = new SoMaterial;
+    t2mat->diffuseColor.setValue(0.2f, 0.8f, 0.3f);
+    t2sep->addChild(t2mat);
+    SoFont* t2font = new SoFont;
+    t2font->size.setValue(20.0f);
+    t2sep->addChild(t2font);
+    SoText2* text2 = new SoText2;
+    text2->string.setValue("3D Test");
+    t2sep->addChild(text2);
+    root->addChild(t2sep);
+
+    SbViewportRegion vp(width, height);
+    cam->viewAll(root, vp);
+    const SbVec3f pos = cam->position.getValue();
+    cam->position.setValue(pos[0], pos[1], pos[2] * 1.8f);
+    return root;
+}
+
+// =========================================================================
+// 7c. Text2 (SoText2 — 2-D screen-space billboard text)
 // =========================================================================
 SoSeparator* createText2(int width, int height)
 {
@@ -927,6 +976,14 @@ SoSeparator* createShadow(int width, int height)
     sg->intensity.setValue(0.7f);
     sg->precision.setValue(0.5f);
     sg->quality.setValue(1.0f);
+    // The bundled OSMesa GLSL implementation currently rejects the legacy
+    // gl_FrontLightModelProduct/gl_FrontMaterial struct members emitted by
+    // the shadow shader.  Keep the scene in the software-renderer lane as a
+    // meaningful geometry/fallback test; the NanoRT shadow test covers
+    // backend-independent shadow behavior there.
+    const char * backend = std::getenv("OBOL_TEST_RENDER_BACKEND");
+    if (backend && std::strcmp(backend, "swrast") == 0)
+        sg->isActive.setValue(FALSE);
     root->addChild(sg);
 
     // Shadow-casting directional light (works for both GL shadow maps and
@@ -1013,8 +1070,14 @@ SoSeparator* createShadow(int width, int height)
         sg->addChild(cubeSep);
     }
 
-    SbViewportRegion vp(width, height);
-    cam->viewAll(root, vp);
+    // Keep the explicit shadow-test camera.  viewAll() traverses the
+    // SoShadowGroup's auxiliary shadow-map scene while it is still being
+    // assembled, which can produce a degenerate camera volume on software
+    // rasterizers and leave the final image empty.
+    cam->nearDistance = 0.1f;
+    cam->farDistance = 50.0f;
+    (void)width;
+    (void)height;
     return root;
 }
 

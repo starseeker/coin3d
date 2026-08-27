@@ -30,14 +30,14 @@
  *      In either case the test must NOT crash and the outer scene must
  *      still produce a valid (possibly blank-textured) image.
  *
- * The test writes argv[1]+".rgb" (plain geometry result) and returns 0 on
- * pass, 1 on fail.  "Pass" means: no crash, no memory corruption, and the
- * plain geometry scene produces non-blank pixels.
+ * The test optionally writes a diagnostic RGB image under the build tree.
+ * Success means no crash or memory corruption and a non-blank plain-geometry
+ * scene.
  */
 
 /* Must come before any Inventor headers when using BasicFLTKContextManager */
 #ifdef OBOL_VIEWER_FLTK_GL
-#  include "utils/fltk_context_manager.h"
+#  include "fltk_context_manager.h"
 #else
 #  include "headless_utils.h"
 #endif
@@ -227,10 +227,10 @@ static int countNonBlackPixels(const unsigned char* buf, int w, int h, int nc)
 }
 
 /* ----------------------------------------------------------------------- */
-/* Test runner                                                              */
+/* Scenario implementation                                                   */
 /* ----------------------------------------------------------------------- */
 
-int main(int argc, char** argv)
+static int runScenario(const char *outputStem)
 {
     /* ------------------------------------------------------------------ */
     /* Initialise with BasicFLTKContextManager (FLTK-window-only context). */
@@ -254,8 +254,8 @@ int main(int argc, char** argv)
     SoGLDriverDatabase::init();
 
     char outbase[4096];
-    if (argc > 1)
-        snprintf(outbase, sizeof(outbase), "%s", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outbase, sizeof(outbase), "%s", outputStem);
     else
         snprintf(outbase, sizeof(outbase), "render_basic_context");
 
@@ -345,4 +345,11 @@ int main(int argc, char** argv)
 
     printf("render_basic_context: overall %s\n", all_ok ? "PASS" : "FAIL");
     return all_ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_basic_context) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_basic_context");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

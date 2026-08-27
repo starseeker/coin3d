@@ -17,8 +17,6 @@
 #                   external/fltk submodule (populated below when absent)
 # =============================================================================
 
-set(OBOL_DEMO_SUPPORT_DIR "${PROJECT_SOURCE_DIR}/examples/demo_support")
-
 # -----------------------------------------------------------------------
 # FLTK GL context manager option
 # Controls whether the viewer uses an FLTK GL window for the system-GL
@@ -73,7 +71,6 @@ if(OBOL_BUILD_VIEWER)
 
     target_include_directories(obol_viewer PRIVATE
         ${OBOL_DEMO_SUPPORT_DIR}              # application context adapters
-        ${PROJECT_SOURCE_DIR}/tests/utils     # legacy GLX fallback only
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
@@ -102,7 +99,7 @@ if(OBOL_BUILD_VIEWER)
             message(STATUS "obol_viewer: using FLTK GL context manager (portable, hidden 1x1 window)")
         endif()
     elseif(OBOL_USE_SYSTEM_GL)
-        message(STATUS "obol_viewer: using GLX context manager (headless_utils.h)")
+        message(STATUS "obol_viewer: using GLX demo context manager")
     endif()
 
     # Optional CPU raytracing panels: Embree and/or NanoRT.
@@ -133,14 +130,8 @@ if(OBOL_BUILD_VIEWER)
         target_link_libraries(obol_viewer PRIVATE ${_obol_embree_link})
         message(STATUS "obol_viewer: Embree panel enabled")
     endif()
-    if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
-        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
-        target_include_directories(obol_viewer PRIVATE
-            "${PROJECT_SOURCE_DIR}/external/nanort"
-            ${OBOL_DEMO_SUPPORT_DIR}              # nanort_context_manager.h
-        )
-        message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
-    endif()
+    target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
+    message(STATUS "obol_viewer: NanoRT panel enabled")
 
     # Optional Vulkan rasterisation panel.
     find_package(Vulkan QUIET)

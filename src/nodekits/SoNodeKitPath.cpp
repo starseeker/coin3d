@@ -50,6 +50,7 @@
 #include <Inventor/SoNodeKitPath.h>
 
 #include <cstdlib>
+#include <memory>
 
 #include <Inventor/nodekits/SoBaseKit.h>
 #include <Inventor/actions/SoSearchAction.h>
@@ -60,7 +61,9 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // OBOL_DEBUG
 
+// Retained for source/ABI compatibility; implementation uses thread-local state.
 SoSearchAction * SoNodeKitPath::searchAction;
+static thread_local std::unique_ptr<SoSearchAction> nodekitpath_search_action;
 
 /*!
   A constructor.
@@ -305,7 +308,7 @@ operator==(const SoNodeKitPath & p1, const SoNodeKitPath & p2)
 void
 SoNodeKitPath::clean(void)
 {
-  delete SoNodeKitPath::searchAction;
+  nodekitpath_search_action.reset();
   SoNodeKitPath::searchAction = NULL;
 }
 
@@ -315,13 +318,12 @@ SoNodeKitPath::clean(void)
 SoSearchAction *
 SoNodeKitPath::getSearchAction(void)
 {
-  if (SoNodeKitPath::searchAction == NULL) {
-    SoNodeKitPath::searchAction = new SoSearchAction();
-    searchAction->setInterest(SoSearchAction::FIRST);
-    searchAction->setSearchingAll(FALSE);
-    coin_atexit((coin_atexit_f *)SoNodeKitPath::clean, CC_ATEXIT_NORMAL);
+  if (!nodekitpath_search_action) {
+    nodekitpath_search_action.reset(new SoSearchAction());
+    nodekitpath_search_action->setInterest(SoSearchAction::FIRST);
+    nodekitpath_search_action->setSearchingAll(FALSE);
   }
-  return SoNodeKitPath::searchAction;
+  return nodekitpath_search_action.get();
 }
 
 //

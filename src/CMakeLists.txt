@@ -14,43 +14,64 @@ file(GENERATE
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
 )
 
-add_compile_options(-DHAVE_CONFIG_H -DOBOL_INTERNAL -DOBOL_DEBUG=$<CONFIG:Debug>)
-
+# Each source directory owns an object-library target.  The old build appended
+# every file to one global source property, which made module ownership and
+# dependency boundaries invisible to CMake.  Object libraries preserve the
+# single installed Obol library while keeping each module's source list local.
+add_library(obol_internal_config INTERFACE)
+target_compile_definitions(obol_internal_config INTERFACE
+    HAVE_CONFIG_H
+    OBOL_INTERNAL
+    OBOL_DEBUG=$<CONFIG:Debug>
+    UTF8_NO_AUTOLINK
+    UNICODE
+    _UNICODE
+)
 if(OBOL_PROFILING)
-  add_compile_options(-DOBOL_PROFILING)
+  target_compile_definitions(obol_internal_config INTERFACE OBOL_PROFILING)
 endif()
-
-include_directories(BEFORE
-  "${PROJECT_BINARY_DIR}/include"
-  "${PROJECT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_BINARY_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/misc"
-  "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
-  "${PROJECT_BINARY_DIR}/src/shadows"
-  "${PROJECT_SOURCE_DIR}"
-  # Subdirectory-specific include paths (needed in single-lib mode where
-  # subdirectory include_directories() calls don't propagate to the parent)
-  "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
-  "${PROJECT_BINARY_DIR}/src/draggers"
-  # CAD subsystem internal headers
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  target_compile_definitions(obol_internal_config INTERFACE USE_MGL_NAMESPACE)
+endif()
+if(OBOL_WARNING_FLAGS)
+  target_compile_options(obol_internal_config INTERFACE ${OBOL_WARNING_FLAGS})
+endif()
+if(MSVC)
+  target_compile_options(obol_internal_config INTERFACE /utf-8)
+endif()
+target_include_directories(obol_internal_config INTERFACE
+    "${PROJECT_BINARY_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/misc"
+    "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
+    "${PROJECT_BINARY_DIR}/src/shadows"
+    "${PROJECT_BINARY_DIR}/src/draggers"
+    "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 
-# add include dirs for non targets
-if(NOT "${OBOL_TARGET_INCLUDE_DIRECTORIES}" STREQUAL "")
-  include_directories(${OBOL_TARGET_INCLUDE_DIRECTORIES})
-endif()
-# add include dirs for targets
-foreach(_tgt ${OBOL_TARGET_LINK_LIBRARIES})
-  if(TARGET ${_tgt} )
-    include_directories($<TARGET_PROPERTY:${_tgt},INTERFACE_INCLUDE_DIRECTORIES>)
+function(obol_add_source_module module)
+  if(NOT ARGN)
+    message(FATAL_ERROR "Obol source module '${module}' has no sources")
   endif()
-endforeach()
-
-set(OBOL_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "OBOL_SOURCE")
+  set(_target "obol_${module}_objects")
+  if(TARGET ${_target})
+    message(FATAL_ERROR "Obol source module target '${_target}' was declared twice")
+  endif()
+  add_library(${_target} OBJECT ${ARGN})
+  target_link_libraries(${_target} PRIVATE obol_internal_config)
+  set_target_properties(${_target} PROPERTIES
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
+      POSITION_INDEPENDENT_CODE ON
+  )
+  if(OBOL_USE_UNITY_BUILD)
+    set_target_properties(${_target} PROPERTIES UNITY_BUILD ON)
+  endif()
+endfunction()
 
 foreach(_subdir actions base bundles caches details draggers elements
                 engines errors events fields fonts glue io manips misc rendering lists
@@ -58,8 +79,23 @@ foreach(_subdir actions base bundles caches details draggers elements
                 hardcopy nodekits profiler hud)
   add_subdirectory(${_subdir})
 endforeach()
-add_subdirectory(doc)
 add_subdirectory(cad)
+
+set(OBOL_SOURCE_MODULE_TARGETS)
+foreach(_subdir actions base bundles caches details draggers elements
+                engines errors events fields fonts glue io manips misc rendering lists
+                nodes shapenodes projectors sensors shadows threads shaders tools
+                hardcopy nodekits profiler hud cad)
+  if(TARGET obol_${_subdir}_objects)
+    list(APPEND OBOL_SOURCE_MODULE_TARGETS obol_${_subdir}_objects)
+  endif()
+endforeach()
+if(TARGET obol_elements_gl_objects)
+  list(APPEND OBOL_SOURCE_MODULE_TARGETS obol_elements_gl_objects)
+endif()
+if(NOT OBOL_SOURCE_MODULE_TARGETS)
+  message(FATAL_ERROR "No Obol source modules were registered")
+endif()
 
 # Keep the high-responsibility CAD assembly and its direct software fallback
 # independently compiled.  Source properties are directory scoped, so set
@@ -80,28 +116,19 @@ set_source_files_properties(
 # Library target creation
 # ============================================================================
 
-# Determine library type
-set(OBOL_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
-
 # Additional headers to include in target
 set(OBOL_ADDITIONAL_HDRS 
     ${PROJECT_BINARY_DIR}/src/config.h
 )
 
-# In dual-GL builds, gl_osmesa.cpp and SoDBOSMesa.cpp need the OSMesa
-# include directories.  Apply them per-file so they don't pollute the rest
-# of the build (system GL headers and OSMesa headers can conflict).
-if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
-    foreach(_osmesa_src
-            "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
-        set_source_files_properties(${_osmesa_src} PROPERTIES
-            INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
-    endforeach()
+set(_obol_object_sources)
+foreach(_module_target ${OBOL_SOURCE_MODULE_TARGETS})
+    list(APPEND _obol_object_sources "$<TARGET_OBJECTS:${_module_target}>")
+endforeach()
+if(TARGET obol_lodepng_objects)
+    list(APPEND _obol_object_sources "$<TARGET_OBJECTS:obol_lodepng_objects>")
 endif()
-
-add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
-target_compile_definitions(${PROJECT_NAME} PRIVATE UTF8_NO_AUTOLINK)
+add_library(${PROJECT_NAME} ${_obol_object_sources} ${OBOL_ADDITIONAL_HDRS})
 if(TARGET obol_parser_gen)
   add_dependencies(${PROJECT_NAME} obol_parser_gen)
 endif()
@@ -137,12 +164,10 @@ endif()
 # Unity Build Support
 # ============================================================================
 
-# Enable unity build if requested and supported (CMake 3.16+)
-if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+# Enable unity build when requested.  CMake 3.16 is the project minimum.
+if(OBOL_USE_UNITY_BUILD)
     message(STATUS "Enabling unity build for faster compilation")
     set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
-elseif(OBOL_USE_UNITY_BUILD)
-    message(WARNING "Unity build requested but requires CMake 3.16+. Current version: ${CMAKE_VERSION}")
 endif()
 
 # ============================================================================
@@ -150,9 +175,6 @@ endif()
 # ============================================================================
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    HAVE_CONFIG_H
-    OBOL_INTERNAL
-    OBOL_DEBUG=$<CONFIG:Debug>
     # In swrast-only builds, all gl* calls in the library must be mangled to
     # mgl* so they resolve to the OSMesa library symbols.  This is scoped to
     # the library target so that test executables (which may include <GL/glx.h>)
@@ -161,10 +183,18 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<BOOL:${OBOL_USE_SWRAST}>:$<$<NOT:$<BOOL:${OBOL_USE_SYSTEM_GL}>>:USE_MGL_NAMESPACE>>
 )
 
+if(OBOL_PROFILING)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE OBOL_PROFILING)
+endif()
+
 # Apply warning flags (controlled by OBOL_WARNINGS option in the top-level CMakeLists.txt)
 if(OBOL_WARNING_FLAGS)
     target_compile_options(${PROJECT_NAME} PRIVATE ${OBOL_WARNING_FLAGS})
 endif()
+target_compile_options(${PROJECT_NAME} PRIVATE
+    "$<$<C_COMPILER_ID:MSVC>:/utf-8>"
+    "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>"
+)
 
 # Target-specific include directories (modern approach)
 target_include_directories(${PROJECT_NAME} 
@@ -179,22 +209,19 @@ target_include_directories(${PROJECT_NAME}
         # Subdirectory-specific paths (needed in single-lib mode)
         "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
         "${PROJECT_BINARY_DIR}/src/draggers"
-        # CAD subsystem internal headers
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        # obol/ public headers (CadIds, SoCADAssembly, SoCADDetail, DepthPolicy)
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Obol/render>
 )
 
 # Target-specific linking (modern approach)  
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE ${OBOL_TARGET_LINK_LIBRARIES}
+    PUBLIC Threads::Threads)
 
 # For dual-GL builds, link OSMesa so osmesa_SoGLContext_* functions can resolve
 # mgl* symbols at runtime.  A shared Obol carries that runtime dependency
@@ -261,7 +288,14 @@ endif()
 # relationship relocatable so consumers do not need LD_LIBRARY_PATH merely to
 # load a dual-backend Obol installation.
 if(UNIX AND NOT APPLE AND OBOL_USE_SWRAST)
-  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+  # Obol and its bundled software renderer are published as a co-located
+  # pair.  Use the install rpath for the build artifact too: downstream
+  # projects may copy the shared library into their own build lib directory,
+  # where the producer's absolute build rpath would otherwise make the loader
+  # select a stale external libosmesa before the consumer's copy.
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN")
 endif()
 
 # Set library version properties
@@ -300,22 +334,6 @@ if(OBOL_BUILD_MAC_FRAMEWORK)
 # ############################################################################
 # Add framework documentation files
 # ############################################################################
-
-  if(OBOL_BUILD_DOCUMENTATION)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-      COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ./Versions/Current/Documentation $<TARGET_FILE_DIR:${PROJECT_NAME}>/../../Documentation
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/html $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html)
-    if(OBOL_BUILD_DOCUMENTATION_QTHELP)
-      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-      COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation)
-    endif()
-    if(OBOL_BUILD_DOCUMENTATION_MAN)
-      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/man/man3 $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/man)
-    endif()
-  endif()
 
 # ############################################################################
 # Add framework links
@@ -368,45 +386,18 @@ else()
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
 
-  # The NanoRT context manager is a diagnostic/test backend implemented by
-  # Obol.  Keep its header-only helper and nanort dependency together so
-  # package consumers do not reach into an Obol source checkout.
-  install(FILES
-          ${PROJECT_SOURCE_DIR}/tests/utils/nanort_context_manager.h
-          ${PROJECT_SOURCE_DIR}/external/nanort/nanort.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol/testing
-          COMPONENT development)
-
-
 # ############################################################################
 # Install target
 # ############################################################################
 
-  if(NOT CMAKE_VERSION VERSION_LESS 3.12)
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
-    if(OBOL_BUILD_SHARED_LIBS)
-      if(MSVC)
-        install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
-      endif()
-    endif()
-  else()
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
-    if(OBOL_BUILD_SHARED_LIBS)
-      install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
-      if(MSVC)
-        install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
-      endif()
-    endif()
+  install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+    RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+  )
+  if(OBOL_BUILD_SHARED_LIBS AND MSVC)
+    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
   endif()
 
   # When using the bundled OSMesa submodule (DUAL_GL or osmesa-only builds),

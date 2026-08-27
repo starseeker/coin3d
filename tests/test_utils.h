@@ -1,5 +1,5 @@
-#ifndef SIMPLE_TEST_UTILS_H
-#define SIMPLE_TEST_UTILS_H
+#ifndef OBOL_TEST_UTILS_H
+#define OBOL_TEST_UTILS_H
 
 /**************************************************************************\
 * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,104 +35,16 @@
 
 /**
  * @file test_utils.h
- * @brief Simple test utilities without external frameworks
- *
- * This provides basic test infrastructure to replace Catch2 for simpler,
- * more direct testing. Each test executable returns 0 for success, 
- * non-zero for failure.
+ * @brief Shared support for Obol GTest suites.
  */
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <cstdio>
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInteraction.h>
+#include <gtest/gtest.h>
 #include <Inventor/SoOffscreenRenderer.h>
 
-namespace SimpleTest {
-
-// Test result tracking
-struct TestResult {
-    std::string test_name;
-    bool passed;
-    std::string error_message;
-};
-
-class TestRunner {
-private:
-    std::vector<TestResult> results;
-    std::string current_test_name;
-    
-public:
-    void startTest(const std::string& name) {
-        current_test_name = name;
-        std::cout << "Running: " << name << "..." << std::flush;
-    }
-    
-    void endTest(bool passed, const std::string& error_msg = "") {
-        TestResult result;
-        result.test_name = current_test_name;
-        result.passed = passed;
-        result.error_message = error_msg;
-        results.push_back(result);
-        
-        if (passed) {
-            std::cout << " PASSED" << std::endl;
-        } else {
-            std::cout << " FAILED";
-            if (!error_msg.empty()) {
-                std::cout << " - " << error_msg;
-            }
-            std::cout << std::endl;
-        }
-    }
-    
-    int getSummary() {
-        int passed = 0, failed = 0;
-        for (const auto& result : results) {
-            if (result.passed) passed++;
-            else failed++;
-        }
-        
-        std::cout << "\nTest Summary: " << passed << " passed, " << failed << " failed";
-        if (results.size() > 0) {
-            std::cout << " (total: " << results.size() << ")";
-        }
-        std::cout << std::endl;
-        
-        return failed; // Return number of failures
-    }
-};
-
-// Simple assertion macro
-#define SIMPLE_ASSERT(condition, message) \
-    if (!(condition)) { \
-        runner.endTest(false, message); \
-        continue; \
-    }
-
-#define SIMPLE_CHECK(condition, message) \
-    if (!(condition)) { \
-        runner.endTest(false, message); \
-        return 1; \
-    }
-
-// Test fixture base class for initialization
-class TestFixture {
-public:
-    TestFixture() {
-        // Initialize Coin3D if not already initialized
-        if (!SoDB::isInitialized()) {
-            SoDB::init(nullptr);
-            SoInteraction::init();
-        }
-    }
-    
-    virtual ~TestFixture() {
-        // Cleanup if needed
-    }
-};
+namespace ObolTest {
 
 // RGB output utilities to replace PNG functions
 // Uses SoOffscreenRenderer::writeToRGB() for SGI RGB format
@@ -147,7 +59,7 @@ namespace RGBOutput {
  * @param flip_vertically If true, flip image vertically (for OpenGL output)
  * @return true if successful, false on error
  */
-bool saveRGB(const std::string& filename, const unsigned char* buffer, 
+bool saveRGB(const std::string& filename, const unsigned char* buffer,
              int width, int height, bool flip_vertically = true);
 
 /**
@@ -159,18 +71,18 @@ bool saveRGB(const std::string& filename, const unsigned char* buffer,
  * @param flip_vertically If true, flip image vertically (for OpenGL output)
  * @return true if successful, false on error
  */
-bool saveRGBA_toRGB(const std::string& filename, const unsigned char* buffer, 
+bool saveRGBA_toRGB(const std::string& filename, const unsigned char* buffer,
                     int width, int height, bool flip_vertically = true);
 
 /**
  * @brief Helper to create RGB buffer from framebuffer data
  * Utility function to strip alpha channel from RGBA data
  */
-std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer, 
+std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer,
                                             int width, int height);
 
 } // namespace RGBOutput
 
-} // namespace SimpleTest
+} // namespace ObolTest
 
-#endif // SIMPLE_TEST_UTILS_H
+#endif // OBOL_TEST_UTILS_H

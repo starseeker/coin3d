@@ -59,7 +59,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoPath.h>
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static int s_fieldFired = 0;
 static void onFieldChange(void*, SoSensor*) { ++s_fieldFired; }
@@ -70,183 +70,169 @@ static void onNodeChange(void*, SoSensor*) { ++s_nodeFired; }
 static int s_timerFired = 0;
 static void onTimer(void*, SoSensor*) { ++s_timerFired; }
 
-int main()
+TEST(SensorsSuite, SoFieldSensorAttachDetach)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    SoCube* cube = new SoCube;
+    cube->ref();
 
-    // -----------------------------------------------------------------------
-    // SoFieldSensor: fires when the watched field changes
-    // Note: In the Obol fork, sensors require a context manager to deliver
-    // callbacks. We test attachment/detachment which works in all modes.
-    // -----------------------------------------------------------------------
-    runner.startTest("SoFieldSensor attach/detach");
-    {
-        SoCube* cube = new SoCube;
-        cube->ref();
+    SoFieldSensor fs(onFieldChange, nullptr);
+    fs.attach(&cube->width);
+    bool attached = (fs.getAttachedField() == &cube->width);
+    fs.detach();
+    bool detached = (fs.getAttachedField() == nullptr);
 
-        SoFieldSensor fs(onFieldChange, nullptr);
-        fs.attach(&cube->width);
-        bool attached = (fs.getAttachedField() == &cube->width);
-        fs.detach();
-        bool detached = (fs.getAttachedField() == nullptr);
+    cube->unref();
+    bool pass = attached && detached;
+    EXPECT_TRUE(pass) << "SoFieldSensor attach/detach failed";
+}
 
-        cube->unref();
-        bool pass = attached && detached;
-        runner.endTest(pass, pass ? "" :
-            "SoFieldSensor attach/detach failed");
-    }
+// -----------------------------------------------------------------------
+// SoFieldSensor: re-attach to a different field
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoFieldSensor: re-attach to a different field
-    // -----------------------------------------------------------------------
-    runner.startTest("SoFieldSensor reattach");
-    {
-        SoCube* cube = new SoCube;
-        cube->ref();
+TEST(SensorsSuite, SoFieldSensorReattach)
+{
+    SoCube* cube = new SoCube;
+    cube->ref();
 
-        SoFieldSensor fs(onFieldChange, nullptr);
-        fs.attach(&cube->width);
-        fs.attach(&cube->height); // re-attach
-        bool pass = (fs.getAttachedField() == &cube->height);
-        fs.detach();
-        cube->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoFieldSensor reattach failed");
-    }
+    SoFieldSensor fs(onFieldChange, nullptr);
+    fs.attach(&cube->width);
+    fs.attach(&cube->height); // re-attach
+    bool pass = (fs.getAttachedField() == &cube->height);
+    fs.detach();
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoFieldSensor reattach failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoNodeSensor: attach/detach
-    // Note: actual callback delivery requires a context manager in Obol.
-    // -----------------------------------------------------------------------
-    runner.startTest("SoNodeSensor attach/detach");
-    {
-        SoCube* cube = new SoCube;
-        cube->ref();
+// -----------------------------------------------------------------------
+// SoNodeSensor: attach/detach
+// Note: actual callback delivery requires a context manager in Obol.
+// -----------------------------------------------------------------------
 
-        SoNodeSensor ns(onNodeChange, nullptr);
-        ns.attach(cube);
-        bool attached = (ns.getAttachedNode() == cube);
-        ns.detach();
-        bool detached = (ns.getAttachedNode() == nullptr);
+TEST(SensorsSuite, SoNodeSensorAttachDetach)
+{
+    SoCube* cube = new SoCube;
+    cube->ref();
 
-        cube->unref();
-        bool pass = attached && detached;
-        runner.endTest(pass, pass ? "" :
-            "SoNodeSensor attach/detach failed");
-    }
+    SoNodeSensor ns(onNodeChange, nullptr);
+    ns.attach(cube);
+    bool attached = (ns.getAttachedNode() == cube);
+    ns.detach();
+    bool detached = (ns.getAttachedNode() == nullptr);
 
-    // -----------------------------------------------------------------------
-    // SoTimerSensor: create and schedule/unschedule without crash
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTimerSensor schedule/unschedule");
-    {
-        SoTimerSensor ts(onTimer, nullptr);
-        ts.setInterval(SbTime(1.0)); // 1 second interval
-        ts.schedule();
-        bool scheduled = ts.isScheduled();
-        ts.unschedule();
-        bool unscheduled = !ts.isScheduled();
-        bool pass = scheduled && unscheduled;
-        runner.endTest(pass, pass ? "" :
-            "SoTimerSensor schedule/unschedule failed");
-    }
+    cube->unref();
+    bool pass = attached && detached;
+    EXPECT_TRUE(pass) << "SoNodeSensor attach/detach failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoAlarmSensor: create and schedule/unschedule without crash
-    // -----------------------------------------------------------------------
-    runner.startTest("SoAlarmSensor schedule/unschedule");
-    {
-        SoAlarmSensor as(onTimer, nullptr);
-        as.setTime(SbTime::getTimeOfDay() + SbTime(10.0));
-        as.schedule();
-        bool scheduled = as.isScheduled();
-        as.unschedule();
-        bool unscheduled = !as.isScheduled();
-        bool pass = scheduled && unscheduled;
-        runner.endTest(pass, pass ? "" :
-            "SoAlarmSensor schedule/unschedule failed");
-    }
+// -----------------------------------------------------------------------
+// SoTimerSensor: create and schedule/unschedule without crash
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoOneShotSensor: schedule/unschedule
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOneShotSensor schedule/unschedule");
-    {
-        SoOneShotSensor oss(onTimer, nullptr);
-        oss.schedule();
-        bool pass = oss.isScheduled();
-        oss.unschedule();
-        pass = pass && !oss.isScheduled();
-        runner.endTest(pass, pass ? "" :
-            "SoOneShotSensor schedule/unschedule failed");
-    }
+TEST(SensorsSuite, SoTimerSensorScheduleUnschedule)
+{
+    SoTimerSensor ts(onTimer, nullptr);
+    ts.setInterval(SbTime(1.0)); // 1 second interval
+    ts.schedule();
+    bool scheduled = ts.isScheduled();
+    ts.unschedule();
+    bool unscheduled = !ts.isScheduled();
+    bool pass = scheduled && unscheduled;
+    EXPECT_TRUE(pass) << "SoTimerSensor schedule/unschedule failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoIdleSensor: schedule/unschedule without crash
-    // -----------------------------------------------------------------------
-    runner.startTest("SoIdleSensor schedule/unschedule");
-    {
-        SoIdleSensor ids(onTimer, nullptr);
-        ids.schedule();
-        bool pass = ids.isScheduled();
-        ids.unschedule();
-        pass = pass && !ids.isScheduled();
-        runner.endTest(pass, pass ? "" :
-            "SoIdleSensor schedule/unschedule failed");
-    }
+// -----------------------------------------------------------------------
+// SoAlarmSensor: create and schedule/unschedule without crash
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoPathSensor: attach/detach to a path
-    // -----------------------------------------------------------------------
-    runner.startTest("SoPathSensor attach/detach");
-    {
-        SoSeparator* root = new SoSeparator;
-        root->ref();
-        SoCube* cube = new SoCube;
-        root->addChild(cube);
+TEST(SensorsSuite, SoAlarmSensorScheduleUnschedule)
+{
+    SoAlarmSensor as(onTimer, nullptr);
+    as.setTime(SbTime::getTimeOfDay() + SbTime(10.0));
+    as.schedule();
+    bool scheduled = as.isScheduled();
+    as.unschedule();
+    bool unscheduled = !as.isScheduled();
+    bool pass = scheduled && unscheduled;
+    EXPECT_TRUE(pass) << "SoAlarmSensor schedule/unschedule failed";
+}
 
-        SoPath* path = new SoPath(root);
-        path->ref();
-        path->append(cube);
+// -----------------------------------------------------------------------
+// SoOneShotSensor: schedule/unschedule
+// -----------------------------------------------------------------------
 
-        SoPathSensor ps(onNodeChange, nullptr);
-        ps.attach(path);
-        bool attached = (ps.getAttachedPath() == path);
-        ps.detach();
-        bool detached = (ps.getAttachedPath() == nullptr);
+TEST(SensorsSuite, SoOneShotSensorScheduleUnschedule)
+{
+    SoOneShotSensor oss(onTimer, nullptr);
+    oss.schedule();
+    bool pass = oss.isScheduled();
+    oss.unschedule();
+    pass = pass && !oss.isScheduled();
+    EXPECT_TRUE(pass) << "SoOneShotSensor schedule/unschedule failed";
+}
 
-        path->unref();
-        root->unref();
+// -----------------------------------------------------------------------
+// SoIdleSensor: schedule/unschedule without crash
+// -----------------------------------------------------------------------
 
-        bool pass = attached && detached;
-        runner.endTest(pass, pass ? "" : "SoPathSensor attach/detach failed");
-    }
+TEST(SensorsSuite, SoIdleSensorScheduleUnschedule)
+{
+    SoIdleSensor ids(onTimer, nullptr);
+    ids.schedule();
+    bool pass = ids.isScheduled();
+    ids.unschedule();
+    pass = pass && !ids.isScheduled();
+    EXPECT_TRUE(pass) << "SoIdleSensor schedule/unschedule failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDataSensor: class initialized and API via SoFieldSensor (concrete
-    // derived class); getTriggerField returns NULL before any trigger fires.
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDataSensor class initialized via SoFieldSensor");
-    {
-        SoFieldSensor fs(onFieldChange, nullptr);
-        // SoFieldSensor IS-A SoDataSensor – verify the SoDataSensor API is
-        // accessible without crashing.
-        SoField* tf = fs.getTriggerField();     // NULL before attach/trigger
-        SbBool pathFlag = fs.getTriggerPathFlag(); // default FALSE
-        bool pass = (tf == nullptr) && (pathFlag == FALSE);
-        runner.endTest(pass, pass ? "" :
-            "SoDataSensor getTriggerField/getTriggerPathFlag initial state wrong");
-    }
+// -----------------------------------------------------------------------
+// SoPathSensor: attach/detach to a path
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoDataSensor setTriggerPathFlag");
-    {
-        SoFieldSensor fs(onFieldChange, nullptr);
-        fs.setTriggerPathFlag(TRUE);
-        bool pass = (fs.getTriggerPathFlag() == TRUE);
-        runner.endTest(pass, pass ? "" :
-            "SoDataSensor setTriggerPathFlag did not stick");
-    }
+TEST(SensorsSuite, SoPathSensorAttachDetach)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+    SoCube* cube = new SoCube;
+    root->addChild(cube);
 
-    return runner.getSummary();
+    SoPath* path = new SoPath(root);
+    path->ref();
+    path->append(cube);
+
+    SoPathSensor ps(onNodeChange, nullptr);
+    ps.attach(path);
+    bool attached = (ps.getAttachedPath() == path);
+    ps.detach();
+    bool detached = (ps.getAttachedPath() == nullptr);
+
+    path->unref();
+    root->unref();
+
+    bool pass = attached && detached;
+    EXPECT_TRUE(pass) << "SoPathSensor attach/detach failed";
+}
+
+// -----------------------------------------------------------------------
+// SoDataSensor: class initialized and API via SoFieldSensor (concrete
+// derived class); getTriggerField returns NULL before any trigger fires.
+// -----------------------------------------------------------------------
+
+TEST(SensorsSuite, SoDataSensorClassInitializedViaSoFieldSensor)
+{
+    SoFieldSensor fs(onFieldChange, nullptr);
+    // SoFieldSensor IS-A SoDataSensor – verify the SoDataSensor API is
+    // accessible without crashing.
+    SoField* tf = fs.getTriggerField();     // NULL before attach/trigger
+    SbBool pathFlag = fs.getTriggerPathFlag(); // default FALSE
+    bool pass = (tf == nullptr) && (pathFlag == FALSE);
+    EXPECT_TRUE(pass) << "SoDataSensor getTriggerField/getTriggerPathFlag initial state wrong";
+}
+
+TEST(SensorsSuite, SoDataSensorSetTriggerPathFlag)
+{
+    SoFieldSensor fs(onFieldChange, nullptr);
+    fs.setTriggerPathFlag(TRUE);
+    bool pass = (fs.getTriggerPathFlag() == TRUE);
+    EXPECT_TRUE(pass) << "SoDataSensor setTriggerPathFlag did not stick";
 }

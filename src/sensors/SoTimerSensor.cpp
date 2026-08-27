@@ -47,11 +47,9 @@
 
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/SoDB.h>
-#include <cassert>
-
-#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // OBOL_DEBUG
+#include <cassert>
+#include <cmath>
 
 #define DEBUG_TIMERSENSOR_TRACE 0
 
@@ -162,12 +160,28 @@ SoTimerSensor::reschedule(const SbTime & schedtime)
 #endif // debug
   }
   else {
-    int intervals = (int)((schedtime - this->base)/this->interval) + 1;
+    const double intervalvalue = this->interval.getValue();
+    if (!(intervalvalue > 0.0) || !std::isfinite(intervalvalue)) {
+      SoDebugError::postWarning("SoTimerSensor::reschedule",
+                                "timer interval must be finite and positive");
+      return;
+    }
 
-    if ( intervals < 0 ) 
-      intervals = 0;
-    
-    this->setTriggerTime(this->base + intervals * this->interval);
+    // Keep the count as a double.  A user-supplied base time can be decades
+    // before the current clock, so even ordinary subsecond intervals readily
+    // exceed INT_MAX.  Converting that quotient to int was undefined and also
+    // scheduled the wrong trigger after overflow.
+    double intervals =
+      std::floor((schedtime - this->base).getValue() / intervalvalue) + 1.0;
+    if (intervals < 0.0) intervals = 0.0;
+    if (!std::isfinite(intervals)) {
+      // At extreme magnitudes the original phase can no longer be represented
+      // meaningfully; retain forward progress from the scheduling instant.
+      this->setTriggerTime(schedtime + this->interval);
+    }
+    else {
+      this->setTriggerTime(this->base + intervals * this->interval);
+    }
 
 #if DEBUG_TIMERSENSOR_TRACE
     SoDebugError::postInfo("SoTimerSensor::reschedule",
@@ -233,7 +247,8 @@ SoTimerSensor::unschedule(void)
   if (!this->isScheduled()) {
     SoDebugError::postWarning("SoTimerSensor::unschedule",
                               "%p not scheduled (istriggering=%s)",
-                              this, this->istriggering ? "TRUE" : "FALSE");
+                              static_cast<void *>(this),
+                              this->istriggering ? "TRUE" : "FALSE");
     return;
   }
 #endif // OBOL_DEBUG

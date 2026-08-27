@@ -88,161 +88,100 @@
 #include <Inventor/SbColor.h>
 #include <Inventor/SbString.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-// Macro mirroring each vanilla "initialized" test block:
-//   BOOST_CHECK that getTypeId() != badType() and getNum() == 0
-#define TEST_MF_INITIALIZED(TestName, FieldType) \
-    runner.startTest(TestName " initialized"); \
-    { \
-        FieldType field; \
-        bool pass = (field.getTypeId() != SoType::badType()) && \
-                    (field.getNum() == 0); \
-        runner.endTest(pass, pass ? "" : \
-            TestName " not initialized or initial count != 0"); \
-    }
+template <typename FieldType>
+class MultiFieldInitialization : public ::testing::Test { };
 
-int main()
+using MultiFieldTypes = ::testing::Types<
+    SoMFFloat, SoMFDouble, SoMFInt32, SoMFShort, SoMFUInt32, SoMFUShort,
+    SoMFVec2f, SoMFVec3f, SoMFVec4f, SoMFColor, SoMFString, SoMFRotation,
+    SoMFBool, SoMFMatrix, SoMFName, SoMFTime, SoMFPlane, SoMFColorRGBA,
+    SoMFEnum, SoMFBitMask, SoMFNode, SoMFVec2d, SoMFVec2i32, SoMFVec2s,
+    SoMFVec3d, SoMFVec3i32, SoMFVec3s, SoMFVec4d, SoMFVec4i32, SoMFVec4s,
+    SoMFVec2b, SoMFVec3b, SoMFVec4b, SoMFVec4ub, SoMFVec4us,
+    SoMFVec4ui32, SoMFPath, SoMFEngine>;
+
+TYPED_TEST_SUITE(MultiFieldInitialization, MultiFieldTypes);
+
+TYPED_TEST(MultiFieldInitialization, StartsEmptyWithValidType)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    TypeParam field;
+    EXPECT_NE(field.getTypeId(), SoType::badType());
+    EXPECT_EQ(field.getNum(), 0);
+}
 
-    // -----------------------------------------------------------------------
-    // All SoMF* types: class initialized with zero elements
-    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
-    // -----------------------------------------------------------------------
-    TEST_MF_INITIALIZED("SoMFFloat",    SoMFFloat)
-    TEST_MF_INITIALIZED("SoMFDouble",   SoMFDouble)
-    TEST_MF_INITIALIZED("SoMFInt32",    SoMFInt32)
-    TEST_MF_INITIALIZED("SoMFShort",    SoMFShort)
-    TEST_MF_INITIALIZED("SoMFUInt32",   SoMFUInt32)
-    TEST_MF_INITIALIZED("SoMFUShort",   SoMFUShort)
-    TEST_MF_INITIALIZED("SoMFVec2f",    SoMFVec2f)
-    TEST_MF_INITIALIZED("SoMFVec3f",    SoMFVec3f)
-    TEST_MF_INITIALIZED("SoMFVec4f",    SoMFVec4f)
-    TEST_MF_INITIALIZED("SoMFColor",    SoMFColor)
-    TEST_MF_INITIALIZED("SoMFString",   SoMFString)
-    TEST_MF_INITIALIZED("SoMFRotation", SoMFRotation)
-    TEST_MF_INITIALIZED("SoMFBool",     SoMFBool)
-    TEST_MF_INITIALIZED("SoMFMatrix",   SoMFMatrix)
-    TEST_MF_INITIALIZED("SoMFName",     SoMFName)
-    TEST_MF_INITIALIZED("SoMFTime",     SoMFTime)
-    TEST_MF_INITIALIZED("SoMFPlane",    SoMFPlane)
+TEST(FieldsMfFields, SoMFFloatSet1ValueGetNumOperator)
+{
+    SoMFFloat field;
+    field.set1Value(0, 1.0f);
+    field.set1Value(1, 2.0f);
+    field.set1Value(2, 3.0f);
+    bool pass = (field.getNum() == 3) &&
+                (field[0] == 1.0f) &&
+                (field[1] == 2.0f) &&
+                (field[2] == 3.0f);
+    EXPECT_TRUE(pass) << "SoMFFloat set/get values failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMFFloat: set/get values
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMFFloat set1Value/getNum/operator[]");
-    {
-        SoMFFloat field;
-        field.set1Value(0, 1.0f);
-        field.set1Value(1, 2.0f);
-        field.set1Value(2, 3.0f);
-        bool pass = (field.getNum() == 3) &&
-                    (field[0] == 1.0f) &&
-                    (field[1] == 2.0f) &&
-                    (field[2] == 3.0f);
-        runner.endTest(pass, pass ? "" : "SoMFFloat set/get values failed");
-    }
+// -----------------------------------------------------------------------
+// SoMFVec3f: set/get values
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoMFVec3f: set/get values
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMFVec3f set1Value/getNum/operator[]");
-    {
-        SoMFVec3f field;
-        field.set1Value(0, SbVec3f(1.0f, 0.0f, 0.0f));
-        field.set1Value(1, SbVec3f(0.0f, 1.0f, 0.0f));
-        bool pass = (field.getNum() == 2) &&
-                    (field[0] == SbVec3f(1.0f, 0.0f, 0.0f)) &&
-                    (field[1] == SbVec3f(0.0f, 1.0f, 0.0f));
-        runner.endTest(pass, pass ? "" : "SoMFVec3f set/get values failed");
-    }
+TEST(FieldsMfFields, SoMFVec3fSet1ValueGetNumOperator)
+{
+    SoMFVec3f field;
+    field.set1Value(0, SbVec3f(1.0f, 0.0f, 0.0f));
+    field.set1Value(1, SbVec3f(0.0f, 1.0f, 0.0f));
+    bool pass = (field.getNum() == 2) &&
+                (field[0] == SbVec3f(1.0f, 0.0f, 0.0f)) &&
+                (field[1] == SbVec3f(0.0f, 1.0f, 0.0f));
+    EXPECT_TRUE(pass) << "SoMFVec3f set/get values failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMFString: set/get values
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMFString set1Value/getNum/operator[]");
-    {
-        SoMFString field;
-        field.set1Value(0, "foo");
-        field.set1Value(1, "bar");
-        bool pass = (field.getNum() == 2) &&
-                    (field[0] == SbString("foo")) &&
-                    (field[1] == SbString("bar"));
-        runner.endTest(pass, pass ? "" : "SoMFString set/get values failed");
-    }
+// -----------------------------------------------------------------------
+// SoMFString: set/get values
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SoMFInt32: deleteValues
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMFInt32 deleteValues");
-    {
-        SoMFInt32 field;
-        field.set1Value(0, 10);
-        field.set1Value(1, 20);
-        field.set1Value(2, 30);
-        field.deleteValues(1, 1); // remove element at index 1
-        bool pass = (field.getNum() == 2) &&
-                    (field[0] == 10) &&
-                    (field[1] == 30);
-        runner.endTest(pass, pass ? "" : "SoMFInt32 deleteValues failed");
-    }
+TEST(FieldsMfFields, SoMFStringSet1ValueGetNumOperator)
+{
+    SoMFString field;
+    field.set1Value(0, "foo");
+    field.set1Value(1, "bar");
+    bool pass = (field.getNum() == 2) &&
+                (field[0] == SbString("foo")) &&
+                (field[1] == SbString("bar"));
+    EXPECT_TRUE(pass) << "SoMFString set/get values failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMFColor: set/get values
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMFColor set1Value/operator[]");
-    {
-        SoMFColor field;
-        field.set1Value(0, SbColor(1.0f, 0.0f, 0.0f));
-        field.set1Value(1, SbColor(0.0f, 1.0f, 0.0f));
-        bool pass = (field.getNum() == 2) &&
-                    (field[0] == SbColor(1.0f, 0.0f, 0.0f)) &&
-                    (field[1] == SbColor(0.0f, 1.0f, 0.0f));
-        runner.endTest(pass, pass ? "" : "SoMFColor set/get values failed");
-    }
+// -----------------------------------------------------------------------
+// SoMFInt32: deleteValues
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // Remaining SoMF* types: class initialized with zero elements
-    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
-    // -----------------------------------------------------------------------
-    TEST_MF_INITIALIZED("SoMFColorRGBA", SoMFColorRGBA)
-    TEST_MF_INITIALIZED("SoMFEnum",      SoMFEnum)
-    TEST_MF_INITIALIZED("SoMFBitMask",   SoMFBitMask)
-    TEST_MF_INITIALIZED("SoMFNode",      SoMFNode)
+TEST(FieldsMfFields, SoMFInt32DeleteValues)
+{
+    SoMFInt32 field;
+    field.set1Value(0, 10);
+    field.set1Value(1, 20);
+    field.set1Value(2, 30);
+    field.deleteValues(1, 1); // remove element at index 1
+    bool pass = (field.getNum() == 2) &&
+                (field[0] == 10) &&
+                (field[1] == 30);
+    EXPECT_TRUE(pass) << "SoMFInt32 deleteValues failed";
+}
 
-    // -----------------------------------------------------------------------
-    // SoMFVec2/3/4 variant types: class initialized with zero elements
-    // -----------------------------------------------------------------------
-    TEST_MF_INITIALIZED("SoMFVec2d",    SoMFVec2d)
-    TEST_MF_INITIALIZED("SoMFVec2i32",  SoMFVec2i32)
-    TEST_MF_INITIALIZED("SoMFVec2s",    SoMFVec2s)
-    TEST_MF_INITIALIZED("SoMFVec3d",    SoMFVec3d)
-    TEST_MF_INITIALIZED("SoMFVec3i32",  SoMFVec3i32)
-    TEST_MF_INITIALIZED("SoMFVec3s",    SoMFVec3s)
-    TEST_MF_INITIALIZED("SoMFVec4d",    SoMFVec4d)
-    TEST_MF_INITIALIZED("SoMFVec4i32",  SoMFVec4i32)
-    TEST_MF_INITIALIZED("SoMFVec4s",    SoMFVec4s)
+// -----------------------------------------------------------------------
+// SoMFColor: set/get values
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // Byte/unsigned-integer SoMFVec variants: class initialized
-    // Baseline: src/fields/SoMFVec2b.cpp, SoMFVec3b.cpp, SoMFVec4b.cpp,
-    //           SoMFVec4ub.cpp, SoMFVec4us.cpp, SoMFVec4ui32.cpp
-    // -----------------------------------------------------------------------
-    TEST_MF_INITIALIZED("SoMFVec2b",    SoMFVec2b)
-    TEST_MF_INITIALIZED("SoMFVec3b",    SoMFVec3b)
-    TEST_MF_INITIALIZED("SoMFVec4b",    SoMFVec4b)
-    TEST_MF_INITIALIZED("SoMFVec4ub",   SoMFVec4ub)
-    TEST_MF_INITIALIZED("SoMFVec4us",   SoMFVec4us)
-    TEST_MF_INITIALIZED("SoMFVec4ui32", SoMFVec4ui32)
-
-    // -----------------------------------------------------------------------
-    // SoMFPath / SoMFEngine: class initialized
-    // Baseline: src/fields/SoMFPath.cpp, SoMFEngine.cpp
-    // -----------------------------------------------------------------------
-    TEST_MF_INITIALIZED("SoMFPath",     SoMFPath)
-    TEST_MF_INITIALIZED("SoMFEngine",   SoMFEngine)
-
-    return runner.getSummary();
+TEST(FieldsMfFields, SoMFColorSet1ValueOperator)
+{
+    SoMFColor field;
+    field.set1Value(0, SbColor(1.0f, 0.0f, 0.0f));
+    field.set1Value(1, SbColor(0.0f, 1.0f, 0.0f));
+    bool pass = (field.getNum() == 2) &&
+                (field[0] == SbColor(1.0f, 0.0f, 0.0f)) &&
+                (field[1] == SbColor(0.0f, 1.0f, 0.0f));
+    EXPECT_TRUE(pass) << "SoMFColor set/get values failed";
 }

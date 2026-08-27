@@ -523,10 +523,9 @@ SoAction::apply(SoNode * root)
     {
       SoNode * profileroverlay = SoActionP::getProfilerOverlay();
       if (profileroverlay) {
-        SoProfiler::enable(FALSE);
+        SoProfilerP::ScopedPause pause;
         this->beginTraversal(profileroverlay);
         this->endTraversal(profileroverlay);
-        SoProfiler::enable(TRUE);
       }
     }
 
@@ -562,9 +561,8 @@ SoAction::apply(SoNode * root)
         !this->isOfType(SoGLRenderAction::getClassTypeId())) {
       // update profiler stats node with the profiling data from the traversal
       SoNode * profilerstats = SoActionP::getProfilerStatsNode();
-      SoProfiler::enable(FALSE);
+      SoProfilerP::ScopedPause pause;
       this->traverse(profilerstats);
-      SoProfiler::enable(TRUE);
     }
 
     if (SoProfiler::isConsoleActive()) {

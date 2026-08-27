@@ -3,8 +3,8 @@
 #
 # CAD assembly rendering, picking, and LoD subsystem.
 #
-# Sources are added to the global OBOL_SOURCE list so they are compiled into
-# the main Obol library (same pattern as all other src/ subdirectories).
+# Sources are compiled into a dedicated object library and folded into the
+# installed Obol library by src/CMakeLists.txt.
 # =============================================================================
 
 set(CAD_SOURCES
@@ -28,4 +28,8 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/picking/CadPicking.cpp
 )
 
-set(OBOL_SOURCE ${OBOL_SOURCE} ${CAD_SOURCES} CACHE INTERNAL "OBOL_SOURCE")
+obol_add_source_module(cad ${CAD_SOURCES})
+target_include_directories(obol_cad_objects PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/lod
+    ${CMAKE_CURRENT_SOURCE_DIR}/picking)

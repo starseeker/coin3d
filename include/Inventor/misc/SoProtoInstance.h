@@ -45,13 +45,14 @@ class SoSensor;
 
 /*!
   \class SoProtoInstance SoProtoInstance.h Inventor/misc/SoProtoInstance.h
-  \brief Instance of a VRML97 PROTO definition (legacy, VRML support removed).
+  \brief Instance of a retained legacy PROTO definition.
 
   \ingroup coin_misc
 
-  SoProtoInstance represented a single instantiation of a VRML97
-  PROTO node.  VRML support has been removed from Obol; this
-  class is retained as a stub for API compatibility only.
+  SoProtoInstance represents a live instantiation of an SoProto definition,
+  including its dynamic fields and IS connections.  It remains functional for
+  the PROTO syntax accepted by Obol's Inventor reader.  This does not imply
+  support for the removed SoVRML* node family or the complete VRML97 runtime.
 
   \sa SoProto
 */

@@ -14,10 +14,8 @@ set(OBOL_ERRORS_INTERNAL_FILES
 	debugerror.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_ERRORS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} errors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(errors ${OBOL_ERRORS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_ERRORS_FILES})

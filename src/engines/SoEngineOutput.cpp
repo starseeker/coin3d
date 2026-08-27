@@ -263,7 +263,8 @@ SoEngineOutput::addConnection(SoField * f)
 #if OBOL_DEBUG
   if (this->slaves.find(f) != -1) {
     SoDebugError::postWarning("SoEngineOutput::addConnection",
-                              "connection from %p already made", f);
+                              "connection from %p already made",
+                              static_cast<void *>(f));
     return;
   }
 #endif // OBOL_DEBUG
@@ -307,7 +308,8 @@ SoEngineOutput::removeConnection(SoField * f)
 #if OBOL_DEBUG
   if (i == -1) {
     SoDebugError::postWarning("SoEngineOutput::removeConnection",
-                              "no connection from %p present", f);
+                              "no connection from %p present",
+                              static_cast<void *>(f));
     return;
   }
 #endif // OBOL_DEBUG

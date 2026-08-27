@@ -116,10 +116,8 @@ set(OBOL_NODES_INTERNAL_FILES
 	SoUnknownNode.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_NODES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} nodes/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(nodes ${OBOL_NODES_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_NODES_FILES})

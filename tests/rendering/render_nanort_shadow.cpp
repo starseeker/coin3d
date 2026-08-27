@@ -27,7 +27,7 @@
  *   - The GL backend ignores SoSceneRendererParams; renderToFile() is used there
  *     and the test passes without shadow validation (non-black geometry check).
  *
- * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
+ * A diagnostic RGB image is written under the build tree.
  */
 
 #include "headless_utils.h"
@@ -98,13 +98,13 @@ static bool validateShadow(const unsigned char *buf)
     return true;
 }
 
-int main(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
     else
         snprintf(outpath, sizeof(outpath), "render_nanort_shadow.rgb");
 
@@ -234,4 +234,11 @@ int main(int argc, char **argv)
 
     root->unref();
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_nanort_shadow) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_nanort_shadow");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

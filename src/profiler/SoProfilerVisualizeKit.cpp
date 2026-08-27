@@ -102,9 +102,8 @@ namespace {
         static SbBool first = TRUE;
         if (first) {
           SoDebugError::postWarning("SoProfilerVisualizeKit.cpp rootChangedCB",
-                                    "The node i SoProfilerVisualizeKit::stats"
-                                    "must be of type SoProfilerStats.",
-                                    kit->getTypeId().getName().getString());
+                                    "The node in SoProfilerVisualizeKit::stats "
+                                    "must be of type SoProfilerStats.");
           first = FALSE;
         }
 #endif // OBOL_DEBUG

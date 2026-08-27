@@ -73,7 +73,7 @@ SoBoundingBoxCache::SoBoundingBoxCache(SoState *state)
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoBoundingBoxCache::SoBoundingBoxCache",
-                           "Cache created: %p", this);
+                           "Cache created: %p", static_cast<void *>(this));
     
   }
 #endif // debug
@@ -87,7 +87,7 @@ SoBoundingBoxCache::~SoBoundingBoxCache()
 #if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoBoundingBoxCache::~SoBoundingBoxCache",
-                           "Cache destructed: %p", this);
+                           "Cache destructed: %p", static_cast<void *>(this));
   }
 #endif // debug
 

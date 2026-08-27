@@ -14,10 +14,8 @@ set(OBOL_SENSORS_FILES
 	SoTimerSensor.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_SENSORS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} sensors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(sensors ${OBOL_SENSORS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_SENSORS_FILES})

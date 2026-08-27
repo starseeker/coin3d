@@ -42,7 +42,7 @@
 #include <cstring>
 #include <memory>
 
-namespace SimpleTest {
+namespace ObolTest {
 namespace RGBOutput {
 
 // Internal helper function to write SGI RGB header and data
@@ -168,4 +168,4 @@ std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer,
 }
 
 } // namespace RGBOutput
-} // namespace SimpleTest
+} // namespace ObolTest

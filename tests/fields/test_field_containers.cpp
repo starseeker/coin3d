@@ -90,343 +90,331 @@
 
 #include <cstring>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+TEST(FieldsFieldContainers, SoFieldGetClassTypeIdIsNotBadType)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    bool pass = (SoField::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoField::getClassTypeId is badType";
+}
 
-    // =======================================================================
-    // SoField
-    // =======================================================================
+TEST(FieldsFieldContainers, SoFieldSetIgnoredIsIgnoredRoundTrip)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    wfield->setIgnored(TRUE);
+    bool pass = (wfield->isIgnored() == TRUE);
+    wfield->setIgnored(FALSE);
+    bool pass2 = (wfield->isIgnored() == FALSE);
+    cube->unref();
+    EXPECT_TRUE((pass && pass2)) << ((pass && pass2) ? "" : "setIgnored/isIgnored failed");
+}
 
-    runner.startTest("SoField::getClassTypeId is not badType");
-    {
-        bool pass = (SoField::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoField::getClassTypeId is badType");
-    }
+TEST(FieldsFieldContainers, SoFieldSetDefaultIsDefaultRoundTrip)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool was = wfield->isDefault();
+    wfield->setDefault(!was);
+    bool changed = (wfield->isDefault() == !was);
+    wfield->setDefault(was); // restore
+    cube->unref();
+    EXPECT_TRUE(changed) << "setDefault/isDefault failed";
+}
 
-    runner.startTest("SoField::setIgnored / isIgnored round-trip");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        wfield->setIgnored(TRUE);
-        bool pass = (wfield->isIgnored() == TRUE);
-        wfield->setIgnored(FALSE);
-        bool pass2 = (wfield->isIgnored() == FALSE);
-        cube->unref();
-        runner.endTest(pass && pass2, (pass && pass2) ? "" : "setIgnored/isIgnored failed");
-    }
+TEST(FieldsFieldContainers, SoFieldIsOfTypeSoSFFloatForSoCubeWidth)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool pass = wfield->isOfType(SoSFFloat::getClassTypeId());
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoCube::width should be SoSFFloat";
+}
 
-    runner.startTest("SoField::setDefault / isDefault round-trip");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool was = wfield->isDefault();
-        wfield->setDefault(!was);
-        bool changed = (wfield->isDefault() == !was);
-        wfield->setDefault(was); // restore
-        cube->unref();
-        runner.endTest(changed, changed ? "" : "setDefault/isDefault failed");
-    }
+TEST(FieldsFieldContainers, SoFieldGetDirtySetDirtyRoundTrip)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool orig = wfield->getDirty();
+    wfield->setDirty(TRUE);
+    bool afterSet = wfield->getDirty();
+    wfield->setDirty(orig); // restore
+    cube->unref();
+    EXPECT_TRUE((afterSet == TRUE)) << (afterSet == TRUE ? "" : "setDirty(TRUE) / getDirty failed");
+}
 
-    runner.startTest("SoField::isOfType SoSFFloat for SoCube::width");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool pass = wfield->isOfType(SoSFFloat::getClassTypeId());
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoCube::width should be SoSFFloat");
-    }
+TEST(FieldsFieldContainers, SoFieldEnableNotifyIsNotifyEnabledRoundTrip)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    SbBool prev = wfield->isNotifyEnabled();
+    wfield->enableNotify(!prev);
+    bool changed = (wfield->isNotifyEnabled() == !prev);
+    wfield->enableNotify(prev); // restore
+    cube->unref();
+    EXPECT_TRUE(changed) << "enableNotify/isNotifyEnabled failed";
+}
 
-    runner.startTest("SoField::getDirty / setDirty round-trip");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool orig = wfield->getDirty();
-        wfield->setDirty(TRUE);
-        bool afterSet = wfield->getDirty();
-        wfield->setDirty(orig); // restore
-        cube->unref();
-        runner.endTest(afterSet == TRUE, afterSet == TRUE ? "" : "setDirty(TRUE) / getDirty failed");
-    }
+TEST(FieldsFieldContainers, SoFieldSetStringAndGetStringRoundTrip)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    wfield->set("3.5");
+    SbString s;
+    wfield->get(s);
+    // The string should contain "3.5" somewhere
+    bool pass = (s.find("3.5") != -1) || (s.find("3.500") != -1);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoField set/get string round-trip failed";
+}
 
-    runner.startTest("SoField::enableNotify / isNotifyEnabled round-trip");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        SbBool prev = wfield->isNotifyEnabled();
-        wfield->enableNotify(!prev);
-        bool changed = (wfield->isNotifyEnabled() == !prev);
-        wfield->enableNotify(prev); // restore
-        cube->unref();
-        runner.endTest(changed, changed ? "" : "enableNotify/isNotifyEnabled failed");
-    }
+TEST(FieldsFieldContainers, SoFieldIsConnectedIsFALSEByDefault)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool pass = (wfield->isConnected() == FALSE);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoField::isConnected should be FALSE by default";
+}
 
-    runner.startTest("SoField::set(string) and get(string) round-trip");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        wfield->set("3.5");
-        SbString s;
-        wfield->get(s);
-        // The string should contain "3.5" somewhere
-        bool pass = (s.find("3.5") != -1) || (s.find("3.500") != -1);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoField set/get string round-trip failed");
-    }
+TEST(FieldsFieldContainers, SoFieldIsConnectionEnabledIsTRUEByDefault)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool pass = (wfield->isConnectionEnabled() == TRUE);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoField::isConnectionEnabled should be TRUE by default";
+}
 
-    runner.startTest("SoField::isConnected is FALSE by default");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool pass = (wfield->isConnected() == FALSE);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoField::isConnected should be FALSE by default");
-    }
+// =======================================================================
+// SoFieldContainer
+// =======================================================================
 
-    runner.startTest("SoField::isConnectionEnabled is TRUE by default");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool pass = (wfield->isConnectionEnabled() == TRUE);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoField::isConnectionEnabled should be TRUE by default");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerGetFieldsReturnsNonZeroForSoCube)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoFieldList fields;
+    int n = cube->getFields(fields);
+    bool pass = (n > 0) && (fields.getLength() == n);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoCube::getFields returned 0 fields";
+}
 
-    // =======================================================================
-    // SoFieldContainer
-    // =======================================================================
+TEST(FieldsFieldContainers, SoFieldContainerGetFieldRetrievesNamedField)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    bool pass = (wfield != nullptr) && wfield->isOfType(SoSFFloat::getClassTypeId());
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoCube::getField('width') failed";
+}
 
-    runner.startTest("SoFieldContainer::getFields returns non-zero for SoCube");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoFieldList fields;
-        int n = cube->getFields(fields);
-        bool pass = (n > 0) && (fields.getLength() == n);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoCube::getFields returned 0 fields");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerGetFieldReturnsNULLForUnknownName)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * f = cube->getField(SbName("__no_such_field__"));
+    bool pass = (f == nullptr);
+    cube->unref();
+    EXPECT_TRUE(pass) << "getField should return NULL for unknown name";
+}
 
-    runner.startTest("SoFieldContainer::getField retrieves named field");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        bool pass = (wfield != nullptr) && wfield->isOfType(SoSFFloat::getClassTypeId());
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoCube::getField('width') failed");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerGetFieldNameRetrievesName)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    SoField * wfield = cube->getField(SbName("width"));
+    SbName name;
+    SbBool ok = cube->getFieldName(wfield, name);
+    bool pass = ok && (strcmp(name.getString(), "width") == 0);
+    cube->unref();
+    EXPECT_TRUE(pass) << "getFieldName failed for width field";
+}
 
-    runner.startTest("SoFieldContainer::getField returns NULL for unknown name");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * f = cube->getField(SbName("__no_such_field__"));
-        bool pass = (f == nullptr);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "getField should return NULL for unknown name");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerHasDefaultValuesTRUEAfterConstruction)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    bool pass = (cube->hasDefaultValues() == TRUE);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoCube::hasDefaultValues should be TRUE initially";
+}
 
-    runner.startTest("SoFieldContainer::getFieldName retrieves name");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        SoField * wfield = cube->getField(SbName("width"));
-        SbName name;
-        SbBool ok = cube->getFieldName(wfield, name);
-        bool pass = ok && (strcmp(name.getString(), "width") == 0);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "getFieldName failed for width field");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerHasDefaultValuesFALSEAfterModification)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    cube->width.setValue(5.0f);
+    bool pass = (cube->hasDefaultValues() == FALSE);
+    cube->unref();
+    EXPECT_TRUE(pass) << "hasDefaultValues should be FALSE after modification";
+}
 
-    runner.startTest("SoFieldContainer::hasDefaultValues TRUE after construction");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        bool pass = (cube->hasDefaultValues() == TRUE);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoCube::hasDefaultValues should be TRUE initially");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerSetToDefaultsResetsFields)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    float defaultWidth = cube->width.getValue();
+    cube->width.setValue(99.0f);
+    cube->setToDefaults();
+    bool pass = (cube->width.getValue() == defaultWidth);
+    cube->unref();
+    EXPECT_TRUE(pass) << "setToDefaults did not reset width field";
+}
 
-    runner.startTest("SoFieldContainer::hasDefaultValues FALSE after modification");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        cube->width.setValue(5.0f);
-        bool pass = (cube->hasDefaultValues() == FALSE);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "hasDefaultValues should be FALSE after modification");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerFieldsAreEqualForIdenticalCubes)
+{
+    SoCube * c1 = new SoCube;
+    SoCube * c2 = new SoCube;
+    c1->ref(); c2->ref();
+    bool pass = (c1->fieldsAreEqual(c2) == TRUE);
+    c1->unref(); c2->unref();
+    EXPECT_TRUE(pass) << "fieldsAreEqual should be TRUE for two default cubes";
+}
 
-    runner.startTest("SoFieldContainer::setToDefaults resets fields");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        float defaultWidth = cube->width.getValue();
-        cube->width.setValue(99.0f);
-        cube->setToDefaults();
-        bool pass = (cube->width.getValue() == defaultWidth);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "setToDefaults did not reset width field");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerFieldsAreEqualFALSEForDifferentCubes)
+{
+    SoCube * c1 = new SoCube;
+    SoCube * c2 = new SoCube;
+    c1->ref(); c2->ref();
+    c1->width.setValue(5.0f);
+    bool pass = (c1->fieldsAreEqual(c2) == FALSE);
+    c1->unref(); c2->unref();
+    EXPECT_TRUE(pass) << "fieldsAreEqual should be FALSE for cubes with different width";
+}
 
-    runner.startTest("SoFieldContainer::fieldsAreEqual for identical cubes");
-    {
-        SoCube * c1 = new SoCube;
-        SoCube * c2 = new SoCube;
-        c1->ref(); c2->ref();
-        bool pass = (c1->fieldsAreEqual(c2) == TRUE);
-        c1->unref(); c2->unref();
-        runner.endTest(pass, pass ? "" : "fieldsAreEqual should be TRUE for two default cubes");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerCopyFieldValuesReplicatesFields)
+{
+    SoCube * src = new SoCube;
+    SoCube * dst = new SoCube;
+    src->ref(); dst->ref();
+    src->width.setValue(7.0f);
+    src->height.setValue(3.0f);
+    dst->copyFieldValues(src);
+    bool pass = (dst->width.getValue() == src->width.getValue()) &&
+                (dst->height.getValue() == src->height.getValue());
+    src->unref(); dst->unref();
+    EXPECT_TRUE(pass) << "copyFieldValues did not replicate fields";
+}
 
-    runner.startTest("SoFieldContainer::fieldsAreEqual FALSE for different cubes");
-    {
-        SoCube * c1 = new SoCube;
-        SoCube * c2 = new SoCube;
-        c1->ref(); c2->ref();
-        c1->width.setValue(5.0f);
-        bool pass = (c1->fieldsAreEqual(c2) == FALSE);
-        c1->unref(); c2->unref();
-        runner.endTest(pass, pass ? "" : "fieldsAreEqual should be FALSE for cubes with different width");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerSetStringModifiesField)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    cube->set("width 4.5");
+    bool pass = (cube->width.getValue() == 4.5f);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoFieldContainer::set('width 4.5') failed";
+}
 
-    runner.startTest("SoFieldContainer::copyFieldValues replicates fields");
-    {
-        SoCube * src = new SoCube;
-        SoCube * dst = new SoCube;
-        src->ref(); dst->ref();
-        src->width.setValue(7.0f);
-        src->height.setValue(3.0f);
-        dst->copyFieldValues(src);
-        bool pass = (dst->width.getValue() == src->width.getValue()) &&
-                    (dst->height.getValue() == src->height.getValue());
-        src->unref(); dst->unref();
-        runner.endTest(pass, pass ? "" : "copyFieldValues did not replicate fields");
-    }
+TEST(FieldsFieldContainers, SoFieldContainerGetStringReturnsFieldValues)
+{
+    SoCube * cube = new SoCube;
+    cube->ref();
+    cube->width.setValue(3.0f);
+    SbString s;
+    cube->get(s);
+    bool pass = (s.getLength() > 0);
+    cube->unref();
+    EXPECT_TRUE(pass) << "SoFieldContainer::get returned empty string";
+}
 
-    runner.startTest("SoFieldContainer::set string modifies field");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        cube->set("width 4.5");
-        bool pass = (cube->width.getValue() == 4.5f);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoFieldContainer::set('width 4.5') failed");
-    }
+// =======================================================================
+// SoSFTrigger
+// =======================================================================
 
-    runner.startTest("SoFieldContainer::get string returns field values");
-    {
-        SoCube * cube = new SoCube;
-        cube->ref();
-        cube->width.setValue(3.0f);
-        SbString s;
-        cube->get(s);
-        bool pass = (s.getLength() > 0);
-        cube->unref();
-        runner.endTest(pass, pass ? "" : "SoFieldContainer::get returned empty string");
-    }
+TEST(FieldsFieldContainers, SoSFTriggerClassTypeRegistered)
+{
+    bool pass = (SoSFTrigger::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoSFTrigger bad class type";
+}
 
-    // =======================================================================
-    // SoSFTrigger
-    // =======================================================================
+TEST(FieldsFieldContainers, SoSFTriggerOperatorTwoTriggersAreAlwaysEqual)
+{
+    SoSFTrigger t1, t2;
+    bool pass = (t1 == t2);
+    EXPECT_TRUE(pass) << "SoSFTrigger operator== failed (should always be equal)";
+}
 
-    runner.startTest("SoSFTrigger class type registered");
-    {
-        bool pass = (SoSFTrigger::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoSFTrigger bad class type");
-    }
+// =======================================================================
+// SoSFPlane
+// =======================================================================
 
-    runner.startTest("SoSFTrigger operator== (two triggers are always equal)");
-    {
-        SoSFTrigger t1, t2;
-        bool pass = (t1 == t2);
-        runner.endTest(pass, pass ? "" : "SoSFTrigger operator== failed (should always be equal)");
-    }
+TEST(FieldsFieldContainers, SoSFPlaneGetValueSetValueRoundTrip)
+{
+    SoSFPlane field;
+    SbPlane plane(SbVec3f(0, 1, 0), 5.0f);
+    field.setValue(plane);
+    SbPlane retrieved = field.getValue();
+    bool pass = (retrieved == plane);
+    EXPECT_TRUE(pass) << "SoSFPlane getValue/setValue round-trip failed";
+}
 
-    // =======================================================================
-    // SoSFPlane
-    // =======================================================================
+// =======================================================================
+// SoMFMatrix
+// =======================================================================
 
-    runner.startTest("SoSFPlane getValue/setValue round-trip");
-    {
-        SoSFPlane field;
-        SbPlane plane(SbVec3f(0, 1, 0), 5.0f);
-        field.setValue(plane);
-        SbPlane retrieved = field.getValue();
-        bool pass = (retrieved == plane);
-        runner.endTest(pass, pass ? "" : "SoSFPlane getValue/setValue round-trip failed");
-    }
+TEST(FieldsFieldContainers, SoMFMatrixSet1ValueAndGetNum)
+{
+    SoMFMatrix field;
+    SbMatrix mat = SbMatrix::identity();
+    field.set1Value(0, mat);
+    field.set1Value(1, mat);
+    bool pass = (field.getNum() == 2) && (field[0] == mat);
+    EXPECT_TRUE(pass) << "SoMFMatrix set1Value/getNum failed";
+}
 
-    // =======================================================================
-    // SoMFMatrix
-    // =======================================================================
+// =======================================================================
+// SoMFString
+// =======================================================================
 
-    runner.startTest("SoMFMatrix set1Value and getNum");
-    {
-        SoMFMatrix field;
-        SbMatrix mat = SbMatrix::identity();
-        field.set1Value(0, mat);
-        field.set1Value(1, mat);
-        bool pass = (field.getNum() == 2) && (field[0] == mat);
-        runner.endTest(pass, pass ? "" : "SoMFMatrix set1Value/getNum failed");
-    }
+TEST(FieldsFieldContainers, SoMFStringSet1ValueAndOperator)
+{
+    SoMFString field;
+    field.set1Value(0, "hello");
+    field.set1Value(1, "world");
+    bool pass = (field.getNum() == 2) &&
+                (strcmp(field[0].getString(), "hello") == 0) &&
+                (strcmp(field[1].getString(), "world") == 0);
+    EXPECT_TRUE(pass) << "SoMFString set1Value/operator[] failed";
+}
 
-    // =======================================================================
-    // SoMFString
-    // =======================================================================
+// =======================================================================
+// SoMFName
+// =======================================================================
 
-    runner.startTest("SoMFString set1Value and operator[]");
-    {
-        SoMFString field;
-        field.set1Value(0, "hello");
-        field.set1Value(1, "world");
-        bool pass = (field.getNum() == 2) &&
-                    (strcmp(field[0].getString(), "hello") == 0) &&
-                    (strcmp(field[1].getString(), "world") == 0);
-        runner.endTest(pass, pass ? "" : "SoMFString set1Value/operator[] failed");
-    }
+TEST(FieldsFieldContainers, SoMFNameSet1ValueAndGetNum)
+{
+    SoMFName field;
+    field.set1Value(0, SbName("foo"));
+    field.set1Value(1, SbName("bar"));
+    bool pass = (field.getNum() == 2) &&
+                (strcmp(field[0].getString(), "foo") == 0);
+    EXPECT_TRUE(pass) << "SoMFName set1Value/getNum failed";
+}
 
-    // =======================================================================
-    // SoMFName
-    // =======================================================================
+// =======================================================================
+// SoMFTime
+// =======================================================================
 
-    runner.startTest("SoMFName set1Value and getNum");
-    {
-        SoMFName field;
-        field.set1Value(0, SbName("foo"));
-        field.set1Value(1, SbName("bar"));
-        bool pass = (field.getNum() == 2) &&
-                    (strcmp(field[0].getString(), "foo") == 0);
-        runner.endTest(pass, pass ? "" : "SoMFName set1Value/getNum failed");
-    }
-
-    // =======================================================================
-    // SoMFTime
-    // =======================================================================
-
-    runner.startTest("SoMFTime set1Value and operator[]");
-    {
-        SoMFTime field;
-        SbTime t1(1.5), t2(3.0);
-        field.set1Value(0, t1);
-        field.set1Value(1, t2);
-        bool pass = (field.getNum() == 2) &&
-                    (std::fabs(field[0].getValue() - 1.5) < 1e-9) &&
-                    (std::fabs(field[1].getValue() - 3.0) < 1e-9);
-        runner.endTest(pass, pass ? "" : "SoMFTime set1Value/operator[] failed");
-    }
-
-    return runner.getSummary();
+TEST(FieldsFieldContainers, SoMFTimeSet1ValueAndOperator)
+{
+    SoMFTime field;
+    SbTime t1(1.5), t2(3.0);
+    field.set1Value(0, t1);
+    field.set1Value(1, t2);
+    bool pass = (field.getNum() == 2) &&
+                (std::fabs(field[0].getValue() - 1.5) < 1e-9) &&
+                (std::fabs(field[1].getValue() - 3.0) < 1e-9);
+    EXPECT_TRUE(pass) << "SoMFTime set1Value/operator[] failed";
 }

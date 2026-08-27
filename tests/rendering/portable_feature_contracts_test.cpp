@@ -61,7 +61,7 @@ std::array<unsigned char, 3> centerPixel(const ObolTestSupport::RenderFixture & 
     return {pixels[offset], pixels[offset + 1], pixels[offset + 2]};
 }
 
-TEST(OSMesaFeatureContracts, IndexedShapesAndMaterialBindingsRender)
+TEST(PortableFeatureContracts, IndexedShapesAndMaterialBindingsRender)
 {
     auto * root = new SoSeparator;
     OwnedScene scene(root);
@@ -113,7 +113,7 @@ TEST(OSMesaFeatureContracts, IndexedShapesAndMaterialBindingsRender)
     EXPECT_EQ(binding->value.getValue(), SoMaterialBinding::PER_VERTEX_INDEXED);
 }
 
-TEST(OSMesaFeatureContracts, TextureUploadAndUpdateAffectRenderedPixels)
+TEST(PortableFeatureContracts, TextureUploadAndUpdateAffectRenderedPixels)
 {
     auto * root = new SoSeparator;
     OwnedScene scene(root);
@@ -166,7 +166,7 @@ TEST(OSMesaFeatureContracts, TextureUploadAndUpdateAffectRenderedPixels)
     EXPECT_GT(second[2], second[0] + 60);
 }
 
-TEST(OSMesaFeatureContracts, RenderStateNodesAndEngineConnectionsRemainUsable)
+TEST(PortableFeatureContracts, RenderStateNodesAndEngineConnectionsRemainUsable)
 {
     auto * root = new SoSeparator;
     OwnedScene scene(root);
@@ -226,7 +226,7 @@ TEST(OSMesaFeatureContracts, RenderStateNodesAndEngineConnectionsRemainUsable)
     EXPECT_GT(fixture.nonBackgroundPixels(), 100u);
 }
 
-TEST(OSMesaFeatureContracts, RepeatedIndexedRenderSurvivesNormalCacheInvalidation)
+TEST(PortableFeatureContracts, RepeatedIndexedRenderSurvivesNormalCacheInvalidation)
 {
     auto * root = new SoSeparator;
     OwnedScene scene(root);

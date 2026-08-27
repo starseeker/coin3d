@@ -70,6 +70,7 @@
 #include <Inventor/errors/SoMemoryError.h>
 
 #include <cstdio>
+#include <mutex>
 
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
@@ -80,6 +81,10 @@ SoType SoMemoryError::classTypeId STATIC_SOTYPE_INIT;
 SoErrorCB * SoMemoryError::callback = SoError::defaultHandlerCB;
 void * SoMemoryError::callbackData = NULL;
 
+namespace {
+std::mutex somemoryerror_callback_mutex;
+}
+
 // *************************************************************************
 
 /*!
@@ -88,6 +93,7 @@ void * SoMemoryError::callbackData = NULL;
 void
 SoMemoryError::initClass(void)
 {
+  const std::lock_guard<std::mutex> guard(somemoryerror_callback_mutex);
   SoMemoryError::callback = SoError::defaultHandlerCB;
   SoMemoryError::callbackData = NULL;
   SoMemoryError::classTypeId =
@@ -117,12 +123,8 @@ void
 SoMemoryError::setHandlerCallback(SoErrorCB * const function,
                                   void * const data)
 {
-  /* FIXME: Overriding the error handler for subclasses of SoError
-     doesn't work yet. Use SoError::setHandlerCallback() instead as a
-     workaround, but note that this will stop working when callback
-     override is implemented properly. 2003-01-22 thammer.
-  */
-  SoMemoryError::callback = function;
+  const std::lock_guard<std::mutex> guard(somemoryerror_callback_mutex);
+  SoMemoryError::callback = function ? function : SoError::defaultHandlerCB;
   SoMemoryError::callbackData = data;
 }
 
@@ -132,6 +134,7 @@ SoMemoryError::setHandlerCallback(SoErrorCB * const function,
 SoErrorCB *
 SoMemoryError::getHandlerCallback(void)
 {
+  const std::lock_guard<std::mutex> guard(somemoryerror_callback_mutex);
   return SoMemoryError::callback;
 }
 
@@ -141,6 +144,7 @@ SoMemoryError::getHandlerCallback(void)
 void *
 SoMemoryError::getHandlerData(void)
 {
+  const std::lock_guard<std::mutex> guard(somemoryerror_callback_mutex);
   return SoMemoryError::callbackData;
 }
 
@@ -161,6 +165,7 @@ SoMemoryError::post(const char * const whatWasAllocated)
 // Documented for parent class.
 SoErrorCB * SoMemoryError::getHandler(void * & data) const
 {
+  const std::lock_guard<std::mutex> guard(somemoryerror_callback_mutex);
   data = SoMemoryError::callbackData;
   return SoMemoryError::callback;
 }

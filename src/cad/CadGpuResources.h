@@ -214,14 +214,21 @@ struct CadFlatShadedGroup {
     std::vector<GLsizei> counts;
     uint8_t rgba[4] = {204, 204, 204, 255};
     bool cullBackfaces = false;
+    /* Closed, consistently oriented geometry does not need Mesa's expensive
+     * two-sided fixed-function vertex-lighting path even while a non-exact
+     * PoP cut temporarily disables back-face culling.  Open and unoriented
+     * surfaces retain two-sided lighting. */
+    bool twoSidedLighting = true;
 };
 
 struct CadFlatShadedRangeKey {
     InstanceId instance;
     uint8_t cut = Obol::ProgressiveCutUnspecified;
-    /* Identifies the part generation and occurrence transform used to bake
-     * this world-space range.  Presentation/style revisions deliberately do
-     * not participate, so selection can reuse the same vertices. */
+    /* Identifies the certified progressive lineage (or ordinary part
+     * generation) and occurrence transform used to bake this world-space
+     * range.  A later immutable generation in the same append-only lineage
+     * preserves an existing cut byte-for-byte.  Presentation/style revisions
+     * deliberately do not participate, so selection can reuse the vertices. */
     uint64_t geometryToken = 0;
 
     bool operator==(const CadFlatShadedRangeKey& other) const noexcept {
@@ -553,7 +560,7 @@ public:
 
     const CadFlatWireGpu& flatWire() const { return flatWire_; }
 
-    void uploadFlatShaded(uint64_t planRevision,
+    bool uploadFlatShaded(uint64_t planRevision,
                           uint64_t geometryRevision,
                           const std::vector<float>& positions,
                           const std::vector<float>& normals,

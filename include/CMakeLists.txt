@@ -1,8 +1,13 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Inventor/basic.h.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/Inventor/basic.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Inventor/system/gl-headers.h.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/Inventor/system/gl-headers.h)
 
-file(GLOB_RECURSE COMMON_HDRS ${CMAKE_CURRENT_SOURCE_DIR}/Inventor/*.h)
-file(GLOB_RECURSE COMMON_BIN_HDRS ${CMAKE_CURRENT_BINARY_DIR}/Inventor/*.h)
+# These generated/public headers are part of the install and framework
+# manifests.  CONFIGURE_DEPENDS makes additions/removals trigger a reconfigure
+# instead of silently producing an incomplete package.
+file(GLOB_RECURSE COMMON_HDRS CONFIGURE_DEPENDS
+     ${CMAKE_CURRENT_SOURCE_DIR}/Inventor/*.h)
+file(GLOB_RECURSE COMMON_BIN_HDRS CONFIGURE_DEPENDS
+     ${CMAKE_CURRENT_BINARY_DIR}/Inventor/*.h)
 
 set(OBOL_DOCUMENTATION_FILES
   ${OBOL_DOCUMENTATION_FILES}

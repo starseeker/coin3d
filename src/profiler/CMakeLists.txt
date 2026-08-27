@@ -18,10 +18,8 @@ set(OBOL_PROFILER_INTERNAL_FILES
 	SoNodeProfiling.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_PROFILER_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} profiler/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(profiler ${OBOL_PROFILER_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_PROFILER_FILES})

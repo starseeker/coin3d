@@ -2,11 +2,12 @@
 
 ## Overview
 
-Obol requires applications to supply an OpenGL context manager before library
-initialization.  This cleanly separates all platform-specific context logic
-from the library itself and allows any context back end — OSMesa, EGL, WGL,
-GLX, or a no-op stub for non-rendering scenarios — to be substituted without
-touching Obol code.
+Obol keeps platform-specific context logic outside the library and allows any
+context back end — OSMesa, EGL, WGL, GLX, or a no-op stub — to be substituted
+without touching Obol code.  Applications using global OpenGL/offscreen
+services should pass a context manager to `SoDB::init()`.  Non-rendering or
+custom-backend applications may pass `nullptr` and continue with limited
+functionality, installing a manager later if needed.
 
 ## The ContextManager Interface
 
@@ -123,8 +124,9 @@ Per-renderer managers (see below) take precedence over the global singleton.
 
 ## NullContextManager — Non-rendering / Testing
 
-For unit tests or applications that never call `SoOffscreenRenderer`, a no-op
-implementation is sufficient.  Only the four pure-virtual methods need to be
+For unit tests or applications that never call `SoOffscreenRenderer`, either
+pass `nullptr` to `SoDB::init()` or use an explicit no-op implementation.  If
+an object is supplied, only the four pure-virtual methods need to be
 implemented:
 
 ```cpp
@@ -277,7 +279,7 @@ switching.
 ## Built-in OSMesa Factory
 
 When the library is built with OSMesa support
-(`OBOL_USE_OSMESA=ON` or `OBOL_BUILD_DUAL_GL=ON`), the factory function
+(`OBOL_USE_SWRAST=ON`), the factory function
 `SoDB::createOSMesaContextManager()` creates a ready-to-use OSMesa context
 manager without requiring the application to include OSMesa headers:
 
@@ -319,13 +321,14 @@ public:
 };
 ```
 
-Obol ships three reference implementations:
+Obol ships NanoRT as a supported library backend and keeps additional backend
+examples with the rendering tests:
 
 | Class | Backend | Header | Notes |
 |-------|---------|--------|-------|
-| `SoNanoRTContextManager` | [nanort](https://github.com/lighttransport/nanort) (bundled) | `tests/utils/nanort_context_manager.h` | Always available |
-| `SoEmbreeContextManager` | [Intel Embree 4](https://www.embree.org/) (system library) | `tests/utils/embree_context_manager.h` | Requires `libembree-dev` |
-| `SoVulkanContextManager` | Vulkan rasterization (CPU Phong pre-baking) | `tests/utils/vulkan_context_manager.h` | Requires Vulkan SDK; uses `SoRaytracerSceneCollector` for geometry |
+| `SoNanoRTContextManager` | [nanort](https://github.com/lighttransport/nanort) (bundled) | `include/Obol/render/SoNanoRTContextManager.h` | Always available; implemented by the Obol library |
+| `SoEmbreeContextManager` | [Intel Embree 4](https://www.embree.org/) (system library) | `examples/demo_support/embree_context_manager.h` | Requires `libembree-dev` |
+| `SoVulkanContextManager` | Vulkan rasterization (CPU Phong pre-baking) | `examples/demo_support/vulkan_context_manager.h` | Requires Vulkan SDK; uses `SoRaytracerSceneCollector` for geometry |
 
 The raytracing managers delegate **all** scene collection to the generic
 `SoSceneCollector` library class (see below) and differ only in their
@@ -389,7 +392,7 @@ To integrate a new raytracing engine (e.g. OptiX, Embree, BRL-CAD librt):
    - Call `collector_.compositeOverlays()` for text/HUD.
 5. Pass the manager to `SoDB::init()`.
 
-See `tests/utils/embree_context_manager.h` for a complete worked example (~450 lines).
+See `examples/demo_support/embree_context_manager.h` for a complete worked example.
 
 ## Key Points
 

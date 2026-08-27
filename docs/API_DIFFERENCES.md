@@ -21,7 +21,7 @@ migration guide.
 8. [Collision Detection Action Removed](#8-collision-detection-action-removed)
 9. [Platform-Specific Context Code Removed](#9-platform-specific-context-code-removed)
 10. [PostScript / Hardcopy Output Always Included](#10-postscript--hardcopy-output-always-included)
-11. [Profiling Subsystem Off by Default](#11-profiling-subsystem-off-by-default)
+11. [Profiling Compiled In, Runtime Off by Default](#11-profiling-compiled-in-runtime-off-by-default)
 12. [Font Handling Simplified](#12-font-handling-simplified)
 13. [Threading Primitives Modernized](#13-threading-primitives-modernized)
 14. [Dead Code and Obsolete Classes Removed](#14-dead-code-and-obsolete-classes-removed)
@@ -66,16 +66,21 @@ navigation, or GUI-toolkit integration require the most work.
 
 ### What changed
 
-`SoDB::init()` now **requires** a `ContextManager*` argument.  The upstream
-Coin signature takes no arguments:
+`SoDB::init()` now takes a `ContextManager*` argument.  The pointer may be
+`nullptr` for non-rendering or custom-backend applications; initialization
+still completes, but global OpenGL/offscreen services remain unavailable until
+a manager is installed.  The upstream Coin signature takes no arguments:
 
 ```cpp
 // Coin (upstream)
 SoDB::init();
 
-// Obol — a ContextManager MUST be provided
+// Obol — pass a manager for global GL/offscreen rendering
 SoDB::setContextManager(&myManager);  // deprecated path
 SoDB::init(&myManager);               // preferred path
+
+// Obol — limited non-rendering/custom-backend initialization
+SoDB::init(nullptr);
 ```
 
 `SoDB::ContextManager` is an abstract base class declared inside `SoDB`.
@@ -117,16 +122,18 @@ Windows, GLX on Linux, CGL/AGL on macOS).  This tightly couples the library to
 each windowing system.  Moving context creation into an application-supplied
 callback object eliminates all platform-specific context code from the library
 and allows OSMesa, EGL, or any other backend to be substituted without patching
-Obol itself.  The change also makes initialization ordering explicit: the
-context manager is always in place before `SoDB::init()` attempts any
-OpenGL-related setup.
+Obol itself.  The change also makes initialization ordering explicit when a
+manager is supplied: it is in place before `SoDB::init()` attempts any
+OpenGL-related setup.  Applications that do not use global OpenGL/offscreen
+services may initialize with `nullptr` and install a manager later if needed.
 
 ### User implications
 
-Every application that calls `SoDB::init()` must now supply a `ContextManager`.
-For headless or testing scenarios the `NullContextManager` (no-op) shipped with
-the test suite is sufficient.  For real rendering provide an implementation
-backed by your context API of choice:
+Applications that use global OpenGL or offscreen rendering must supply a
+`ContextManager`.  Non-rendering and custom-backend applications may pass
+`nullptr`; the `NullContextManager` (no-op) shipped with the test suite is also
+useful when code needs an explicit manager object.  For real rendering provide
+an implementation backed by your context API of choice:
 
 ```cpp
 // Minimal NullContextManager (no offscreen rendering)
@@ -156,13 +163,19 @@ complete worked examples.
 
 ### What changed
 
-The entire VRML and VRML97 subsystem has been removed:
+The public VRML/VRML97 node and action subsystem has been removed:
 
 * **70 headers** under `include/Inventor/VRMLnodes/` are gone.
 * `SoDB::readAllVRML()` has been removed.
 * Actions `SoToVRMLAction` and `SoToVRML2Action` have been removed.
 * `SoVRMLGroup` and all other `SoVRML*` node classes are gone.
 * VRML-specific elements and fields are removed.
+
+The legacy `SoProto` / `SoProtoInstance` implementation is intentionally
+retained because Obol's Inventor reader still uses it for PROTO definitions,
+instances, IS references, and routes. It is functional compatibility code,
+not a complete VRML97 runtime; in particular, the removed `SoVRML*` classes
+and network-backed EXTERNPROTO behavior are not restored by it.
 
 ### Why
 
@@ -413,39 +426,36 @@ option is needed and no source changes are required relative to upstream Coin.
 
 ---
 
-## 11. Profiling Subsystem Off by Default
+## 11. Profiling Compiled In, Runtime Off by Default
 
 ### What changed
 
-In upstream Coin the profiling subsystem is always compiled in and activated by
-setting the `COIN_PROFILER` environment variable at runtime.
-
-In Obol, the profiling code is compiled in but **`SoProfiler::isEnabled()`
-always returns `FALSE` unless the build is configured with
-`-DOBOL_PROFILING=ON`**.  With that option off (the default) the entire
-profiling code path is unreachable at runtime regardless of the `COIN_PROFILER`
-environment variable.
+Obol compiles the profiling subsystem by default (`OBOL_PROFILING=ON`), but
+initialization alone does not start data collection.  Profiling remains off
+until the application calls `SoProfiler::enable(TRUE)` or sets the
+`OBOL_PROFILER` environment variable.  A size- or latency-sensitive build can
+still configure `-DOBOL_PROFILING=OFF`; in that configuration
+`SoProfiler::isEnabled()` always returns `FALSE`.
 
 ### Why
 
-Profiling instrumentation adds dead-code weight to every hot traversal path
-(`SoSeparator`, `SoGroup`, `SoMaterial`).  Until the overhead has been
-benchmarked against realistic scenes the subsystem is kept disabled by default
-so that performance regressions cannot be silently introduced.
+Keeping the implementation available makes performance diagnosis possible in
+normal builds without requiring a rebuild.  The runtime-off path performs only
+the inexpensive enable-state check; collection, timing, report generation, and
+overlay work do not run until profiling is explicitly enabled.
 
 ### User implications
 
 `SoProfilingReportGenerator`, `SbProfilingData`, and related classes are
-always compiled but are not reachable at runtime unless `-DOBOL_PROFILING=ON`
-is specified at CMake configure time:
+available in a default build.  Enable collection explicitly when it is needed:
 
 ```bash
-cmake -S . -B build_dir -DOBOL_PROFILING=ON
+OBOL_PROFILER=on your_application
 ```
 
-When enabled, profiling behaves identically to upstream Coin: set the
-`COIN_PROFILER` environment variable to activate it (see the upstream Coin
-documentation for the full syntax).
+Applications may instead call `SoProfiler::enable(TRUE)`.  Configure with
+`-DOBOL_PROFILING=OFF` only when excluding the instrumentation at compile time
+is an intentional requirement.
 
 ---
 
@@ -753,13 +763,14 @@ The combination of these two flags determines the build mode:
 | CMake option | Default | Description |
 |---|---|---|
 | `BUILD_SHARED_LIBS` | `ON` | Shared vs. static library |
-| `OBOL_BUILD_TESTS` | `ON` | Build the Catch2-based test suite |
+| `OBOL_BUILD_TESTS` | `OFF` | Build the GTest/CTest test suite |
+| `OBOL_BUILD_EXAMPLES` | `OFF` | Build examples and viewer applications |
 | `OBOL_BUILD_DOCS` | `OFF` | Build Doxygen API documentation (requires Doxygen) |
-| `OBOL_THREADSAFE` | `ON` | Thread-safe render traversals |
+| `OBOL_THREADSAFE` | `ON` | Deprecated compatibility option; thread safety is always enabled |
 | `HAVE_NODEKITS` | `ON` | NodeKit support |
 | `HAVE_DRAGGERS` | `ON` | Dragger support |
 | `HAVE_MANIPULATORS` | `ON` | Manipulator support |
-| `OBOL_PROFILING` | `OFF` | Enable profiling subsystem (`SoProfiler::isEnabled()` always `FALSE` when `OFF`) |
+| `OBOL_PROFILING` | `ON` | Compile the profiling subsystem; runtime collection remains opt-in |
 | `USE_EXCEPTIONS` | `ON` | Compile with C++ exceptions (GCC/Clang) |
 
 ### Build quality options
@@ -769,6 +780,8 @@ The combination of these two flags determines the build mode:
 | `OBOL_USE_UNITY_BUILD` | `ON` | Unity (jumbo) build for faster compilation (CMake ≥ 3.16) |
 | `OBOL_WARNINGS` | `ON` | Enable extra warning flags (`-Wall -Wextra -Wundef -Wshadow` etc.) on the Obol target |
 | `OBOL_COVERAGE` | `OFF` | Code-coverage instrumentation (GCC/Clang; adds `coverage` CTest target) |
+| `OBOL_ASAN_UBSAN` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer instrumentation |
+| `OBOL_FETCH_SUBMODULES` | `OFF` | Permit configure to initialize missing registered git submodules |
 
 ### Viewer options
 
@@ -803,9 +816,10 @@ system GL and OSMesa are compiled into the same shared library, selectable per
 **Software rasterizer submodule:** The `external/osmesa` submodule provides the
 name-mangled OSMesa build required for `OBOL_USE_SWRAST=ON`.
 
-**FLTK detection:** CMake first looks for a system FLTK installation
-(`libfltk1.3-dev`); if none is found it automatically initialises the
-`external/fltk` submodule and builds FLTK from source.
+**FLTK detection:** When examples are enabled, CMake first looks for a system
+FLTK installation (`libfltk1.3-dev`).  A populated `external/fltk` submodule is
+used as a fallback only when present; missing submodules are initialized only
+when `OBOL_FETCH_SUBMODULES=ON`.
 
 **Minimum compiler standard:** C++17.
 
@@ -824,7 +838,7 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 
 | Category | Change | Migration action |
 |----------|--------|-----------------|
-| **Initialization** | `SoDB::init(ContextManager*)` — argument required | Implement and pass a `ContextManager`; NullContextManager for non-rendering use |
+| **Initialization** | `SoDB::init(ContextManager*)` — pointer may be null for limited non-rendering use | Pass a real `ContextManager` for global GL/offscreen rendering; install one later if needed |
 | **VRML / VRML97** | All 70+ `SoVRML*` nodes and headers removed | Handle VRML externally; use `.iv` or in-memory scene construction |
 | **VRML actions** | `SoToVRMLAction`, `SoToVRML2Action` removed | No Obol replacement |
 | **ScXML / Navigation** | 42 ScXML + 11 navigation headers removed | Implement navigation directly using events and draggers |
@@ -835,7 +849,7 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 | **Platform GL context** | WGL/GLX/AGL/CGL/EGL code removed | Implement `SoDB::ContextManager` for each platform |
 | **Configurable DPI** | Offscreen renderer defaults to 72 DPI; adjustable at runtime | Call `SoOffscreenRenderer::setScreenPixelsPerInch(dpi)` to override |
 | **PostScript/hardcopy** | Always compiled; API always available | No action needed; `SoVectorizePSAction` usable in all builds |
-| **Profiling** | Always compiled; off by default (`-DOBOL_PROFILING=ON` to enable) | Add CMake option; `COIN_PROFILER` env var activates it when enabled |
+| **Profiling** | Compiled in by default; runtime collection is off by default | Set `OBOL_PROFILER=on` or call `SoProfiler::enable(TRUE)` when needed |
 | **Font: SoGlyph** | Removed (was deprecated in Coin) | Use `SbFont` / `SbGlyph2D` / `SbGlyph3D` |
 | **Font: Win32 GDI / libfreetype** | Both removed; embedded `struetype` rasterizer used | No external font library needed; supply `.ttf` files via `SbFont::loadFont()` |
 | **Threading C API** | `Inventor/C/threads/` headers not public | Use `Sb*` C++ threading classes |
@@ -951,13 +965,14 @@ bypasses the entire OpenGL pipeline.  `pixels` is a pre-allocated buffer of
 `SoOffscreenRenderer::getBuffer()`.
 
 Implement this to provide a CPU raytracing backend (NanoRT, Embree, OptiX) or a
-Vulkan rasterization backend.  Obol ships three reference implementations:
+Vulkan rasterization backend.  Obol ships NanoRT as a supported library
+backend and keeps Embree and Vulkan examples with the rendering tests:
 
 | Class | Backend | Header |
 |-------|---------|--------|
-| `SoNanoRTContextManager` | NanoRT CPU raytracing (bundled) | `tests/utils/nanort_context_manager.h` |
-| `SoEmbreeContextManager` | Intel Embree 4 (system library) | `tests/utils/embree_context_manager.h` |
-| `SoVulkanContextManager` | Vulkan rasterization | `tests/utils/vulkan_context_manager.h` |
+| `SoNanoRTContextManager` | NanoRT CPU raytracing (bundled) | `include/Obol/render/SoNanoRTContextManager.h` |
+| `SoEmbreeContextManager` | Intel Embree 4 (system library) | `examples/demo_support/embree_context_manager.h` |
+| `SoVulkanContextManager` | Vulkan rasterization | `examples/demo_support/vulkan_context_manager.h` |
 
 All three delegate scene collection to `SoSceneCollector`; see
 `docs/CONTEXT_MANAGEMENT_API.md` for the full integration guide.

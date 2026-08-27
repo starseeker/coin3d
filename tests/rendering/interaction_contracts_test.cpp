@@ -52,7 +52,7 @@ void sendMotion(SoNode * root, const SbViewportRegion & viewport,
     action.apply(root);
 }
 
-TEST(OSMesaInteractionContracts, MouseDragMovesTranslateDraggerAndAttachedTransform)
+TEST(RenderInteractionContracts, MouseDragMovesTranslateDraggerAndAttachedTransform)
 {
     constexpr int width = 256;
     constexpr int height = 256;

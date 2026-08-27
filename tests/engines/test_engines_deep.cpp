@@ -63,252 +63,239 @@
 #include <Inventor/SoType.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+TEST(EnginesDeep, SoDecomposeMatrixIdentityTranslationIsZero)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    SoDecomposeMatrix * eng = new SoDecomposeMatrix;
+    eng->ref();
+    eng->matrix.setValue(SbMatrix::identity());
+    eng->center.setValue(SbVec3f(0.0f, 0.0f, 0.0f));
 
-    // -----------------------------------------------------------------------
-    // SoDecomposeMatrix: identity matrix → translation ~(0,0,0)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDecomposeMatrix identity translation is zero");
-    {
-        SoDecomposeMatrix * eng = new SoDecomposeMatrix;
-        eng->ref();
-        eng->matrix.setValue(SbMatrix::identity());
-        eng->center.setValue(SbVec3f(0.0f, 0.0f, 0.0f));
+    SoMFVec3f result;
+    result.connectFrom(&eng->translation);
+    result.evaluate();
 
-        SoMFVec3f result;
-        result.connectFrom(&eng->translation);
-        result.evaluate();
-
-        bool pass = false;
-        if (result.getNum() > 0) {
-            const SbVec3f & t = result[0];
-            pass = (std::fabs(t[0]) < 1e-5f) &&
-                   (std::fabs(t[1]) < 1e-5f) &&
-                   (std::fabs(t[2]) < 1e-5f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDecomposeMatrix identity translation should be (0,0,0)");
+    bool pass = false;
+    if (result.getNum() > 0) {
+        const SbVec3f & t = result[0];
+        pass = (std::fabs(t[0]) < 1e-5f) &&
+               (std::fabs(t[1]) < 1e-5f) &&
+               (std::fabs(t[2]) < 1e-5f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeMatrix identity translation should be (0,0,0)";
+}
 
-    runner.startTest("SoDecomposeMatrix identity scaleFactor is one");
-    {
-        SoDecomposeMatrix * eng = new SoDecomposeMatrix;
-        eng->ref();
-        eng->matrix.setValue(SbMatrix::identity());
-        eng->center.setValue(SbVec3f(0.0f, 0.0f, 0.0f));
+TEST(EnginesDeep, SoDecomposeMatrixIdentityScaleFactorIsOne)
+{
+    SoDecomposeMatrix * eng = new SoDecomposeMatrix;
+    eng->ref();
+    eng->matrix.setValue(SbMatrix::identity());
+    eng->center.setValue(SbVec3f(0.0f, 0.0f, 0.0f));
 
-        SoMFVec3f result;
-        result.connectFrom(&eng->scaleFactor);
-        result.evaluate();
+    SoMFVec3f result;
+    result.connectFrom(&eng->scaleFactor);
+    result.evaluate();
 
-        bool pass = false;
-        if (result.getNum() > 0) {
-            const SbVec3f & s = result[0];
-            pass = (std::fabs(s[0] - 1.0f) < 1e-4f) &&
-                   (std::fabs(s[1] - 1.0f) < 1e-4f) &&
-                   (std::fabs(s[2] - 1.0f) < 1e-4f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDecomposeMatrix identity scaleFactor should be (1,1,1)");
+    bool pass = false;
+    if (result.getNum() > 0) {
+        const SbVec3f & s = result[0];
+        pass = (std::fabs(s[0] - 1.0f) < 1e-4f) &&
+               (std::fabs(s[1] - 1.0f) < 1e-4f) &&
+               (std::fabs(s[2] - 1.0f) < 1e-4f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeMatrix identity scaleFactor should be (1,1,1)";
+}
 
-    // -----------------------------------------------------------------------
-    // SoDecomposeRotation: identity quaternion → angle ~0
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDecomposeRotation identity rotation angle is zero");
-    {
-        SoDecomposeRotation * eng = new SoDecomposeRotation;
-        eng->ref();
-        eng->rotation.setValue(SbRotation::identity());
+// -----------------------------------------------------------------------
+// SoDecomposeRotation: identity quaternion → angle ~0
+// -----------------------------------------------------------------------
 
-        SoMFFloat result;
-        result.connectFrom(&eng->angle);
-        result.evaluate();
+TEST(EnginesDeep, SoDecomposeRotationIdentityRotationAngleIsZero)
+{
+    SoDecomposeRotation * eng = new SoDecomposeRotation;
+    eng->ref();
+    eng->rotation.setValue(SbRotation::identity());
 
-        bool pass = (result.getNum() > 0) &&
-                    (std::fabs(result[0]) < 1e-5f);
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDecomposeRotation identity angle should be ~0");
+    SoMFFloat result;
+    result.connectFrom(&eng->angle);
+    result.evaluate();
+
+    bool pass = (result.getNum() > 0) &&
+                (std::fabs(result[0]) < 1e-5f);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoDecomposeRotation identity angle should be ~0";
+}
+
+// -----------------------------------------------------------------------
+// SoComposeRotationFromTo: from=(1,0,0), to=(0,1,0) → non-identity output
+// -----------------------------------------------------------------------
+
+TEST(EnginesDeep, SoComposeRotationFromToProducesNonIdentityRotation)
+{
+    SoComposeRotationFromTo * eng = new SoComposeRotationFromTo;
+    eng->ref();
+    eng->from.setValue(SbVec3f(1.0f, 0.0f, 0.0f));
+    eng->to  .setValue(SbVec3f(0.0f, 1.0f, 0.0f));
+
+    SoMFRotation result;
+    result.connectFrom(&eng->rotation);
+    result.evaluate();
+
+    bool pass = false;
+    if (result.getNum() > 0) {
+        SbVec3f axis; float angle;
+        result[0].getValue(axis, angle);
+        pass = (std::fabs(angle) > 1e-3f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoComposeRotationFromTo should produce non-identity rotation";
+}
 
-    // -----------------------------------------------------------------------
-    // SoComposeRotationFromTo: from=(1,0,0), to=(0,1,0) → non-identity output
-    // -----------------------------------------------------------------------
-    runner.startTest("SoComposeRotationFromTo produces non-identity rotation");
-    {
-        SoComposeRotationFromTo * eng = new SoComposeRotationFromTo;
-        eng->ref();
-        eng->from.setValue(SbVec3f(1.0f, 0.0f, 0.0f));
-        eng->to  .setValue(SbVec3f(0.0f, 1.0f, 0.0f));
+// -----------------------------------------------------------------------
+// SoTransformVec3f: (1,0,0) × identity → point ~(1,0,0)
+// -----------------------------------------------------------------------
 
-        SoMFRotation result;
-        result.connectFrom(&eng->rotation);
-        result.evaluate();
+TEST(EnginesDeep, SoTransformVec3fIdentityTransformPreservesVector)
+{
+    SoTransformVec3f * eng = new SoTransformVec3f;
+    eng->ref();
+    eng->vector.setValue(SbVec3f(1.0f, 0.0f, 0.0f));
+    eng->matrix.setValue(SbMatrix::identity());
 
-        bool pass = false;
-        if (result.getNum() > 0) {
-            SbVec3f axis; float angle;
-            result[0].getValue(axis, angle);
-            pass = (std::fabs(angle) > 1e-3f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoComposeRotationFromTo should produce non-identity rotation");
+    SoMFVec3f result;
+    result.connectFrom(&eng->point);
+    result.evaluate();
+
+    bool pass = false;
+    if (result.getNum() > 0) {
+        const SbVec3f & p = result[0];
+        pass = (std::fabs(p[0] - 1.0f) < 1e-5f) &&
+               (std::fabs(p[1])         < 1e-5f) &&
+               (std::fabs(p[2])         < 1e-5f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoTransformVec3f identity should return ~(1,0,0)";
+}
 
-    // -----------------------------------------------------------------------
-    // SoTransformVec3f: (1,0,0) × identity → point ~(1,0,0)
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransformVec3f identity transform preserves vector");
-    {
-        SoTransformVec3f * eng = new SoTransformVec3f;
-        eng->ref();
-        eng->vector.setValue(SbVec3f(1.0f, 0.0f, 0.0f));
-        eng->matrix.setValue(SbMatrix::identity());
+// -----------------------------------------------------------------------
+// SoInterpolateRotation: alpha=0 gives first input, alpha=1 gives second
+// -----------------------------------------------------------------------
 
-        SoMFVec3f result;
-        result.connectFrom(&eng->point);
-        result.evaluate();
+TEST(EnginesDeep, SoInterpolateRotationAlpha0ReturnsFirstInput)
+{
+    SoInterpolateRotation * eng = new SoInterpolateRotation;
+    eng->ref();
+    eng->input0.setValue(SbRotation::identity());
+    eng->input1.setValue(SbRotation(SbVec3f(0, 0, 1),
+                                    static_cast<float>(M_PI / 2.0)));
+    eng->alpha.setValue(0.0f);
 
-        bool pass = false;
-        if (result.getNum() > 0) {
-            const SbVec3f & p = result[0];
-            pass = (std::fabs(p[0] - 1.0f) < 1e-5f) &&
-                   (std::fabs(p[1])         < 1e-5f) &&
-                   (std::fabs(p[2])         < 1e-5f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoTransformVec3f identity should return ~(1,0,0)");
+    SoMFRotation result;
+    result.connectFrom(&eng->output);
+    result.evaluate();
+
+    bool pass = false;
+    if (result.getNum() > 0) {
+        SbVec3f axis; float angle;
+        result[0].getValue(axis, angle);
+        pass = (std::fabs(angle) < 1e-3f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoInterpolateRotation alpha=0 should return identity rotation";
+}
 
-    // -----------------------------------------------------------------------
-    // SoInterpolateRotation: alpha=0 gives first input, alpha=1 gives second
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInterpolateRotation alpha=0 returns first input");
-    {
-        SoInterpolateRotation * eng = new SoInterpolateRotation;
-        eng->ref();
-        eng->input0.setValue(SbRotation::identity());
-        eng->input1.setValue(SbRotation(SbVec3f(0, 0, 1),
-                                        static_cast<float>(M_PI / 2.0)));
-        eng->alpha.setValue(0.0f);
+TEST(EnginesDeep, SoInterpolateRotationAlpha1ReturnsSecondInput)
+{
+    SoInterpolateRotation * eng = new SoInterpolateRotation;
+    eng->ref();
+    eng->input0.setValue(SbRotation::identity());
+    float target = static_cast<float>(M_PI / 2.0);
+    eng->input1.setValue(SbRotation(SbVec3f(0.0f, 0.0f, 1.0f), target));
+    eng->alpha.setValue(1.0f);
 
-        SoMFRotation result;
-        result.connectFrom(&eng->output);
-        result.evaluate();
+    SoMFRotation result;
+    result.connectFrom(&eng->output);
+    result.evaluate();
 
-        bool pass = false;
-        if (result.getNum() > 0) {
-            SbVec3f axis; float angle;
-            result[0].getValue(axis, angle);
-            pass = (std::fabs(angle) < 1e-3f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoInterpolateRotation alpha=0 should return identity rotation");
+    bool pass = false;
+    if (result.getNum() > 0) {
+        SbVec3f axis; float angle;
+        result[0].getValue(axis, angle);
+        pass = (std::fabs(std::fabs(angle) - target) < 0.01f);
     }
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoInterpolateRotation alpha=1 should return ~90-degree rotation";
+}
 
-    runner.startTest("SoInterpolateRotation alpha=1 returns second input");
-    {
-        SoInterpolateRotation * eng = new SoInterpolateRotation;
-        eng->ref();
-        eng->input0.setValue(SbRotation::identity());
-        float target = static_cast<float>(M_PI / 2.0);
-        eng->input1.setValue(SbRotation(SbVec3f(0.0f, 0.0f, 1.0f), target));
-        eng->alpha.setValue(1.0f);
+// -----------------------------------------------------------------------
+// SoOnOff: on/off/toggle triggers
+// -----------------------------------------------------------------------
 
-        SoMFRotation result;
-        result.connectFrom(&eng->output);
-        result.evaluate();
+TEST(EnginesDeep, SoOnOffTriggerOnSetsIsOnToTRUE)
+{
+    SoOnOff * eng = new SoOnOff;
+    eng->ref();
+    eng->on.touch();
 
-        bool pass = false;
-        if (result.getNum() > 0) {
-            SbVec3f axis; float angle;
-            result[0].getValue(axis, angle);
-            pass = (std::fabs(std::fabs(angle) - target) < 0.01f);
-        }
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoInterpolateRotation alpha=1 should return ~90-degree rotation");
-    }
+    SoSFBool result;
+    result.connectFrom(&eng->isOn);
+    result.evaluate();
 
-    // -----------------------------------------------------------------------
-    // SoOnOff: on/off/toggle triggers
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOnOff: trigger 'on' sets isOn to TRUE");
-    {
-        SoOnOff * eng = new SoOnOff;
-        eng->ref();
-        eng->on.touch();
+    bool pass = (result.getValue() == TRUE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoOnOff: isOn should be TRUE after on trigger";
+}
 
-        SoSFBool result;
-        result.connectFrom(&eng->isOn);
-        result.evaluate();
+TEST(EnginesDeep, SoOnOffTriggerOffSetsIsOnToFALSE)
+{
+    SoOnOff * eng = new SoOnOff;
+    eng->ref();
+    eng->on.touch();   // turn on first
+    eng->off.touch();  // then turn off
 
-        bool pass = (result.getValue() == TRUE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoOnOff: isOn should be TRUE after on trigger");
-    }
+    SoSFBool result;
+    result.connectFrom(&eng->isOn);
+    result.evaluate();
 
-    runner.startTest("SoOnOff: trigger 'off' sets isOn to FALSE");
-    {
-        SoOnOff * eng = new SoOnOff;
-        eng->ref();
-        eng->on.touch();   // turn on first
-        eng->off.touch();  // then turn off
+    bool pass = (result.getValue() == FALSE);
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoOnOff: isOn should be FALSE after off trigger";
+}
 
-        SoSFBool result;
-        result.connectFrom(&eng->isOn);
-        result.evaluate();
+TEST(EnginesDeep, SoOnOffToggleFlipsState)
+{
+    SoOnOff * eng = new SoOnOff;
+    eng->ref();
 
-        bool pass = (result.getValue() == FALSE);
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoOnOff: isOn should be FALSE after off trigger");
-    }
+    SoSFBool result;
+    result.connectFrom(&eng->isOn);
 
-    runner.startTest("SoOnOff: toggle flips state");
-    {
-        SoOnOff * eng = new SoOnOff;
-        eng->ref();
+    // Initial state: off
+    result.evaluate();
+    bool initial = (result.getValue() == FALSE);
 
-        SoSFBool result;
-        result.connectFrom(&eng->isOn);
+    // Toggle once
+    eng->toggle.touch();
+    result.evaluate();
+    bool afterToggle = (result.getValue() == TRUE);
 
-        // Initial state: off
-        result.evaluate();
-        bool initial = (result.getValue() == FALSE);
+    bool pass = initial && afterToggle;
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoOnOff: toggle should flip state from FALSE to TRUE";
+}
 
-        // Toggle once
-        eng->toggle.touch();
-        result.evaluate();
-        bool afterToggle = (result.getValue() == TRUE);
+// -----------------------------------------------------------------------
+// SoTriggerAny: class type check
+// -----------------------------------------------------------------------
 
-        bool pass = initial && afterToggle;
-        eng->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoOnOff: toggle should flip state from FALSE to TRUE");
-    }
-
-    // -----------------------------------------------------------------------
-    // SoTriggerAny: class type check
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTriggerAny class initialized");
-    {
-        SoTriggerAny * eng = new SoTriggerAny;
-        eng->ref();
-        bool pass = (eng->getTypeId() != SoType::badType());
-        eng->unref();
-        runner.endTest(pass, pass ? "" : "SoTriggerAny has bad type");
-    }
-
-    return runner.getSummary();
+TEST(EnginesDeep, SoTriggerAnyClassInitialized)
+{
+    SoTriggerAny * eng = new SoTriggerAny;
+    eng->ref();
+    bool pass = (eng->getTypeId() != SoType::badType());
+    eng->unref();
+    EXPECT_TRUE(pass) << "SoTriggerAny has bad type";
 }

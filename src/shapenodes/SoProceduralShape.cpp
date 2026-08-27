@@ -1477,7 +1477,7 @@ SoProceduralShape::emitWireframeCylinders(SoAction*                    action,
   // Tessellate each wireframe segment as a 6-sided prism (cylinder) so that
   // ray-tracing backends (e.g. nanort via SoCallbackAction) can pick up the
   // geometry via their triangle callbacks.  This mirrors the cylinder-proxy
-  // mechanism used for SoLineSet / SoIndexedLineSet in nanort_context_manager.h.
+  // mechanism used by SoLineSet / SoIndexedLineSet for raytracing backends.
   if (wire.vertices.empty() || wire.segments.empty()) return;
 
   const int    nv     = static_cast<int>(wire.vertices.size());

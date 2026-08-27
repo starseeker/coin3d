@@ -27,7 +27,7 @@
  * Button coordinates (lower-left corner in viewport pixels):
  *   x=10, width=100, height=28 → click centre at (60, y+14)
  *
- * The test writes the post-interaction frame to argv[1]+".rgb" so the
+ * The test writes the post-interaction frame to outputStem+".rgb" so the
  * image comparison infrastructure can optionally compare it.
  *
  * Exit code: 0 on pass, 1 on fail.
@@ -157,14 +157,14 @@ static int dominantChannel(const unsigned char *buf, int cx, int cy, int radius)
     return 2;
 }
 
-int main(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
-        const char *primaryBase = (argc > 1) ? argv[1] : "render_hud_interaction";
+        const char *primaryBase = (outputStem != nullptr) ? outputStem : "render_hud_interaction";
         SoSeparator *fRoot = ObolTest::Scenes::createHUDInteraction(256, 256);
         SbViewportRegion fVp(256, 256);
         SoOffscreenRenderer fRen(fVp);
@@ -414,8 +414,8 @@ int main(int argc, char **argv)
 
     // ---- Write final output ----
     char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+    if (outputStem != nullptr)
+        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
     else
         snprintf(outpath, sizeof(outpath), "render_hud_interaction.rgb");
 
@@ -430,4 +430,11 @@ int main(int argc, char **argv)
 
     root->unref();
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_hud_interaction) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_hud_interaction");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

@@ -1,76 +1,41 @@
-/*
- * render_point_set.cpp - Integration test: SoPointSet rendering
- *
- * Renders a 4-point scene using SoPointSet + SoPackedColor + SoCoordinate3.
- * The scene is built by the shared testlib factory (createPointSet).
- *
- * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
- */
-
-#include "headless_utils.h"
+#include "framework/scene_test_utils.h"
 #include "testlib/test_scenes.h"
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoOrthographicCamera.h>
-#include <Inventor/nodes/SoPackedColor.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoPointSet.h>
-#include <Inventor/nodes/SoDrawStyle.h>
-#include <Inventor/SbViewportRegion.h>
-#include <cstdio>
-#include <cmath>
+#include <gtest/gtest.h>
 
 static const int W = 256;
 static const int H = 256;
 
-static bool validatePointSet(const unsigned char *buf)
-{
-    int red = 0, green = 0, blue = 0, bright = 0;
-    for (int i = 0; i < W * H; ++i) {
-        const unsigned char *p = buf + i * 3;
-        if (p[0] > 150 && p[1] < 80 && p[2] < 80) ++red;
-        if (p[1] > 150 && p[0] < 80 && p[2] < 80) ++green;
-        if (p[2] > 150 && p[0] < 80 && p[1] < 80) ++blue;
-        if (p[0] > 200 && p[1] > 200 && p[2] > 200) ++bright;
-    }
-    printf("render_point_set: red=%d green=%d blue=%d bright=%d\n",
-           red, green, blue, bright);
+struct PointSetMetrics {
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+    int bright = 0;
+};
 
-    int families = (red > 0) + (green > 0) + (blue > 0) + (bright > 0);
-    if (families < 3) {
-        fprintf(stderr, "render_point_set: FAIL – expected at least 3 colour families\n");
-        return false;
+static PointSetMetrics measurePointSet(const ObolTestSupport::RenderFixture & fixture)
+{
+    PointSetMetrics metrics;
+    const auto & pixels = fixture.pixels();
+    for (int i = 0; i < W * H; ++i) {
+        const unsigned char *p = pixels.data() + i * 3;
+        if (p[0] > 150 && p[1] < 80 && p[2] < 80) ++metrics.red;
+        if (p[1] > 150 && p[0] < 80 && p[2] < 80) ++metrics.green;
+        if (p[2] > 150 && p[0] < 80 && p[1] < 80) ++metrics.blue;
+        if (p[0] > 200 && p[1] > 200 && p[2] > 200) ++metrics.bright;
     }
-    printf("render_point_set: PASS\n");
-    return true;
+    return metrics;
 }
 
-int main(int argc, char **argv)
+TEST(RenderSceneFactories, PointSetPreservesColourFamilies)
 {
-    initCoinHeadless();
+    ObolTestSupport::RenderFixture fixture(W, H);
+    ASSERT_TRUE(fixture.available());
+    auto scene = ObolTestSupport::makeScene(ObolTest::Scenes::createPointSet,
+                                            fixture);
+    ASSERT_TRUE(fixture.render(scene.root()));
 
-    SoSeparator *root = ObolTest::Scenes::createPointSet(W, H);
-
-    SbViewportRegion vpr(W, H);
-    SoOffscreenRenderer renderer(vpr);
-    renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
-    char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
-    else
-        snprintf(outpath, sizeof(outpath), "render_point_set.rgb");
-
-    bool ok = false;
-    if (renderer.render(root)) {
-        const unsigned char *buf = renderer.getBuffer();
-        bool pixOk = (buf != nullptr) && validatePointSet(buf);
-        ok = pixOk && renderer.writeToRGB(outpath);
-    } else {
-        fprintf(stderr, "render_point_set: render() failed\n");
-    }
-
-    root->unref();
-    return ok ? 0 : 1;
+    const PointSetMetrics metrics = measurePointSet(fixture);
+    const int families = (metrics.red > 0) + (metrics.green > 0) +
+                         (metrics.blue > 0) + (metrics.bright > 0);
+    EXPECT_GE(families, 3);
 }

@@ -60,7 +60,7 @@
 #include <Inventor/SoType.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool floatNear(float a, float b, float eps = 1e-4f)
 {
@@ -83,249 +83,242 @@ static SoSeparator * buildPickScene()
     return root;
 }
 
-int main()
+TEST(ActionsPick, SoRayPickActionClassTypeRegistered)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    bool pass = (SoRayPickAction::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoRayPickAction bad class type";
+}
 
-    // -----------------------------------------------------------------------
-    // SoRayPickAction class type
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction class type registered");
-    {
-        bool pass = (SoRayPickAction::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoRayPickAction bad class type");
+// -----------------------------------------------------------------------
+// setRadius / getRadius
+// -----------------------------------------------------------------------
+
+TEST(ActionsPick, SoRayPickActionSetRadiusGetRadiusRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRadius(5.0f);
+    bool pass = floatNear(ra.getRadius(), 5.0f);
+    EXPECT_TRUE(pass) << "setRadius/getRadius round-trip failed";
+}
+
+// -----------------------------------------------------------------------
+// setPickAll / isPickAll
+// -----------------------------------------------------------------------
+
+TEST(ActionsPick, SoRayPickActionSetPickAllTRUEIsPickAllRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setPickAll(TRUE);
+    bool pass = (ra.isPickAll() == TRUE);
+    EXPECT_TRUE(pass) << "setPickAll(TRUE)/isPickAll failed";
+}
+
+TEST(ActionsPick, SoRayPickActionSetPickAllFALSEIsPickAllRoundTrip)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setPickAll(FALSE);
+    bool pass = (ra.isPickAll() == FALSE);
+    EXPECT_TRUE(pass) << "setPickAll(FALSE)/isPickAll failed";
+}
+
+// -----------------------------------------------------------------------
+// setNormalizedPoint / setPoint
+// -----------------------------------------------------------------------
+
+TEST(ActionsPick, SoRayPickActionSetNormalizedPointDoesNotCrash)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setNormalizedPoint(SbVec2f(0.5f, 0.5f));
+    SUCCEED();
+}
+
+TEST(ActionsPick, SoRayPickActionSetPointDoesNotCrash)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setPoint(SbVec2s(256, 256));
+    SUCCEED();
+}
+
+// -----------------------------------------------------------------------
+// setRay + hasWorldSpaceRay + computeWorldSpaceRay
+// -----------------------------------------------------------------------
+
+TEST(ActionsPick, SoRayPickActionHasWorldSpaceRayIsFALSEBeforeSetting)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    bool pass = (ra.hasWorldSpaceRay() == FALSE);
+    EXPECT_TRUE(pass) << "hasWorldSpaceRay should be FALSE before setRay";
+}
+
+TEST(ActionsPick, SoRayPickActionSetRayThenHasWorldSpaceRayIsTRUE)
+{
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    bool pass = (ra.hasWorldSpaceRay() == TRUE);
+    EXPECT_TRUE(pass) << "hasWorldSpaceRay should be TRUE after setRay";
+}
+
+// -----------------------------------------------------------------------
+// Picking: ray through sphere at origin
+// -----------------------------------------------------------------------
+
+TEST(ActionsPick, SoRayPickActionCentreRayHitsSphereAtOrigin)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    // Ray from z=5 towards -z, should hit sphere at origin
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = (pp != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "Centre ray should hit sphere at origin";
+}
+
+TEST(ActionsPick, SoRayPickActionPickedPointIsOnGeometry)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = (pp != nullptr) && pp->isOnGeometry();
+    root->unref();
+    EXPECT_TRUE(pass) << "Picked point should be on geometry";
+}
+
+TEST(ActionsPick, SoRayPickActionPickedPointHasValidPosition)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = false;
+    if (pp) {
+        SbVec3f pt = pp->getPoint();
+        // Sphere has radius 1, centre at origin; hit should be at z≈+1
+        pass = floatNear(pt[2], 1.0f, 0.1f);
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "Picked point z-position should be near +1";
+}
 
-    // -----------------------------------------------------------------------
-    // setRadius / getRadius
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction setRadius / getRadius round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRadius(5.0f);
-        bool pass = floatNear(ra.getRadius(), 5.0f);
-        runner.endTest(pass, pass ? "" : "setRadius/getRadius round-trip failed");
+TEST(ActionsPick, SoRayPickActionMissReturnsNull)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    // Ray from far right, parallel to Z - should miss the sphere at origin
+    ra.setRay(SbVec3f(5, 5, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = (pp == nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "Off-centre ray should miss the sphere (should return null)";
+}
+
+TEST(ActionsPick, SoRayPickActionGetPickedPointListIsEmptyForMiss)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(10, 10, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    const SoPickedPointList & list = ra.getPickedPointList();
+    bool pass = (list.getLength() == 0);
+    root->unref();
+    EXPECT_TRUE(pass) << "Missed ray getPickedPointList should be empty";
+}
+
+TEST(ActionsPick, SoRayPickActionSetPickAllCollectsMultipleIntersections)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setPickAll(TRUE);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    // With pickAll=TRUE, should get both front and back surface intersections
+    const SoPickedPointList & list = ra.getPickedPointList();
+    bool pass = (list.getLength() >= 1);
+    root->unref();
+    EXPECT_TRUE(pass) << "setPickAll should collect at least 1 intersection";
+}
+
+TEST(ActionsPick, SoRayPickActionPickedPathContainsSphereNode)
+{
+    SoSeparator * root = buildPickScene();
+    root->ref();
+
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
+
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = false;
+    if (pp) {
+        SoPath * path = pp->getPath();
+        // Path should contain the sphere
+        pass = (path != nullptr) &&
+               path->containsNode(root->getChild(1)); // sphere is child 1
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "Picked path should contain the sphere node";
+}
 
-    // -----------------------------------------------------------------------
-    // setPickAll / isPickAll
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction setPickAll TRUE / isPickAll round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setPickAll(TRUE);
-        bool pass = (ra.isPickAll() == TRUE);
-        runner.endTest(pass, pass ? "" : "setPickAll(TRUE)/isPickAll failed");
-    }
+// -----------------------------------------------------------------------
+// Pick with SoCube
+// -----------------------------------------------------------------------
 
-    runner.startTest("SoRayPickAction setPickAll FALSE / isPickAll round-trip");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setPickAll(FALSE);
-        bool pass = (ra.isPickAll() == FALSE);
-        runner.endTest(pass, pass ? "" : "setPickAll(FALSE)/isPickAll failed");
-    }
+TEST(ActionsPick, SoRayPickActionRayHitsCubeAtOrigin)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera * cam = new SoOrthographicCamera;
+    cam->position.setValue(0, 0, 5);
+    cam->nearDistance = 0.5f;
+    cam->farDistance  = 20.0f;
+    cam->height       = 4.0f;
+    root->addChild(cam);
+    root->addChild(new SoCube); // default unit cube at origin
 
-    // -----------------------------------------------------------------------
-    // setNormalizedPoint / setPoint
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction setNormalizedPoint does not crash");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setNormalizedPoint(SbVec2f(0.5f, 0.5f));
-        bool pass = true; // just must not crash
-        runner.endTest(pass, pass ? "" : "setNormalizedPoint crashed");
-    }
+    SbViewportRegion vp(512, 512);
+    SoRayPickAction ra(vp);
+    ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
+    ra.apply(root);
 
-    runner.startTest("SoRayPickAction setPoint does not crash");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setPoint(SbVec2s(256, 256));
-        bool pass = true;
-        runner.endTest(pass, pass ? "" : "setPoint crashed");
-    }
-
-    // -----------------------------------------------------------------------
-    // setRay + hasWorldSpaceRay + computeWorldSpaceRay
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction hasWorldSpaceRay is FALSE before setting");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        bool pass = (ra.hasWorldSpaceRay() == FALSE);
-        runner.endTest(pass, pass ? "" : "hasWorldSpaceRay should be FALSE before setRay");
-    }
-
-    runner.startTest("SoRayPickAction setRay then hasWorldSpaceRay is TRUE");
-    {
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        bool pass = (ra.hasWorldSpaceRay() == TRUE);
-        runner.endTest(pass, pass ? "" : "hasWorldSpaceRay should be TRUE after setRay");
-    }
-
-    // -----------------------------------------------------------------------
-    // Picking: ray through sphere at origin
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction: centre ray hits sphere at origin");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        // Ray from z=5 towards -z, should hit sphere at origin
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = (pp != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Centre ray should hit sphere at origin");
-    }
-
-    runner.startTest("SoRayPickAction: picked point is on geometry");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = (pp != nullptr) && pp->isOnGeometry();
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Picked point should be on geometry");
-    }
-
-    runner.startTest("SoRayPickAction: picked point has valid position");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = false;
-        if (pp) {
-            SbVec3f pt = pp->getPoint();
-            // Sphere has radius 1, centre at origin; hit should be at z≈+1
-            pass = floatNear(pt[2], 1.0f, 0.1f);
-        }
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Picked point z-position should be near +1");
-    }
-
-    runner.startTest("SoRayPickAction: miss returns null");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        // Ray from far right, parallel to Z - should miss the sphere at origin
-        ra.setRay(SbVec3f(5, 5, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = (pp == nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Off-centre ray should miss the sphere (should return null)");
-    }
-
-    runner.startTest("SoRayPickAction: getPickedPointList is empty for miss");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(10, 10, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        const SoPickedPointList & list = ra.getPickedPointList();
-        bool pass = (list.getLength() == 0);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Missed ray getPickedPointList should be empty");
-    }
-
-    runner.startTest("SoRayPickAction: setPickAll collects multiple intersections");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setPickAll(TRUE);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        // With pickAll=TRUE, should get both front and back surface intersections
-        const SoPickedPointList & list = ra.getPickedPointList();
-        bool pass = (list.getLength() >= 1);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "setPickAll should collect at least 1 intersection");
-    }
-
-    runner.startTest("SoRayPickAction: picked path contains sphere node");
-    {
-        SoSeparator * root = buildPickScene();
-        root->ref();
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = false;
-        if (pp) {
-            SoPath * path = pp->getPath();
-            // Path should contain the sphere
-            pass = (path != nullptr) &&
-                   path->containsNode(root->getChild(1)); // sphere is child 1
-        }
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Picked path should contain the sphere node");
-    }
-
-    // -----------------------------------------------------------------------
-    // Pick with SoCube
-    // -----------------------------------------------------------------------
-    runner.startTest("SoRayPickAction: ray hits cube at origin");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        SoOrthographicCamera * cam = new SoOrthographicCamera;
-        cam->position.setValue(0, 0, 5);
-        cam->nearDistance = 0.5f;
-        cam->farDistance  = 20.0f;
-        cam->height       = 4.0f;
-        root->addChild(cam);
-        root->addChild(new SoCube); // default unit cube at origin
-
-        SbViewportRegion vp(512, 512);
-        SoRayPickAction ra(vp);
-        ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-        ra.apply(root);
-
-        SoPickedPoint * pp = ra.getPickedPoint(0);
-        bool pass = (pp != nullptr);
-        root->unref();
-        runner.endTest(pass, pass ? "" : "Ray through cube at origin should hit");
-    }
-
-    return runner.getSummary();
+    SoPickedPoint * pp = ra.getPickedPoint(0);
+    bool pass = (pp != nullptr);
+    root->unref();
+    EXPECT_TRUE(pass) << "Ray through cube at origin should hit";
 }

@@ -39,8 +39,14 @@
 
 #include "threads/threads.h"
 
-#include "base/dict.h"
 #include "config.h"
+
+#ifdef __cplusplus
+#include <unordered_map>
+typedef std::unordered_map<cc_thread_id_t, void *> cc_storage_map;
+#else
+typedef struct cc_storage_map cc_storage_map;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,11 +58,11 @@ extern "C" {
     unsigned int size;
     void (*constructor)(void *);
     void (*destructor)(void *);
-    cc_dict * dict;
+    cc_storage_map * dict;
     cc_mutex * mutex;
   };
   
-  void cc_storage_thread_cleanup(unsigned long threadid);
+  void cc_storage_thread_cleanup(cc_thread_id_t threadid);
 
 /* ********************************************************************** */
 

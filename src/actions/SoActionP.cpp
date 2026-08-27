@@ -35,6 +35,8 @@
 
 #include "actions/SoActionP.h"
 
+#include <mutex>
+
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #ifdef HAVE_NODEKITS
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
@@ -43,15 +45,44 @@
 
 // *************************************************************************
 
+namespace {
+
+struct ProfilerStatsState {
+  std::mutex mutex;
+  SoProfilerStats * node = NULL;
+};
+
+struct ProfilerOverlayState {
+  std::mutex mutex;
+  SoNode * nodekit = NULL;
+};
+
+ProfilerStatsState & profilerStatsState(void)
+{
+  static ProfilerStatsState state;
+  return state;
+}
+
+ProfilerOverlayState & profilerOverlayState(void)
+{
+  static ProfilerOverlayState state;
+  return state;
+}
+
+} // namespace
+
+// *************************************************************************
+
 SoProfilerStats *
 SoActionP::getProfilerStatsNode(void)
 {
-  static SoProfilerStats * pstats = NULL;
-  if (!pstats) {
-    pstats = new SoProfilerStats;
-    pstats->ref();
+  ProfilerStatsState & state = profilerStatsState();
+  std::lock_guard<std::mutex> lock(state.mutex);
+  if (!state.node) {
+    state.node = new SoProfilerStats;
+    state.node->ref();
   }
-  return pstats;
+  return state.node;
 }
 
 SoNode *
@@ -60,21 +91,42 @@ SoActionP::getProfilerOverlay(void)
   if (!SoProfiler::isEnabled() || !SoProfiler::isOverlayActive())
     return NULL;
 
-  static SoNode * nodekit = NULL;
+  ProfilerOverlayState & state = profilerOverlayState();
+  std::lock_guard<std::mutex> lock(state.mutex);
 #ifdef HAVE_NODEKITS
-  if (nodekit == NULL) {
+  if (!state.nodekit) {
     SoProfilerTopKit * kit = new SoProfilerTopKit;
     kit->ref();
-    kit->setPart("profilingStats",
-                 SoActionP::getProfilerStatsNode());
-    nodekit = kit;
+    kit->setPart("profilingStats", SoActionP::getProfilerStatsNode());
+    state.nodekit = kit;
 
     SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
     viskit->stats.setValue(SoActionP::getProfilerStatsNode());
     kit->addOverlayGeometry(viskit);
   }
 #endif // HAVE_NODEKITS
-  return nodekit;
+  return state.nodekit;
+}
+
+void
+SoActionP::cleanupProfilerResources(void)
+{
+  {
+    ProfilerOverlayState & state = profilerOverlayState();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    if (state.nodekit) {
+      state.nodekit->unref();
+      state.nodekit = NULL;
+    }
+  }
+  {
+    ProfilerStatsState & state = profilerStatsState();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    if (state.node) {
+      state.node->unref();
+      state.node = NULL;
+    }
+  }
 }
 
 // *************************************************************************

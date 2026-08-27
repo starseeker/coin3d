@@ -42,10 +42,8 @@ set(OBOL_SHADERS_INTERNAL_FILES
 	SoGLShaderProgramElement.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_SHADERS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} shaders/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(shaders ${OBOL_SHADERS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHADERS_FILES})

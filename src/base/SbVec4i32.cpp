@@ -32,7 +32,7 @@
 
 #include <Inventor/SbVec4i32.h>
 
-#include <limits>
+#include "SbVecI32Conversion.h"
 
 #include <Inventor/SbVec4ui32.h>
 #include <Inventor/SbVec4b.h>
@@ -83,16 +83,15 @@ SbVec4i32 &
 SbVec4i32::setValue(const SbVec4f & v)
 {
 #if OBOL_DEBUG
-  if (v[0] > std::numeric_limits<int32_t>::max() || v[0] < -std::numeric_limits<int32_t>::max() || 
-      v[1] > std::numeric_limits<int32_t>::max() || v[1] < -std::numeric_limits<int32_t>::max() || 
-      v[2] > std::numeric_limits<int32_t>::max() || v[2] < -std::numeric_limits<int32_t>::max()) {
+  if (CoinInternal::outsideInt32(v[0]) || CoinInternal::outsideInt32(v[1]) ||
+      CoinInternal::outsideInt32(v[2]) || CoinInternal::outsideInt32(v[3])) {
     SoDebugError::post("SbVec4i32::setValue", "SbVec4f argument out of range to store in an SbVec4i32");
   }
 #endif // OBOL_DEBUG
-  vec[0] = static_cast<int32_t>(v[0]);
-  vec[1] = static_cast<int32_t>(v[1]);
-  vec[2] = static_cast<int32_t>(v[2]);
-  vec[3] = static_cast<int32_t>(v[3]);
+  vec[0] = CoinInternal::clampToInt32(v[0]);
+  vec[1] = CoinInternal::clampToInt32(v[1]);
+  vec[2] = CoinInternal::clampToInt32(v[2]);
+  vec[3] = CoinInternal::clampToInt32(v[3]);
   return *this;
 }
 
@@ -100,25 +99,24 @@ SbVec4i32 &
 SbVec4i32::setValue(const SbVec4d & v)
 {
 #if OBOL_DEBUG
-  if (v[0] > std::numeric_limits<int32_t>::max() || v[0] < -std::numeric_limits<int32_t>::max() || 
-      v[1] > std::numeric_limits<int32_t>::max() || v[1] < -std::numeric_limits<int32_t>::max() || 
-      v[2] > std::numeric_limits<int32_t>::max() || v[2] < -std::numeric_limits<int32_t>::max()) {
+  if (CoinInternal::outsideInt32(v[0]) || CoinInternal::outsideInt32(v[1]) ||
+      CoinInternal::outsideInt32(v[2]) || CoinInternal::outsideInt32(v[3])) {
     SoDebugError::post("SbVec4i32::setValue", "SbVec4d argument out of range to store in an SbVec4i32");
   }
 #endif // OBOL_DEBUG
-  vec[0] = static_cast<int32_t>(v[0]);
-  vec[1] = static_cast<int32_t>(v[1]);
-  vec[2] = static_cast<int32_t>(v[2]);
-  vec[3] = static_cast<int32_t>(v[3]);
+  vec[0] = CoinInternal::clampToInt32(v[0]);
+  vec[1] = CoinInternal::clampToInt32(v[1]);
+  vec[2] = CoinInternal::clampToInt32(v[2]);
+  vec[3] = CoinInternal::clampToInt32(v[3]);
   return *this;
 }
 
 SbVec4i32 &
 SbVec4i32::operator *= (double d)
 {
-  vec[0] = static_cast<int32_t>(vec[0] * d);
-  vec[1] = static_cast<int32_t>(vec[1] * d);
-  vec[2] = static_cast<int32_t>(vec[2] * d);
-  vec[3] = static_cast<int32_t>(vec[3] * d);
+  vec[0] = CoinInternal::clampToInt32(vec[0] * d);
+  vec[1] = CoinInternal::clampToInt32(vec[1] * d);
+  vec[2] = CoinInternal::clampToInt32(vec[2] * d);
+  vec[3] = CoinInternal::clampToInt32(vec[3] * d);
   return *this;
 }

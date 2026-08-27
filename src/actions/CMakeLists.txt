@@ -26,10 +26,8 @@ set(OBOL_ACTIONS_INTERNAL_FILES
 	SoSubActionP.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_ACTIONS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} actions/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(actions ${OBOL_ACTIONS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_ACTIONS_FILES})

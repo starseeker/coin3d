@@ -1,74 +1,68 @@
-/*
- * render_switch_visibility.cpp - Integration test: SoSwitch visibility control
- *
- * Uses ObolTest::Scenes::createSwitchVisibility — the same factory used by
- * obol_viewer — so CLI and viewer render identical scenes.
- *
- * After creating the scene the test locates the two SoSwitch nodes via
- * SoSearchAction and validates all three switch states:
- *
- *   Frame 1: both switches ON  → both spheres visible (red left, blue right)
- *   Frame 2: red switch OFF    → only blue sphere visible (left side black)
- *   Frame 3: blue switch OFF   → only red sphere visible (right side black)
- *
- * Only frame 1 is written to disk; frames 2-3 are validated in-memory.
- *
- * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
- */
-
-#include "headless_utils.h"
+#include "framework/scene_test_utils.h"
 #include "testlib/test_scenes.h"
-#include <Inventor/nodes/SoSwitch.h>
+
+#include <gtest/gtest.h>
+
 #include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/SbViewportRegion.h>
-#include <cstdio>
+#include <Inventor/nodes/SoSwitch.h>
+
 #include <cmath>
 
-static const int W = 256;
-static const int H = 256;
+namespace {
 
-// Camera / geometry constants that match createSwitchVisibility
-static const float CAM_H  = 2.0f;
-static const float SPH_R  = 0.3f;
-static const float SPH_X  = 0.5f;
+constexpr int W = 256;
+constexpr int H = 256;
+constexpr float SPH_X = 0.5f;
+constexpr float SPH_R = 0.3f;
+constexpr float CAM_H = 2.0f;
+constexpr int LEFT_PX = static_cast<int>(W * (0.5f - SPH_X / CAM_H));
+constexpr int RIGHT_PX = static_cast<int>(W * (0.5f + SPH_X / CAM_H));
+constexpr int TOL = static_cast<int>(SPH_R / CAM_H * W) + 8;
 
-static const int LEFT_PX  = (int)(W * (0.5f - SPH_X / CAM_H));
-static const int RIGHT_PX = (int)(W * (0.5f + SPH_X / CAM_H));
-static const int TOL      = (int)(SPH_R / CAM_H * W) + 8;
-
-static bool isColour(const unsigned char *buf, int x, int y,
-                     unsigned char r, unsigned char g, unsigned char b, int t = 60)
+bool isColour(const ObolTestSupport::RenderFixture & fixture,
+              int x, int y,
+              unsigned char red,
+              unsigned char green,
+              unsigned char blue,
+              int tolerance = 60)
 {
     if (x < 0 || x >= W || y < 0 || y >= H) return false;
-    const unsigned char *p = buf + (y * W + x) * 3;
-    return (std::abs((int)p[0] - (int)r) <= t &&
-            std::abs((int)p[1] - (int)g) <= t &&
-            std::abs((int)p[2] - (int)b) <= t);
+    const auto & pixels = fixture.pixels();
+    const unsigned char * p = pixels.data() + (y * W + x) * 3;
+    return std::abs(static_cast<int>(p[0]) - red) <= tolerance &&
+           std::abs(static_cast<int>(p[1]) - green) <= tolerance &&
+           std::abs(static_cast<int>(p[2]) - blue) <= tolerance;
 }
 
-static bool hasSphereAt(const unsigned char *buf, int cx,
-                        unsigned char r, unsigned char g, unsigned char b)
+bool hasSphereAt(const ObolTestSupport::RenderFixture & fixture,
+                 int center_x,
+                 unsigned char red,
+                 unsigned char green,
+                 unsigned char blue)
 {
-    int cy = H / 2;
     int hits = 0;
     for (int dx = -TOL; dx <= TOL; dx += 4) {
         for (int dy = -TOL; dy <= TOL; dy += 4) {
-            if (isColour(buf, cx + dx, cy + dy, r, g, b)) ++hits;
+            if (isColour(fixture, center_x + dx, H / 2 + dy,
+                         red, green, blue)) {
+                ++hits;
+            }
         }
     }
     return hits >= 3;
 }
 
-static bool isBlankAt(const unsigned char *buf, int cx)
+bool isBlankAt(const ObolTestSupport::RenderFixture & fixture, int center_x)
 {
-    int cy = H / 2;
-    int blank = 0, total = 0;
+    int blank = 0;
+    int total = 0;
+    const auto & pixels = fixture.pixels();
     for (int dx = -TOL; dx <= TOL; dx += 4) {
-        int x = cx + dx;
+        const int x = center_x + dx;
         for (int dy = -TOL; dy <= TOL; dy += 4) {
-            int y = cy + dy;
+            const int y = H / 2 + dy;
             if (x < 0 || x >= W || y < 0 || y >= H) continue;
-            const unsigned char *p = buf + (y * W + x) * 3;
+            const unsigned char * p = pixels.data() + (y * W + x) * 3;
             if (p[0] < 30 && p[1] < 30 && p[2] < 30) ++blank;
             ++total;
         }
@@ -76,107 +70,44 @@ static bool isBlankAt(const unsigned char *buf, int cx)
     return total > 0 && blank > total * 3 / 4;
 }
 
-int main(int argc, char **argv)
+} // namespace
+
+TEST(RenderSceneFactories, SwitchVisibilityMutatesAcrossRepeatedRenders)
 {
-    initCoinHeadless();
+    ObolTestSupport::RenderFixture fixture(W, H);
+    ASSERT_TRUE(fixture.available());
+    auto scene = ObolTestSupport::makeScene(
+        ObolTest::Scenes::createSwitchVisibility, fixture);
 
-    char outpath[1024];
-    if (argc > 1)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
-    else
-        snprintf(outpath, sizeof(outpath), "render_switch_visibility.rgb");
+    SoSearchAction search;
+    search.setInterest(SoSearchAction::ALL);
+    search.setType(SoSwitch::getClassTypeId(), FALSE);
+    search.apply(scene.root());
+    SoPathList & paths = search.getPaths();
+    ASSERT_GE(paths.getLength(), 2);
 
-    /* Use the shared factory so viewer and CLI render the same scene. */
-    SoSeparator *root = ObolTest::Scenes::createSwitchVisibility(W, H);
+    auto * red_switch = dynamic_cast<SoSwitch *>(paths[0]->getTail());
+    auto * blue_switch = dynamic_cast<SoSwitch *>(paths[1]->getTail());
+    ASSERT_NE(red_switch, nullptr);
+    ASSERT_NE(blue_switch, nullptr);
 
-    /* Locate the two SoSwitch nodes within the factory-created scene. */
-    SoSearchAction sa;
-    sa.setInterest(SoSearchAction::ALL);
-    sa.setType(SoSwitch::getClassTypeId(), FALSE);
-    sa.apply(root);
-    SoPathList &paths = sa.getPaths();
+    // Frame 1: both switches on.
+    red_switch->whichChild.setValue(SO_SWITCH_ALL);
+    blue_switch->whichChild.setValue(SO_SWITCH_ALL);
+    ASSERT_TRUE(fixture.render(scene.root()));
+    EXPECT_TRUE(hasSphereAt(fixture, LEFT_PX, 255, 0, 0));
+    EXPECT_TRUE(hasSphereAt(fixture, RIGHT_PX, 0, 0, 255));
 
-    SoSwitch *redSwitch  = (paths.getLength() >= 1)
-                         ? dynamic_cast<SoSwitch *>(paths[0]->getTail())
-                         : nullptr;
-    SoSwitch *blueSwitch = (paths.getLength() >= 2)
-                         ? dynamic_cast<SoSwitch *>(paths[1]->getTail())
-                         : nullptr;
+    // Frame 2: hide only the red sphere.
+    red_switch->whichChild.setValue(SO_SWITCH_NONE);
+    ASSERT_TRUE(fixture.render(scene.root()));
+    EXPECT_TRUE(isBlankAt(fixture, LEFT_PX));
+    EXPECT_TRUE(hasSphereAt(fixture, RIGHT_PX, 0, 0, 255));
 
-    if (!redSwitch) {
-        fprintf(stderr, "render_switch_visibility: could not locate first SoSwitch node\n");
-        root->unref();
-        return 1;
-    }
-    if (!blueSwitch) {
-        fprintf(stderr, "render_switch_visibility: could not locate second SoSwitch node\n");
-        root->unref();
-        return 1;
-    }
-
-    SbViewportRegion vp(W, H);
-    SoOffscreenRenderer renderer(vp);
-    renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
-    bool allOk = true;
-
-    /* --- Frame 1: both switches ON --- */
-    redSwitch ->whichChild.setValue(SO_SWITCH_ALL);
-    blueSwitch->whichChild.setValue(SO_SWITCH_ALL);
-    if (!renderer.render(root)) {
-        fprintf(stderr, "render_switch_visibility: frame1 render() failed\n");
-        allOk = false;
-    } else {
-        const unsigned char *buf = renderer.getBuffer();
-        bool redOk  = buf && hasSphereAt(buf, LEFT_PX,  255, 0, 0);
-        bool blueOk = buf && hasSphereAt(buf, RIGHT_PX, 0, 0, 255);
-        printf("Frame1 (both ON): red=%s blue=%s\n",
-               redOk ? "FOUND" : "MISSING", blueOk ? "FOUND" : "MISSING");
-        if (!redOk || !blueOk) {
-            fprintf(stderr, "render_switch_visibility: FAIL frame1\n");
-            allOk = false;
-        }
-    }
-    renderer.writeToRGB(outpath);
-
-    /* --- Frame 2: red switch OFF --- */
-    redSwitch->whichChild.setValue(SO_SWITCH_NONE);
-    if (!renderer.render(root)) {
-        fprintf(stderr, "render_switch_visibility: frame2 render() failed\n");
-        allOk = false;
-    } else {
-        const unsigned char *buf = renderer.getBuffer();
-        bool redGone = buf && isBlankAt(buf, LEFT_PX);
-        bool blueOk  = buf && hasSphereAt(buf, RIGHT_PX, 0, 0, 255);
-        printf("Frame2 (red OFF): redGone=%s blue=%s\n",
-               redGone ? "YES" : "NO", blueOk ? "FOUND" : "MISSING");
-        if (!redGone || !blueOk) {
-            fprintf(stderr, "render_switch_visibility: FAIL frame2\n");
-            allOk = false;
-        }
-    }
-
-    /* --- Frame 3: blue switch OFF --- */
-    redSwitch ->whichChild.setValue(SO_SWITCH_ALL);
-    blueSwitch->whichChild.setValue(SO_SWITCH_NONE);
-    if (!renderer.render(root)) {
-        fprintf(stderr, "render_switch_visibility: frame3 render() failed\n");
-        allOk = false;
-    } else {
-        const unsigned char *buf = renderer.getBuffer();
-        bool redOk    = buf && hasSphereAt(buf, LEFT_PX,  255, 0, 0);
-        bool blueGone = buf && isBlankAt(buf, RIGHT_PX);
-        printf("Frame3 (blue OFF): red=%s blueGone=%s\n",
-               redOk ? "FOUND" : "MISSING", blueGone ? "YES" : "NO");
-        if (!redOk || !blueGone) {
-            fprintf(stderr, "render_switch_visibility: FAIL frame3\n");
-            allOk = false;
-        }
-    }
-
-    if (allOk) printf("render_switch_visibility: PASS\n");
-
-    root->unref();
-    return allOk ? 0 : 1;
+    // Frame 3: restore red and hide only the blue sphere.
+    red_switch->whichChild.setValue(SO_SWITCH_ALL);
+    blue_switch->whichChild.setValue(SO_SWITCH_NONE);
+    ASSERT_TRUE(fixture.render(scene.root()));
+    EXPECT_TRUE(hasSphereAt(fixture, LEFT_PX, 255, 0, 0));
+    EXPECT_TRUE(isBlankAt(fixture, RIGHT_PX));
 }

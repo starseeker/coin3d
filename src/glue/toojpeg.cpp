@@ -20,6 +20,7 @@ namespace // anonymous namespace to hide local functions / constants / etc.
 // data types
 using uint8_t  = unsigned char;
 using uint16_t = unsigned short;
+using uint32_t = unsigned int;
 using  int16_t =          short;
 using  int32_t =          int; // at least four bytes
 
@@ -115,7 +116,9 @@ struct BitWriter
   // store the most recently encoded bits that are not written yet
   struct BitBuffer
   {
-    int32_t data    = 0; // actually only at most 24 bits are used
+    // Bit accumulation is unsigned: Huffman payloads are bit patterns, and a
+    // signed left shift becomes undefined as soon as the high bit is set.
+    uint32_t data   = 0; // actually only at most 24 bits are used
     uint8_t numBits = 0; // number of valid bits (the right-most bits)
   } buffer;
 

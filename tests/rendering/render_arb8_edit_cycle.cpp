@@ -16,16 +16,16 @@
  *
  * One SGI RGB image is written per step:
  *
- *   argv[1]+".rgb"         — primary (combined three-panel view)
- *   argv[1]+"_step1.rgb"   — step 1: initial solid ARB8 (from JSON defaults)
- *   argv[1]+"_step2.rgb"   — step 2: solid + buildSelectionDisplay() overlay
- *   argv[1]+"_step3.rgb"   — step 3: edited solid (v0 moved; v0_h highlighted)
+ *   outputStem+".rgb"         — primary (combined three-panel view)
+ *   outputStem+"_step1.rgb"   — step 1: initial solid ARB8 (from JSON defaults)
+ *   outputStem+"_step2.rgb"   — step 2: solid + buildSelectionDisplay() overlay
+ *   outputStem+"_step3.rgb"   — step 3: edited solid (v0 moved; v0_h highlighted)
  *
- * The primary output for CTest is argv[1]+".rgb" (combined three-panel view).
- * All four images are generated so that generate_controls.sh can capture
+ * The primary output for CTest is outputStem+".rgb" (combined three-panel view).
+ * All four images are generated so that GTest diagnostics retain
  * them as individual control PNGs for visual inspection.
  *
- * Output: argv[1]+".rgb"  (and _step1/_step2/_step3)  — 800×600 SGI RGB
+ * Output: outputStem+".rgb"  (and _step1/_step2/_step3)  — 800×600 SGI RGB
  */
 
 #include "headless_utils.h"
@@ -225,10 +225,9 @@ static SoMaterial* editedMaterial()
 static const SbColor kBgColor(0.12f, 0.12f, 0.14f);
 
 // ============================================================================
-// main
-// ============================================================================
+// Scenario implementation// ============================================================================
 
-int main(int argc, char** argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
@@ -244,10 +243,10 @@ int main(int argc, char** argv)
         nullptr,
         static_cast<SoProceduralObjectValidateCB>(objCB));
 
-    const char* base = (argc > 1) ? argv[1] : "render_arb8_edit_cycle";
+    const char* base = (outputStem != nullptr) ? outputStem : "render_arb8_edit_cycle";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes.
+     * This keeps the GTest scenario and obol_viewer on identical scene construction.
      * Use the same dimensions and background as the step renders. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createArb8EditCycle(DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -516,4 +515,11 @@ int main(int argc, char** argv)
         root->unref();
         return ok ? 0 : 1;
     }
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_arb8_edit_cycle) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_arb8_edit_cycle");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

@@ -63,36 +63,55 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
 
   All methods are static.  SoDB::init() \b must be called before any
   other Obol API, and SoDB::finish() should be called on shutdown to
-  release resources cleanly.
+  release resources cleanly.  The context-manager argument may be NULL for
+  applications that do not use Obol's global OpenGL/offscreen services;
+  initialization then succeeds with limited functionality.  A manager may be
+  installed later with setContextManager(), or supplied per renderer.
 
   \section thread_safety Thread Safety
 
-  Obol is thread safe for the following usage scenarios:
+  Obol supports the following concurrent usage scenarios after one thread has
+  completed library initialization:
 
   - **Concurrent render** — Multiple threads, each owning an independent GL
-    context and traversing its own independent scene graph, may render
-    simultaneously without any application-level locking.  Each thread must
-    call SoDB::init() once before its first traversal; after that the global
-    infrastructure (name interning, type system, reference counts, auditor
-    lists) is safe for concurrent access.  GL contexts must \e not be shared
-    between threads without explicit platform re-binding (glXMakeCurrent etc.);
-    Obol will emit a SoDebugError warning if cross-thread GL context use is
-    detected.
+    context and action/state, may render independent scene graphs
+    simultaneously.  Call SoDB::init() once, from a quiescent startup thread,
+    before starting worker threads.  The shared registries used by this
+    supported traversal path are protected by internal synchronization.  This
+    does not make arbitrary application callbacks or mutable node instances
+    implicitly thread-safe.  GL contexts
+    must \e not be used by two threads at the same time; platform rebinding
+    (glXMakeCurrent, wglMakeCurrent, or the equivalent) remains the
+    application's responsibility.
 
-  - **Init-then-read** — SoDB::init() is called once on one thread; afterwards
-    multiple threads may read (traverse) the scene graph simultaneously without
-    any further locking.
+  - **Init-then-read** — After initialization, multiple threads may traverse
+    the same scene graph concurrently while no thread mutates it.  Each thread
+    must own its action and state objects.
 
   - **Mixed read/write** — When one or more threads mutate the scene graph
-    while others traverse it, the application must bracket mutations with
-    SoDB::writelock() / SoDB::writeunlock() and may bracket concurrent traversals
-    with SoDB::readlock() / SoDB::readunlock().  All SoAction::apply() calls
-    already acquire the global read lock internally.
+    while others traverse it, the application must bracket every mutation,
+    route change, or connection change with SoDB::writelock() /
+    SoDB::writeunlock().  SoAction::apply() acquires the global read lock
+    internally.  Explicit read locking is only needed for traversal-like code
+    that does not go through SoAction.
 
-  The following scenario is \b not supported without additional application-level
-  synchronisation:
+  The following operations are not concurrent operations and require a
+  quiescent application:
+
+  - SoDB::init(), SoDB::finish(), and SoDB::cleanup().  Do not initialize,
+    shut down, or reinitialize the database while worker threads use Obol.
+  - SoDB::setContextManager().  The pointer update is synchronized, but the
+    caller must keep the old manager alive and ensure that no render is using
+    it.  Prefer per-renderer context managers for independent workers.
+
+  The following scenario is not supported without additional application-level
+  synchronization:
+
   - Sharing a single \c SoAction or \c SoState between multiple threads.
     Each thread must create and own its own action objects.
+
+  Do not call SoAction::apply() while holding SoDB::writelock(); apply() takes
+  the read lock internally and the write lock is not reentrant.
 
   \sa SoDB::ContextManager, SoOffscreenRenderer, SoDB::readlock(), SoDB::writelock()
 */
@@ -101,6 +120,16 @@ public:
   // Forward declaration of ContextManager for init function
   class ContextManager;
 
+  /**
+   * Initialize the Obol database and class registry.
+   *
+   * Passing NULL on the first initialization is supported for non-rendering
+   * and custom-backend use.  In that mode initialization completes,
+   * getContextManager() returns NULL, and operations requiring the global GL
+   * context manager remain unavailable until a manager is installed.  As with
+   * every repeated init() call, passing NULL after initialization does not
+   * replace an already installed manager.
+   */
   static void init(ContextManager * context_manager);
   static void finish(void);
   static void cleanup(void);
@@ -177,7 +206,7 @@ public:
     renderScene() — fill a pre-allocated pixel buffer without using OpenGL.
     When this returns TRUE, SoOffscreenRenderer uses the resulting pixels
     directly and skips the entire GL pipeline.
-    SoNanoRTContextManager (tests/utils/nanort_context_manager.h) is a
+    SoNanoRTContextManager (<Obol/render/SoNanoRTContextManager.h>) is a
     reference implementation using NanoRT for ray-triangle intersection.
 
     The two paths are independent: a subclass may implement only the GL path
@@ -287,8 +316,11 @@ public:
     // --- Optional alternative rendering path -------------------------------
     // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
     // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of
-    // width*height*nrcomponents bytes (RGB or RGBA, values 0-255, top-to-bottom
-    // row order matching SoOffscreenRenderer::getBuffer()).
+    // width*height*nrcomponents bytes.  Components 1 through 4 represent
+    // luminance, luminance-alpha, RGB, and RGBA respectively.  Rows use the
+    // bottom-to-top SoOffscreenRenderer::getBuffer() convention.  The renderer
+    // initializes the buffer to its background (including any gradient) before
+    // this call, so an implementation may leave uncovered pixels unchanged.
     // 'background_rgb' is a 3-element float array [R,G,B] in [0,1].
     // Default implementation returns FALSE (GL path is used).
     virtual SbBool renderScene(SoNode * scene,

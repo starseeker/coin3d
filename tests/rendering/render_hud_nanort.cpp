@@ -13,7 +13,7 @@
  *     image (where the buttons are placed).
  *
  * Viewport : 800 × 600
- * Output   : argv[1]+".rgb" (SGI RGB, used by the image-comparison infra)
+ * Output   : outputStem+".rgb" (SGI RGB, used by the image-comparison infra)
  *
  * Building / linking: see CMakeLists.txt add_nanort_testlib_rendering_test()
  */
@@ -116,7 +116,7 @@ static bool validateHUDButtons(const unsigned char * buf, int w, int h)
 
 static const int MAX_PATH_LEN = 1024;
 
-int main(int argc, char ** argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
@@ -125,8 +125,8 @@ int main(int argc, char ** argv)
         SoSeparator * root = ObolTest::Scenes::createHUD(W, H);
 
         char outpath[MAX_PATH_LEN];
-        if (argc > 1)
-            snprintf(outpath, sizeof(outpath), "%s.rgb", argv[1]);
+        if (outputStem != nullptr)
+            snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
         else
             snprintf(outpath, sizeof(outpath), "render_hud_nanort.rgb");
 
@@ -154,8 +154,8 @@ int main(int argc, char ** argv)
         SoSeparator * root2 = ObolTest::Scenes::createHUDOverlay(W, H);
 
         char outpath2[MAX_PATH_LEN];
-        if (argc > 1)
-            snprintf(outpath2, sizeof(outpath2), "%s_overlay.rgb", argv[1]);
+        if (outputStem != nullptr)
+            snprintf(outpath2, sizeof(outpath2), "%s_overlay.rgb", outputStem);
         else
             snprintf(outpath2, sizeof(outpath2), "render_hud_nanort_overlay.rgb");
 
@@ -180,4 +180,11 @@ int main(int argc, char ** argv)
 
     printf("render_hud_nanort: PASS\n");
     return 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_hud_nanort) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_hud_nanort");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

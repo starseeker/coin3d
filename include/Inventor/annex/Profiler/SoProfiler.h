@@ -42,7 +42,9 @@
   \ingroup coin_annex
 
   SoProfiler enables or disables scene-graph traversal profiling
-  and provides access to the collected SbProfilingData.
+  and provides access to the collected SbProfilingData. Calling init()
+  registers the profiling subsystem but leaves runtime profiling disabled;
+  call enable(TRUE) to begin collecting data.
 
   \sa SbProfilingData, SoProfilerStats, SoProfilerElement
 */
@@ -55,6 +57,9 @@ public:
 
   static SbBool isOverlayActive(void);
   static SbBool isConsoleActive(void);
+
+private:
+  static void cleanup(void);
 
 }; // SoProfiler
 

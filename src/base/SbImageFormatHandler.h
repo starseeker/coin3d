@@ -36,6 +36,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 // Forward declarations
 class SbString;
@@ -78,7 +81,6 @@ public:
   virtual const char* getLastError() const;
 
 protected:
-  mutable std::string lastError;
   void setError(const std::string& error) const;
 };
 
@@ -123,15 +125,19 @@ public:
   const char* getLastError() const;
 
 private:
-  SbImageFormatRegistry() = default;
+  SbImageFormatRegistry();
   ~SbImageFormatRegistry() = default;
   SbImageFormatRegistry(const SbImageFormatRegistry&) = delete;
   SbImageFormatRegistry& operator=(const SbImageFormatRegistry&) = delete;
   
   std::vector<std::unique_ptr<SbImageFormatHandler>> handlers;
-  mutable std::string lastError;
+  mutable std::shared_mutex handlersMutex;
+  std::unordered_map<unsigned char *, SbImageFormatHandler *> allocations;
+  mutable std::mutex allocationsMutex;
   
   std::string getFileExtension(const char* filename) const;
+  std::vector<SbImageFormatHandler*> getHandlersSnapshot() const;
+  void rememberAllocation(unsigned char * data, SbImageFormatHandler * handler);
   void setError(const std::string& error) const;
 };
 

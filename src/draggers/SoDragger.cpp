@@ -610,7 +610,7 @@ SoDragger::getProjectorEpsilon(void) const
 void
 SoDragger::addStartCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->startCB.addCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->startCB.addCallback(func, data);
 }
 
 /*!
@@ -621,7 +621,7 @@ SoDragger::addStartCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::removeStartCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->startCB.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->startCB.removeCallback(func, data);
 }
 
 /*!
@@ -631,7 +631,7 @@ SoDragger::removeStartCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::addMotionCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->motionCB.addCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->motionCB.addCallback(func, data);
 }
 
 /*!
@@ -642,7 +642,7 @@ SoDragger::addMotionCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::removeMotionCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->motionCB.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->motionCB.removeCallback(func, data);
 }
 
 /*!
@@ -651,7 +651,7 @@ SoDragger::removeMotionCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::addFinishCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->finishCB.addCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->finishCB.addCallback(func, data);
 }
 
 /*!
@@ -662,7 +662,7 @@ SoDragger::addFinishCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::removeFinishCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->finishCB.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->finishCB.removeCallback(func, data);
 }
 
 /*!
@@ -674,7 +674,7 @@ SoDragger::removeFinishCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::addValueChangedCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->valueChangedCB.addCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->valueChangedCB.addCallback(func, data);
 }
 
 /*!
@@ -685,7 +685,7 @@ SoDragger::addValueChangedCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::removeValueChangedCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->valueChangedCB.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->valueChangedCB.removeCallback(func, data);
 }
 
 /*!
@@ -743,7 +743,7 @@ SoDragger::getMotionMatrix(void)
 void
 SoDragger::addOtherEventCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->otherEventCB.addCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->otherEventCB.addCallback(func, data);
 }
 
 /*!
@@ -754,7 +754,7 @@ SoDragger::addOtherEventCallback(SoDraggerCB * func, void * data)
 void
 SoDragger::removeOtherEventCallback(SoDraggerCB * func, void * data)
 {
-  PRIVATE(this)->otherEventCB.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), data);
+  PRIVATE(this)->otherEventCB.removeCallback(func, data);
 }
 
 /*!

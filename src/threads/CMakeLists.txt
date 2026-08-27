@@ -22,13 +22,10 @@ set(OBOL_THREADS_INTERNAL_FILES
 	recmutex_global_cxx17.h
 	mutexp.h
 	condvarp.h
-	threadp.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_THREADS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} threads/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(threads ${OBOL_THREADS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_THREADS_FILES})

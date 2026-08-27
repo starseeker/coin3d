@@ -491,8 +491,13 @@ TEST(Actions, CallbackTraversalPreservesShapeAndVertexBindingContracts)
     indexed_callback.apply(indexed_root);
     EXPECT_EQ(indexed_counts.triangles, 2);
     normal_binding->value.setValue(SoNormalBinding::PER_FACE_INDEXED);
-    const int32_t face_normal_indices[] = {0, -1, 1, -1};
-    indexed_faces->normalIndex.setValues(0, 4, face_normal_indices);
+    // PER_FACE_INDEXED uses one index per face; unlike
+    // PER_VERTEX_INDEXED, its index array has no end-of-face markers.
+    const int32_t face_normal_indices[] = {0, 1};
+    indexed_faces->normalIndex.setValues(0, 2, face_normal_indices);
+    // SoMField::setValues() grows fields but intentionally does not shrink
+    // them. Drop the values left by the preceding per-vertex check.
+    indexed_faces->normalIndex.setNum(2);
     indexed_callback.apply(indexed_root);
     EXPECT_EQ(indexed_counts.triangles, 4);
     indexed_root->unref();

@@ -18,7 +18,8 @@
  *   params[2]  height        float  default 2.0
  *   params[3]  sides         int    default 16
  *
- * Compile as part of the Obol test suite via tests/rendering/CMakeLists.txt.
+ * The corresponding rendering contract is compiled into the shared
+ * obol_render_tests GTest target.
  */
 
 #include "headless_utils.h"

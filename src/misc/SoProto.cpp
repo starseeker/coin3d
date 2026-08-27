@@ -34,12 +34,12 @@
   \class SoProto SoProto.h Inventor/misc/SoProto.h
   \brief The SoProto class handles PROTO definitions.
 
-  \note VRML support has been removed from Obol (the open-source fork of Coin3D).
-  The SoProto functionality is no longer available.
-
-  SoProto and SoProtoInstance were designed to read and handle VRML97 PROTOs.
-  This functionality has been removed to simplify the library and focus on
-  core scene graph management rather than file I/O support.
+  Obol retains the legacy PROTO definition, instantiation, IS-reference, and
+  ROUTE implementation used by Inventor input.  The broader VRML97 subsystem
+  (including SoVRML* nodes, VRML conversion actions, scripting, audio, and
+  network-backed EXTERNPROTO loading) is not part of Obol.  Applications
+  should therefore treat SoProto as a compatibility facility for supported
+  Inventor files, not as complete VRML97 support.
 
 */
 
@@ -423,7 +423,7 @@ SoProto::write(SoWriteAction * action)
     if (SoWriterefCounter::debugWriterefs()) {
       SoDebugError::postInfo("SoProto::write",
                              "%p/%s/'%s': %d -> %d",
-                             this,
+                             static_cast<void *>(this),
                              this->getTypeId().getName().getString(),
                              this->getName().getString(),
                              writerefcount, writerefcount - 1);

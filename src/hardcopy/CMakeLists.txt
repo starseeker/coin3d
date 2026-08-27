@@ -15,10 +15,8 @@ set(OBOL_HARDCOPY_INTERNAL_FILES
 	VectorizeItems.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_HARDCOPY_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} hardcopy/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(hardcopy ${OBOL_HARDCOPY_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_HARDCOPY_FILES})

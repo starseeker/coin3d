@@ -12,7 +12,7 @@
  *   6. SoGetPrimitiveCountAction on a quad mesh
  *   7. Wireframe draw style (SoDrawStyle LINES)
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -414,15 +414,15 @@ static bool test7_wireframe(const char *basepath)
 /* -------------------------------------------------------------------------
  * main
  * ----------------------------------------------------------------------- */
-int main(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     const char *basepath =
-        (argc > 1) ? argv[1] : "render_quad_mesh_deep";
+        (outputStem != nullptr) ? outputStem : "render_quad_mesh_deep";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *root = ObolTest::Scenes::createQuadMeshDeep(256, 256);
         SbViewportRegion vp(256, 256);
@@ -450,4 +450,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_quad_mesh_deep) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_quad_mesh_deep");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

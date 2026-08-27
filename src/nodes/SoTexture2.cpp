@@ -195,6 +195,7 @@
 #include <Inventor/nodes/SoTexture2.h>
 
 #include <cassert>
+#include <unordered_map>
 
 #include "config.h"
 
@@ -219,6 +220,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/lists/SbStringList.h>
+#include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/misc/SoGLBigImage.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/threads/SbMutex.h>
@@ -378,6 +380,15 @@ public:
   static SbMutex * mutex;
   int readstatus;
   SbBool glimagevalid;
+  std::unordered_map<uint32_t, uint64_t> appliedsubtextures;
+
+  static void contextCleanup(uint32_t contextid, void * closure) {
+    SoTexture2P * pimpl = static_cast<SoTexture2P *>(closure);
+    if (!SoTexture2P::mutex) return;
+    SoTexture2P::mutex->lock();
+    pimpl->appliedsubtextures.erase(contextid);
+    SoTexture2P::mutex->unlock();
+  }
 
   static void cleanup(void) {
     delete SoTexture2P::mutex;
@@ -437,6 +448,8 @@ SoTexture2::SoTexture2(void)
   PRIVATE(this)->filenamesensor = new SoFieldSensor(filenameSensorCB, this);
   PRIVATE(this)->filenamesensor->setPriority(0);
   PRIVATE(this)->filenamesensor->attach(&this->filename);
+  SoContextHandler::addContextDestructionCallback(
+    SoTexture2P::contextCleanup, PRIVATE(this));
 }
 
 /*!
@@ -445,6 +458,8 @@ SoTexture2::SoTexture2(void)
 */
 SoTexture2::~SoTexture2()
 {
+  SoContextHandler::removeContextDestructionCallback(
+    SoTexture2P::contextCleanup, PRIVATE(this));
   if (PRIVATE(this)->glimage) PRIVATE(this)->glimage->unref(NULL);
   delete PRIVATE(this)->filenamesensor;
   delete PRIVATE(this);
@@ -506,6 +521,8 @@ SoTexture2::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
   int unit = SoTextureUnitElement::get(state);
+  const uint32_t cachecontext = SoGLCacheContextElement::get(state);
+  const uint64_t updategeneration = this->image.getUpdateGeneration();
   
   if ((unit == 0) && SoTextureOverrideElement::getImageOverride(state))
     return;
@@ -516,9 +533,10 @@ SoTexture2::GLRender(SoGLRenderAction * action)
   SoTextureScalePolicyElement::Policy scalepolicy =
     SoTextureScalePolicyElement::get(state);
   SbBool needbig = (scalepolicy == SoTextureScalePolicyElement::FRACTURE);
-  SoType glimagetype = PRIVATE(this)->glimage ? PRIVATE(this)->glimage->getTypeId() : SoType::badType();
-    
+
   LOCK_GLIMAGE(this);
+  SoType glimagetype = PRIVATE(this)->glimage ?
+    PRIVATE(this)->glimage->getTypeId() : SoType::badType();
   
   if (!PRIVATE(this)->glimagevalid || 
       (needbig && glimagetype != SoGLBigImage::getClassTypeId()) ||
@@ -548,12 +566,17 @@ SoTexture2::GLRender(SoGLRenderAction * action)
       PRIVATE(this)->glimage->setFlags(PRIVATE(this)->glimage->getFlags()|SoGLImage::SCALE_DOWN);
     }
 
+    PRIVATE(this)->appliedsubtextures.clear();
     if (bytes && size != SbVec2s(0,0)) {
       PRIVATE(this)->glimage->setData(bytes, size, nc,
                              translateWrap((Wrap)this->wrapS.getValue()),
                              translateWrap((Wrap)this->wrapT.getValue()),
                              quality);
       PRIVATE(this)->glimagevalid = TRUE;
+      // Every context texture created from this point uses the already-updated
+      // system-memory image. The current context therefore starts at the
+      // current update generation even if its GL object is created lazily.
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
       // don't cache while creating a texture object
       SoCacheElement::setInvalid(TRUE);
       if (state->isCacheOpen()) {
@@ -561,13 +584,60 @@ SoTexture2::GLRender(SoGLRenderAction * action)
       }
     }
   }
+  else {
+    auto applied = PRIVATE(this)->appliedsubtextures.find(cachecontext);
+    if (applied == PRIVATE(this)->appliedsubtextures.end()) {
+      // This context has not had a texture object yet. Its lazy initial upload
+      // will use the current system-memory image, including every update.
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
+    }
+    else if (applied->second != updategeneration) {
+      SbBool updated = applied->second < updategeneration &&
+                       PRIVATE(this)->glimage->getTypeId() ==
+                         SoGLImage::getClassTypeId();
+      int nc = 0;
+      SbVec2s size;
+      const unsigned char * bytes = this->image.getValue(size, nc);
+
+      uint64_t generation = applied->second + 1;
+      while (updated) {
+        SbVec2s subsize;
+        SbVec2s offset;
+        const unsigned char * subpixels =
+          this->image.getSubTextureForGeneration(generation, subsize, offset);
+        updated = subpixels &&
+          PRIVATE(this)->glimage->setSubData(state, subpixels, size, nc,
+                                             subsize, offset);
+        if (!updated || generation == updategeneration) break;
+        ++generation;
+      }
+
+      if (!updated) {
+        // Resized, mipmapped, compressed/large-image, and newly-created
+        // context cases cannot always accept a direct subimage. Recreate from
+        // the cumulatively updated system-memory image as a safe fallback.
+        if (bytes && size != SbVec2s(0, 0)) {
+          PRIVATE(this)->glimage->setData(bytes, size, nc,
+                               translateWrap((Wrap)this->wrapS.getValue()),
+                               translateWrap((Wrap)this->wrapT.getValue()),
+                               quality);
+          PRIVATE(this)->glimagevalid = TRUE;
+          SoCacheElement::setInvalid(TRUE);
+          if (state->isCacheOpen()) SoCacheElement::invalidate(state);
+        }
+        else {
+          PRIVATE(this)->glimagevalid = FALSE;
+        }
+        PRIVATE(this)->appliedsubtextures.clear();
+      }
+      PRIVATE(this)->appliedsubtextures[cachecontext] = updategeneration;
+    }
+  }
 
   if (PRIVATE(this)->glimage && PRIVATE(this)->glimage->getTypeId() == SoGLBigImage::getClassTypeId()) {
     SoCacheElement::invalidate(state);
   }
 
-  UNLOCK_GLIMAGE(this);
-  
   SoMultiTextureImageElement::Model glmodel = (SoMultiTextureImageElement::Model) 
     this->model.getValue();
   
@@ -603,6 +673,11 @@ SoTexture2::GLRender(SoGLRenderAction * action)
     // ignore the texture here so that all texture for non-supported
     // units will be ignored. pederb, 2003-11-04
   }
+
+  // Keep the image pointer and validity flag stable until the action state
+  // has consumed them. Parallel render traversals can otherwise replace the
+  // shared SoGLImage between the update above and the element assignment.
+  UNLOCK_GLIMAGE(this);
 }
 
 // Documented in superclass.
@@ -768,14 +843,24 @@ SoTexture2::notify(SoNotList * l)
 {
   SoField * f = l->getLastField();
   if (f == &this->image) {
-    PRIVATE(this)->glimagevalid = FALSE;
+    int subtexturecount = 0;
+    (void)this->image.hasSubTextures(subtexturecount);
+    LOCK_GLIMAGE(this);
+    if (!PRIVATE(this)->glimagevalid || subtexturecount == 0) {
+      PRIVATE(this)->glimagevalid = FALSE;
+      PRIVATE(this)->appliedsubtextures.clear();
+    }
+    UNLOCK_GLIMAGE(this);
 
     // write image, not filename
     this->filename.setDefault(TRUE);
     this->image.setDefault(FALSE);
   }
   else if (f == &this->wrapS || f == &this->wrapT) {
+    LOCK_GLIMAGE(this);
     PRIVATE(this)->glimagevalid = FALSE;
+    PRIVATE(this)->appliedsubtextures.clear();
+    UNLOCK_GLIMAGE(this);
   }
   inherited::notify(l);
 }
@@ -801,7 +886,10 @@ SoTexture2::loadFilename(void)
       SbBool oldnotify = this->image.enableNotify(FALSE);
       this->image.setValue(size, nc, bytes);
       this->image.enableNotify(oldnotify);
+      LOCK_GLIMAGE(this);
       PRIVATE(this)->glimagevalid = FALSE; // recreate GL image in next GLRender()
+      PRIVATE(this)->appliedsubtextures.clear();
+      UNLOCK_GLIMAGE(this);
       retval = TRUE;
     }
   }

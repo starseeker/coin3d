@@ -49,8 +49,9 @@ sudo apt-get install -y libfltk1.3-dev
 sudo dnf install -y fltk-devel
 ```
 
-If no system FLTK is found, CMake automatically initialises the `external/fltk`
-git submodule at configure time and builds FLTK from source (see Submodules).
+If no system FLTK is found, a populated `external/fltk` checkout is used as a
+fallback.  Missing submodules are initialized only when
+`-DOBOL_FETCH_SUBMODULES=ON` is explicitly supplied.
 
 ### Package Groups
 
@@ -72,8 +73,7 @@ Two external libraries are managed as git submodules in `external/`:
 | `external/fltk` | https://github.com/fltk/fltk (branch-1.3) | FLTK GUI toolkit (fallback when system FLTK absent) |
 | `external/osmesa` | https://github.com/starseeker/osmesa | Name-mangled OSMesa for dual-GL / headless builds |
 
-CMake initialises each submodule automatically at configure time when it is
-needed and the directory is empty.  To initialise them manually:
+CMake does not initialize submodules by default.  To initialize them manually:
 
 ```bash
 # Initialise all submodules at once
@@ -96,7 +96,9 @@ cmake --build build -- -j$(nproc)
 For headless/CI testing with OSMesa:
 
 ```bash
-cmake -S . -B build -DOBOL_USE_OSMESA=ON -DOBOL_BUILD_TESTS=ON
+cmake -S . -B build \
+    -DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=ON \
+    -DOBOL_BUILD_TESTS=ON
 ```
 
 ### Running Tests
@@ -115,8 +117,9 @@ xvfb-run -a ctest --output-on-failure
 obol/
 ├── src/          Core Obol library (Open Inventor subset)
 ├── include/      Public headers
-├── tests/        Test runners and visual regression tests
-│   ├── testlib/  libObolEx: shared scene catalog + test registry
+├── tests/        GTest/CTest tests and visual regression sources
+│   ├── framework/ GTest support, fixtures, and target registration
+│   ├── testlib/  Shared scene catalogue retained during rendering migration
 │   ├── utils/    Context managers and test utilities
 │   ├── rendering/ Visual regression tests
 │   └── tools/    Unit tests for utility subsystems
@@ -125,7 +128,7 @@ obol/
 │   ├── qt/       Qt6-based viewer + widget example
 │   └── Mentor/   Open Inventor Mentor book examples
 └── external/     Third-party dependencies
-    ├── fltk/     FLTK submodule (populated on demand when system FLTK absent)
+    ├── fltk/     FLTK submodule (optional fallback when system FLTK is absent)
     ├── osmesa/   OSMesa submodule (name-mangled; for dual-GL/headless)
     ├── nanort/   NanoRT header-only raytracer (optional panel in obol_viewer)
     └── lodepng.{cpp,h}  Bundled PNG codec (used by test image comparison)
@@ -135,7 +138,7 @@ obol/
 
 - C++17 required; use standard library features (e.g. `std::optional`, `std::string_view`)
 - CMake 3.16+ with modern target-based builds (`target_link_libraries`, `target_include_directories`)
-- All shared scene/test utilities go in `libObolEx` (`tests/testlib/`) so both tests and examples can link against them
+- Shared test lifecycle/image helpers go in `tests/framework/`; reusable scene factories retained during the rendering migration live in `tests/testlib/`
 - GUI viewers belong in `examples/` (not `tests/`)
 - Headless/CLI test runners belong in `tests/`
 - utf8 support lives in `src/base/utf8/` (implementation) — do not use `external/utf8` (removed)

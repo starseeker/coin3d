@@ -20,10 +20,8 @@ set(OBOL_NODEKITS_INTERNAL_FILES
 	SoSubKitP.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_NODEKITS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} nodekits/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(nodekits ${OBOL_NODEKITS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_NODEKITS_FILES})

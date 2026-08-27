@@ -73,7 +73,7 @@
 #include <cstring>
 #include <cstdlib>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static void silentErrCb(const SoError *, void *) {}
 
@@ -118,368 +118,359 @@ static SoSeparator * readFromBuffer(void * buf, size_t bufLen)
     return root;
 }
 
-int main()
+TEST(IoWriteAction, ASCIIRoundTripSoGroupWithSoSphereSoCube)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    SoGroup * grp = new SoGroup;
+    grp->ref();
+    grp->addChild(new SoSphere);
+    grp->addChild(new SoCube);
 
-    // -----------------------------------------------------------------------
-    // 1. ASCII round-trip: SoGroup { SoSphere SoCube } — type and child count
-    // -----------------------------------------------------------------------
-    runner.startTest("ASCII round-trip: SoGroup with SoSphere+SoCube");
-    {
-        SoGroup * grp = new SoGroup;
-        grp->ref();
-        grp->addChild(new SoSphere);
-        grp->addChild(new SoCube);
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(grp, buf, bufLen);
+    grp->unref();
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(grp, buf, bufLen);
-        grp->unref();
-
-        bool pass = false;
-        if (wrote) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                // readAll wraps in a separator; its first child should be the group
-                pass = (root->getNumChildren() >= 1);
-                root->unref();
-            }
+    bool pass = false;
+    if (wrote) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            // readAll wraps in a separator; its first child should be the group
+            pass = (root->getNumChildren() >= 1);
+            root->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "ASCII round-trip for SoGroup failed");
     }
+    EXPECT_TRUE(pass) << "ASCII round-trip for SoGroup failed";
+}
 
-    // -----------------------------------------------------------------------
-    // 2. Binary round-trip: same scene, setBinary(TRUE)
-    // -----------------------------------------------------------------------
-    runner.startTest("Binary round-trip: SoGroup with SoSphere+SoCube");
-    {
-        SoGroup * grp = new SoGroup;
-        grp->ref();
-        grp->addChild(new SoSphere);
-        grp->addChild(new SoCube);
+// -----------------------------------------------------------------------
+// 2. Binary round-trip: same scene, setBinary(TRUE)
+// -----------------------------------------------------------------------
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(grp, buf, bufLen, /*binary=*/true);
-        grp->unref();
+TEST(IoWriteAction, BinaryRoundTripSoGroupWithSoSphereSoCube)
+{
+    SoGroup * grp = new SoGroup;
+    grp->ref();
+    grp->addChild(new SoSphere);
+    grp->addChild(new SoCube);
 
-        bool pass = false;
-        if (wrote && buf != nullptr) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                pass = (root->getNumChildren() >= 1);
-                root->unref();
-            }
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(grp, buf, bufLen, /*binary=*/true);
+    grp->unref();
+
+    bool pass = false;
+    if (wrote && buf != nullptr) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            pass = (root->getNumChildren() >= 1);
+            root->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "Binary round-trip for SoGroup failed");
     }
+    EXPECT_TRUE(pass) << "Binary round-trip for SoGroup failed";
+}
 
-    // -----------------------------------------------------------------------
-    // 3. Multi-ref: shared SoCube added twice — write+read without crash
-    // -----------------------------------------------------------------------
-    runner.startTest("Multi-ref: shared SoCube referenced twice survives round-trip");
-    {
-        SoCube * sharedCube = new SoCube;
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        sep->addChild(sharedCube);
-        sep->addChild(sharedCube);   // second reference
+// -----------------------------------------------------------------------
+// 3. Multi-ref: shared SoCube added twice — write+read without crash
+// -----------------------------------------------------------------------
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(sep, buf, bufLen);
-        sep->unref();
+TEST(IoWriteAction, MultiRefSharedSoCubeReferencedTwiceSurvivesRoundTrip)
+{
+    SoCube * sharedCube = new SoCube;
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    sep->addChild(sharedCube);
+    sep->addChild(sharedCube);   // second reference
 
-        bool pass = false;
-        if (wrote) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                pass = true;   // no crash = success
-                root->unref();
-            }
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(sep, buf, bufLen);
+    sep->unref();
+
+    bool pass = false;
+    if (wrote) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            pass = true;   // no crash = success
+            root->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "Multi-ref round-trip crashed or failed to read back");
     }
+    EXPECT_TRUE(pass) << "Multi-ref round-trip crashed or failed to read back";
+}
 
-    // -----------------------------------------------------------------------
-    // 4. SoTransform translation field round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoTransform translation (1,2,3) survives round-trip");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        SoTransform * xf = new SoTransform;
-        xf->translation.setValue(1.0f, 2.0f, 3.0f);
-        sep->addChild(xf);
-        sep->addChild(new SoCube);
+// -----------------------------------------------------------------------
+// 4. SoTransform translation field round-trip
+// -----------------------------------------------------------------------
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(sep, buf, bufLen);
-        sep->unref();
+TEST(IoWriteAction, SoTransformTranslation123SurvivesRoundTrip)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    SoTransform * xf = new SoTransform;
+    xf->translation.setValue(1.0f, 2.0f, 3.0f);
+    sep->addChild(xf);
+    sep->addChild(new SoCube);
 
-        bool pass = false;
-        if (wrote) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                {
-                    SoSearchAction sa;
-                    sa.setType(SoTransform::getClassTypeId());
-                    sa.setInterest(SoSearchAction::FIRST);
-                    sa.apply(root);
-                    if (sa.getPath()) {
-                        SoTransform * found = static_cast<SoTransform *>(
-                            sa.getPath()->getTail());
-                        SbVec3f t = found->translation.getValue();
-                        pass = (t == SbVec3f(1.0f, 2.0f, 3.0f));
-                    }
-                } // sa destroyed here, releasing path refs before unref
-                root->unref();
-            }
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(sep, buf, bufLen);
+    sep->unref();
+
+    bool pass = false;
+    if (wrote) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            {
+                SoSearchAction sa;
+                sa.setType(SoTransform::getClassTypeId());
+                sa.setInterest(SoSearchAction::FIRST);
+                sa.apply(root);
+                if (sa.getPath()) {
+                    SoTransform * found = static_cast<SoTransform *>(
+                        sa.getPath()->getTail());
+                    SbVec3f t = found->translation.getValue();
+                    pass = (t == SbVec3f(1.0f, 2.0f, 3.0f));
+                }
+            } // sa destroyed here, releasing path refs before unref
+            root->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "SoTransform translation did not round-trip correctly");
     }
+    EXPECT_TRUE(pass) << "SoTransform translation did not round-trip correctly";
+}
 
-    // -----------------------------------------------------------------------
-    // 5. SoMaterial diffuseColor field round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("SoMaterial diffuseColor (0.2,0.4,0.6) survives round-trip");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        SoMaterial * mat = new SoMaterial;
-        mat->diffuseColor.setValue(0.2f, 0.4f, 0.6f);
-        sep->addChild(mat);
-        sep->addChild(new SoCube);
+// -----------------------------------------------------------------------
+// 5. SoMaterial diffuseColor field round-trip
+// -----------------------------------------------------------------------
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(sep, buf, bufLen);
-        sep->unref();
+TEST(IoWriteAction, SoMaterialDiffuseColor020406SurvivesRoundTrip)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    SoMaterial * mat = new SoMaterial;
+    mat->diffuseColor.setValue(0.2f, 0.4f, 0.6f);
+    sep->addChild(mat);
+    sep->addChild(new SoCube);
 
-        bool pass = false;
-        if (wrote) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                {
-                    SoSearchAction sa;
-                    sa.setType(SoMaterial::getClassTypeId());
-                    sa.setInterest(SoSearchAction::FIRST);
-                    sa.apply(root);
-                    if (sa.getPath()) {
-                        SoMaterial * found = static_cast<SoMaterial *>(
-                            sa.getPath()->getTail());
-                        SbColor c = found->diffuseColor[0];
-                        float r, g, b;
-                        c.getValue(r, g, b);
-                        pass = (fabsf(r - 0.2f) < 1e-4f &&
-                                fabsf(g - 0.4f) < 1e-4f &&
-                                fabsf(b - 0.6f) < 1e-4f);
-                    }
-                } // sa destroyed here
-                root->unref();
-            }
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(sep, buf, bufLen);
+    sep->unref();
+
+    bool pass = false;
+    if (wrote) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            {
+                SoSearchAction sa;
+                sa.setType(SoMaterial::getClassTypeId());
+                sa.setInterest(SoSearchAction::FIRST);
+                sa.apply(root);
+                if (sa.getPath()) {
+                    SoMaterial * found = static_cast<SoMaterial *>(
+                        sa.getPath()->getTail());
+                    SbColor c = found->diffuseColor[0];
+                    float r, g, b;
+                    c.getValue(r, g, b);
+                    pass = (fabsf(r - 0.2f) < 1e-4f &&
+                            fabsf(g - 0.4f) < 1e-4f &&
+                            fabsf(b - 0.6f) < 1e-4f);
+                }
+            } // sa destroyed here
+            root->unref();
         }
-        runner.endTest(pass, pass ? "" :
-            "SoMaterial diffuseColor did not round-trip correctly");
     }
+    EXPECT_TRUE(pass) << "SoMaterial diffuseColor did not round-trip correctly";
+}
 
-    // -----------------------------------------------------------------------
-    // 6. SoOutput::getBuffer nBytes > 0 after write
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOutput::getBuffer nBytes > 0 after write");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        sep->addChild(new SoCube);
+// -----------------------------------------------------------------------
+// 6. SoOutput::getBuffer nBytes > 0 after write
+// -----------------------------------------------------------------------
 
-        g_buf = nullptr; g_buf_size = 0;
-        SoOutput out;
-        out.setBuffer(nullptr, 1, bufGrow);
-        SoWriteAction wa(&out);
-        wa.apply(sep);
-        sep->unref();
+TEST(IoWriteAction, SoOutputGetBufferNBytes0AfterWrite)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    sep->addChild(new SoCube);
 
-        void * buf = nullptr; size_t bufLen = 0;
-        out.getBuffer(buf, bufLen);
-        bool pass = (bufLen > 0);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput::getBuffer reported 0 bytes after write");
-    }
+    g_buf = nullptr; g_buf_size = 0;
+    SoOutput out;
+    out.setBuffer(nullptr, 1, bufGrow);
+    SoWriteAction wa(&out);
+    wa.apply(sep);
+    sep->unref();
 
-    // -----------------------------------------------------------------------
-    // 7. SoInput::eof() is TRUE after SoDB::readAll consumes the buffer
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInput::eof() TRUE after SoDB::readAll");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        sep->addChild(new SoCube);
+    void * buf = nullptr; size_t bufLen = 0;
+    out.getBuffer(buf, bufLen);
+    bool pass = (bufLen > 0);
+    EXPECT_TRUE(pass) << "SoOutput::getBuffer reported 0 bytes after write";
+}
 
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(sep, buf, bufLen);
-        sep->unref();
+// -----------------------------------------------------------------------
+// 7. SoInput::eof() is TRUE after SoDB::readAll consumes the buffer
+// -----------------------------------------------------------------------
 
-        bool pass = false;
-        if (wrote) {
-            SoInput in;
-            in.setBuffer(buf, bufLen);
-            SoSeparator * root = SoDB::readAll(&in);
-            if (root) {
-                root->ref();
-                root->unref();
-                pass = (in.eof() == TRUE);
-            }
-        }
-        runner.endTest(pass, pass ? "" :
-            "SoInput::eof() not TRUE after consuming buffer");
-    }
+TEST(IoWriteAction, SoInputEofTRUEAfterSoDBReadAll)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    sep->addChild(new SoCube);
 
-    // -----------------------------------------------------------------------
-    // 8. SoOutput::reset() clears buffer — second write also produces data
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOutput::reset() allows fresh write with non-empty result");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        sep->addChild(new SoCube);
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(sep, buf, bufLen);
+    sep->unref();
 
-        g_buf = nullptr; g_buf_size = 0;
-        SoOutput out;
-        out.setBuffer(nullptr, 1, bufGrow);
-        SoWriteAction wa(&out);
-        wa.apply(sep);
-
-        out.reset();
-
-        SoWriteAction wa2(&out);
-        wa2.apply(sep);
-        sep->unref();
-
-        void * buf = nullptr; size_t bufLen = 0;
-        out.getBuffer(buf, bufLen);
-        bool pass = (bufLen > 0);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput::reset() did not allow a fresh non-empty write");
-    }
-
-    // -----------------------------------------------------------------------
-    // 9. Deep hierarchy: Sep > Sep > Sep > Cube — round-trip
-    // -----------------------------------------------------------------------
-    runner.startTest("Deep hierarchy (3 levels) round-trip");
-    {
-        SoSeparator * outer = new SoSeparator;
-        outer->ref();
-        SoSeparator * mid = new SoSeparator;
-        SoSeparator * inner = new SoSeparator;
-        inner->addChild(new SoCube);
-        mid->addChild(inner);
-        outer->addChild(mid);
-
-        void * buf = nullptr; size_t bufLen = 0;
-        bool wrote = writeToBuffer(outer, buf, bufLen);
-        outer->unref();
-
-        bool pass = false;
-        if (wrote) {
-            SoSeparator * root = readFromBuffer(buf, bufLen);
-            if (root) {
-                {
-                    // Search for the deepest SoCube
-                    SoSearchAction sa;
-                    sa.setType(SoCube::getClassTypeId());
-                    sa.setInterest(SoSearchAction::FIRST);
-                    sa.apply(root);
-                    pass = (sa.getPath() != nullptr);
-                } // sa destroyed here
-                root->unref();
-            }
-        }
-        runner.endTest(pass, pass ? "" :
-            "Deep hierarchy round-trip did not find SoCube at deepest level");
-    }
-
-    // -----------------------------------------------------------------------
-    // 10. SoOutput::getBufferSize() > 0 after a write
-    // -----------------------------------------------------------------------
-    runner.startTest("SoOutput::getBufferSize() > 0 after write");
-    {
-        SoSeparator * sep = new SoSeparator;
-        sep->ref();
-        sep->addChild(new SoCube);
-
-        g_buf = nullptr; g_buf_size = 0;
-        SoOutput out;
-        out.setBuffer(nullptr, 1, bufGrow);
-        SoWriteAction wa(&out);
-        wa.apply(sep);
-        sep->unref();
-
-        bool pass = (out.getBufferSize() > 0);
-        runner.endTest(pass, pass ? "" :
-            "SoOutput::getBufferSize() should be > 0 after write");
-    }
-
-    // -----------------------------------------------------------------------
-    // 11. Two consecutive SoInput::setBuffer calls — reads from second buffer
-    // -----------------------------------------------------------------------
-    runner.startTest("SoInput: second setBuffer overrides first");
-    {
-        // Build two different scenes
-        SoSeparator * sep1 = new SoSeparator;
-        sep1->ref();
-        sep1->addChild(new SoSphere);
-
-        SoSeparator * sep2 = new SoSeparator;
-        sep2->ref();
-        sep2->addChild(new SoCube);
-        sep2->addChild(new SoCylinder);
-
-        void * buf1 = nullptr; size_t len1 = 0;
-        void * buf2 = nullptr; size_t len2 = 0;
-        bool w1 = writeToBuffer(sep1, buf1, len1);
-        bool w2 = writeToBuffer(sep2, buf2, len2);
-        sep1->unref();
-        sep2->unref();
-
-        bool pass = false;
-        if (w1 && w2) {
-            SoInput in;
-            in.setBuffer(buf1, len1);  // first call
-            in.setBuffer(buf2, len2);  // second call — should override
-            SoSeparator * root = SoDB::readAll(&in);
-            if (root) {
-                root->ref();
-                // The second scene has 2 children; check we got something
-                pass = (root->getNumChildren() >= 1);
-                root->unref();
-            }
-        }
-        runner.endTest(pass, pass ? "" :
-            "Second SoInput::setBuffer did not work correctly");
-    }
-
-    // -----------------------------------------------------------------------
-    // 12. Graceful handling of completely empty buffer
-    // -----------------------------------------------------------------------
-    runner.startTest("SoDB::readAll on empty buffer returns nullptr gracefully");
-    {
-        SoErrorCB * old = SoError::getHandlerCallback();
-        SoError::setHandlerCallback(silentErrCb, nullptr);
-
-        const char emptyBuf[] = "";
+    bool pass = false;
+    if (wrote) {
         SoInput in;
-        in.setBuffer(emptyBuf, 0);
+        in.setBuffer(buf, bufLen);
         SoSeparator * root = SoDB::readAll(&in);
-
-        SoError::setHandlerCallback(old, nullptr);
-
-        bool pass = (root == nullptr);
-        if (root) root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoDB::readAll on empty buffer should return nullptr");
+        if (root) {
+            root->ref();
+            root->unref();
+            pass = (in.eof() == TRUE);
+        }
     }
+    EXPECT_TRUE(pass) << "SoInput::eof() not TRUE after consuming buffer";
+}
 
-    return runner.getSummary() != 0 ? 1 : 0;
+// -----------------------------------------------------------------------
+// 8. SoOutput::reset() clears buffer — second write also produces data
+// -----------------------------------------------------------------------
+
+TEST(IoWriteAction, SoOutputResetAllowsFreshWriteWithNonEmptyResult)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    sep->addChild(new SoCube);
+
+    g_buf = nullptr; g_buf_size = 0;
+    SoOutput out;
+    out.setBuffer(nullptr, 1, bufGrow);
+    SoWriteAction wa(&out);
+    wa.apply(sep);
+
+    out.reset();
+
+    SoWriteAction wa2(&out);
+    wa2.apply(sep);
+    sep->unref();
+
+    void * buf = nullptr; size_t bufLen = 0;
+    out.getBuffer(buf, bufLen);
+    bool pass = (bufLen > 0);
+    EXPECT_TRUE(pass) << "SoOutput::reset() did not allow a fresh non-empty write";
+}
+
+// -----------------------------------------------------------------------
+// 9. Deep hierarchy: Sep > Sep > Sep > Cube — round-trip
+// -----------------------------------------------------------------------
+
+TEST(IoWriteAction, DeepHierarchy3LevelsRoundTrip)
+{
+    SoSeparator * outer = new SoSeparator;
+    outer->ref();
+    SoSeparator * mid = new SoSeparator;
+    SoSeparator * inner = new SoSeparator;
+    inner->addChild(new SoCube);
+    mid->addChild(inner);
+    outer->addChild(mid);
+
+    void * buf = nullptr; size_t bufLen = 0;
+    bool wrote = writeToBuffer(outer, buf, bufLen);
+    outer->unref();
+
+    bool pass = false;
+    if (wrote) {
+        SoSeparator * root = readFromBuffer(buf, bufLen);
+        if (root) {
+            {
+                // Search for the deepest SoCube
+                SoSearchAction sa;
+                sa.setType(SoCube::getClassTypeId());
+                sa.setInterest(SoSearchAction::FIRST);
+                sa.apply(root);
+                pass = (sa.getPath() != nullptr);
+            } // sa destroyed here
+            root->unref();
+        }
+    }
+    EXPECT_TRUE(pass) << "Deep hierarchy round-trip did not find SoCube at deepest level";
+}
+
+// -----------------------------------------------------------------------
+// 10. SoOutput::getBufferSize() > 0 after a write
+// -----------------------------------------------------------------------
+
+TEST(IoWriteAction, SoOutputGetBufferSize0AfterWrite)
+{
+    SoSeparator * sep = new SoSeparator;
+    sep->ref();
+    sep->addChild(new SoCube);
+
+    g_buf = nullptr; g_buf_size = 0;
+    SoOutput out;
+    out.setBuffer(nullptr, 1, bufGrow);
+    SoWriteAction wa(&out);
+    wa.apply(sep);
+    sep->unref();
+
+    bool pass = (out.getBufferSize() > 0);
+    EXPECT_TRUE(pass) << "SoOutput::getBufferSize() should be > 0 after write";
+}
+
+// -----------------------------------------------------------------------
+// 11. Two consecutive SoInput::setBuffer calls — reads from second buffer
+// -----------------------------------------------------------------------
+
+TEST(IoWriteAction, SoInputSecondSetBufferOverridesFirst)
+{
+    // Build two different scenes
+    SoSeparator * sep1 = new SoSeparator;
+    sep1->ref();
+    sep1->addChild(new SoSphere);
+
+    SoSeparator * sep2 = new SoSeparator;
+    sep2->ref();
+    sep2->addChild(new SoCube);
+    sep2->addChild(new SoCylinder);
+
+    void * buf1 = nullptr; size_t len1 = 0;
+    void * buf2 = nullptr; size_t len2 = 0;
+    bool w1 = writeToBuffer(sep1, buf1, len1);
+    bool w2 = writeToBuffer(sep2, buf2, len2);
+    sep1->unref();
+    sep2->unref();
+
+    bool pass = false;
+    if (w1 && w2) {
+        SoInput in;
+        in.setBuffer(buf1, len1);  // first call
+        in.setBuffer(buf2, len2);  // second call — should override
+        SoSeparator * root = SoDB::readAll(&in);
+        if (root) {
+            root->ref();
+            // The second scene has 2 children; check we got something
+            pass = (root->getNumChildren() >= 1);
+            root->unref();
+        }
+    }
+    EXPECT_TRUE(pass) << "Second SoInput::setBuffer did not work correctly";
+}
+
+// -----------------------------------------------------------------------
+// 12. Graceful handling of completely empty buffer
+// -----------------------------------------------------------------------
+
+TEST(IoWriteAction, SoDBReadAllOnEmptyBufferReturnsNullptrGracefully)
+{
+    SoErrorCB * old = SoError::getHandlerCallback();
+    SoError::setHandlerCallback(silentErrCb, nullptr);
+
+    const char emptyBuf[] = "";
+    SoInput in;
+    in.setBuffer(emptyBuf, 0);
+    SoSeparator * root = SoDB::readAll(&in);
+
+    SoError::setHandlerCallback(old, nullptr);
+
+    bool pass = (root == nullptr);
+    if (root) {
+        root->ref();
+        root->unref();
+    }
+    EXPECT_TRUE(pass) << "SoDB::readAll on empty buffer should return nullptr";
 }

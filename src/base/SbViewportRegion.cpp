@@ -223,13 +223,14 @@ SbViewportRegion::setWindowSize(short width, short height)
 #if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::setWindowSize",
-                              "width (%d) should be >=0. Clamped to 0.",width);
+                              "width (%d) should be >=0. Clamped to 0.",
+                              static_cast<int>(width));
     width=0;
   }
   if (height<0) {
     SoDebugError::postWarning("SbViewportRegion::setWindowSize",
                               "height (%d) should be >=0. Clamped to 0.",
-                              height);
+                              static_cast<int>(height));
     height=0;
   }
 #endif // OBOL_DEBUG
@@ -274,13 +275,14 @@ SbViewportRegion::setViewport(float left, float bottom,
 #if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
-                              "width (%d) should be >=0. Clamped to 0.",width);
+                              "width (%g) should be >=0. Clamped to 0.",
+                              static_cast<double>(width));
     width=0;
   }
   if (height<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
-                              "height (%d) should be >=0. Clamped to 0.",
-                              height);
+                              "height (%g) should be >=0. Clamped to 0.",
+                              static_cast<double>(height));
     height=0;
   }
 #endif // OBOL_DEBUG
@@ -298,14 +300,14 @@ SbViewportRegion::setViewport(SbVec2f origin, SbVec2f size)
 #if OBOL_DEBUG
   if (size[0]<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
-                              "size[0] (%d) should be >=0. Clamped to 0.",
-                              size[0]);
+                              "size[0] (%g) should be >=0. Clamped to 0.",
+                              static_cast<double>(size[0]));
     size[0]=0;
   }
   if (size[1]<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
-                              "size[1] (%d) should be >=0. Clamped to 0.",
-                              size[1]);
+                              "size[1] (%g) should be >=0. Clamped to 0.",
+                              static_cast<double>(size[1]));
     size[1]=0;
   }
 #endif // OBOL_DEBUG

@@ -11,7 +11,7 @@
  *   5. Move objects by dragging (uses SoTrackballManip replaceNode/replaceManip).
  *   6. Animate object position by simulating multiple mouse drags with renders.
  *
- * Returns 0 on pass, non-0 on failure.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -436,16 +436,15 @@ static bool test5_trackballManipLifecycle(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_scene_interaction";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_scene_interaction";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createSceneInteraction(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -471,4 +470,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_scene_interaction) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_scene_interaction");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

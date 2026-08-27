@@ -105,10 +105,8 @@ set(OBOL_FIELDS_INTERNAL_FILES
 	SoSubFieldP.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_FIELDS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} fields/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(fields ${OBOL_FIELDS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_FIELDS_FILES})

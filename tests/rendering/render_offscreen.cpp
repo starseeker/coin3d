@@ -17,7 +17,7 @@
  * Covers SoOffscreenRenderer code paths in src/rendering/SoOffscreenRenderer.cpp
  * that are not exercised by image-comparison tests (which only render + write).
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -59,11 +59,11 @@ static int countRedPixels(const unsigned char *buf, int w, int h)
 
 // ---------------------------------------------------------------------------
 
-int main(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *outpath = (argc > 1) ? argv[1] : "render_offscreen";
+    const char *outpath = (outputStem != nullptr) ? outputStem : "render_offscreen";
 
     bool ok = true;
 
@@ -266,4 +266,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "render_offscreen: SOME TESTS FAILED\n");
     }
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_offscreen) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_offscreen");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

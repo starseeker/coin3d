@@ -56,10 +56,8 @@
 
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
-#include <shared_mutex>
-#include <thread>
-#include <functional>
+#include <mutex>
+#include <condition_variable>
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,7 +75,7 @@ extern "C" {
  * 
  * \param threadid The ID of the thread to clean up
  */
-void cc_storage_thread_cleanup_enhanced(unsigned long threadid);
+void cc_storage_thread_cleanup_enhanced(cc_thread_id_t threadid);
 
 /*!
  * \brief Register a storage object for enhanced thread cleanup
@@ -114,7 +112,7 @@ namespace CoinInternal {
  * objects, enabling comprehensive cleanup when threads exit.
  * 
  * Key features:
- * - Thread-safe registration/unregistration using shared_mutex
+ * - Stable lifetime records for registration and concurrent cleanup
  * - Automatic cleanup detection using thread_local destructors
  * - Exception-safe operations throughout
  * - Global singleton pattern for application-wide cleanup
@@ -143,22 +141,31 @@ public:
      * \brief Clean up all data for a specific thread across all storage objects
      * \param threadid The ID of the thread to clean up
      */
-    void cleanupThread(unsigned long threadid);
+    void cleanupThread(cc_thread_id_t threadid);
 
     /*!
      * \brief Get the current thread ID in a platform-independent way
      * \return Thread ID compatible with cc_storage key format
      */
-    static unsigned long getCurrentThreadId();
+    static cc_thread_id_t getCurrentThreadId();
 
 private:
+    struct StorageRecord {
+        explicit StorageRecord(cc_storage * value) : storage(value) {}
+
+        cc_storage * storage;
+        bool registered = true;
+        unsigned int active_cleanups = 0;
+    };
+
     StorageRegistry() = default;
     ~StorageRegistry() = default;
     StorageRegistry(const StorageRegistry&) = delete;
     StorageRegistry& operator=(const StorageRegistry&) = delete;
 
-    mutable std::shared_mutex registry_mutex;
-    std::unordered_set<cc_storage*> registered_storages;
+    std::mutex registry_mutex;
+    std::condition_variable registry_cv;
+    std::unordered_map<cc_storage*, std::shared_ptr<StorageRecord>> registered_storages;
 };
 
 /*!
@@ -178,7 +185,7 @@ public:
     static void ensureCleanupTrigger();
 
 private:
-    unsigned long thread_id;
+    cc_thread_id_t thread_id;
     static thread_local std::unique_ptr<ThreadCleanupTrigger> instance;
 };
 

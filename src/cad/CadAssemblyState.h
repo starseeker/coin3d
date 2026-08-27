@@ -224,12 +224,14 @@ struct CadSubpixelClassifier {
     uint32_t subpixelProxyBuildWireOffset_ = 0;
     bool subpixelProxyBuildWireHasUncollapsed_ = false;
     size_t subpixelProxyBuildWireStructuralCount_ = 0;
-    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
-        subpixelProxyScratchWireParts_;
-    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
-        subpixelProxyScratchStructuralCountByPart_;
+    uint64_t subpixelProxyBuildTotalUnits_ = 0;
+    uint64_t subpixelProxyBuildCompletedWireUnits_ = 0;
+    /* Dense plan-indexed scratch keeps the preparation reservation exact;
+     * node-based hash allocation is neither portable nor tightly bounded. */
+    std::vector<uint8_t> subpixelProxyScratchWireByPart_;
+    std::vector<size_t> subpixelProxyScratchStructuralCountByPart_;
     size_t subpixelProxyScratchStructuralCount_ = 0;
-    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>>
+    std::vector<Obol::InstanceId>
         subpixelProxyScratchStructuralInstances_;
     uint64_t subpixelProxyClassifiedAppendRevision_ = 0;
     std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
@@ -251,6 +253,8 @@ struct CadRendererState {
      * plan/classification.  SoCADAssembly::renderPreparationSerial() combines
      * this with renderer-owned record/upload preparation. */
     uint64_t renderPreparationSerial_ = 0;
+    Obol::CadPresentationPreparationSnapshot presentationPreparation_;
+    uint64_t nextPresentationPreparationRevision_ = 1;
 };
 
 } // namespace internal

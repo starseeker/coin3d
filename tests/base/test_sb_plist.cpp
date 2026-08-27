@@ -54,288 +54,276 @@
 #include <Inventor/SbString.h>
 #include <Inventor/SbVec3f.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+TEST(BaseSbPlist, SbPListDefaultIsEmpty)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    SbPList list;
+    bool pass = (list.getLength() == 0);
+    EXPECT_TRUE(pass) << "SbPList should start empty";
+}
 
-    // =======================================================================
-    // SbPList tests
-    // =======================================================================
+TEST(BaseSbPlist, SbPListAppendIncreasesLength)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    bool pass = (list.getLength() == 3);
+    EXPECT_TRUE(pass) << "SbPList::append did not increase length";
+}
 
-    runner.startTest("SbPList default is empty");
-    {
-        SbPList list;
-        bool pass = (list.getLength() == 0);
-        runner.endTest(pass, pass ? "" : "SbPList should start empty");
-    }
+TEST(BaseSbPlist, SbPListOperatorReturnsCorrectElement)
+{
+    SbPList list;
+    int a = 10, b = 20;
+    list.append(&a);
+    list.append(&b);
+    bool pass = (list[0] == &a) && (list[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList operator[] returned wrong element";
+}
 
-    runner.startTest("SbPList append increases length");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        bool pass = (list.getLength() == 3);
-        runner.endTest(pass, pass ? "" : "SbPList::append did not increase length");
-    }
+TEST(BaseSbPlist, SbPListFindReturnsCorrectIndex)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    bool pass = (list.find(&b) == 1) && (list.find(&c) == 2);
+    EXPECT_TRUE(pass) << "SbPList::find returned wrong index";
+}
 
-    runner.startTest("SbPList operator[] returns correct element");
-    {
-        SbPList list;
-        int a = 10, b = 20;
-        list.append(&a);
-        list.append(&b);
-        bool pass = (list[0] == &a) && (list[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList operator[] returned wrong element");
-    }
+TEST(BaseSbPlist, SbPListFindReturns1ForMissingElement)
+{
+    SbPList list;
+    int a = 5;
+    bool pass = (list.find(&a) == -1);
+    EXPECT_TRUE(pass) << "SbPList::find should return -1 for missing element";
+}
 
-    runner.startTest("SbPList find returns correct index");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        bool pass = (list.find(&b) == 1) && (list.find(&c) == 2);
-        runner.endTest(pass, pass ? "" : "SbPList::find returned wrong index");
-    }
+TEST(BaseSbPlist, SbPListInsertAtPosition)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 99;
+    list.append(&a);
+    list.append(&b);
+    list.insert(&c, 1); // insert before index 1
+    // list: a, c, b
+    bool pass = (list.getLength() == 3) &&
+                (list[0] == &a) &&
+                (list[1] == &c) &&
+                (list[2] == &b);
+    EXPECT_TRUE(pass) << "SbPList::insert at position failed";
+}
 
-    runner.startTest("SbPList find returns -1 for missing element");
-    {
-        SbPList list;
-        int a = 5;
-        bool pass = (list.find(&a) == -1);
-        runner.endTest(pass, pass ? "" : "SbPList::find should return -1 for missing element");
-    }
+TEST(BaseSbPlist, SbPListRemoveByIndex)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    list.remove(1); // remove b
+    bool pass = (list.getLength() == 2) &&
+                (list[0] == &a) &&
+                (list[1] == &c);
+    EXPECT_TRUE(pass) << "SbPList::remove by index failed";
+}
 
-    runner.startTest("SbPList insert at position");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 99;
-        list.append(&a);
-        list.append(&b);
-        list.insert(&c, 1); // insert before index 1
-        // list: a, c, b
-        bool pass = (list.getLength() == 3) &&
-                    (list[0] == &a) &&
-                    (list[1] == &c) &&
-                    (list[2] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList::insert at position failed");
-    }
+TEST(BaseSbPlist, SbPListRemoveFastRemovesLastElementIntoSlot)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    list.removeFast(0); // removes a, moves c into slot 0
+    bool pass = (list.getLength() == 2) &&
+                (list.find(&a) == -1);
+    EXPECT_TRUE(pass) << "SbPList::removeFast failed";
+}
 
-    runner.startTest("SbPList remove by index");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        list.remove(1); // remove b
-        bool pass = (list.getLength() == 2) &&
-                    (list[0] == &a) &&
-                    (list[1] == &c);
-        runner.endTest(pass, pass ? "" : "SbPList::remove by index failed");
-    }
+TEST(BaseSbPlist, SbPListRemoveItemByPointer)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    list.removeItem(&b);
+    bool pass = (list.getLength() == 2) && (list.find(&b) == -1);
+    EXPECT_TRUE(pass) << "SbPList::removeItem failed";
+}
 
-    runner.startTest("SbPList removeFast removes last element into slot");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        list.removeFast(0); // removes a, moves c into slot 0
-        bool pass = (list.getLength() == 2) &&
-                    (list.find(&a) == -1);
-        runner.endTest(pass, pass ? "" : "SbPList::removeFast failed");
-    }
+TEST(BaseSbPlist, SbPListTruncateShortensTheList)
+{
+    SbPList list;
+    int a = 1, b = 2, c = 3, d = 4;
+    list.append(&a);
+    list.append(&b);
+    list.append(&c);
+    list.append(&d);
+    list.truncate(2);
+    bool pass = (list.getLength() == 2) &&
+                (list[0] == &a) &&
+                (list[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList::truncate failed";
+}
 
-    runner.startTest("SbPList removeItem by pointer");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        list.removeItem(&b);
-        bool pass = (list.getLength() == 2) && (list.find(&b) == -1);
-        runner.endTest(pass, pass ? "" : "SbPList::removeItem failed");
-    }
+TEST(BaseSbPlist, SbPListCopyConstructorReplicatesElements)
+{
+    SbPList orig;
+    int a = 1, b = 2;
+    orig.append(&a);
+    orig.append(&b);
+    SbPList copy(orig);
+    bool pass = (copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList copy constructor failed";
+}
 
-    runner.startTest("SbPList truncate shortens the list");
-    {
-        SbPList list;
-        int a = 1, b = 2, c = 3, d = 4;
-        list.append(&a);
-        list.append(&b);
-        list.append(&c);
-        list.append(&d);
-        list.truncate(2);
-        bool pass = (list.getLength() == 2) &&
-                    (list[0] == &a) &&
-                    (list[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList::truncate failed");
-    }
+TEST(BaseSbPlist, SbPListOperatorCopiesElements)
+{
+    SbPList orig;
+    int a = 1, b = 2;
+    orig.append(&a);
+    orig.append(&b);
+    SbPList copy;
+    copy = orig;
+    bool pass = (copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList operator= failed";
+}
 
-    runner.startTest("SbPList copy constructor replicates elements");
-    {
-        SbPList orig;
-        int a = 1, b = 2;
-        orig.append(&a);
-        orig.append(&b);
-        SbPList copy(orig);
-        bool pass = (copy.getLength() == 2) &&
-                    (copy[0] == &a) && (copy[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList copy constructor failed");
-    }
+TEST(BaseSbPlist, SbPListCopyMemberFunctionReplicatesElements)
+{
+    SbPList orig;
+    int a = 10, b = 20;
+    orig.append(&a);
+    orig.append(&b);
+    SbPList copy;
+    copy.copy(orig);
+    bool pass = (copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList::copy() failed";
+}
 
-    runner.startTest("SbPList operator= copies elements");
-    {
-        SbPList orig;
-        int a = 1, b = 2;
-        orig.append(&a);
-        orig.append(&b);
-        SbPList copy;
-        copy = orig;
-        bool pass = (copy.getLength() == 2) &&
-                    (copy[0] == &a) && (copy[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList operator= failed");
-    }
+TEST(BaseSbPlist, SbPListOperatorForEqualLists)
+{
+    SbPList a, b;
+    int v1 = 1, v2 = 2;
+    a.append(&v1); a.append(&v2);
+    b.append(&v1); b.append(&v2);
+    bool pass = (a == b);
+    EXPECT_TRUE(pass) << "SbPList operator== failed for equal lists";
+}
 
-    runner.startTest("SbPList copy() member function replicates elements");
-    {
-        SbPList orig;
-        int a = 10, b = 20;
-        orig.append(&a);
-        orig.append(&b);
-        SbPList copy;
-        copy.copy(orig);
-        bool pass = (copy.getLength() == 2) &&
-                    (copy[0] == &a) && (copy[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList::copy() failed");
-    }
+TEST(BaseSbPlist, SbPListOperatorForDifferentLists)
+{
+    SbPList a, b;
+    int v1 = 1, v2 = 2;
+    a.append(&v1);
+    b.append(&v2);
+    bool pass = (a != b);
+    EXPECT_TRUE(pass) << "SbPList operator!= failed for different lists";
+}
 
-    runner.startTest("SbPList operator== for equal lists");
-    {
-        SbPList a, b;
-        int v1 = 1, v2 = 2;
-        a.append(&v1); a.append(&v2);
-        b.append(&v1); b.append(&v2);
-        bool pass = (a == b);
-        runner.endTest(pass, pass ? "" : "SbPList operator== failed for equal lists");
-    }
+TEST(BaseSbPlist, SbPListGetAndSet)
+{
+    SbPList list;
+    int a = 5, b = 10;
+    list.append(&a);
+    // get
+    bool passGet = (list.get(0) == &a);
+    // set
+    list.set(0, &b);
+    bool passSet = (list.get(0) == &b);
+    bool pass = passGet && passSet;
+    EXPECT_TRUE(pass) << "SbPList get/set failed";
+}
 
-    runner.startTest("SbPList operator!= for different lists");
-    {
-        SbPList a, b;
-        int v1 = 1, v2 = 2;
-        a.append(&v1);
-        b.append(&v2);
-        bool pass = (a != b);
-        runner.endTest(pass, pass ? "" : "SbPList operator!= failed for different lists");
-    }
+TEST(BaseSbPlist, SbPListGetArrayPtrReturnsNonNullForNonEmptyList)
+{
+    SbPList list;
+    int a = 1, b = 2;
+    list.append(&a);
+    list.append(&b);
+    void ** arr = list.getArrayPtr();
+    bool pass = (arr != nullptr) && (arr[0] == &a) && (arr[1] == &b);
+    EXPECT_TRUE(pass) << "SbPList::getArrayPtr failed";
+}
 
-    runner.startTest("SbPList get() and set()");
-    {
-        SbPList list;
-        int a = 5, b = 10;
-        list.append(&a);
-        // get
-        bool passGet = (list.get(0) == &a);
-        // set
-        list.set(0, &b);
-        bool passSet = (list.get(0) == &b);
-        bool pass = passGet && passSet;
-        runner.endTest(pass, pass ? "" : "SbPList get/set failed");
-    }
+TEST(BaseSbPlist, SbPListFitDoesNotCrash)
+{
+    SbPList list;
+    int a = 1;
+    list.append(&a);
+    list.fit(); // should compact internal storage
+    bool pass = (list.getLength() == 1) && (list[0] == &a);
+    EXPECT_TRUE(pass) << "SbPList::fit changed list contents";
+}
 
-    runner.startTest("SbPList getArrayPtr returns non-null for non-empty list");
-    {
-        SbPList list;
-        int a = 1, b = 2;
-        list.append(&a);
-        list.append(&b);
-        void ** arr = list.getArrayPtr();
-        bool pass = (arr != nullptr) && (arr[0] == &a) && (arr[1] == &b);
-        runner.endTest(pass, pass ? "" : "SbPList::getArrayPtr failed");
-    }
+// =======================================================================
+// SbStringList tests
+// =======================================================================
 
-    runner.startTest("SbPList fit does not crash");
-    {
-        SbPList list;
-        int a = 1;
-        list.append(&a);
-        list.fit(); // should compact internal storage
-        bool pass = (list.getLength() == 1) && (list[0] == &a);
-        runner.endTest(pass, pass ? "" : "SbPList::fit changed list contents");
-    }
+TEST(BaseSbPlist, SbStringListAppendAndRetrieveStrings)
+{
+    SbStringList list;
+    SbString * s1 = new SbString("hello");
+    SbString * s2 = new SbString("world");
+    list.append(s1);
+    list.append(s2);
+    bool pass = (list.getLength() == 2) &&
+                (list[0] == s1) &&
+                (list[1] == s2);
+    delete s1;
+    delete s2;
+    EXPECT_TRUE(pass) << "SbStringList append/retrieve failed";
+}
 
-    // =======================================================================
-    // SbStringList tests
-    // =======================================================================
+// =======================================================================
+// SbIntList tests
+// =======================================================================
 
-    runner.startTest("SbStringList append and retrieve strings");
-    {
-        SbStringList list;
-        SbString * s1 = new SbString("hello");
-        SbString * s2 = new SbString("world");
-        list.append(s1);
-        list.append(s2);
-        bool pass = (list.getLength() == 2) &&
-                    (list[0] == s1) &&
-                    (list[1] == s2);
-        delete s1;
-        delete s2;
-        runner.endTest(pass, pass ? "" : "SbStringList append/retrieve failed");
-    }
+TEST(BaseSbPlist, SbIntListAppendAndOperator)
+{
+    SbIntList list;
+    list.append(10);
+    list.append(20);
+    list.append(30);
+    bool pass = (list.getLength() == 3) &&
+                (list[0] == 10) &&
+                (list[1] == 20) &&
+                (list[2] == 30);
+    EXPECT_TRUE(pass) << "SbIntList append/operator[] failed";
+}
 
-    // =======================================================================
-    // SbIntList tests
-    // =======================================================================
+TEST(BaseSbPlist, SbIntListFindReturnsCorrectIndex)
+{
+    SbIntList list;
+    list.append(5);
+    list.append(10);
+    list.append(15);
+    bool pass = (list.find(10) == 1) && (list.find(99) == -1);
+    EXPECT_TRUE(pass) << "SbIntList::find failed";
+}
 
-    runner.startTest("SbIntList append and operator[]");
-    {
-        SbIntList list;
-        list.append(10);
-        list.append(20);
-        list.append(30);
-        bool pass = (list.getLength() == 3) &&
-                    (list[0] == 10) &&
-                    (list[1] == 20) &&
-                    (list[2] == 30);
-        runner.endTest(pass, pass ? "" : "SbIntList append/operator[] failed");
-    }
+// =======================================================================
+// SbVec3fList tests
+// =======================================================================
 
-    runner.startTest("SbIntList find returns correct index");
-    {
-        SbIntList list;
-        list.append(5);
-        list.append(10);
-        list.append(15);
-        bool pass = (list.find(10) == 1) && (list.find(99) == -1);
-        runner.endTest(pass, pass ? "" : "SbIntList::find failed");
-    }
-
-    // =======================================================================
-    // SbVec3fList tests
-    // =======================================================================
-
-    runner.startTest("SbVec3fList append and retrieve");
-    {
-        SbVec3fList list;
-        SbVec3f v1(1.0f, 0.0f, 0.0f);
-        SbVec3f v2(0.0f, 1.0f, 0.0f);
-        list.append(&v1);
-        list.append(&v2);
-        bool pass = (list.getLength() == 2) &&
-                    (*list[0] == v1) &&
-                    (*list[1] == v2);
-        runner.endTest(pass, pass ? "" : "SbVec3fList append/retrieve failed");
-    }
-
-    return runner.getSummary();
+TEST(BaseSbPlist, SbVec3fListAppendAndRetrieve)
+{
+    SbVec3fList list;
+    SbVec3f v1(1.0f, 0.0f, 0.0f);
+    SbVec3f v2(0.0f, 1.0f, 0.0f);
+    list.append(&v1);
+    list.append(&v2);
+    bool pass = (list.getLength() == 2) &&
+                (*list[0] == v1) &&
+                (*list[1] == v2);
+    EXPECT_TRUE(pass) << "SbVec3fList append/retrieve failed";
 }

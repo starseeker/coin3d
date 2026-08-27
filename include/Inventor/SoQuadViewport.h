@@ -77,6 +77,8 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoViewport.h>
 
+#include <cstddef>
+
 class SoCamera;
 class SoNode;
 class SoOffscreenRenderer;
@@ -204,6 +206,19 @@ public:
      * Delegates to getViewport(quad)->render(renderer).
      */
     SbBool renderQuadrant(int quad, SoOffscreenRenderer * renderer);
+
+    /**
+     * Render all four quadrants into an interleaved RGB buffer.
+     *
+     * The buffer must contain at least getWindowSize()[0] *
+     * getWindowSize()[1] * 3 bytes. Rows are returned bottom-to-top, matching
+     * OpenGL and SoOffscreenRenderer. All four quadrant renders must succeed.
+     * The renderer's viewport and background colour are restored before this
+     * method returns.
+     */
+    SbBool renderComposite(SoOffscreenRenderer * quadRenderer,
+                           unsigned char * buffer,
+                           std::size_t bufferSize);
 
     /**
      * Render all four quadrants into a composite full-window image and write

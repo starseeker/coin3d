@@ -23,7 +23,7 @@ SbList<SoDB_HeaderInfo *> * SoDBP::headerlist = NULL;
 SoSensorManager * SoDBP::sensormanager = NULL;
 SoTimerSensor * SoDBP::globaltimersensor = NULL;
 UInt32ToInt16Map * SoDBP::converters = NULL;
-SbBool SoDBP::isinitialized = FALSE;
+std::atomic<SbBool> SoDBP::isinitialized{FALSE};
 std::atomic<int> SoDBP::notificationcounter{0};
 SbList<SoDBP::ProgressCallbackInfo> * SoDBP::progresscblist = NULL;
 

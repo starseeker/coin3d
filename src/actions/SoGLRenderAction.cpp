@@ -1573,7 +1573,7 @@ SoGLRenderActionP::doPathSort(void)
 void
 SoGLRenderAction::addPreRenderCallback(SoGLPreRenderCB * func, void * userdata)
 {
-  PRIVATE(this)->precblist.addCallback(reinterpret_cast<SoCallbackListCB *>(func), userdata);
+  PRIVATE(this)->precblist.addCallback(func, userdata);
 }
 
 /*!
@@ -1586,7 +1586,7 @@ SoGLRenderAction::addPreRenderCallback(SoGLPreRenderCB * func, void * userdata)
 void
 SoGLRenderAction::removePreRenderCallback(SoGLPreRenderCB * func, void * userdata)
 {
-  PRIVATE(this)->precblist.removeCallback(reinterpret_cast<SoCallbackListCB *>(func), userdata);
+  PRIVATE(this)->precblist.removeCallback(func, userdata);
 }
 
 /*!
@@ -1788,9 +1788,10 @@ SoGLRenderActionP::render(SoNode * node)
       SoNode * profileroverlay = SoActionP::getProfilerOverlay();
       if (profileroverlay) {
         this->isrenderingoverlay = TRUE;
-        SoProfiler::enable(FALSE);
-        this->renderSingle(profileroverlay);
-        SoProfiler::enable(TRUE);
+        {
+          SoProfilerP::ScopedPause pause;
+          this->renderSingle(profileroverlay);
+        }
         this->isrenderingoverlay = FALSE;
       }
     } else {

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Modern CMake project definition with metadata
 project(Obol
-  VERSION 1.0.0
+  VERSION 2.0.0
   DESCRIPTION "A 3D visualization library implementing a subset of the Open Inventor 2.1 API (with some variations)"
   HOMEPAGE_URL "https://github.com/starseeker/obol"
   LANGUAGES C CXX
@@ -52,7 +52,8 @@ endif()
 #   3. If git is unavailable or the command fails → emit a WARNING and
 #      continue; callers are expected to gracefully degrade.
 macro(obol_init_submodule submodule_path)
-  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${submodule_path}/CMakeLists.txt")
+  if(OBOL_FETCH_SUBMODULES AND
+     NOT EXISTS "${PROJECT_SOURCE_DIR}/${submodule_path}/CMakeLists.txt")
     find_program(_obol_git git)
     if(_obol_git)
       # Check whether this path is actually registered as a git submodule
@@ -95,11 +96,6 @@ macro(obol_init_submodule submodule_path)
   endif()
 endmacro()
 
-# Ensure the OSMesa submodule is present (needed for osmesa and dual-GL builds).
-# This is a no-op when osmesa files are already on disk (bundled or previously
-# initialised).
-obol_init_submodule("external/osmesa")
-
 # Set C++ standard requirements
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -137,8 +133,13 @@ endif()
 
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
-option(OBOL_BUILD_TESTS "Build unit tests" ON)
-option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
+option(OBOL_BUILD_TESTS "Build unit tests" OFF)
+option(OBOL_BUILD_BENCHMARKS "Build standalone performance benchmarks" OFF)
+option(OBOL_BUILD_TEST_TOOLS "Build standalone image and test utilities" OFF)
+option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" OFF)
+option(OBOL_FETCH_SUBMODULES
+  "Initialize missing registered git submodules during configure"
+  OFF)
 
 # ---------------------------------------------------------------------------
 # FLTK detection and submodule fallback
@@ -151,49 +152,63 @@ option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
 # FLTK viewer options (OBOL_BUILD_VIEWER, OBOL_VIEWER_USE_FLTK_GL, etc.)
 # are declared in examples/fltk/CMakeLists.txt where the viewers live.
 # Detection and the submodule build live here so that tests/ (which processes
-# before examples/) can also use FLTK (e.g. render_basic_context).
+# before examples/) can also use FLTK.
 # ---------------------------------------------------------------------------
-find_package(FLTK QUIET)
-if(FLTK_FOUND)
-  message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
-else()
-  # System FLTK not found.  Try to populate the submodule fallback.
-  set(FLTK_LIBRARIES)
-  set(FLTK_INCLUDE_DIRS)
-  obol_init_submodule("external/fltk")
-  if(EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
-    message(STATUS "FLTK: using external/fltk submodule")
-    set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
-    set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
-    set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
-    set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
-    set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
-    # FLTK_BUILD_GL is set by examples/fltk/CMakeLists.txt based on
-    # OBOL_VIEWER_USE_FLTK_GL; default ON here so the submodule is usable.
-    if(NOT DEFINED FLTK_BUILD_GL)
-      set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
-    endif()
-    set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
-    add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
-    set(FLTK_FOUND TRUE)
-    set(FLTK_LIBRARIES fltk)
-    if(TARGET fltk_gl)
-      list(APPEND FLTK_LIBRARIES fltk_gl)
-    endif()
-    set(FLTK_INCLUDE_DIRS
-        "${PROJECT_SOURCE_DIR}/external/fltk"
-        "${CMAKE_BINARY_DIR}/fltk_build")
+if(OBOL_BUILD_EXAMPLES)
+  find_package(FLTK QUIET)
+  if(FLTK_FOUND)
+    message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
   else()
-    if(OBOL_BUILD_TESTS)
+    # System FLTK not found.  Try the explicitly opted-in submodule fallback.
+    set(FLTK_LIBRARIES)
+    set(FLTK_INCLUDE_DIRS)
+    obol_init_submodule("external/fltk")
+    if(EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
+      message(STATUS "FLTK: using external/fltk submodule")
+      set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
+      set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
+      set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
+      set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
+      set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
+      # FLTK_BUILD_GL is set by examples/fltk/CMakeLists.txt based on
+      # OBOL_VIEWER_USE_FLTK_GL; default ON here so the submodule is usable.
+      if(NOT DEFINED FLTK_BUILD_GL)
+        set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+      endif()
+      set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
+      # CMAKE_UNITY_BUILD is a project-wide default, but vendored FLTK 1.3
+      # contains translation-unit-local helpers with repeated names.  Combining
+      # those implementation files changes their linkage domain and fails the
+      # build.  Keep unity enabled for Obol while creating third-party targets
+      # with their upstream compilation boundaries intact.
+      set(_obol_unity_build "${CMAKE_UNITY_BUILD}")
+      set(CMAKE_UNITY_BUILD OFF)
+      add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
+      set(CMAKE_UNITY_BUILD "${_obol_unity_build}")
+      unset(_obol_unity_build)
+      set(FLTK_FOUND TRUE)
+      set(FLTK_LIBRARIES fltk)
+      if(TARGET fltk_gl)
+        list(APPEND FLTK_LIBRARIES fltk_gl)
+      endif()
+      set(FLTK_INCLUDE_DIRS
+          "${PROJECT_SOURCE_DIR}/external/fltk"
+          "${CMAKE_BINARY_DIR}/fltk_build")
+    else()
       message(STATUS "FLTK: not found (no system package, no external/fltk submodule) – FLTK viewers disabled")
     endif()
   endif()
+else()
+  set(FLTK_FOUND FALSE)
+  message(STATUS "FLTK: skipped because OBOL_BUILD_EXAMPLES=OFF")
 endif()
 
 # Internal alias used throughout src/ for Windows shared/static detection
 set(OBOL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
-# Documentation: optional Doxygen API reference
+# Documentation: optional Doxygen API reference.  OBOL_BUILD_DOCS is the
+# single documentation switch; the old OBOL_BUILD_DOCUMENTATION* family was
+# never wired into the current build and has been retired.
 option(OBOL_BUILD_DOCS "Build Doxygen API documentation" OFF)
 if(OBOL_BUILD_DOCS)
   find_package(Doxygen QUIET)
@@ -202,7 +217,13 @@ if(OBOL_BUILD_DOCS)
       "${PROJECT_SOURCE_DIR}/docs/Doxyfile.in"
       "${CMAKE_BINARY_DIR}/docs/Doxyfile"
       @ONLY)
+    install(DIRECTORY "${CMAKE_BINARY_DIR}/docs/doxygen/html"
+      DESTINATION "${CMAKE_INSTALL_DOCDIR}/html"
+      COMPONENT documentation
+      OPTIONAL)
     add_custom_target(obol_docs
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+              "${CMAKE_BINARY_DIR}/docs/doxygen"
       COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/docs/Doxyfile"
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
       COMMENT "Generating Obol API documentation with Doxygen"
@@ -220,12 +241,29 @@ endif()
 #   SYSTEM_GL only                        → system OpenGL only, no software fallback
 #   Both OFF                              → no OpenGL at all (custom context drivers only)
 #
-# Probe availability to set sensible defaults.
+# Probe availability to set sensible defaults.  Initialize a registered OSMesa
+# submodule before checking its presence, otherwise OBOL_FETCH_SUBMODULES would
+# not affect the default value on a clean checkout.
 find_package(OpenGL QUIET)
 if(OpenGL_FOUND)
   set(_obol_sysgl_default ON)
 else()
   set(_obol_sysgl_default OFF)
+endif()
+option(OBOL_BUILD_BUNDLED_OSMESA
+    "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
+    ON)
+# If the caller explicitly disabled software rasterization, do not initialize
+# a missing submodule merely because the bundle option defaults to ON.  When
+# the backend option is unspecified, populate the submodule before deriving
+# its default so a clean checkout with fetching enabled behaves correctly.
+set(_obol_swrast_explicitly_set OFF)
+if(DEFINED OBOL_USE_SWRAST)
+  set(_obol_swrast_explicitly_set ON)
+endif()
+if(OBOL_BUILD_BUNDLED_OSMESA AND
+   (NOT _obol_swrast_explicitly_set OR OBOL_USE_SWRAST))
+  obol_init_submodule("external/osmesa")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
   set(_obol_swrast_default ON)
@@ -238,11 +276,9 @@ option(OBOL_USE_SYSTEM_GL
 option(OBOL_USE_SWRAST
     "Enable software rasterizer (OSMesa) backend for headless/offscreen rendering"
     ${_obol_swrast_default})
-option(OBOL_BUILD_BUNDLED_OSMESA
-    "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
-    ON)
 unset(_obol_sysgl_default)
 unset(_obol_swrast_default)
+unset(_obol_swrast_explicitly_set)
 # Thread safety is now unconditional (all #ifdef OBOL_THREADSAFE guards were
 # removed in Phase 3).  OBOL_THREADSAFE is kept as a no-op option for backward
 # compatibility only; it has no effect on the build.
@@ -252,7 +288,9 @@ option(OBOL_THREADSAFE "Deprecated – thread safety is now always on; kept for 
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
 option(HAVE_DRAGGERS "Enable Dragger support" ON)
 option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
-option(OBOL_PROFILING "Enable profiling subsystem" OFF)
+option(OBOL_PROFILING
+    "Compile in the profiling subsystem (runtime collection remains off by default)"
+    ON)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
@@ -267,6 +305,9 @@ option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 #   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
 #   cmake --build <dir> && ctest
 option(OBOL_TSAN "Enable ThreadSanitizer instrumentation (GCC/Clang)" OFF)
+option(OBOL_ASAN_UBSAN
+  "Enable AddressSanitizer and UndefinedBehaviorSanitizer instrumentation"
+  OFF)
 
 # Extra warning flags for the Obol library target (GCC/Clang only).
 # Applied via target_compile_options so external dependencies are unaffected.
@@ -316,20 +357,35 @@ option(OBOL_TSAN "Enable ThreadSanitizer instrumentation (GCC/Clang)" OFF)
 #                    are brought into conformance.
 #   -Wmissing-field-initializers  ~207 warnings; deferred to a future clean-up pass.
 option(OBOL_WARNINGS "Enable extra warning flags (-Wall -Wextra -Wundef -Wshadow -Wpedantic -Wformat-nonliteral -Wmaybe-uninitialized -Wmissing-declarations -Wredundant-decls -Wcast-qual) on the Obol target" ON)
+option(OBOL_WARNINGS_AS_ERRORS
+  "Treat warnings from Obol sources as build errors (external dependencies are unaffected)"
+  OFF)
 
+set(_obol_warning_flags "")
 if(OBOL_WARNINGS AND NOT MSVC)
-  set(_obol_warning_flags "")
   foreach(_flag Wall Wextra Wundef Wshadow Wno-long-long Wpedantic Wformat-nonliteral Wmaybe-uninitialized Wmissing-declarations Wredundant-decls Wcast-qual)
     check_cxx_compiler_flag("-${_flag}" OBOL_CXX_HAS_${_flag})
     if(OBOL_CXX_HAS_${_flag})
       list(APPEND _obol_warning_flags "-${_flag}")
     endif()
   endforeach()
-  set(OBOL_WARNING_FLAGS "${_obol_warning_flags}" CACHE INTERNAL
-      "Compiler warning flags applied to the Obol library target")
-  if(OBOL_WARNING_FLAGS)
-    message(STATUS "Obol warning flags: ${OBOL_WARNING_FLAGS}")
+endif()
+if(OBOL_WARNINGS_AS_ERRORS)
+  if(MSVC)
+    list(APPEND _obol_warning_flags /WX)
+  else()
+    check_cxx_compiler_flag("-Werror" OBOL_CXX_HAS_Werror)
+    if(NOT OBOL_CXX_HAS_Werror)
+      message(FATAL_ERROR
+        "OBOL_WARNINGS_AS_ERRORS requires compiler support for -Werror")
+    endif()
+    list(APPEND _obol_warning_flags -Werror)
   endif()
+endif()
+set(OBOL_WARNING_FLAGS "${_obol_warning_flags}" CACHE INTERNAL
+    "Compiler warning flags applied to the Obol library target" FORCE)
+if(OBOL_WARNING_FLAGS)
+  message(STATUS "Obol warning flags: ${OBOL_WARNING_FLAGS}")
 endif()
 
 # Build optimization options
@@ -423,7 +479,10 @@ else()
       check_include_file_cxx("GL/glx.h" HAVE_GLX_H)
       if(HAVE_GLX_H)
         set(HAVE_GLX 1)
-        list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL ${X11_X11_LIB})
+        # Keep the installed static target relocatable.  FindX11's imported
+        # target is rediscovered by obol-config.cmake instead of baking the
+        # build machine's absolute libX11 path into the export.
+        list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL X11::X11)
         list(APPEND OBOL_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR})
         message(STATUS "GLX offscreen rendering support enabled")
       endif()
@@ -754,6 +813,22 @@ endif()
 #   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
 #   cmake --build <dir> && ctest --output-on-failure
 # ============================================================================
+if(OBOL_ASAN_UBSAN)
+  if(OBOL_TSAN OR OBOL_COVERAGE)
+    message(FATAL_ERROR
+      "OBOL_ASAN_UBSAN cannot be combined with OBOL_TSAN or OBOL_COVERAGE")
+  elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
+         CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(STATUS "AddressSanitizer and UndefinedBehaviorSanitizer enabled")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+  else()
+    message(WARNING
+      "OBOL_ASAN_UBSAN=ON but the compiler is not GCC/Clang; sanitizers disabled")
+    set(OBOL_ASAN_UBSAN OFF CACHE BOOL "" FORCE)
+  endif()
+endif()
+
 if(OBOL_TSAN)
   if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
      CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -778,19 +853,37 @@ endif()
 # Add subdirectories
 # ============================================================================
 
+# PNG decoding and encoding is part of SbImage's built-in functionality, not
+# test infrastructure. Compile the bundled implementation as object code so
+# both shared and static Obol libraries contain it without exposing a private,
+# non-installed dependency in the package export.
+add_library(obol_lodepng_objects OBJECT
+  "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
+target_include_directories(obol_lodepng_objects PUBLIC
+  "${PROJECT_SOURCE_DIR}/external")
+set_target_properties(obol_lodepng_objects PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF)
+message(STATUS "Using bundled lodepng from external/lodepng.cpp")
+
 add_subdirectory(include)
 add_subdirectory(src)
 
 if(OBOL_BUILD_TESTS)
-  # Build lodepng from the bundled source so that rgb_to_png and
-  # image_comparator can write / compare PNG control images without
-  # requiring any system-installed PNG library.
-  add_library(lodepng STATIC "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
-  target_include_directories(lodepng PUBLIC "${PROJECT_SOURCE_DIR}/external")
-  message(STATUS "Using bundled lodepng from external/lodepng.cpp")
-
   enable_testing()
-  add_subdirectory(tests)
+  # The GTest suite is the only supported test entry point.  The old
+  # registry-based test graph is intentionally not part of the build.
+  add_subdirectory(tests/framework)
+endif()
+
+if(OBOL_BUILD_BENCHMARKS)
+  add_subdirectory(tests/benchmarks)
+endif()
+
+if(OBOL_BUILD_TEST_TOOLS)
+  add_subdirectory(tests/tools)
 endif()
 
 # Examples are useful for standalone Obol development, but package builds do
@@ -874,6 +967,8 @@ endif()
 
 add_feature_info(ThreadSafe FEAT_HAVE_SAFETHREAD "Thread safe render traversals (always on)")
 add_feature_info(ThreadSanitizer OBOL_TSAN "ThreadSanitizer instrumentation")
+add_feature_info(Profiler OBOL_PROFILING
+  "Profiling support (runtime collection is off by default)")
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL

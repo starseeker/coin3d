@@ -7,10 +7,8 @@ set(OBOL_BUNDLES_FILES
 	SoTextureCoordinateBundle.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_BUNDLES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} bundles/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(bundles ${OBOL_BUNDLES_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_BUNDLES_FILES})

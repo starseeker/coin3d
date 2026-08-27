@@ -50,6 +50,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -376,21 +377,27 @@ static bool writeSGIRGB(const char * path, const unsigned char * buf, int W, int
 // Composite rendering
 // ---------------------------------------------------------------------------
 
-SbBool SoQuadViewport::writeCompositeToRGB(const char * filename,
-                                            SoOffscreenRenderer * quadRenderer)
+SbBool SoQuadViewport::renderComposite(SoOffscreenRenderer * quadRenderer,
+                                       unsigned char * composite,
+                                       std::size_t compositeSize)
 {
-    if (!filename || !quadRenderer)
+    if (!quadRenderer || !composite)
         return FALSE;
 
     const int W  = windowSize_[0];
     const int H  = windowSize_[1];
+    if (W <= 0 || H <= 0)
+        return FALSE;
+
     const int qW = W / 2;
     const int qH = H / 2;
+    const std::size_t requiredSize =
+        static_cast<std::size_t>(W) * static_cast<std::size_t>(H) * 3;
+    if (qW <= 0 || qH <= 0 || compositeSize < requiredSize)
+        return FALSE;
 
-    // Allocate and zero-fill the composite buffer (interleaved RGB, bottom-to-top).
-    const int bufBytes = W * H * 3;
-    unsigned char * composite = new unsigned char[bufBytes];
-    memset(composite, 0, bufBytes);
+    // Interleaved RGB, bottom-to-top.
+    memset(composite, 0, requiredSize);
 
     // x/y pixel offsets for each quadrant in the composite:
     //   TOP_LEFT  (0): (0,   qH)
@@ -403,16 +410,24 @@ SbBool SoQuadViewport::writeCompositeToRGB(const char * filename,
     // Use a simple qW×qH viewport region for each per-quadrant render so
     // the renderer allocates a qW×qH buffer (not the full W×H window).
     const SbViewportRegion qvp((short)qW, (short)qH);
-    bool anyOk = false;
+    const SbViewportRegion previousViewport = quadRenderer->getViewportRegion();
+    const SbColor previousBackground = quadRenderer->getBackgroundColor();
+    bool allOk = true;
 
     for (int q = 0; q < NUM_QUADS; ++q) {
         quadRenderer->setViewportRegion(qvp);
         quadRenderer->setBackgroundColor(tiles_[q].getBackgroundColor());
         SbBool ok = quadRenderer->render(tiles_[q].getRoot());
-        if (!ok) continue;
-        anyOk = true;
+        if (!ok) {
+            allOk = false;
+            break;
+        }
 
         const unsigned char * qBuf = quadRenderer->getBuffer();
+        if (!qBuf) {
+            allOk = false;
+            break;
+        }
         const int cx = xOff[q];
         const int cy = yOff[q];
 
@@ -423,18 +438,36 @@ SbBool SoQuadViewport::writeCompositeToRGB(const char * filename,
         }
     }
 
-    if (!anyOk) {
-        delete[] composite;
+    quadRenderer->setViewportRegion(previousViewport);
+    quadRenderer->setBackgroundColor(previousBackground);
+
+    if (!allOk)
         return FALSE;
-    }
 
     // Paint border lines over the assembled composite.
     if (borderWidth_ > 0)
         applyBordersToBuffer(composite, W, H);
 
-    SbBool result = writeSGIRGB(filename, composite, W, H) ? TRUE : FALSE;
-    delete[] composite;
-    return result;
+    return TRUE;
+}
+
+SbBool SoQuadViewport::writeCompositeToRGB(const char * filename,
+                                            SoOffscreenRenderer * quadRenderer)
+{
+    if (!filename || !quadRenderer)
+        return FALSE;
+
+    const int W = windowSize_[0];
+    const int H = windowSize_[1];
+    if (W <= 0 || H <= 0)
+        return FALSE;
+
+    std::vector<unsigned char> composite(
+        static_cast<std::size_t>(W) * static_cast<std::size_t>(H) * 3);
+    if (!this->renderComposite(quadRenderer, composite.data(), composite.size()))
+        return FALSE;
+
+    return writeSGIRGB(filename, composite.data(), W, H) ? TRUE : FALSE;
 }
 
 // ---------------------------------------------------------------------------

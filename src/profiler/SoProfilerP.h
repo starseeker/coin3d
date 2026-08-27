@@ -39,6 +39,15 @@ class SbProfilingData;
 
 class SoProfilerP {
 public:
+  class ScopedPause {
+  public:
+    ScopedPause(void);
+    ~ScopedPause(void);
+
+    ScopedPause(const ScopedPause &) = delete;
+    ScopedPause & operator=(const ScopedPause &) = delete;
+  };
+
   static SbBool shouldContinuousRender(void);
   static float getContinuousRenderDelay(void);
 
@@ -54,6 +63,12 @@ public:
   static SoType getActionType(void);
 
   static void dumpToConsole(const SbProfilingData & data);
+
+  static SbBool isPausedForCurrentThread(void);
+
+private:
+  static void pushPause(void);
+  static void popPause(void);
 };
 
 #endif // !OBOL_SOPROFILERP_H

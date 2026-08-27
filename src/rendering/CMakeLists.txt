@@ -8,6 +8,7 @@ set(OBOL_RENDERING_FILES
 	SoRenderManager.cpp
 	SoRenderManagerP.cpp
 	SoOffscreenRenderer.cpp
+	SoNanoRTContextManager.cpp
 	SoVBO.cpp
 	SoVertexArrayIndexer.cpp
 	CoinOffscreenGLCanvas.cpp
@@ -27,10 +28,10 @@ set(OBOL_RENDERING_INTERNAL_FILES
 	CoinOffscreenGLCanvas.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_RENDERING_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} rendering/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(rendering ${OBOL_RENDERING_FILES})
+target_include_directories(obol_rendering_objects PRIVATE
+	${PROJECT_SOURCE_DIR}/external/nanort)
 
 # define documentation
 foreach(SRCFILE ${OBOL_RENDERING_FILES})

@@ -6,10 +6,8 @@ set(OBOL_HUD_FILES
     SoHUDButton.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_HUD_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} hud/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(hud ${OBOL_HUD_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_HUD_FILES})

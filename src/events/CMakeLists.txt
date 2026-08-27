@@ -9,10 +9,8 @@ set(OBOL_EVENTS_FILES
 	SoSpaceballButtonEvent.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_EVENTS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} events/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(events ${OBOL_EVENTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_EVENTS_FILES})

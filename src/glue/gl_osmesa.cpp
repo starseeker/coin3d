@@ -10,7 +10,7 @@
  * The approach mirrors BRL-CAD's technique for embedding a private zlib
  * alongside a system zlib:
  *
- *   1. gl.cpp is the canonical implementation of the GL glue layer.
+ *   1. gl_impl.inc is the canonical implementation of the GL glue layer.
  *      When compiled normally it produces SoGLContext_instance(),
  *      SoGLContext_glGenTextures(), etc., all calling system GL symbols
  *      (glGetString, glGenTextures, …).
@@ -22,7 +22,7 @@
  *        b. USE_MGL_NAMESPACE              – activates <OSMesa/gl_mangle.h>
  *           so every gl* call becomes mgl* (the OSMesa namespace).
  *        c. SOGL_PREFIX_SET / SOGL_PREFIX_STR=osmesa_  – every SoGLContext_*
- *           function defined in gl.cpp gets the osmesa_ prefix, e.g.
+ *           function defined in gl_impl.inc gets the osmesa_ prefix, e.g.
  *           osmesa_SoGLContext_instance(), osmesa_SoGLContext_glGenTextures().
  *
  * The result: the object file from this TU exports osmesa_SoGLContext_*
@@ -32,7 +32,7 @@
  *
  * Dispatch
  * --------
- * A thin dispatch layer in gl.cpp (compiled with OBOL_DUAL_GL_BUILD
+ * A thin dispatch layer in gl_impl.inc (compiled with OBOL_DUAL_GL_BUILD
  * defined) keeps the stable SoGLContext_* API working at runtime: it
  * checks a per-context backend flag set at context-creation time and
  * forwards to either osmesa_SoGLContext_* or the system-GL implementation.
@@ -70,7 +70,7 @@
 
 /* -----------------------------------------------------------------------
  * Step 3 – activate the SOGL function-name prefix so that every
- *           SoGLContext_* function defined in gl.cpp gets the osmesa_
+ *           SoGLContext_* function defined in gl_impl.inc gets the osmesa_
  *           prefix in this compilation unit.
  * --------------------------------------------------------------------- */
 #define SOGL_PREFIX_SET 1
@@ -80,4 +80,4 @@
  * Step 4 – compile the primary GL glue implementation.
  *           The #defines above take effect inside the included file.
  * --------------------------------------------------------------------- */
-#include "gl.cpp"
+#include "gl_impl.inc"

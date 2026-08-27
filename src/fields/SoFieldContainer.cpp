@@ -52,6 +52,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <mutex>
 
 #include "config.h"
 
@@ -109,10 +110,12 @@ SoType SoFieldContainer::classTypeId STATIC_SOTYPE_INIT;
 // used by setUserData() and getUserData()
 typedef SbHash<const SoFieldContainer *, void *> UserDataMap;
 static UserDataMap * sofieldcontainer_userdata_dict = NULL;
+static std::mutex sofieldcontainer_userdata_mutex;
 
 void
 sofieldcontainer_userdata_cleanup(void)
 {
+  const std::lock_guard<std::mutex> guard(sofieldcontainer_userdata_mutex);
   delete sofieldcontainer_userdata_dict;
   sofieldcontainer_userdata_dict = NULL;
 }
@@ -140,7 +143,10 @@ SoFieldContainer::~SoFieldContainer()
   // area that this destructed instance is placed at. So we must
   // remove our entry (if any -- we can just ignore the return value,
   // no harm is done if no data was set for this instance).
-  (void)sofieldcontainer_userdata_dict->erase(this);
+  const std::lock_guard<std::mutex> guard(sofieldcontainer_userdata_mutex);
+  if (sofieldcontainer_userdata_dict) {
+    (void)sofieldcontainer_userdata_dict->erase(this);
+  }
 }
 
 // *************************************************************************
@@ -248,7 +254,10 @@ SoFieldContainer::initClass(void)
   SoFieldContainer::classTypeId =
     SoType::createType(inherited::getClassTypeId(), "FieldContainer", NULL);
 
-  sofieldcontainer_userdata_dict = new UserDataMap;
+  {
+    const std::lock_guard<std::mutex> guard(sofieldcontainer_userdata_mutex);
+    sofieldcontainer_userdata_dict = new UserDataMap;
+  }
   coin_atexit(sofieldcontainer_userdata_cleanup, CC_ATEXIT_NORMAL);
 
   sofieldcontainer_copydictstorage =
@@ -1261,6 +1270,8 @@ SoFieldContainer::getFieldsMemorySize(size_t & managed, size_t & unmanaged) cons
 void
 SoFieldContainer::setUserData(void * userdata) const
 {
+  const std::lock_guard<std::mutex> guard(sofieldcontainer_userdata_mutex);
+  assert(sofieldcontainer_userdata_dict);
   (void)sofieldcontainer_userdata_dict->put(this, userdata);
 }
 
@@ -1274,6 +1285,8 @@ SoFieldContainer::setUserData(void * userdata) const
 void *
 SoFieldContainer::getUserData(void) const
 {
+  const std::lock_guard<std::mutex> guard(sofieldcontainer_userdata_mutex);
+  assert(sofieldcontainer_userdata_dict);
   void * tmp = NULL;
   if (sofieldcontainer_userdata_dict->get(this, tmp)) {
     return tmp;

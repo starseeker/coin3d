@@ -2953,7 +2953,7 @@ bool CadGpuResources::lookupFlatWireRange(
     return true;
 }
 
-void CadGpuResources::uploadFlatShaded(
+bool CadGpuResources::uploadFlatShaded(
         uint64_t planRevision,
         uint64_t geometryRevision,
         const std::vector<float>& positions,
@@ -2966,57 +2966,96 @@ void CadGpuResources::uploadFlatShaded(
         const SoGLContext *glue,
         const CadGLCaps& caps)
 {
-    if (!glue || positions.empty() || positions.size() != normals.size())
-        return;
-    const GLsizei vertexCount =
-        static_cast<GLsizei>(positions.size() / 3);
+    if (!glue || positions.empty() || positions.size() != normals.size() ||
+            positions.size() % 3u != 0u ||
+            positions.size() / 3u >
+                static_cast<size_t>(std::numeric_limits<GLsizei>::max()))
+        return false;
+    const GLsizei vertexCount = static_cast<GLsizei>(positions.size() / 3u);
     capacityVertexCount = std::max(vertexCount, capacityVertexCount);
-    if (!flatShaded_.posBuf)
-        glue->glGenBuffers(1, &flatShaded_.posBuf);
-    if (!flatShaded_.normBuf)
-        glue->glGenBuffers(1, &flatShaded_.normBuf);
-    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.posBuf);
-    glue->glBufferData(GL_ARRAY_BUFFER,
-                       static_cast<GLsizeiptr>(capacityVertexCount) *
-                           3 * sizeof(float),
-                       nullptr, GL_DYNAMIC_DRAW);
-    glue->glBufferSubData(GL_ARRAY_BUFFER, 0,
-                         static_cast<GLsizeiptr>(
-                             positions.size() * sizeof(float)),
-                         positions.data());
-    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.normBuf);
-    glue->glBufferData(GL_ARRAY_BUFFER,
-                       static_cast<GLsizeiptr>(capacityVertexCount) *
-                           3 * sizeof(float),
-                       nullptr, GL_DYNAMIC_DRAW);
-    glue->glBufferSubData(GL_ARRAY_BUFFER, 0,
-                         static_cast<GLsizeiptr>(
-                             normals.size() * sizeof(float)),
-                         normals.data());
+    const GLsizeiptr capacityBytes =
+        static_cast<GLsizeiptr>(capacityVertexCount) * 3 * sizeof(float);
+    const GLsizeiptr logicalBytes =
+        static_cast<GLsizeiptr>(positions.size()) * sizeof(float);
+
+    /* A flat shaded atlas is one logical resource: positions, normals, range
+     * metadata, and (optionally) a VAO must describe the same capacity.  Do
+     * not resize its live buffers in place.  Under memory pressure one
+     * glBufferData may succeed while the other fails; publishing the desired
+     * capacity after that partial update made software TNL read beyond the
+     * normal buffer.  Populate replacement names first and commit only after
+     * both stores prove their actual sizes. */
+    GLuint positionBuffer = 0;
+    GLuint normalBuffer = 0;
+    glue->glGenBuffers(1, &positionBuffer);
+    glue->glGenBuffers(1, &normalBuffer);
+    const auto discardBuffers = [&]() {
+        if (glue->glDeleteBuffers) {
+            if (positionBuffer)
+                glue->glDeleteBuffers(1, &positionBuffer);
+            if (normalBuffer)
+                glue->glDeleteBuffers(1, &normalBuffer);
+        }
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    };
+    if (!positionBuffer || !normalBuffer) {
+        discardBuffers();
+        return false;
+    }
+    glue->glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+    if (!allocateAndPopulateBuffer(
+            glue, GL_ARRAY_BUFFER, capacityBytes, logicalBytes,
+            positions.data(), GL_DYNAMIC_DRAW)) {
+        discardBuffers();
+        return false;
+    }
+    glue->glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+    if (!allocateAndPopulateBuffer(
+            glue, GL_ARRAY_BUFFER, capacityBytes, logicalBytes,
+            normals.data(), GL_DYNAMIC_DRAW)) {
+        discardBuffers();
+        return false;
+    }
 
     /* Flat batches are rendered by direct GLSL calls.  Never record their
      * attribute pointers in VAO 0: Qt's QOpenGLWidget compositor also uses
      * that VAO in its shared presentation context. */
-    if (!flatShaded_.vao && caps.hasVAO && glue->glGenVertexArrays) {
-        glue->glGenVertexArrays(1, &flatShaded_.vao);
-        glue->glBindVertexArray(flatShaded_.vao);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.posBuf);
+    GLuint vertexArray = 0;
+    if (caps.hasVAO && glue->glGenVertexArrays) {
+        glue->glGenVertexArrays(1, &vertexArray);
+    }
+    if (vertexArray) {
+        glue->glBindVertexArray(vertexArray);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
         glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
                                        3 * sizeof(float), nullptr);
         glue->glEnableVertexAttribArrayARB(0);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.normBuf);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
         glue->glVertexAttribPointerARB(1, 3, GL_FLOAT, GL_FALSE,
                                        3 * sizeof(float), nullptr);
         glue->glEnableVertexAttribArrayARB(1);
         glue->glBindVertexArray(0);
     }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    if (glue->glDeleteBuffers) {
+        if (flatShaded_.posBuf)
+            glue->glDeleteBuffers(1, &flatShaded_.posBuf);
+        if (flatShaded_.normBuf)
+            glue->glDeleteBuffers(1, &flatShaded_.normBuf);
+    }
+    if (flatShaded_.vao && glue->glDeleteVertexArrays)
+        glue->glDeleteVertexArrays(1, &flatShaded_.vao);
+    flatShaded_.posBuf = positionBuffer;
+    flatShaded_.normBuf = normalBuffer;
+    flatShaded_.vao = vertexArray;
     flatShaded_.planRevision = planRevision;
     flatShaded_.geometryRevision = geometryRevision;
     flatShaded_.vertexCount = vertexCount;
     flatShaded_.capacityVertexCount = capacityVertexCount;
     flatShaded_.groups = groups;
     flatShaded_.ranges = ranges;
+    return true;
 }
 
 bool CadGpuResources::appendFlatShaded(

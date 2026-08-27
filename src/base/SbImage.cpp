@@ -63,6 +63,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <limits>
 
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbVec3s.h>
@@ -78,7 +79,6 @@
 #include <Inventor/threads/SbRWMutex.h>
 
 #include "SbImageFormatHandler.h"
-#include "SbJpegImageHandler.h"
 
 #ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcmp;
@@ -161,20 +161,38 @@ public:
 
 };
 
+static bool
+checked_image_buffer_size(const SbVec3s & size, int bytesperpixel,
+                          size_t & buffersize)
+{
+  if (size[0] < 0 || size[1] < 0 || size[2] < 0 || bytesperpixel < 0) {
+    return false;
+  }
+
+  const size_t maxsize = std::numeric_limits<size_t>::max();
+  buffersize = 1;
+  const size_t dimensions[3] = {
+    static_cast<size_t>(size[0]),
+    static_cast<size_t>(size[1]),
+    static_cast<size_t>(size[2] == 0 ? 1 : size[2])
+  };
+  for (const size_t dimension : dimensions) {
+    if (dimension != 0 && buffersize > maxsize / dimension) return false;
+    buffersize *= dimension;
+  }
+  if (bytesperpixel != 0 &&
+      buffersize > maxsize / static_cast<size_t>(bytesperpixel)) {
+    return false;
+  }
+  buffersize *= static_cast<size_t>(bytesperpixel);
+  return buffersize <= maxsize - 3;
+}
+
 extern "C" {
 
 static void SbImage_cleanup_callback(void) {
   delete SbImageP::readimagecallbacks;
   SbImageP::readimagecallbacks = NULL;
-}
-
-static void SbImage_init_format_handlers(void) {
-  static bool initialized = false;
-  if (!initialized) {
-    auto& registry = SbImageFormatRegistry::getInstance();
-    registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-    initialized = true;
-  }
 }
 
 } // extern "C"
@@ -298,6 +316,12 @@ void
 SbImage::setValuePtr(const SbVec3s & size, const int bytesperpixel,
                      const unsigned char * bytes)
 {
+  size_t ignored_buffersize = 0;
+  if (!checked_image_buffer_size(size, bytesperpixel, ignored_buffersize)) {
+    SoDebugError::postWarning("SbImage::setValuePtr",
+                              "Image dimensions or component count are invalid");
+    return;
+  }
   PRIVATE(this)->writeLock();
   PRIVATE(this)->schedulename = "";
   PRIVATE(this)->schedulecb = NULL;
@@ -340,10 +364,15 @@ void
 SbImage::setValue(const SbVec3s & size, const int bytesperpixel,
                   const unsigned char * bytes)
 {
+  size_t buffersize = 0;
+  if (!checked_image_buffer_size(size, bytesperpixel, buffersize)) {
+    SoDebugError::postWarning("SbImage::setValue",
+                              "Image dimensions or component count are invalid");
+    return;
+  }
   PRIVATE(this)->writeLock();
   PRIVATE(this)->schedulename = "";
   PRIVATE(this)->schedulecb = NULL;
-  size_t buffersize = size_t(size[0]) * size_t(size[1]) * size_t(size[2] == 0 ? 1 : size[2]) * size_t(bytesperpixel);
   if (PRIVATE(this)->bytes && PRIVATE(this)->datatype == SbImageP::INTERNAL_DATA) {
     // check for special case where we don't have to reallocate
     if (bytes && (size == PRIVATE(this)->size) && (bytesperpixel == PRIVATE(this)->bpp)) {
@@ -467,9 +496,6 @@ SbImage::readFile(const SbString & filename,
                        "attempted to read file from empty filename.");
     return FALSE;
   }
-
-  // Initialize format handlers on first use
-  SbImage_init_format_handlers();
 
   SbString finalname = SbImage::searchForFile(filename, searchdirectories,
                                               numdirectories);
@@ -701,5 +727,3 @@ SbImage::removeReadImageCB(SbImageReadImageCB * cb, void * closure)
 }
 
 #undef PRIVATE
-
-

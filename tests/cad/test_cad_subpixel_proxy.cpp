@@ -16,10 +16,39 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
+
+void
+setTestEnvironment(const char *name, const char *value, int overwrite)
+{
+#ifdef _WIN32
+    if (!overwrite && std::getenv(name))
+        return;
+    const int result = _putenv_s(name, value);
+#else
+    const int result = ::setenv(name, value, overwrite);
+#endif
+    if (result != 0)
+        throw std::runtime_error(
+            std::string("cannot set test environment variable ") + name);
+}
+
+void
+unsetTestEnvironment(const char *name)
+{
+#ifdef _WIN32
+    const int result = _putenv_s(name, "");
+#else
+    const int result = ::unsetenv(name);
+#endif
+    if (result != 0)
+        throw std::runtime_error(
+            std::string("cannot unset test environment variable ") + name);
+}
 
 Obol::WireRep unitBox();
 
@@ -320,10 +349,10 @@ normalFreeTwoSidedGlslMatchesFixed()
         previousGlsl ? std::string(previousGlsl) : std::string();
     const auto restoreGlslEnvironment = [&]() {
         if (hadPreviousGlsl)
-            setenv("OBOL_CAD_SOFTWARE_GLSL",
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL",
                    previousGlslValue.c_str(), 1);
         else
-            unsetenv("OBOL_CAD_SOFTWARE_GLSL");
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
     };
 
     struct RouteResult {
@@ -332,9 +361,9 @@ normalFreeTwoSidedGlslMatchesFixed()
     };
     const auto renderRoute = [](bool softwareGlsl) {
         if (softwareGlsl)
-            setenv("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
         else
-            unsetenv("OBOL_CAD_SOFTWARE_GLSL");
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
 
         /*
          * Renderer configuration is immutable per assembly.  Construct a
@@ -532,7 +561,7 @@ indirectProgressiveAtlasGrows()
     const bool hadPreviousIndirect = previousIndirect != nullptr;
     const std::string previousIndirectValue =
         previousIndirect ? previousIndirect : "";
-    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "1", 1);
     const bool coarseRendered = render(renderer, root);
     const int coarseTier = assembly->lastRenderTier();
     const uint64_t coarseTriangles =
@@ -575,10 +604,10 @@ indirectProgressiveAtlasGrows()
     }
 
     if (hadPreviousIndirect)
-        setenv("OBOL_CAD_INDIRECT",
+        setTestEnvironment("OBOL_CAD_INDIRECT",
             previousIndirectValue.c_str(), 1);
     else
-        unsetenv("OBOL_CAD_INDIRECT");
+        unsetTestEnvironment("OBOL_CAD_INDIRECT");
     root->unref();
     return passed;
 }
@@ -590,7 +619,7 @@ indirectProgressiveGenerationAppendsSuffix()
     const bool hadPreviousIndirect = previousIndirect != nullptr;
     const std::string previousIndirectValue =
         previousIndirect ? previousIndirect : "";
-    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "1", 1);
 
     SoSeparator *root = new SoSeparator;
     root->ref();
@@ -716,10 +745,10 @@ indirectProgressiveGenerationAppendsSuffix()
 
     root->unref();
     if (hadPreviousIndirect)
-        setenv("OBOL_CAD_INDIRECT",
+        setTestEnvironment("OBOL_CAD_INDIRECT",
             previousIndirectValue.c_str(), 1);
     else
-        unsetenv("OBOL_CAD_INDIRECT");
+        unsetTestEnvironment("OBOL_CAD_INDIRECT");
     return passed;
 }
 
@@ -730,7 +759,7 @@ ordinaryProgressiveGenerationAppendsSuffix()
     const bool hadPreviousIndirect = previousIndirect != nullptr;
     const std::string previousIndirectValue =
         previousIndirect ? previousIndirect : "";
-    setenv("OBOL_CAD_INDIRECT", "0", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "0", 1);
 
     SoSeparator *root = new SoSeparator;
     root->ref();
@@ -980,10 +1009,10 @@ ordinaryProgressiveGenerationAppendsSuffix()
 
     root->unref();
     if (hadPreviousIndirect)
-        setenv("OBOL_CAD_INDIRECT",
+        setTestEnvironment("OBOL_CAD_INDIRECT",
             previousIndirectValue.c_str(), 1);
     else
-        unsetenv("OBOL_CAD_INDIRECT");
+        unsetTestEnvironment("OBOL_CAD_INDIRECT");
     return passed;
 }
 
@@ -994,7 +1023,7 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
     const bool hadPreviousIndirect = previousIndirect != nullptr;
     const std::string previousIndirectValue =
         previousIndirect ? previousIndirect : "";
-    setenv("OBOL_CAD_INDIRECT", "0", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "0", 1);
 
     SoSeparator *root = new SoSeparator;
     root->ref();
@@ -1105,9 +1134,9 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
 
     root->unref();
     if (hadPreviousIndirect)
-        setenv("OBOL_CAD_INDIRECT", previousIndirectValue.c_str(), 1);
+        setTestEnvironment("OBOL_CAD_INDIRECT", previousIndirectValue.c_str(), 1);
     else
-        unsetenv("OBOL_CAD_INDIRECT");
+        unsetTestEnvironment("OBOL_CAD_INDIRECT");
     return passed;
 }
 
@@ -1135,6 +1164,24 @@ struct DeadlineAssemblyAbort {
     size_t abortAt = 10;
 };
 
+struct DeadlinePreparationAbort {
+    SoCADAssembly *assembly = nullptr;
+    size_t calls = 0u;
+};
+
+SoGLRenderAction::AbortCode
+deadlineAbortPreparation(void *userData)
+{
+    DeadlinePreparationAbort *counter =
+        static_cast<DeadlinePreparationAbort *>(userData);
+    if (!counter || !counter->assembly ||
+            counter->assembly->presentationPreparationSnapshot().state !=
+                Obol::CadPresentationPreparationState::Preparing)
+        return SoGLRenderAction::CONTINUE;
+    ++counter->calls;
+    return SoGLRenderAction::ABORT;
+}
+
 SoGLRenderAction::AbortCode
 deadlineAbortAssemblyWork(void *userData)
 {
@@ -1147,6 +1194,117 @@ deadlineAbortAssemblyWork(void *userData)
     ++counter->calls;
     return counter->calls >= counter->abortAt ?
         SoGLRenderAction::ABORT : SoGLRenderAction::CONTINUE;
+}
+
+bool
+subpixelPreparationReservationCoversBoundedScratch()
+{
+    constexpr uint32_t occurrenceCount = 131072u;
+    constexpr uint32_t gridWidth = 512u;
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(2048.0f);
+    root->addChild(camera);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    root->addChild(assembly);
+
+    Obol::PartGeometry geometry;
+    geometry.wire = unitBox();
+    geometry.subpixelProxyEligible = true;
+    geometry.structuralProxy = true;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("bounded-subpixel-preparation");
+    assembly->upsertPart(part, geometry);
+
+    std::vector<Obol::InstanceUpdate> updates;
+    updates.reserve(occurrenceCount);
+    for (uint32_t index = 0; index < occurrenceCount; ++index) {
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = "bounded-subpixel-preparation";
+        instance.occurrenceIndex = index;
+        instance.lodStructuralProxy = true;
+        instance.localToRoot.setTranslate(SbVec3f(
+            static_cast<float>(index % gridWidth) -
+                static_cast<float>(gridWidth) * 0.5f,
+            static_cast<float>(index / gridWidth) -
+                static_cast<float>(occurrenceCount / gridWidth) * 0.5f,
+            0.0f));
+        Obol::InstanceUpdate update;
+        update.instance = Obol::CadIdBuilder::extendNameOccBool(
+            instance.parent, instance.childName,
+            instance.occurrenceIndex, instance.boolOp);
+        update.record = instance;
+        updates.push_back(std::move(update));
+    }
+    assembly->upsertInstances(updates);
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    SoGLRenderAction *action = renderer.getGLRenderAction();
+    SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+    void *previousData = nullptr;
+    if (action)
+        action->getAbortCallback(previousCallback, previousData);
+
+    DeadlinePreparationAbort interrupted;
+    interrupted.assembly = assembly;
+    if (action)
+        action->setAbortCallback(deadlineAbortPreparation, &interrupted);
+    (void)renderer.render(root);
+    const Obol::CadPresentationPreparationSnapshot preparing =
+        assembly->presentationPreparationSnapshot();
+    if (action)
+        action->setAbortCallback(previousCallback, previousData);
+
+    /* These are only the fixed occurrence-indexed buffers.  Point records
+     * and their reverse index make the real reservation larger.  Requiring
+     * this lower bound catches any return to unaccounted node-based scratch
+     * while remaining independent of std::vector growth policy. */
+    const uint64_t fixedOccurrenceBytes =
+        sizeof(uint8_t) + sizeof(uint32_t) + sizeof(int8_t) +
+        sizeof(Obol::InstanceId);
+    const uint64_t minimumReservation =
+        static_cast<uint64_t>(occurrenceCount) * fixedOccurrenceBytes +
+        sizeof(uint8_t) + sizeof(size_t);
+    const bool preparationInterrupted = action &&
+        action->hasTerminated() && interrupted.calls == 1u;
+    bool passed = preparationInterrupted &&
+        preparing.target.kind == Obol::CadPresentationPreparationKind::
+            SubpixelClassification &&
+        preparing.state == Obol::CadPresentationPreparationState::Preparing &&
+        preparing.completedUnits > 0u &&
+        preparing.completedUnits < preparing.totalUnits &&
+        preparing.reservedBytes >= minimumReservation;
+
+    SoOffscreenRenderer recoveryRenderer(SbViewportRegion(128, 128));
+    recoveryRenderer.setComponents(SoOffscreenRenderer::RGB);
+    passed = passed && render(recoveryRenderer, root) &&
+        assembly->lastSubpixelProxyCount() == occurrenceCount &&
+        assembly->lastUncollapsedStructuralProxyCount() == 0u;
+    if (!passed) {
+        std::fprintf(stderr,
+            "bounded classifier reservation failed "
+            "(aborted=%d state=%u completed=%llu/%llu reserved=%llu "
+            "minimum=%llu proxies=%zu boxes=%zu)\n",
+            preparationInterrupted ? 1 : 0,
+            static_cast<unsigned>(preparing.state),
+            static_cast<unsigned long long>(preparing.completedUnits),
+            static_cast<unsigned long long>(preparing.totalUnits),
+            static_cast<unsigned long long>(preparing.reservedBytes),
+            static_cast<unsigned long long>(minimumReservation),
+            assembly->lastSubpixelProxyCount(),
+            assembly->lastUncollapsedStructuralProxyCount());
+    }
+    root->unref();
+    return passed;
 }
 
 bool
@@ -1168,14 +1326,14 @@ ordinaryExecutorHonorsAbortSafePoints()
         setting.present = value != nullptr;
         if (value)
             setting.value = value;
-        setenv(setting.name, "0", 1);
+        setTestEnvironment(setting.name, "0", 1);
     }
     const auto restoreEnvironment = [&]() {
         for (const EnvironmentSnapshot& setting : settings) {
             if (setting.present)
-                setenv(setting.name, setting.value.c_str(), 1);
+                setTestEnvironment(setting.name, setting.value.c_str(), 1);
             else
-                unsetenv(setting.name);
+                unsetTestEnvironment(setting.name);
         }
     };
 
@@ -1293,15 +1451,15 @@ indirectAtlasValidationResumesAcrossAborts()
         if (value)
             setting.value = value;
     }
-    setenv("OBOL_CAD_INDIRECT", "1", 1);
-    setenv("OBOL_CAD_FLAT_SHADED", "0", 1);
-    setenv("OBOL_CAD_ATLAS_VALIDATION_FRAMES", "1", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "1", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_SHADED", "0", 1);
+    setTestEnvironment("OBOL_CAD_ATLAS_VALIDATION_FRAMES", "1", 1);
     const auto restoreEnvironment = [&]() {
         for (const EnvironmentSnapshot& setting : settings) {
             if (setting.present)
-                setenv(setting.name, setting.value.c_str(), 1);
+                setTestEnvironment(setting.name, setting.value.c_str(), 1);
             else
-                unsetenv(setting.name);
+                unsetTestEnvironment(setting.name);
         }
     };
 
@@ -1438,11 +1596,11 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
         if (value)
             setting.value = value;
     }
-    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    setTestEnvironment("OBOL_CAD_INDIRECT", "1", 1);
     /* One ordinary atlas page fits, two do not.  Every minimum prefix fits
      * comfortably, while all requested rich prefixes require the second
      * page. */
-    setenv("OBOL_CAD_ATLAS_MB", "20", 1);
+    setTestEnvironment("OBOL_CAD_ATLAS_MB", "20", 1);
 
     SoSeparator *root = new SoSeparator;
     root->ref();
@@ -1565,9 +1723,9 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
     root->unref();
     for (const EnvironmentSnapshot& setting : settings) {
         if (setting.present)
-            setenv(setting.name, setting.value.c_str(), 1);
+            setTestEnvironment(setting.name, setting.value.c_str(), 1);
         else
-            unsetenv(setting.name);
+            unsetTestEnvironment(setting.name);
     }
     return passed;
 }
@@ -1575,30 +1733,8 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
 } // namespace
 
 int
-main()
+runCadSubpixelProxyLifecycleContract()
 {
-    initCoinHeadless();
-    SoCADAssembly::initClass();
-
-    if (!sparseUniformClusterContract()) {
-        std::fprintf(stderr, "sparse uniform cluster contract failed\n");
-        return 1;
-    }
-    if (!sharedProjectedProxyContract()) {
-        std::fprintf(stderr, "shared projected-proxy contract failed\n");
-        return 1;
-    }
-    if (!degenerateStructuralProxyContract()) {
-        std::fprintf(stderr,
-            "degenerate structural-proxy contract failed\n");
-        return 1;
-    }
-    if (!softwareSubpixelProxyAggregationContract()) {
-        std::fprintf(stderr,
-            "software subpixel-proxy aggregation contract failed\n");
-        return 1;
-    }
-
     SoSeparator *root = new SoSeparator;
     root->ref();
     SoOrthographicCamera *camera = new SoOrthographicCamera;
@@ -1984,7 +2120,7 @@ main()
     assembly->upsertInstanceAuto(progressiveInstance);
 
     camera->height.setValue(70.0f);
-    setenv("OBOL_CAD_FLAT_WIRE", "0", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_WIRE", "0", 1);
     if (!render(renderer, root)) {
         std::fprintf(stderr, "per-part mixed proxy reference did not render\n");
         root->unref();
@@ -1996,7 +2132,7 @@ main()
     std::vector<unsigned char> reference(
         renderer.getBuffer(), renderer.getBuffer() + imageBytes);
 
-    setenv("OBOL_CAD_FLAT_WIRE", "1", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_WIRE", "1", 1);
     if (!render(renderer, root) || assembly->lastRenderTier() != 5) {
         std::fprintf(stderr,
             "mixed progressive scene did not retain the flat wire batch\n");
@@ -2490,24 +2626,85 @@ main()
     }
 
     root->unref();
-    if (!normalFreeTwoSidedGlslMatchesFixed()) {
-        std::fprintf(stderr,
-            "normal-free two-sided GLSL shading diverged from fixed VBO\n");
-        return 1;
-    }
-    if (!indirectProgressiveAtlasGrows())
-        return 1;
-    if (!indirectProgressiveGenerationAppendsSuffix())
-        return 1;
-    if (!ordinaryProgressiveGenerationAppendsSuffix())
-        return 1;
-    if (!ordinaryProgressiveZeroLineageReplacesWithoutOverread())
-        return 1;
-    if (!ordinaryExecutorHonorsAbortSafePoints())
-        return 1;
-    if (!indirectAtlasValidationResumesAcrossAborts())
-        return 1;
-    if (!indirectProgressiveAtlasPreservesCoverageUnderPressure())
-        return 1;
     return 0;
+}
+
+#include "render_test_registration.h"
+
+class CadSubpixelProxyContracts : public ::testing::Test {
+protected:
+    static void SetUpTestSuite()
+    {
+        SoCADAssembly::initClass();
+    }
+};
+
+TEST_F(CadSubpixelProxyContracts, SparseUniformClustersRemainValid)
+{
+    EXPECT_TRUE(sparseUniformClusterContract());
+}
+
+TEST_F(CadSubpixelProxyContracts, ProjectedProxyClassificationHandlesClipEdges)
+{
+    EXPECT_TRUE(sharedProjectedProxyContract());
+}
+
+TEST_F(CadSubpixelProxyContracts, DegenerateStructuralProxyKeepsItsPlane)
+{
+    EXPECT_TRUE(degenerateStructuralProxyContract());
+}
+
+TEST_F(CadSubpixelProxyContracts, SoftwareAggregationPreservesLogicalCoverage)
+{
+    EXPECT_TRUE(softwareSubpixelProxyAggregationContract());
+}
+
+TEST_F(CadSubpixelProxyContracts, LifecycleAndStreamingStateRemainCoherent)
+{
+    EXPECT_EQ(runCadSubpixelProxyLifecycleContract(), 0);
+}
+
+TEST_F(CadSubpixelProxyContracts, NormalFreeTwoSidedGlslMatchesFixedPipeline)
+{
+    EXPECT_TRUE(normalFreeTwoSidedGlslMatchesFixed());
+}
+
+TEST_F(CadSubpixelProxyContracts, IndirectProgressiveAtlasGrows)
+{
+    EXPECT_TRUE(indirectProgressiveAtlasGrows());
+}
+
+TEST_F(CadSubpixelProxyContracts, IndirectGenerationAppendsOnlyItsSuffix)
+{
+    EXPECT_TRUE(indirectProgressiveGenerationAppendsSuffix());
+}
+
+TEST_F(CadSubpixelProxyContracts, OrdinaryGenerationAppendsOnlyItsSuffix)
+{
+    EXPECT_TRUE(ordinaryProgressiveGenerationAppendsSuffix());
+}
+
+TEST_F(CadSubpixelProxyContracts, ZeroLineageReplacementDoesNotOverread)
+{
+    EXPECT_TRUE(ordinaryProgressiveZeroLineageReplacesWithoutOverread());
+}
+
+TEST_F(CadSubpixelProxyContracts, OrdinaryExecutorHonorsAbortSafePoints)
+{
+    EXPECT_TRUE(ordinaryExecutorHonorsAbortSafePoints());
+}
+
+TEST_F(CadSubpixelProxyContracts, IndirectValidationResumesAcrossAborts)
+{
+    EXPECT_TRUE(indirectAtlasValidationResumesAcrossAborts());
+}
+
+TEST_F(CadSubpixelProxyContracts, IndirectAtlasPreservesCoverageUnderPressure)
+{
+    EXPECT_TRUE(indirectProgressiveAtlasPreservesCoverageUnderPressure());
+}
+
+TEST_F(CadSubpixelProxyContracts, PreparationReservationCoversBoundedScratch)
+{
+    EXPECT_TRUE(subpixelPreparationReservationCoversBoundedScratch());
 }

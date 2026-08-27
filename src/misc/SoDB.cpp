@@ -65,6 +65,7 @@
 #include "config.h"
 
 #include <atomic>
+#include <mutex>
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
@@ -112,7 +113,7 @@
 #include "rendering/SoVBO.h"
 
 // Threading support
-#include "threads/threadp.h"
+#include "threads/threads.h"
 
 #include <Inventor/threads/SbRWMutex.h>
 #include "threads/recmutexp.h"
@@ -130,7 +131,11 @@
 
 // Static storage for the global context manager
 namespace {
-  SoDB::ContextManager * global_context_manager = nullptr;
+  // SoDB lifecycle operations are process-wide.  Serialize initialization,
+  // reconfiguration, and shutdown; rendering itself is protected by the
+  // scene-graph lock and does not take this mutex.
+  std::recursive_mutex lifecycle_mutex;
+  std::atomic<SoDB::ContextManager *> global_context_manager{nullptr};
 }
 
 // *************************************************************************
@@ -184,11 +189,12 @@ static uint32_t a_static_variable = 0xdeadbeef;
 // *************************************************************************
 
 /*!
-  Initialize the Coin library with the provided OpenGL context manager.
+  Initialize the Obol library with an optional OpenGL context manager.
 
-  This function sets up the Coin library with the specified context manager
-  for OpenGL operations. The context manager must be provided and will be
-  used for all offscreen rendering operations throughout the library's lifetime.
+  This function sets up the library with the specified context manager for
+  OpenGL operations.  Passing NULL is supported for non-rendering and custom
+  backend applications; initialization completes with limited functionality
+  and global context-manager lookups return NULL until a manager is installed.
 
   Note that this function should be called before using any other Coin
   class or function. If the Coin library is built as a DLL under Microsoft
@@ -196,47 +202,46 @@ static uint32_t a_static_variable = 0xdeadbeef;
   please see the class documentation of SoDB for a description of how to
   work around this problem.
 
-  It's safe to call this function multiple times with the same context manager.
+  Repeated calls after initialization may replace the context manager, but
+  must be made while the application is quiescent.  The context manager must
+  remain alive until it is replaced or the library is finished.
 
   Make sure you call SoDB::cleanup() before application termination, for
   the Coin library to be able to clean up internal static data structures.
 
-  \param context_manager The OpenGL context manager to use for rendering operations.
-                        Must not be NULL.
+  \param context_manager The OpenGL context manager to use for rendering
+                         operations, or NULL when global context management is
+                         not needed.
 
   \sa cleanup(), finish()
 
-  \since Coin 4.0 (breaking change - context manager is now required)
+  \since Coin 4.0
  */
 void
 SoDB::init(ContextManager * context_manager)
 {
+  std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   OBOL_INIT_CHECK_THREAD();
 
-  // Require a valid context manager
+  // Repeated initialization updates only the manager.  In particular,
+  // init(nullptr) must not claim GL services are unavailable when an existing
+  // initialized database still owns a valid manager.
+  if (SoDB::isInitialized()) {
+    if (context_manager) {
+      global_context_manager.store(context_manager, std::memory_order_release);
+    }
+    return;
+  }
+
   if (!context_manager) {
     // Use fprintf here because SoError::initClasses() has not been called yet;
     // calling SoDebugError::post() before that would trigger an assert.
-    fprintf(stderr, "SoDB::init: Context manager is NULL. "
-                    "Applications must provide a valid ContextManager implementation. "
+    fprintf(stderr, "SoDB::init: Context manager is NULL; "
+                    "global OpenGL/offscreen services are unavailable. "
                     "Proceeding with limited functionality.\n");
-    // For internal library calls, we proceed but with limited context support
-    // Applications should always provide a proper context manager
   } else {
     // Set the global context manager
-    global_context_manager = context_manager;
-  }
-
-  // Allow re-initialization if a context manager is provided, even if already initialized
-  // This enables tests to be run in isolation with proper context setup
-  if (SoDB::isInitialized() && !context_manager) {
-    return; // No re-initialization without context manager
-  }
-
-  // If already initialized and context manager is provided, just update the context manager
-  if (SoDB::isInitialized() && context_manager) {
-    global_context_manager = context_manager;
-    return; // Context manager updated, no need to re-initialize everything else
+    global_context_manager.store(context_manager, std::memory_order_release);
   }
 
   // This is to catch the (unlikely) event that the C++ compiler adds
@@ -401,7 +406,7 @@ SoDB::init(ContextManager * context_manager)
   auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_LISTMODULES");
   if (env.has_value() && (std::atoi(env->c_str()) > 0)) { SoDBP::listWin32ProcessModules(); }
 
-  SoDBP::isinitialized = TRUE;
+  SoDBP::isinitialized.store(TRUE, std::memory_order_release);
 
   // NOTE: SoDBP::isinitialized must be set to TRUE before this block,
   // or you will get a "mysterious" crash on a mutex. Logically, it should
@@ -445,8 +450,14 @@ SoDB::init(ContextManager * context_manager)
 void
 SoDB::finish(void)
 {
+  std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   coin_atexit_cleanup();
-  SoDBP::isinitialized = FALSE;
+  // Do not leave a pointer to an application-owned manager visible after the
+  // library has released its global state.  Callers may legitimately query
+  // the manager while coordinating shutdown, and a stale pointer here would
+  // turn that query into use-after-lifetime once the manager is destroyed.
+  global_context_manager.store(nullptr, std::memory_order_release);
+  SoDBP::isinitialized.store(FALSE, std::memory_order_release);
 }
 
 /*!
@@ -1033,7 +1044,7 @@ SoDB::getConverter(SoType from, SoType to)
 SbBool
 SoDB::isInitialized(void)
 {
-  return SoDBP::isinitialized;
+  return SoDBP::isinitialized.load(std::memory_order_acquire);
 }
 
 /*!
@@ -1576,7 +1587,7 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
 SoDB::ContextManager *
 SoDB::getContextManager(void)
 {
-  return global_context_manager;
+  return global_context_manager.load(std::memory_order_acquire);
 }
 
 /*!
@@ -1590,7 +1601,8 @@ void
 SoDB::setContextManager(ContextManager * manager)
 {
   if (manager) {
-    global_context_manager = manager;
+    std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
+    global_context_manager.store(manager, std::memory_order_release);
   }
 }
 

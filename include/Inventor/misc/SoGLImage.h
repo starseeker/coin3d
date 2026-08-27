@@ -131,6 +131,18 @@ public:
                        const int border = 0,
                        SoState * createinstate = NULL);
 
+  /**
+   * Update one rectangular region of an existing 2D texture in the current
+   * state's cache context. Returns FALSE when the texture must be recreated
+   * instead (for example when it was resized or uses explicit mipmap levels).
+   */
+  SbBool setSubData(SoState * state,
+                    const unsigned char * bytes,
+                    const SbVec2s & imageSize,
+                    const int numcomponents,
+                    const SbVec2s & subSize,
+                    const SbVec2s & offset);
+
   // these flags can be used to set texture properties.
   enum Flags {
     // mipmap, scaling and filtering settings

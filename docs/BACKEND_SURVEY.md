@@ -304,9 +304,9 @@ collector.compositeOverlays(pixels, width, height, 3);
 collector.updateCameraId(cam);
 ```
 
-See `tests/utils/nanort_context_manager.h` (nanort) and
-`tests/utils/embree_context_manager.h` (Intel Embree 4) for complete
-worked examples of this pattern.
+See `src/rendering/SoNanoRTContextManager.cpp` for the supported NanoRT
+implementation and `examples/demo_support/embree_context_manager.h` for an Intel Embree
+4 example of this pattern.
 
 ### What a Complete Raytracing Integration Looks Like
 
@@ -331,7 +331,7 @@ intersection works today without any OpenGL context.
 
 ## Tier 4 — Vulkan Rasterization Backend
 
-`SoVulkanContextManager` (`tests/utils/vulkan_context_manager.h`) implements the
+`SoVulkanContextManager` (`examples/demo_support/vulkan_context_manager.h`) implements the
 `renderScene()` virtual to rasterize the Obol scene graph using the Vulkan API.
 It uses `SoRaytracerSceneCollector` (a subclass of `SoSceneCollector`) for
 geometry and light extraction, then issues Vulkan draw calls for rasterization.

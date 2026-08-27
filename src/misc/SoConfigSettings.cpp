@@ -19,8 +19,6 @@ namespace {
   {
     return sizeof(VALID_OPTIONS)/sizeof(VALID_OPTIONS[0]);
   }
-  const char COIN [] = "COIN";
-
   const SbString INVALID_SETTING("");
 };
 

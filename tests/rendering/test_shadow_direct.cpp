@@ -8,7 +8,8 @@
 #include <Inventor/SbViewportRegion.h>
 #include <cstdio>
 
-int main() {
+static int runScenario(const char *outputStem) {
+    (void)outputStem;
     initCoinHeadless();
     printf("Init OK\n");
 
@@ -50,4 +51,11 @@ int main() {
 
     root->unref();
     return ok ? 0 : 1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, test_shadow_direct) {
+    const std::string outputStem = ObolTest::renderingOutputStem("test_shadow_direct");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

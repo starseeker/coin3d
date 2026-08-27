@@ -271,17 +271,6 @@
 
 // *************************************************************************
 
-// Used to search for nodes. Just use one static action to avoid
-// allocating a new action every time we need to search for a node.
-static SoSearchAction * soselection_searchAction; 
-
-static void
-soselection_cleanup(void)
-{
-  delete soselection_searchAction;
-  soselection_searchAction = NULL;
-}
-
 // *************************************************************************
 
 SO_NODE_SOURCE(SoSelection);
@@ -538,7 +527,7 @@ SoSelection::operator[](const int i) const
 void
 SoSelection::addSelectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->selCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->selCBList->addCallback(f, userData);
 }
 
 /*!
@@ -549,7 +538,7 @@ SoSelection::addSelectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::removeSelectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->selCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->selCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -561,7 +550,7 @@ SoSelection::removeSelectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::addDeselectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->deselCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->deselCBList->addCallback(f, userData);
 }
 
 /*!
@@ -572,7 +561,7 @@ SoSelection::addDeselectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::removeDeselectionCallback(SoSelectionPathCB * f, void * userData)
 {
-  this->deselCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->deselCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -587,7 +576,7 @@ SoSelection::removeDeselectionCallback(SoSelectionPathCB * f, void * userData)
 void
 SoSelection::addStartCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->startCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->startCBList->addCallback(f, userData);
 }
 
 /*!
@@ -598,7 +587,7 @@ SoSelection::addStartCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeStartCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->startCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->startCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -611,7 +600,7 @@ SoSelection::removeStartCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::addFinishCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->finishCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->finishCBList->addCallback(f, userData);
 }
 
 /*!
@@ -622,7 +611,7 @@ SoSelection::addFinishCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeFinishCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->finishCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->finishCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -705,7 +694,7 @@ SoSelection::getPickMatching(void) const
 void
 SoSelection::addChangeCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->changeCBList->addCallback((SoCallbackListCB *)f, userData);
+  this->changeCBList->addCallback(f, userData);
 }
 
 /*!
@@ -715,7 +704,7 @@ SoSelection::addChangeCallback(SoSelectionClassCB * f, void * userData)
 void
 SoSelection::removeChangeCallback(SoSelectionClassCB * f, void * userData)
 {
-  this->changeCBList->removeCallback((SoCallbackListCB *)f, userData);
+  this->changeCBList->removeCallback(f, userData);
 }
 
 /*!
@@ -914,23 +903,22 @@ SoSelection::handleEvent(SoHandleEventAction * action)
 }
 
 
-// Uses a static search action to find path to node from this. If the
+// Uses a temporary search action to find path to node from this. If the
 // node is found, the returned path will be ref'ed. It's the caller's
 // responsibility to unref the returned path when != NULL.
 SoPath *
 SoSelection::searchNode(SoNode * node) const
 {
-  if (soselection_searchAction == NULL) {
-    soselection_searchAction = new SoSearchAction;
-    soselection_searchAction->setInterest(SoSearchAction::FIRST);
-    coin_atexit((coin_atexit_f*) soselection_cleanup, CC_ATEXIT_NORMAL);
-  }
-  soselection_searchAction->setNode(node);
-  soselection_searchAction->apply(const_cast<SoNode*>(static_cast<const SoNode*>(this)));
-  SoPath * path = soselection_searchAction->getPath();
+  // The action carries mutable traversal state, so sharing one process-wide
+  // instance makes otherwise independent selection searches race.  Keep it
+  // local; this path is infrequent compared with rendering and correctness is
+  // more important than avoiding one small allocation.
+  SoSearchAction searchAction;
+  searchAction.setInterest(SoSearchAction::FIRST);
+  searchAction.setNode(node);
+  searchAction.apply(const_cast<SoNode*>(static_cast<const SoNode*>(this)));
+  SoPath * path = searchAction.getPath();
   if (path) path->ref();
-  // reset action before returning 
-  soselection_searchAction->reset();
   return path;
 }
 

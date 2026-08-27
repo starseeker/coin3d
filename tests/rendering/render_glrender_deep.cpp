@@ -16,7 +16,7 @@
  *  11. setViewportRegion after construction
  *  12. Caching modes: NO_AUTO_CACHING, CACHE_ALL  
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -336,16 +336,15 @@ static bool test8_sortedTriangle(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_glrender_deep";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_glrender_deep";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createGLRenderDeep(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -374,4 +373,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_glrender_deep) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_glrender_deep");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

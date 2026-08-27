@@ -12,10 +12,8 @@ set(OBOL_FONTS_INTERNAL_FILES
 	fontspec.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_FONTS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} fonts/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(fonts ${OBOL_FONTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_FONTS_FILES})

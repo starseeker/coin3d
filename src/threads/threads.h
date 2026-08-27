@@ -38,6 +38,7 @@
 #endif /* ! OBOL_INTERNAL */
 
 #include <Inventor/basic.h>  /* OBOL_DLL_API */
+#include <stdint.h>
 
 /* ********************************************************************** */
 
@@ -59,7 +60,6 @@ extern "C" {
 typedef struct cc_sched cc_sched;
 typedef struct cc_wpool cc_wpool;
 typedef struct cc_worker cc_worker;
-typedef struct cc_thread cc_thread;
 typedef struct cc_mutex cc_mutex;
 typedef struct cc_rwmutex cc_rwmutex;
 typedef struct cc_condvar cc_condvar;
@@ -111,16 +111,13 @@ OBOL_DLL_API void cc_storage_apply_to_all(cc_storage * storage,
                                           cc_storage_apply_func * func, 
                                           void * closure);
 
-/* Thread API */
-typedef void * cc_thread_f(void *);
+/* Internal thread identity and sleep API. Thread creation is provided by
+   SbThread; the obsolete parallel cc_thread implementation was removed. */
+typedef uint64_t cc_thread_id_t;
 
-OBOL_DLL_API cc_thread * cc_thread_construct(cc_thread_f * func, void * closure);
-OBOL_DLL_API void cc_thread_destruct(cc_thread * thread);
-
-OBOL_DLL_API int cc_thread_join(cc_thread * thread, void ** retvalptr);
-
-OBOL_DLL_API unsigned long cc_thread_id(void);
+OBOL_DLL_API cc_thread_id_t cc_thread_id(void);
 OBOL_DLL_API void cc_sleep(float seconds);
+void cc_thread_init(void);
 
 /* Mutex API */
 OBOL_DLL_API cc_mutex * cc_mutex_construct(void);

@@ -34,6 +34,11 @@
 
 #include <cstring>
 #include <cmath> // pow()
+#include <cstddef>
+#include <cerrno>
+#include <cstdlib>
+#include <limits>
+#include <cctype>
 
 #include "config.h"
 
@@ -391,20 +396,38 @@ SoInput_FileInfo::getReader(void)
 SbBool
 SoInput_FileInfo::readUnsignedIntegerString(char * str)
 {
+  return this->readUnsignedIntegerString(str, 512);
+}
+
+SbBool
+SoInput_FileInfo::readUnsignedIntegerString(char * str, size_t capacity)
+{
   assert(!this->isBinary());
+  if (!str || capacity < 2) return FALSE;
   int minSize = 1;
   char * s = str;
 
   if (this->readChar(s, '0')) {
-    if (this->readChar(s + 1, 'x')) {
-      s += 2 + this->readHexDigits(s + 2);
+    size_t used = 1;
+    if (this->readChar(s + used, 'x')) {
+      used++;
+      const int count = this->readHexDigits(s + used, capacity - used);
+      if (static_cast<size_t>(count) + 1 >= capacity - used) return FALSE;
+      used += static_cast<size_t>(count);
       minSize = 3;
     }
-    else
-      s += 1 + this->readDigits(s + 1);
+    else {
+      const int count = this->readDigits(s + used, capacity - used);
+      if (static_cast<size_t>(count) + 1 >= capacity - used) return FALSE;
+      used += static_cast<size_t>(count);
+    }
+    s += used;
   }
-  else
-    s += this->readDigits(s);
+  else {
+    const int count = this->readDigits(s, capacity);
+    if (static_cast<size_t>(count) + 1 >= capacity) return FALSE;
+    s += count;
+  }
 
   if (s - str < minSize)
     return FALSE;
@@ -417,16 +440,18 @@ SbBool
 SoInput_FileInfo::readUnsignedInteger(uint32_t & l)
 {
   assert(!this->isBinary());
-  // FIXME: fixed size buffer for input of unknown
-  // length. Ouch. 19990530 mortene.
   char str[512];
   if (! this->readUnsignedIntegerString(str))
     return FALSE;
 
-  // FIXME: check man page of strtoul and exploit the functionality
-  // provided better -- it looks like we are duplicating some of the
-  // effort. 19990530 mortene.
-  l = strtoul(str, NULL, 0);
+  char * end = NULL;
+  errno = 0;
+  const unsigned long value = std::strtoul(str, &end, 0);
+  if (errno == ERANGE || end == str || *end != '\0' ||
+      value > static_cast<unsigned long>(std::numeric_limits<uint32_t>::max())) {
+    return FALSE;
+  }
+  l = static_cast<uint32_t>(value);
 
   return TRUE;
 }
@@ -435,8 +460,6 @@ SbBool
 SoInput_FileInfo::readInteger(int32_t & l)
 {
   assert(!this->isBinary());
-  // FIXME: fixed size buffer for input of unknown
-  // length. Ouch. 19990530 mortene.
   char str[512];
   char * s = str;
   // Read optional sign character directly into the string
@@ -444,46 +467,19 @@ SoInput_FileInfo::readInteger(int32_t & l)
     s++;
   }
   else if (this->readChar(s, '+')) s++;
-  if (! this->readUnsignedIntegerString(s))
+  const size_t remaining = sizeof(str) - static_cast<size_t>(s - str);
+  if (! this->readUnsignedIntegerString(s, remaining))
     return FALSE;
 
-  // FIXME: check man page of strtol and exploit the functionality
-  // provided better -- it looks like we are duplicating some of the
-  // effort. 19990530 mortene.
-#if 1 // old code
-  l = strtol(str, NULL, 0);
-#else // first version of replacement of strtol. Not activated yet
-  int i, n = strlen(s);
-  if (n >= 3 && s[0] == '0' && s[1] == 'x') {
-    int v = 0;
-    int mul = 1;
-    for (i = 2; i < n; i++) {
-      char c = s[(n-1)-i+2];
-      if (c >= '0' && c <= '9') {
-        v += (c-'0') * mul;
-      }
-      else if (c >= 'a' && c <= 'f') {
-        v += ((c-'a')+10) * mul;
-      }
-      else {
-        v += ((c-'A')+10) * mul;
-      }
-      mul <<= 4;
-    }
-    l = v;
+  char * end = NULL;
+  errno = 0;
+  const long value = std::strtol(str, &end, 0);
+  if (errno == ERANGE || end == str || *end != '\0' ||
+      value < static_cast<long>(std::numeric_limits<int32_t>::min()) ||
+      value > static_cast<long>(std::numeric_limits<int32_t>::max())) {
+    return FALSE;
   }
-  else {
-    int v = 0;
-    int mul = 1;
-    for (i = 0; i < n; i++) {
-      char c = s[(n-1)-i];
-      v += (c-'0') * mul;
-      mul *= 10;
-    }
-    l = v;
-  }
-  if (minus) l = -l;
-#endif // strtol replacement
+  l = static_cast<int32_t>(value);
   return TRUE;
 }
 
@@ -491,7 +487,7 @@ SbBool
 SoInput_FileInfo::readReal(double & d)
 {
   assert(!this->isBinary());
-  const int BUFSIZE = 2048;
+  const size_t BUFSIZE = 2048;
   SbBool minus = FALSE;
   SbBool gotNum = FALSE;
   int i, n;
@@ -508,7 +504,8 @@ SoInput_FileInfo::readReal(double & d)
   else minus = TRUE;
   s += n;
 
-  if ((n = this->readDigits(s)) > 0) {
+  if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
+    if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
     gotNum = TRUE;
     number = 0.0;
     double mul = 1.0;
@@ -524,7 +521,8 @@ SoInput_FileInfo::readReal(double & d)
   if (this->readChar(s, '.') > 0) {
     s++;
 
-    if ((n = this->readDigits(s)) > 0) {
+    if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
+      if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
       gotNum = TRUE;
       double mul = 0.1;
       for (i = 0; i < n; i++) {
@@ -555,7 +553,8 @@ SoInput_FileInfo::readReal(double & d)
     else minus = TRUE;
     s += n;
 
-    if ((n = this->readDigits(s)) > 0) {
+    if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
+      if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
       exponent = 0.0;
       double mul = 1.0;
       for (i = 0; i < n; i++) {
@@ -594,11 +593,18 @@ SoInput_FileInfo::readChar(char * s, char charToRead)
 int
 SoInput_FileInfo::readDigits(char * str)
 {
+  return this->readDigits(str, 512);
+}
+
+int
+SoInput_FileInfo::readDigits(char * str, size_t capacity)
+{
   assert(!this->isBinary());
+  if (!str || capacity < 1) return 0;
   char c, * s = str;
 
-  while (this->get(c)) {
-    if (isdigit(c))
+  while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
+    if (std::isdigit(static_cast<unsigned char>(c)))
       *s++ = c;
     else {
       this->putBack(c);
@@ -612,11 +618,18 @@ SoInput_FileInfo::readDigits(char * str)
 int
 SoInput_FileInfo::readHexDigits(char * str)
 {
-  assert(!this->isBinary());
-  char c, * s = str;
-  while (this->get(c)) {
+  return this->readHexDigits(str, 512);
+}
 
-    if (isxdigit(c)) *s++ = c;
+int
+SoInput_FileInfo::readHexDigits(char * str, size_t capacity)
+{
+  assert(!this->isBinary());
+  if (!str || capacity < 1) return 0;
+  char c, * s = str;
+  while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
+
+    if (std::isxdigit(static_cast<unsigned char>(c))) *s++ = c;
     else {
       this->putBack(c);
       break;

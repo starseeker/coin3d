@@ -34,12 +34,13 @@ meaningfully.
 ## Building
 
 The Mentor examples are built automatically when Obol is configured with
-`-DOBOL_BUILD_TESTS=ON`.  They inherit the parent build's GL backend
+`-DOBOL_BUILD_EXAMPLES=ON` (the default).  They inherit the parent build's GL backend
 (OSMesa or system OpenGL).
 
 ```bash
 # From the Obol top-level source tree:
-cmake -S . -B build -DOBOL_BUILD_TESTS=ON [-DOBOL_USE_OSMESA=ON]
+cmake -S . -B build -DOBOL_BUILD_EXAMPLES=ON \
+  [-DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=ON]
 cmake --build build -- -j$(nproc)
 ```
 

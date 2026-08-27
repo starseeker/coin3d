@@ -110,6 +110,12 @@ public:
   static void freeCriteria(SbProfilingReportSortCriteria * criteria);
   static void freeCriteria(SbProfilingReportPrintCriteria * criteria);
 
+private:
+  friend class SoProfiler;
+  static void cleanup(void);
+
+public:
+
   typedef CallbackResponse ReportCB(void * userdata, int entrynum, const char * text);
 
   static void generate(const SbProfilingData & data,

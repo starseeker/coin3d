@@ -24,7 +24,7 @@
  *  11. PER_LINE with texture coordinates
  *  12. PER_VERTEX with texture coordinates
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -306,15 +306,15 @@ static bool testIndexedLineSet(int matbind, int tex,
 /* ==========================================================================
  * main
  * ======================================================================== */
-int main(int argc, char **argv)
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
     const char *basepath =
-        (argc > 1) ? argv[1] : "render_sogl_bindings";
+        (outputStem != nullptr) ? outputStem : "render_sogl_bindings";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *root = ObolTest::Scenes::createSOGLBindings(W, H);
         SbViewportRegion vp(W, H);
@@ -367,4 +367,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_sogl_bindings) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_sogl_bindings");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

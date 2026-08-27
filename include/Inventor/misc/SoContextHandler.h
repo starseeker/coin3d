@@ -55,6 +55,11 @@ public:
 
   typedef void ContextDestructionCB(uint32_t contextid, void * userdata);
   static void addContextDestructionCallback(ContextDestructionCB * func, void * closure);
+  // Outside callback dispatch, removal waits for in-flight invocations.  A
+  // callback-internal removal is cancellation-only and does not wait, avoiding
+  // deadlocks between concurrent dispatches.  Before destroying closure
+  // storage, repeat that removal after leaving callback dispatch; the second
+  // call waits for all invocations that retained the inactive entry.
   static void removeContextDestructionCallback(ContextDestructionCB * func, void * closure);
 };
 

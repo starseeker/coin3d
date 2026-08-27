@@ -28,7 +28,7 @@
  * Scene setup uses ObolTest::Scenes::buildDraggerTestScene() so the
  * viewer (obol_viewer) and this test start from the same base scene.
  *
- * Returns 0 if all succeed, non-0 on failure.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -148,13 +148,12 @@ static bool testDragger(SoDragger *dragger,
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
 
-    const char *basepath = (argc > 1) ? argv[1] : "render_simple_draggers";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_simple_draggers";
     int failures = 0;
 
     printf("\n=== Simple dragger interaction tests ===\n");
@@ -203,4 +202,11 @@ int main(int argc, char **argv)
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_simple_draggers) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_simple_draggers");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

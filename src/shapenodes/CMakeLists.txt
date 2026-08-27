@@ -42,10 +42,8 @@ set(OBOL_SHAPENODES_INTERNAL_FILES
 	soshape_trianglesort.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_SHAPENODES_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(shapenodes ${OBOL_SHAPENODES_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHAPENODES_FILES})

@@ -119,7 +119,8 @@ looked up by the integer context ID that Obol assigns to each GL context.
 
 ## Why `USE_MGL_NAMESPACE` Is Not Set Globally
 
-In a pure OSMesa build (`OBOL_USE_OSMESA=ON`), `USE_MGL_NAMESPACE` is set as a
+In a pure OSMesa build (`OBOL_USE_SWRAST=ON` with
+`OBOL_USE_SYSTEM_GL=OFF`), `USE_MGL_NAMESPACE` is set as a
 `target_compile_definitions` on the Obol library target — not via
 `add_definitions()`.  This scoping is deliberate: test executables and viewer
 code that include `<GL/glx.h>` must **not** see `USE_MGL_NAMESPACE`, because
@@ -176,16 +177,16 @@ delegate to its own resolver.  `CoinOSMesaContextManager` overrides this to call
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
 # Force dual-GL explicitly
-cmake -S . -B build -DOBOL_BUILD_DUAL_GL=ON
+cmake -S . -B build -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=ON
 
 # OSMesa only (headless CI, servers)
-cmake -S . -B build -DOBOL_USE_OSMESA=ON
+cmake -S . -B build -DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=ON
 
 # System GL only (GPU-only deployment, no headless fallback)
-cmake -S . -B build -DOBOL_USE_SYSTEM_ONLY=ON
+cmake -S . -B build -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF
 
 # No OpenGL (custom context driver, raytracing only)
-cmake -S . -B build -DOBOL_NO_OPENGL=ON
+cmake -S . -B build -DOBOL_USE_SYSTEM_GL=OFF -DOBOL_USE_SWRAST=OFF
 ```
 
 When `OBOL_BUILD_DUAL_GL` is active the library is named `libObol.so` and
@@ -201,5 +202,5 @@ system GL is available the function returns `nullptr`.
 - `docs/CONTEXT_MANAGEMENT_API.md` — Full ContextManager implementation guide
 - `src/glue/gl_osmesa.cpp` — The compilation-unit trick
 - `src/glue/gl.cpp` — The dispatch layer (`coingl_is_osmesa_context`)
-- `tests/utils/osmesa_context_manager.h` — Reference OSMesa implementation
-- `tests/utils/fltk_context_manager.h` — Reference system-GL implementation
+- `SoDB::createOSMesaContextManager()` — supported OSMesa manager factory
+- `examples/demo_support/fltk_context_manager.h` — reference system-GL implementation

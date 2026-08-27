@@ -181,7 +181,6 @@
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
 #include "base/SbImageFormatHandler.h"
-#include "base/SbJpegImageHandler.h"
 #include "misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
@@ -1112,6 +1111,63 @@ SoGLImage::setData(const unsigned char *bytes,
                 tex_border, createinstate);
 }
 
+SbBool
+SoGLImage::setSubData(SoState * state,
+                      const unsigned char * bytes,
+                      const SbVec2s & imageSize,
+                      const int numcomponents,
+                      const SbVec2s & subSize,
+                      const SbVec2s & offset)
+{
+  if (!state || !bytes || numcomponents < 1 || numcomponents > 4 ||
+      imageSize[0] <= 0 || imageSize[1] <= 0 ||
+      subSize[0] <= 0 || subSize[1] <= 0 ||
+      offset[0] < 0 || offset[1] < 0 ||
+      offset[0] > imageSize[0] - subSize[0] ||
+      offset[1] > imageSize[1] - subSize[1] ||
+      this->getTypeId() != SoGLImage::getClassTypeId()) {
+    return FALSE;
+  }
+
+  const SoGLContext * glue = sogl_glue_instance(state);
+  if (!glue || !SoGLDriverDatabase::isSupported(glue, SO_GL_TEXSUBIMAGE)) {
+    return FALSE;
+  }
+
+  SoGLDisplayList * dl = NULL;
+  LOCK_GLIMAGE;
+  dl = PRIVATE(this)->findDL(state);
+  const SbBool compatible =
+    dl != NULL &&
+    !dl->isMipMapTextureObject() &&
+    PRIVATE(this)->tex_border == 0 &&
+    PRIVATE(this)->glcomp == numcomponents &&
+    PRIVATE(this)->glsize == SbVec3s(imageSize[0], imageSize[1], 0);
+  if (compatible) {
+    dl->ref();
+    PRIVATE(this)->glimageid = SoGLImageP::getNextGLImageId();
+    PRIVATE(this)->needtransparencytest = TRUE;
+  }
+  UNLOCK_GLIMAGE;
+
+  if (!compatible) return FALSE;
+
+  dl->call(state);
+  const GLenum target = static_cast<GLenum>(dl->getTextureTarget());
+  const GLenum format = SoGLContext_get_texture_format(glue, numcomponents);
+  SoGLContext_glPixelStorei(glue, GL_UNPACK_ALIGNMENT, 1);
+  SoGLContext_glTexSubImage2D(glue, target, 0,
+                             offset[0], offset[1],
+                             subSize[0], subSize[1],
+                             format, GL_UNSIGNED_BYTE, bytes);
+  SoGLContext_glPixelStorei(glue, GL_UNPACK_ALIGNMENT, 4);
+  dl->unref(state);
+
+  SoCacheElement::setInvalid(TRUE);
+  if (state->isCacheOpen()) SoCacheElement::invalidate(state);
+  return TRUE;
+}
+
 
 /*!
   Destructor.
@@ -1432,14 +1488,6 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
         // Use high-quality resize when texture quality is important
         bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
         
-        // Initialize format handlers to ensure resize capability is available
-        static bool handlersInitialized = false;
-        if (!handlersInitialized) {
-          auto& registry = SbImageFormatRegistry::getInstance();
-          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-          handlersInitialized = true;
-        }
-        
         auto& registry = SbImageFormatRegistry::getInstance();
         unsigned char* result = registry.resizeImage((unsigned char*)bytes,
                                                     xsize, ysize, numcomponents,
@@ -1456,14 +1504,6 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       }
       else { // (zsize > 0) => 3D image
         bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
-        
-        // Initialize format handlers
-        static bool handlersInitialized = false;
-        if (!handlersInitialized) {
-          auto& registry = SbImageFormatRegistry::getInstance();
-          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-          handlersInitialized = true;
-        }
         
         auto& registry = SbImageFormatRegistry::getInstance();
         unsigned char* result = registry.resize3DImage((unsigned char*)bytes,

@@ -741,14 +741,15 @@ SoField::connectFrom(SoField * master, SbBool notnotify, SbBool append)
         (void) fc->getFieldName(master, fieldname);
         SoDebugError::postWarning("SoField::connectFrom",
                                   "connection from %p (%s.%s) already made",
-                                  master,
+                                  static_cast<void *>(master),
                                   fcname.getString(),
                                   fieldname.getString());
 
       }
       else {
         SoDebugError::postWarning("SoField::connectFrom",
-                                  "connection from %p already made", master);
+                                  "connection from %p already made",
+                                  static_cast<void *>(master));
       }
 #endif // OBOL_DEBUG
       return FALSE;
@@ -868,7 +869,8 @@ SoField::connectFrom(SoEngineOutput * master, SbBool notnotify, SbBool append)
         // created by 3ds max).
 #if OBOL_DEBUG
         SoDebugError::postWarning("SoField::connectFrom",
-                                  "connection from %p already made", master);
+                                  "connection from %p already made",
+                                  static_cast<void *>(master));
 #endif // OBOL_DEBUG
         // Match the ref() invocation.
         if (masterengine) masterengine->unref();

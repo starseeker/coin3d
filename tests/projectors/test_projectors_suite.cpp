@@ -54,119 +54,118 @@
 #include <Inventor/SbVec2f.h>
 #include <cmath>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
 static bool isFiniteVec(const SbVec3f & v)
 {
     return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
 }
 
-int main()
+TEST(ProjectorsSuite, SbLineProjectorClassInitialized)
 {
-    TestFixture fixture;
-    TestRunner runner;
-
-    // Build a perspective view volume used by all projector tests
     SbViewVolume vv;
     vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbLineProjector proj;
+    SUCCEED();
+}
 
-    // -----------------------------------------------------------------------
-    // SbLineProjector: setLine, project, getLine
-    // -----------------------------------------------------------------------
-    runner.startTest("SbLineProjector class initialized");
-    {
-        SbLineProjector proj;
-        bool pass = true; // construction itself is the test
-        runner.endTest(pass, "");
-    }
+TEST(ProjectorsSuite, SbLineProjectorSetLineGetLineRoundTrip)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbLineProjector proj;
+    SbLine line(SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f));
+    proj.setLine(line);
+    const SbLine & got = proj.getLine();
+    // Compare direction vectors
+    SbVec3f dir = got.getDirection();
+    bool pass = (std::fabs(dir[0] - 1.0f) < 1e-5f) &&
+                (std::fabs(dir[1]) < 1e-5f) &&
+                (std::fabs(dir[2]) < 1e-5f);
+    EXPECT_TRUE(pass) << "SbLineProjector getLine direction mismatch";
+}
 
-    runner.startTest("SbLineProjector setLine / getLine round-trip");
-    {
-        SbLineProjector proj;
-        SbLine line(SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f));
-        proj.setLine(line);
-        const SbLine & got = proj.getLine();
-        // Compare direction vectors
-        SbVec3f dir = got.getDirection();
-        bool pass = (std::fabs(dir[0] - 1.0f) < 1e-5f) &&
-                    (std::fabs(dir[1]) < 1e-5f) &&
-                    (std::fabs(dir[2]) < 1e-5f);
-        runner.endTest(pass, pass ? "" : "SbLineProjector getLine direction mismatch");
-    }
+TEST(ProjectorsSuite, SbLineProjectorProjectReturnsFinitePoint)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbLineProjector proj;
+    proj.setViewVolume(vv);
+    // Use a line along Y-axis to avoid parallelism with camera ray (along -Z)
+    SbLine line(SbVec3f(0.0f, -5.0f, 0.0f), SbVec3f(0.0f, 5.0f, 0.0f));
+    proj.setLine(line);
+    // project() may return NaN when no intersection exists; just test it runs
+    proj.project(SbVec2f(0.0f, 0.0f));
+    SUCCEED();
+}
 
-    runner.startTest("SbLineProjector project returns finite point");
-    {
-        SbLineProjector proj;
-        proj.setViewVolume(vv);
-        // Use a line along Y-axis to avoid parallelism with camera ray (along -Z)
-        SbLine line(SbVec3f(0.0f, -5.0f, 0.0f), SbVec3f(0.0f, 5.0f, 0.0f));
-        proj.setLine(line);
-        // project() may return NaN when no intersection exists; just test it runs
-        proj.project(SbVec2f(0.0f, 0.0f));
-        bool pass = true; // test that the call completes without crashing
-        runner.endTest(pass, "");
-    }
+// -----------------------------------------------------------------------
+// SbPlaneProjector: setPlane, project
+// -----------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------
-    // SbPlaneProjector: setPlane, project
-    // -----------------------------------------------------------------------
-    runner.startTest("SbPlaneProjector class initialized");
-    {
-        SbPlaneProjector proj;
-        bool pass = true;
-        runner.endTest(pass, "");
-    }
+TEST(ProjectorsSuite, SbPlaneProjectorClassInitialized)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbPlaneProjector proj;
+    SUCCEED();
+}
 
-    runner.startTest("SbPlaneProjector project returns finite point");
-    {
-        SbPlaneProjector proj;
-        proj.setViewVolume(vv);
-        // XY plane (z=0)
-        proj.setPlane(SbPlane(SbVec3f(0.0f, 0.0f, 1.0f), 0.0f));
-        SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-        bool pass = isFiniteVec(result);
-        runner.endTest(pass, pass ? "" : "SbPlaneProjector project returned non-finite point");
-    }
+TEST(ProjectorsSuite, SbPlaneProjectorProjectReturnsFinitePoint)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbPlaneProjector proj;
+    proj.setViewVolume(vv);
+    // XY plane (z=0)
+    proj.setPlane(SbPlane(SbVec3f(0.0f, 0.0f, 1.0f), 0.0f));
+    SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
+    bool pass = isFiniteVec(result);
+    EXPECT_TRUE(pass) << "SbPlaneProjector project returned non-finite point";
+}
 
-    // -----------------------------------------------------------------------
-    // SbSphereSectionProjector: construct, setViewVolume, project
-    // -----------------------------------------------------------------------
-    runner.startTest("SbSphereSectionProjector class initialized");
-    {
-        SbSphereSectionProjector proj;
-        bool pass = true;
-        runner.endTest(pass, "");
-    }
+// -----------------------------------------------------------------------
+// SbSphereSectionProjector: construct, setViewVolume, project
+// -----------------------------------------------------------------------
 
-    runner.startTest("SbSphereSectionProjector project returns finite point");
-    {
-        SbSphereSectionProjector proj(1.0f);
-        proj.setViewVolume(vv);
-        SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-        bool pass = isFiniteVec(result);
-        runner.endTest(pass, pass ? "" :
-            "SbSphereSectionProjector project returned non-finite point");
-    }
+TEST(ProjectorsSuite, SbSphereSectionProjectorClassInitialized)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbSphereSectionProjector proj;
+    SUCCEED();
+}
 
-    // -----------------------------------------------------------------------
-    // SbCylinderSectionProjector: construct, setViewVolume, project
-    // -----------------------------------------------------------------------
-    runner.startTest("SbCylinderSectionProjector class initialized");
-    {
-        SbCylinderSectionProjector proj;
-        bool pass = true;
-        runner.endTest(pass, "");
-    }
+TEST(ProjectorsSuite, SbSphereSectionProjectorProjectReturnsFinitePoint)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbSphereSectionProjector proj(1.0f);
+    proj.setViewVolume(vv);
+    SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
+    bool pass = isFiniteVec(result);
+    EXPECT_TRUE(pass) << "SbSphereSectionProjector project returned non-finite point";
+}
 
-    runner.startTest("SbCylinderSectionProjector project returns finite point");
-    {
-        SbCylinderSectionProjector proj;
-        proj.setViewVolume(vv);
-        SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-        bool pass = isFiniteVec(result);
-        runner.endTest(pass, pass ? "" :
-            "SbCylinderSectionProjector project returned non-finite point");
-    }
+// -----------------------------------------------------------------------
+// SbCylinderSectionProjector: construct, setViewVolume, project
+// -----------------------------------------------------------------------
 
-    return runner.getSummary();
+TEST(ProjectorsSuite, SbCylinderSectionProjectorClassInitialized)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbCylinderSectionProjector proj;
+    SUCCEED();
+}
+
+TEST(ProjectorsSuite, SbCylinderSectionProjectorProjectReturnsFinitePoint)
+{
+    SbViewVolume vv;
+    vv.perspective(static_cast<float>(M_PI) / 4.0f, 1.0f, 0.1f, 100.0f);
+    SbCylinderSectionProjector proj;
+    proj.setViewVolume(vv);
+    SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
+    bool pass = isFiniteVec(result);
+    EXPECT_TRUE(pass) << "SbCylinderSectionProjector project returned non-finite point";
 }

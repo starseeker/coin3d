@@ -75,11 +75,11 @@ static cc_storage *
 cc_storage_init(unsigned int size, void (*constructor)(void *), 
                 void (*destructor)(void *)) 
 {
-  cc_storage * storage = (cc_storage *) malloc(sizeof(cc_storage));
+  cc_storage * storage = new cc_storage;
   storage->size = size;
   storage->constructor = constructor;
   storage->destructor = destructor;
-  storage->dict = cc_dict_construct(8, 0.75f);
+  storage->dict = new cc_storage_map;
 #ifdef HAVE_THREADS
   storage->mutex = cc_mutex_construct();
 #endif /* HAVE_THREADS */
@@ -90,18 +90,6 @@ cc_storage_init(unsigned int size, void (*constructor)(void *),
   return storage;
 }
 
-static void
-cc_storage_hash_destruct_cb(uintptr_t OBOL_UNUSED_ARG(key), void * val, void * closure)
-{
-  cc_storage * storage = (cc_storage*) closure;
-  
-  if (storage->destructor) {
-    storage->destructor(val);
-  }
-  free(val);
-}
-
-/* ********************************************************************** */
 /* public api */
 
 cc_storage *
@@ -128,14 +116,17 @@ cc_storage_destruct(cc_storage * storage)
   // Unregister from enhanced cleanup system first
   cc_storage_unregister_for_cleanup(storage);
 
-  cc_dict_apply(storage->dict, cc_storage_hash_destruct_cb, storage);
-  cc_dict_destruct(storage->dict);
+  for (const auto & entry : *storage->dict) {
+    if (storage->destructor) storage->destructor(entry.second);
+    free(entry.second);
+  }
+  delete storage->dict;
 
 #ifdef HAVE_THREADS
   cc_mutex_destruct(storage->mutex);
 #endif /* HAVE_THREADS */
 
-  free(storage);
+  delete storage;
 }
 
 /* ********************************************************************** */
@@ -147,7 +138,7 @@ void *
 cc_storage_get(cc_storage * storage)
 {
   void * val;
-  unsigned long threadid = 0;
+  cc_thread_id_t threadid = 0;
 
 #ifdef HAVE_THREADS
   threadid = cc_thread_id();
@@ -161,13 +152,15 @@ cc_storage_get(cc_storage * storage)
   cc_mutex_lock(storage->mutex);
 #endif /* HAVE_THREADS */
 
-  if (!cc_dict_get(storage->dict, threadid, &val)) {
+  const auto existing = storage->dict->find(threadid);
+  if (existing == storage->dict->end()) {
     val = malloc(storage->size);
     if (storage->constructor) {
       storage->constructor(val);
     }
-    (void) cc_dict_put(storage->dict, threadid, val);
+    storage->dict->emplace(threadid, val);
   }
+  else val = existing->second;
 
 #ifdef HAVE_THREADS
   cc_mutex_unlock(storage->mutex);
@@ -184,14 +177,6 @@ typedef struct {
 
 /* callback from cc_dict_apply. will simply call the function specified
    in cc_storage_apply_to_appl */
-static void 
-storage_hash_apply(uintptr_t OBOL_UNUSED_ARG(key), void * val, void * closure)
-{
-  cc_storage_hash_apply_data * data = 
-    (cc_storage_hash_apply_data*) closure;
-  data->func(val, data->closure);
-}
-
 void 
 cc_storage_apply_to_all(cc_storage * storage, 
                         cc_storage_apply_func * func, 
@@ -206,10 +191,14 @@ cc_storage_apply_to_all(cc_storage * storage,
 
 #ifdef HAVE_THREADS
   cc_mutex_lock(storage->mutex);
-  cc_dict_apply(storage->dict, storage_hash_apply, &mydata);
+  for (const auto & entry : *storage->dict) {
+    mydata.func(entry.second, mydata.closure);
+  }
   cc_mutex_unlock(storage->mutex);
 #else /* ! HAVE_THREADS */
-  cc_dict_apply(storage->dict, storage_hash_apply, &mydata);
+  for (const auto & entry : *storage->dict) {
+    mydata.func(entry.second, mydata.closure);
+  }
 #endif /* ! HAVE_THREADS */
 
 }
@@ -218,7 +207,7 @@ cc_storage_apply_to_all(cc_storage * storage,
 /* ********************************************************************** */
 
 void 
-cc_storage_thread_cleanup(unsigned long threadid)
+cc_storage_thread_cleanup(cc_thread_id_t threadid)
 {
   // Use the enhanced cleanup implementation
   cc_storage_thread_cleanup_enhanced(threadid);

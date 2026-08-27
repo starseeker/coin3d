@@ -94,7 +94,9 @@ public:
 
       SoDebugError::postWarning("SoWriterefCounter::<cleanup>",
                                 "Not removed from writerefdict: %p, %s:%s",
-                                base, base->getTypeId().getName().getString(), name.getString());
+                                static_cast<const void *>(base),
+                                base->getTypeId().getName().getString(),
+                                name.getString());
 
     }
 #endif // OBOL_DEBUG

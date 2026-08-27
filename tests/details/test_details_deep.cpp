@@ -68,246 +68,227 @@
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/SoPickedPoint.h>
 
-using namespace SimpleTest;
+using namespace ObolTest;
 
-int main()
+TEST(DetailsDeep, SoCubeDetailClassTypeIdValid)
 {
-    TestFixture fixture;
-    TestRunner runner;
+    bool pass = (SoCubeDetail::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoCubeDetail has bad class type";
+}
 
-    // =========================================================================
-    // SoCubeDetail
-    // =========================================================================
-    runner.startTest("SoCubeDetail: class type id valid");
-    {
-        bool pass = (SoCubeDetail::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoCubeDetail has bad class type");
+TEST(DetailsDeep, SoCubeDetailIsOfTypeSoDetail)
+{
+    SoCubeDetail d;
+    bool pass = d.isOfType(SoDetail::getClassTypeId());
+    EXPECT_TRUE(pass) << "SoCubeDetail not a SoDetail subtype";
+}
+
+TEST(DetailsDeep, SoCubeDetailSetPartGetPartRoundTrip)
+{
+    SoCubeDetail d;
+    d.setPart(3);
+    bool pass = (d.getPart() == 3);
+    EXPECT_TRUE(pass) << "SoCubeDetail setPart(3) then getPart() != 3";
+}
+
+TEST(DetailsDeep, SoCubeDetailCopyReturnsCorrectType)
+{
+    SoCubeDetail d;
+    d.setPart(2);
+    SoDetail * c = d.copy();
+    bool pass = (c != nullptr) &&
+                c->isOfType(SoCubeDetail::getClassTypeId()) &&
+                (static_cast<SoCubeDetail *>(c)->getPart() == 2);
+    delete c;
+    EXPECT_TRUE(pass) << "SoCubeDetail copy() returned null, wrong type, or wrong part";
+}
+
+// Pick test: SoRayPickAction on a SoCube should yield SoCubeDetail.
+// Note: the action must be alive when inspecting the picked point; we apply
+// and check within the same scope.
+
+TEST(DetailsDeep, SoRayPickActionOnSoCubeYieldsSoCubeDetail)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCube);
+
+    SoRayPickAction rpa(SbViewportRegion(256, 256));
+    rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+    rpa.apply(root);
+
+    const SoPickedPoint * pp = rpa.getPickedPoint();
+    bool pass = false;
+    if (pp) {
+        const SoDetail * d = pp->getDetail();
+        pass = (d != nullptr) &&
+               d->isOfType(SoCubeDetail::getClassTypeId());
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "SoRayPickAction on SoCube did not yield SoCubeDetail";
+}
 
-    runner.startTest("SoCubeDetail: isOfType SoDetail");
-    {
-        SoCubeDetail d;
-        bool pass = d.isOfType(SoDetail::getClassTypeId());
-        runner.endTest(pass, pass ? "" : "SoCubeDetail not a SoDetail subtype");
+// =========================================================================
+// SoCylinderDetail
+// =========================================================================
+
+TEST(DetailsDeep, SoCylinderDetailClassTypeIdValid)
+{
+    bool pass = (SoCylinderDetail::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoCylinderDetail has bad class type";
+}
+
+TEST(DetailsDeep, SoCylinderDetailSetPartGetPartRoundTrip)
+{
+    SoCylinderDetail d;
+    d.setPart(1);
+    bool pass = (d.getPart() == 1);
+    EXPECT_TRUE(pass) << "SoCylinderDetail setPart(1) then getPart() != 1";
+}
+
+TEST(DetailsDeep, SoCylinderDetailCopyReturnsCorrectTypeAndPart)
+{
+    SoCylinderDetail d;
+    d.setPart(0);
+    SoDetail * c = d.copy();
+    bool pass = (c != nullptr) &&
+                c->isOfType(SoCylinderDetail::getClassTypeId()) &&
+                (static_cast<SoCylinderDetail *>(c)->getPart() == 0);
+    delete c;
+    EXPECT_TRUE(pass) << "SoCylinderDetail copy() returned null, wrong type, or wrong part";
+}
+
+// Pick test: SoRayPickAction on a SoCylinder should yield SoCylinderDetail
+
+TEST(DetailsDeep, SoRayPickActionOnSoCylinderYieldsSoCylinderDetail)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCylinder);
+
+    SoRayPickAction rpa(SbViewportRegion(256, 256));
+    rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+    rpa.apply(root);
+
+    const SoPickedPoint * pp = rpa.getPickedPoint();
+    bool pass = false;
+    if (pp) {
+        const SoDetail * d = pp->getDetail();
+        pass = (d != nullptr) &&
+               d->isOfType(SoCylinderDetail::getClassTypeId());
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "SoRayPickAction on SoCylinder did not yield SoCylinderDetail";
+}
 
-    runner.startTest("SoCubeDetail: setPart/getPart round-trip");
-    {
-        SoCubeDetail d;
-        d.setPart(3);
-        bool pass = (d.getPart() == 3);
-        runner.endTest(pass, pass ? "" :
-            "SoCubeDetail setPart(3) then getPart() != 3");
+// =========================================================================
+// SoConeDetail
+// =========================================================================
+
+TEST(DetailsDeep, SoConeDetailClassTypeIdValid)
+{
+    bool pass = (SoConeDetail::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoConeDetail has bad class type";
+}
+
+TEST(DetailsDeep, SoConeDetailSetPartGetPartRoundTrip)
+{
+    SoConeDetail d;
+    d.setPart(1);
+    bool pass = (d.getPart() == 1);
+    EXPECT_TRUE(pass) << "SoConeDetail setPart(1) then getPart() != 1";
+}
+
+TEST(DetailsDeep, SoConeDetailCopyReturnsCorrectType)
+{
+    SoConeDetail d;
+    d.setPart(0);
+    SoDetail * c = d.copy();
+    bool pass = (c != nullptr) &&
+                c->isOfType(SoConeDetail::getClassTypeId()) &&
+                (static_cast<SoConeDetail *>(c)->getPart() == 0);
+    delete c;
+    EXPECT_TRUE(pass) << "SoConeDetail copy() returned null, wrong type, or wrong part";
+}
+
+// Pick test: SoRayPickAction on a SoCone should yield SoConeDetail
+
+TEST(DetailsDeep, SoRayPickActionOnSoConeYieldsSoConeDetail)
+{
+    SoSeparator * root = new SoSeparator;
+    root->ref();
+    root->addChild(new SoCone);
+
+    SoRayPickAction rpa(SbViewportRegion(256, 256));
+    rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+    rpa.apply(root);
+
+    const SoPickedPoint * pp = rpa.getPickedPoint();
+    bool pass = false;
+    if (pp) {
+        const SoDetail * d = pp->getDetail();
+        pass = (d != nullptr) &&
+               d->isOfType(SoConeDetail::getClassTypeId());
     }
+    root->unref();
+    EXPECT_TRUE(pass) << "SoRayPickAction on SoCone did not yield SoConeDetail";
+}
 
-    runner.startTest("SoCubeDetail: copy() returns correct type");
-    {
-        SoCubeDetail d;
-        d.setPart(2);
-        SoDetail * c = d.copy();
-        bool pass = (c != nullptr) &&
-                    c->isOfType(SoCubeDetail::getClassTypeId()) &&
-                    (static_cast<SoCubeDetail *>(c)->getPart() == 2);
-        delete c;
-        runner.endTest(pass, pass ? "" :
-            "SoCubeDetail copy() returned null, wrong type, or wrong part");
+// =========================================================================
+// SoTextDetail
+// =========================================================================
+
+TEST(DetailsDeep, SoTextDetailClassTypeIdValid)
+{
+    bool pass = (SoTextDetail::getClassTypeId() != SoType::badType());
+    EXPECT_TRUE(pass) << "SoTextDetail has bad class type";
+}
+
+TEST(DetailsDeep, SoTextDetailSetStringIndexGetStringIndexRoundTrip)
+{
+    SoTextDetail d;
+    d.setStringIndex(5);
+    bool pass = (d.getStringIndex() == 5);
+    EXPECT_TRUE(pass) << "SoTextDetail setStringIndex(5) then getStringIndex() != 5";
+}
+
+TEST(DetailsDeep, SoTextDetailSetCharacterIndexGetCharacterIndexRoundTrip)
+{
+    SoTextDetail d;
+    d.setCharacterIndex(3);
+    bool pass = (d.getCharacterIndex() == 3);
+    EXPECT_TRUE(pass) << "SoTextDetail setCharacterIndex(3) then getCharacterIndex() != 3";
+}
+
+TEST(DetailsDeep, SoTextDetailSetPartGetPartRoundTrip)
+{
+    SoTextDetail d;
+    d.setPart(2);
+    bool pass = (d.getPart() == 2);
+    EXPECT_TRUE(pass) << "SoTextDetail setPart(2) then getPart() != 2";
+}
+
+TEST(DetailsDeep, SoTextDetailCopyPreservesAllFields)
+{
+    SoTextDetail d;
+    d.setStringIndex(7);
+    d.setCharacterIndex(4);
+    d.setPart(1);
+    SoDetail * c = d.copy();
+    bool pass = false;
+    if (c && c->isOfType(SoTextDetail::getClassTypeId())) {
+        const SoTextDetail * cd = static_cast<const SoTextDetail *>(c);
+        pass = (cd->getStringIndex()    == 7) &&
+               (cd->getCharacterIndex() == 4) &&
+               (cd->getPart()           == 1);
     }
+    delete c;
+    EXPECT_TRUE(pass) << "SoTextDetail copy() did not preserve all fields";
+}
 
-    // Pick test: SoRayPickAction on a SoCube should yield SoCubeDetail.
-    // Note: the action must be alive when inspecting the picked point; we apply
-    // and check within the same scope.
-    runner.startTest("SoRayPickAction on SoCube yields SoCubeDetail");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCube);
-
-        SoRayPickAction rpa(SbViewportRegion(256, 256));
-        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
-        rpa.apply(root);
-
-        const SoPickedPoint * pp = rpa.getPickedPoint();
-        bool pass = false;
-        if (pp) {
-            const SoDetail * d = pp->getDetail();
-            pass = (d != nullptr) &&
-                   d->isOfType(SoCubeDetail::getClassTypeId());
-        }
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoRayPickAction on SoCube did not yield SoCubeDetail");
-    }
-
-    // =========================================================================
-    // SoCylinderDetail
-    // =========================================================================
-    runner.startTest("SoCylinderDetail: class type id valid");
-    {
-        bool pass = (SoCylinderDetail::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoCylinderDetail has bad class type");
-    }
-
-    runner.startTest("SoCylinderDetail: setPart/getPart round-trip");
-    {
-        SoCylinderDetail d;
-        d.setPart(1);
-        bool pass = (d.getPart() == 1);
-        runner.endTest(pass, pass ? "" :
-            "SoCylinderDetail setPart(1) then getPart() != 1");
-    }
-
-    runner.startTest("SoCylinderDetail: copy() returns correct type and part");
-    {
-        SoCylinderDetail d;
-        d.setPart(0);
-        SoDetail * c = d.copy();
-        bool pass = (c != nullptr) &&
-                    c->isOfType(SoCylinderDetail::getClassTypeId()) &&
-                    (static_cast<SoCylinderDetail *>(c)->getPart() == 0);
-        delete c;
-        runner.endTest(pass, pass ? "" :
-            "SoCylinderDetail copy() returned null, wrong type, or wrong part");
-    }
-
-    // Pick test: SoRayPickAction on a SoCylinder should yield SoCylinderDetail
-    runner.startTest("SoRayPickAction on SoCylinder yields SoCylinderDetail");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCylinder);
-
-        SoRayPickAction rpa(SbViewportRegion(256, 256));
-        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
-        rpa.apply(root);
-
-        const SoPickedPoint * pp = rpa.getPickedPoint();
-        bool pass = false;
-        if (pp) {
-            const SoDetail * d = pp->getDetail();
-            pass = (d != nullptr) &&
-                   d->isOfType(SoCylinderDetail::getClassTypeId());
-        }
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoRayPickAction on SoCylinder did not yield SoCylinderDetail");
-    }
-
-    // =========================================================================
-    // SoConeDetail
-    // =========================================================================
-    runner.startTest("SoConeDetail: class type id valid");
-    {
-        bool pass = (SoConeDetail::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoConeDetail has bad class type");
-    }
-
-    runner.startTest("SoConeDetail: setPart/getPart round-trip");
-    {
-        SoConeDetail d;
-        d.setPart(1);
-        bool pass = (d.getPart() == 1);
-        runner.endTest(pass, pass ? "" :
-            "SoConeDetail setPart(1) then getPart() != 1");
-    }
-
-    runner.startTest("SoConeDetail: copy() returns correct type");
-    {
-        SoConeDetail d;
-        d.setPart(0);
-        SoDetail * c = d.copy();
-        bool pass = (c != nullptr) &&
-                    c->isOfType(SoConeDetail::getClassTypeId()) &&
-                    (static_cast<SoConeDetail *>(c)->getPart() == 0);
-        delete c;
-        runner.endTest(pass, pass ? "" :
-            "SoConeDetail copy() returned null, wrong type, or wrong part");
-    }
-
-    // Pick test: SoRayPickAction on a SoCone should yield SoConeDetail
-    runner.startTest("SoRayPickAction on SoCone yields SoConeDetail");
-    {
-        SoSeparator * root = new SoSeparator;
-        root->ref();
-        root->addChild(new SoCone);
-
-        SoRayPickAction rpa(SbViewportRegion(256, 256));
-        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
-        rpa.apply(root);
-
-        const SoPickedPoint * pp = rpa.getPickedPoint();
-        bool pass = false;
-        if (pp) {
-            const SoDetail * d = pp->getDetail();
-            pass = (d != nullptr) &&
-                   d->isOfType(SoConeDetail::getClassTypeId());
-        }
-        root->unref();
-        runner.endTest(pass, pass ? "" :
-            "SoRayPickAction on SoCone did not yield SoConeDetail");
-    }
-
-    // =========================================================================
-    // SoTextDetail
-    // =========================================================================
-    runner.startTest("SoTextDetail: class type id valid");
-    {
-        bool pass = (SoTextDetail::getClassTypeId() != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoTextDetail has bad class type");
-    }
-
-    runner.startTest("SoTextDetail: setStringIndex/getStringIndex round-trip");
-    {
-        SoTextDetail d;
-        d.setStringIndex(5);
-        bool pass = (d.getStringIndex() == 5);
-        runner.endTest(pass, pass ? "" :
-            "SoTextDetail setStringIndex(5) then getStringIndex() != 5");
-    }
-
-    runner.startTest("SoTextDetail: setCharacterIndex/getCharacterIndex round-trip");
-    {
-        SoTextDetail d;
-        d.setCharacterIndex(3);
-        bool pass = (d.getCharacterIndex() == 3);
-        runner.endTest(pass, pass ? "" :
-            "SoTextDetail setCharacterIndex(3) then getCharacterIndex() != 3");
-    }
-
-    runner.startTest("SoTextDetail: setPart/getPart round-trip");
-    {
-        SoTextDetail d;
-        d.setPart(2);
-        bool pass = (d.getPart() == 2);
-        runner.endTest(pass, pass ? "" :
-            "SoTextDetail setPart(2) then getPart() != 2");
-    }
-
-    runner.startTest("SoTextDetail: copy() preserves all fields");
-    {
-        SoTextDetail d;
-        d.setStringIndex(7);
-        d.setCharacterIndex(4);
-        d.setPart(1);
-        SoDetail * c = d.copy();
-        bool pass = false;
-        if (c && c->isOfType(SoTextDetail::getClassTypeId())) {
-            const SoTextDetail * cd = static_cast<const SoTextDetail *>(c);
-            pass = (cd->getStringIndex()    == 7) &&
-                   (cd->getCharacterIndex() == 4) &&
-                   (cd->getPart()           == 1);
-        }
-        delete c;
-        runner.endTest(pass, pass ? "" :
-            "SoTextDetail copy() did not preserve all fields");
-    }
-
-    runner.startTest("SoTextDetail: isOfType SoDetail");
-    {
-        SoTextDetail d;
-        bool pass = d.isOfType(SoDetail::getClassTypeId());
-        runner.endTest(pass, pass ? "" :
-            "SoTextDetail not a SoDetail subtype");
-    }
-
-    return runner.getSummary();
+TEST(DetailsDeep, SoTextDetailIsOfTypeSoDetail)
+{
+    SoTextDetail d;
+    bool pass = d.isOfType(SoDetail::getClassTypeId());
+    EXPECT_TRUE(pass) << "SoTextDetail not a SoDetail subtype";
 }

@@ -50,6 +50,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <mutex>
 
 #include <Inventor/SoType.h>
 #include <Inventor/SoInput.h>
@@ -61,6 +62,10 @@ SoType SoReadError::classTypeId STATIC_SOTYPE_INIT;
 SoErrorCB * SoReadError::callback = SoError::defaultHandlerCB;
 void * SoReadError::callbackData = NULL;
 
+namespace {
+std::mutex soreaderror_callback_mutex;
+}
+
 // *************************************************************************
 
 /*!
@@ -69,6 +74,7 @@ void * SoReadError::callbackData = NULL;
 void
 SoReadError::initClass(void)
 {
+  const std::lock_guard<std::mutex> guard(soreaderror_callback_mutex);
   SoReadError::callback = SoError::defaultHandlerCB;
   SoReadError::callbackData = NULL;
   SoReadError::classTypeId =
@@ -97,7 +103,8 @@ SoReadError::getTypeId(void) const
 void
 SoReadError::setHandlerCallback(SoErrorCB * const function, void * const data)
 {
-  SoReadError::callback = function;
+  const std::lock_guard<std::mutex> guard(soreaderror_callback_mutex);
+  SoReadError::callback = function ? function : SoError::defaultHandlerCB;
   SoReadError::callbackData = data;
 }
 
@@ -107,6 +114,7 @@ SoReadError::setHandlerCallback(SoErrorCB * const function, void * const data)
 SoErrorCB *
 SoReadError::getHandlerCallback(void)
 {
+  const std::lock_guard<std::mutex> guard(soreaderror_callback_mutex);
   return SoReadError::callback;
 }
 
@@ -116,6 +124,7 @@ SoReadError::getHandlerCallback(void)
 void *
 SoReadError::getHandlerData(void)
 {
+  const std::lock_guard<std::mutex> guard(soreaderror_callback_mutex);
   return SoReadError::callbackData;
 }
 
@@ -155,18 +164,14 @@ SoReadError::post(const SoInput * const in, const char * const format, ...)
                               "rectify the situation.");
   }
 
-  if (SoReadError::callback != SoError::defaultHandlerCB) {
-    SoReadError::callback(&error, SoReadError::callbackData);
-  }
-  else {
-    error.handleError();
-  }
+  error.handleError();
 }
 
 // Documented for parent class.
 SoErrorCB *
 SoReadError::getHandler(void * & data) const
 {
+  const std::lock_guard<std::mutex> guard(soreaderror_callback_mutex);
   data = SoReadError::callbackData;
   return SoReadError::callback;
 }

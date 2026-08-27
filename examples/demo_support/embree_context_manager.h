@@ -538,7 +538,7 @@ public:
             if (aspect_ratio < 1.0f) vv.scale(1.0f / aspect_ratio);
 
             /* Precompute 4 corner rays once per frame; interpolate per pixel.
-             * See nanort_context_manager.h for the rationale. */
+             * This matches the production NanoRT backend's camera-ray setup. */
             SbVec3f corner_p0[4], corner_p1[4];
             vv.projectPointToLine(SbVec2f(0.0f, 0.0f), corner_p0[0], corner_p1[0]);
             vv.projectPointToLine(SbVec2f(1.0f, 0.0f), corner_p0[1], corner_p1[1]);
@@ -549,7 +549,8 @@ public:
             const float fh = static_cast<float>(height);
 
             /* Parallel pixel loop using C++17 std::thread (fork-join per frame).
-             * See nanort_context_manager.h for the threading pattern rationale. */
+             * The production NanoRT backend uses a persistent worker pool; this
+             * example intentionally keeps the simpler fork-join policy. */
             const unsigned int nthreads = std::max(1u,
                 std::thread::hardware_concurrency());
             const unsigned int effective_threads = std::min(nthreads, height);

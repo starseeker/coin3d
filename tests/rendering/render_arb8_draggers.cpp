@@ -12,7 +12,7 @@
  *     DRAG_ON_PLANE handles (horizontal-ring edges) are all built correctly.
  *   - The scene renders without crashing.
  *
- * Output: argv[1]+".rgb"  (800×600 SGI RGB)
+ * Output: outputStem+".rgb"  (800×600 SGI RGB)
  */
 
 #include "headless_utils.h"
@@ -137,14 +137,14 @@ static const char* kArb8SchemaR = R"({
   ]
 })";
 
-int main(int argc, char** argv)
+static int runScenario(const char *outputStem)
 {
   initCoinHeadless();
 
   /* Render the canonical factory scene as the primary output image.
-   * This ensures obol_viewer and obol_render produce identical scenes. */
+   * This keeps the GTest scenario and obol_viewer on identical scene construction. */
   {
-      const char *primaryBase = (argc > 1) ? argv[1] : "render_arb8_draggers";
+      const char *primaryBase = (outputStem != nullptr) ? outputStem : "render_arb8_draggers";
       SoSeparator *fRoot = ObolTest::Scenes::createArb8Draggers(256, 256);
       SbViewportRegion fVp(256, 256);
       SoOffscreenRenderer fRen(fVp);
@@ -232,10 +232,17 @@ int main(int argc, char** argv)
   cam->position.setValue(cam->position.getValue()*1.3f);
 
   char outpath[1024];
-  if(argc>1) snprintf(outpath,sizeof(outpath),"%s.rgb",argv[1]);
+  if(outputStem != nullptr) snprintf(outpath,sizeof(outpath),"%s.rgb",outputStem);
   else       snprintf(outpath,sizeof(outpath),"render_arb8_draggers.rgb");
 
   bool ok=renderToFile(root,outpath);
   root->unref();
   return ok?0:1;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_arb8_draggers) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_arb8_draggers");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

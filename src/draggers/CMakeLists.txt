@@ -16,17 +16,16 @@ macro(strfy _input _postfix)
 endmacro()
 
 # Process dragger .iv files to generate header files
-file(GLOB_RECURSE OBOL_DRAGGER_IV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} defaults/*.iv)
+file(GLOB_RECURSE OBOL_DRAGGER_IV_FILES CONFIGURE_DEPENDS
+     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} defaults/*.iv)
 foreach(_input_file ${OBOL_DRAGGER_IV_FILES})
   strfy(${_input_file} "_draggergeometry")
 endforeach()
 
 # Set common resources (for macOS framework builds)
-file(GLOB_RECURSE COMMON_DRAGGER_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/defaults/*.iv)
+file(GLOB_RECURSE COMMON_DRAGGER_RESOURCES CONFIGURE_DEPENDS
+     ${CMAKE_CURRENT_SOURCE_DIR}/defaults/*.iv)
 set(COMMON_RESOURCES ${COMMON_DRAGGER_RESOURCES} PARENT_SCOPE)
-
-# Add binary directory to include path for generated headers
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # source files
 set(OBOL_DRAGGERS_FILES
@@ -54,10 +53,8 @@ set(OBOL_DRAGGERS_FILES
 	SoTranslate2Dragger.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
-	set(OBOL_SOURCE ${OBOL_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(draggers ${OBOL_DRAGGERS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_DRAGGERS_FILES})

@@ -13,7 +13,7 @@
  *   7. SoWriteAction::getOutput() API
  *   8. Header/footer in output buffer
  *
- * Returns 0 on pass, 1 on fail.
+ * The GTest scenario reports any failed contract.
  */
 
 #include "headless_utils.h"
@@ -38,6 +38,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 
 // Realloc callback for SoOutput dynamic buffer writes
 static char *  g_wra_buf      = nullptr;
@@ -173,11 +174,13 @@ static bool test1_writeReadBuffer()
 // ---------------------------------------------------------------------------
 // Test 2: Write scene to a temp file, read back from file
 // ---------------------------------------------------------------------------
-static bool test2_writeReadFile()
+static bool test2_writeReadFile(const char * output_stem)
 {
     SoSeparator *origRoot = buildScene();
 
-    const char *tmpPath = "render_write_read_test.iv";
+    const std::string temporary_path =
+        std::string(output_stem) + "_roundtrip.iv";
+    const char *tmpPath = temporary_path.c_str();
 
     // Write to file
     SoOutput out;
@@ -335,15 +338,14 @@ static bool test4_getOutput()
 }
 
 // ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int argc, char **argv)
+// Scenario implementation// ---------------------------------------------------------------------------
+static int runScenario(const char *outputStem)
 {
     initCoinHeadless();
-    const char *basepath = (argc > 1) ? argv[1] : "render_write_read_action";
+    const char *basepath = (outputStem != nullptr) ? outputStem : "render_write_read_action";
 
     /* Render the canonical factory scene as the primary output image.
-     * This ensures obol_viewer and obol_render produce identical scenes. */
+     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
     {
         SoSeparator *fRoot = ObolTest::Scenes::createWriteReadAction(256, 256);
         SbViewportRegion fVp(256, 256);
@@ -363,10 +365,17 @@ int main(int argc, char **argv)
     printf("\n=== SoWriteAction + SoDB::readAll tests ===\n");
 
     if (!test1_writeReadBuffer())  ++failures;
-    if (!test2_writeReadFile())    ++failures;
+    if (!test2_writeReadFile(basepath)) ++failures;
     if (!test3_complexWrite())     ++failures;
     if (!test4_getOutput())        ++failures;
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;
+}
+
+#include "framework/render_test_registration.h"
+
+TEST(RenderingScenarios, render_write_read_action) {
+    const std::string outputStem = ObolTest::renderingOutputStem("render_write_read_action");
+    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
 }

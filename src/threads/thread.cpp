@@ -31,18 +31,6 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_thread threads.h src/threads/threads.h
-  \ingroup coin_threads
-  \brief The structure for a thread.
-*/
-
-/*!
-  \typedef struct cc_thread cc_thread
-  \ingroup coin_threads
-  \brief The type definition for the thread structure.
-*/
-
-/*!
   \enum cc_retval {
     CC_ERROR = 0,
     CC_OK = 1,
@@ -61,8 +49,8 @@
 
 #include "threads/threads.h"
 
+#include <atomic>
 #include <cstdlib>
-#include <cassert>
 
 #include "config.h"
 
@@ -70,87 +58,11 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-// C++17 includes for modern threading
-#ifdef USE_CXX17_THREADS
 #include <thread>
 #include <chrono>
-#include <functional>
-#endif
 
-#include "errors/CoinInternalError.h"
-
-#include "threads/threadp.h"
 #include "threads/mutexp.h"
 #include "threads/recmutexp.h"
-#include "CoinTidbits.h"
-
-
-/* ********************************************************************** */
-
-/*
- FIXME:
- - use static table of cc_thread structures?
- - use cc_storage to reference self-structure for cc_thread_get_self()?
-*/
-
-/* ********************************************************************** */
-
-// C++17 threading is the only supported implementation
-#include "threads/thread_cxx17.icc"
-
-/*
-*/
-
-cc_thread *
-cc_thread_construct(cc_thread_f * func, void * closure)
-{
-  cc_thread * thread;
-  int ok;
-
-  thread = (cc_thread*) malloc(sizeof(cc_thread));
-  assert(thread != NULL);
-  thread->func = func;
-  thread->closure = closure;
-
-  ok = internal_init(thread);
-  if (ok) return thread;
-  assert(0 && "unable to create thread");
-  free(thread);
-  return NULL;
-}
-
-/* ********************************************************************** */
-
-/*
-*/
-
-void
-cc_thread_destruct(cc_thread * thread)
-{
-  int ok;
-  assert(thread != NULL);
-  ok = internal_clean(thread);
-  assert(ok == CC_OK);
-  (void)ok; /* avoid unused variable warning in release builds */
-  free(thread);
-}
-
-/* ********************************************************************** */
-
-/*
-*/
-
-int
-cc_thread_join(cc_thread * thread,
-               void ** retvalptr)
-{
-  int ok;
-  assert(thread != NULL);
-
-  ok = internal_join(thread, retvalptr);
-  assert(ok == CC_OK);
-  return ok;
-}
 
 /* ********************************************************************** */
 
@@ -162,13 +74,20 @@ cc_sleep(float seconds)
   std::this_thread::sleep_for(duration);
 };
 
-unsigned long 
+cc_thread_id_t
 cc_thread_id(void)
 {
-  // Use C++17 std::this_thread::get_id() and convert to hash
-  auto id = std::this_thread::get_id();
-  std::hash<std::thread::id> hasher;
-  return static_cast<unsigned long>(hasher(id));
+  // Storage and recursive mutex ownership require an identity, not a hash.
+  // Zero remains reserved for the no-threads storage key. If the counter ever
+  // exhausts the platform's identifier space, stop before an ID can be reused.
+  static std::atomic<cc_thread_id_t> next_id{1};
+  thread_local const cc_thread_id_t id = [] {
+    const cc_thread_id_t allocated =
+      next_id.fetch_add(1, std::memory_order_relaxed);
+    if (allocated == 0) std::abort();
+    return allocated;
+  }();
+  return id;
 }
 
 
@@ -176,28 +95,8 @@ void
 cc_thread_init(void)
 {
   cc_mutex_init();
-  // C++17 std::thread doesn't need explicit thread ID setup
-  // Thread IDs are automatically managed by std::this_thread::get_id()
   cc_recmutex_init();
 }
-
-/* ********************************************************************** */
-
-/* maybe use static table of thread structures, reference counted, to be
-   able to implement something like this, if needed */
-/* cc_thread * cc_thread_get_self(void); */
-
-/* ********************************************************************** */
-
-/*
- * We don't really want to expose internal id types, which would mean we
- * must include threads-implementation-specific headers in the header files.
- * It's therefore better to implement the missing/needed functionality for
- * the cc_thread type, so id peeking won't be necessary.
- */
-
-/* <id> cc_thread_get_id(cc_thread * thread); */
-/* <id> cc_thread_get_current_id(void); */
 
 /* ********************************************************************** */
 
@@ -330,14 +229,6 @@ cc_thread_init(void)
 */
 
 /*
-  \fn SbThread::SbThread(cc_thread * thread)
-
-  Protected constructor handling the internal thread ADT.
-
-  \sa SbThread::create
-*/
-
-/*
   \fn SbThread::~SbThread(void)
 
   Destructor.
@@ -346,4 +237,3 @@ cc_thread_init(void)
 */
 
 /* ********************************************************************** */
-

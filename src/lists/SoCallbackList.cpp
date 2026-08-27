@@ -43,6 +43,9 @@
 
 #include <Inventor/lists/SoCallbackList.h>
 
+#include <memory>
+#include <vector>
+
 #if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
 #endif // OBOL_DEBUG
@@ -63,11 +66,27 @@ SoCallbackList::SoCallbackList(void)
 {
 }
 
+SoCallbackList::SoCallbackList(const SoCallbackList & other)
+{
+  this->copyCallbacks(other);
+}
+
+SoCallbackList &
+SoCallbackList::operator=(const SoCallbackList & other)
+{
+  if (this != &other) {
+    this->clearCallbacks();
+    this->copyCallbacks(other);
+  }
+  return *this;
+}
+
 /*!
   Destructor.
 */
 SoCallbackList::~SoCallbackList(void)
 {
+  this->clearCallbacks();
 }
 
 /*!
@@ -77,10 +96,7 @@ SoCallbackList::~SoCallbackList(void)
 void
 SoCallbackList::addCallback(SoCallbackListCB * f, void * userdata)
 {
-  // FIXME: Shouldn't we check if the callback is already in the list?
-  // 20050723 kyrah.
-  this->funclist.append((void*)f);
-  this->datalist.append(userdata);
+  this->addCallback<void>(f, userdata);
 }
 
 /*!
@@ -89,30 +105,7 @@ SoCallbackList::addCallback(SoCallbackListCB * f, void * userdata)
 void
 SoCallbackList::removeCallback(SoCallbackListCB * f, void * userdata)
 {
-  int idx = this->getNumCallbacks() - 1;
-
-  // FIXME: Why are we not using a dictionary here? (The question is
-  // of course whether it should be allowed to have the same callback
-  // entry in the list twice...) 20050723 kyrah.
-  while (idx != -1) {
-    if ((this->funclist[idx] == (void*)f) && (this->datalist[idx] == userdata)) {
-      this->funclist.remove(idx);
-      this->datalist.remove(idx);
-      break;
-    }
-    idx--;
-  }
-
-#if OBOL_DEBUG
-  // FIXME: Is this warning really necessary? Shouldn't it be possible
-  // to do the equivalent of setCallback(NULL,NULL) -- i.e. "remove if
-  // already exists, else do nothing"? 20050723 kyrah.
-  if (idx == -1) {
-    SoDebugError::post("SoCallbackList::removeCallback",
-                       "Tried to remove non-existent callback function.");
-    return;
-  }
-#endif // OBOL_DEBUG
+  this->removeCallback<void>(f, userdata);
 }
 
 /*!
@@ -121,6 +114,9 @@ SoCallbackList::removeCallback(SoCallbackListCB * f, void * userdata)
 void
 SoCallbackList::clearCallbacks(void)
 {
+  for (int idx = 0; idx < this->funclist.getLength(); ++idx) {
+    delete static_cast<CallbackEntry *>(this->funclist[idx]);
+  }
   this->funclist.truncate(0);
   this->datalist.truncate(0);
 }
@@ -148,11 +144,35 @@ SoCallbackList::getNumCallbacks(void) const
 void
 SoCallbackList::invokeCallbacks(void * callbackdata)
 {
-  SbPList flcopy(this->funclist);
+  std::vector<std::unique_ptr<CallbackEntry>> flcopy;
+  flcopy.reserve(static_cast<size_t>(this->funclist.getLength()));
+  for (int idx = 0; idx < this->funclist.getLength(); ++idx) {
+    CallbackEntry * entry = static_cast<CallbackEntry *>(this->funclist[idx]);
+    flcopy.emplace_back(entry->clone());
+  }
   SbPList dlcopy(this->datalist);
 
-  for (int idx=0; idx < flcopy.getLength(); idx++) {
-    SoCallbackListCB * func = (SoCallbackListCB*) flcopy[idx];
-    func(dlcopy.operator[](idx), callbackdata);
+  for (size_t idx = 0; idx < flcopy.size(); ++idx) {
+    flcopy[idx]->invoke(dlcopy[static_cast<int>(idx)], callbackdata);
   }
+}
+
+void
+SoCallbackList::copyCallbacks(const SoCallbackList & other)
+{
+  for (int idx = 0; idx < other.funclist.getLength(); ++idx) {
+    CallbackEntry * entry =
+      static_cast<CallbackEntry *>(other.funclist[idx]);
+    this->funclist.append(entry->clone());
+    this->datalist.append(other.datalist[idx]);
+  }
+}
+
+void
+SoCallbackList::reportMissingCallback(void) const
+{
+#if OBOL_DEBUG
+  SoDebugError::post("SoCallbackList::removeCallback",
+                     "Tried to remove non-existent callback function.");
+#endif
 }
