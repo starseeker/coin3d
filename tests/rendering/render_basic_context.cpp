@@ -138,7 +138,7 @@ static SoSeparator* buildTexturedGeometry()
 
 /* Scenario 3: SoSceneTexture2 applied to a flat quad.
  * The inner scene renders an orange cone into a 128×128 texture. */
-static SoSeparator* buildSceneTextureScene()
+static SoSeparator* buildSceneTextureScene(const SbVec2s &textureSize = SbVec2s(128, 128))
 {
     /* Inner scene -------------------------------------------------------- */
     SoSeparator* innerScene = new SoSeparator;
@@ -178,7 +178,7 @@ static SoSeparator* buildSceneTextureScene()
     root->addChild(light);
 
     SoSceneTexture2* stex = new SoSceneTexture2;
-    stex->size.setValue(SbVec2s(128, 128));
+    stex->size.setValue(textureSize);
     stex->backgroundColor.setValue(0.0f, 0.0f, 0.2f, 1.0f);
     stex->type.setValue(SoSceneTexture2::RGBA8);
     stex->wrapS.setValue(SoSceneTexture2::CLAMP);
@@ -283,6 +283,18 @@ static bool sceneTextureDegradesSafely()
     return valid;
 }
 
+static bool sceneTextureInvalidSizeDegradesSafely(const SbVec2s &size)
+{
+    SoSeparator *root = buildSceneTextureScene(size);
+    root->ref();
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    const bool rendered = renderer.render(root);
+    const bool valid = !rendered || renderer.getBuffer() != nullptr;
+    root->unref();
+    return valid;
+}
+
 #include "framework/render_test_registration.h"
 
 class BasicContextRenderTest : public ::testing::Test {
@@ -305,4 +317,14 @@ TEST_F(BasicContextRenderTest, StaticTextureDegradesSafely)
 TEST_F(BasicContextRenderTest, SceneTextureDegradesSafely)
 {
     EXPECT_TRUE(sceneTextureDegradesSafely());
+}
+
+TEST_F(BasicContextRenderTest, NegativeSceneTextureSizeIsRejectedSafely)
+{
+    EXPECT_TRUE(sceneTextureInvalidSizeDegradesSafely(SbVec2s(-1, 64)));
+}
+
+TEST_F(BasicContextRenderTest, RoundedSceneTextureOverflowIsRejectedSafely)
+{
+    EXPECT_TRUE(sceneTextureInvalidSizeDegradesSafely(SbVec2s(32767, 64)));
 }

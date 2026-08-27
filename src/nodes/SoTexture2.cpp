@@ -198,6 +198,7 @@
 #include <unordered_map>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include "elements/SoTextureScalePolicyElement.h"
 #include "nodes/SoSubNodeP.h"
@@ -643,13 +644,12 @@ SoTexture2::GLRender(SoGLRenderAction * action)
   
   if (glmodel == SoMultiTextureImageElement::REPLACE) {
     if (!SoGLContext_glversion_matches_at_least(glue, 1, 1, 0)) {
-      static int didwarn = 0;
-      if (!didwarn) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoTexture2::GLRender",
                                   "Unable to use the GL_REPLACE texture model. "
                                   "Your OpenGL version is < 1.1. "
                                   "Using GL_MODULATE instead.");
-        didwarn = 1;
       }
       // use MODULATE and not DECAL, since DECAL only works for RGB
       // and RGBA textures

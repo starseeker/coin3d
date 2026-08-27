@@ -41,6 +41,7 @@
 #include <vector>
 
 #include <Inventor/annex/Profiler/SbProfilingData.h>
+#include <Inventor/errors/SoDebugError.h>
 #include "CoinTidbits.h"
 
 // *************************************************************************
@@ -127,61 +128,65 @@ SbProfilingReportSortCriteria *
 SoProfilingReportGenerator::getReportSortCriteria(const SbList< SortOrder > & order)
 {
   SbProfilingReportSortCriteria * criteria = new SbProfilingReportSortCriteria;
-
-  criteria->numfunctions=order.getLength();
-
-  criteria->functions =
-    new SoProfilingReportGeneratorP::SortFunction * [ criteria->numfunctions ];
+  std::vector<SoProfilingReportGeneratorP::SortFunction *> functions;
+  functions.reserve(static_cast<size_t>(order.getLength()));
 
   for (int idx=0;idx<order.getLength();++idx) {
     switch (order[idx]) {
     case SoProfilingReportGenerator::TIME_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeAsc);
       break;
     case SoProfilingReportGenerator::TIME_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeDes);
       break;
     case SoProfilingReportGenerator::TIME_MAX_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeMaxAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeMaxAsc);
       break;
     case SoProfilingReportGenerator::TIME_MAX_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeMaxDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeMaxDes);
       break;
     case SoProfilingReportGenerator::TIME_AVG_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeAvgAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeAvgAsc);
       break;
     case SoProfilingReportGenerator::TIME_AVG_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpTimeAvgDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpTimeAvgDes);
       break;
     case SoProfilingReportGenerator::COUNT_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpCountAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpCountAsc);
       break;
     case SoProfilingReportGenerator::COUNT_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpCountDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpCountDes);
       break;
     case SoProfilingReportGenerator::ALPHANUMERIC_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpAlphanumericAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpAlphanumericAsc);
       break;
     case SoProfilingReportGenerator::ALPHANUMERIC_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpAlphanumericDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpAlphanumericDes);
       break;
     case SoProfilingReportGenerator::MEM_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpMemAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpMemAsc);
       break;
     case SoProfilingReportGenerator::MEM_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpMemDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpMemDes);
       break;
     case SoProfilingReportGenerator::GFX_MEM_ASC:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpGfxMemAsc;
+      functions.push_back(SoProfilingReportGeneratorP::cmpGfxMemAsc);
       break;
     case SoProfilingReportGenerator::GFX_MEM_DES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::cmpGfxMemDes;
+      functions.push_back(SoProfilingReportGeneratorP::cmpGfxMemDes);
       break;
     default:
-      assert(!"not a supported sort order");
+      SoDebugError::postWarning("SoProfilingReportGenerator::getReportSortCriteria",
+                                "Ignoring unsupported sort order %d.",
+                                static_cast<int>(order[idx]));
       break;
     }
   }
+
+  criteria->numfunctions = static_cast<int>(functions.size());
+  criteria->functions = criteria->numfunctions > 0 ?
+    new SoProfilingReportGeneratorP::SortFunction * [criteria->numfunctions] : NULL;
+  std::copy(functions.begin(), functions.end(), criteria->functions);
 
   return criteria;
 }
@@ -203,7 +208,10 @@ SoProfilingReportGenerator::getDefaultReportSortCriteria(DataCategorization cate
     order.append(TIME_MAX_DES);
     break;
   default:
-    assert(!"not a supported sort order");
+    SoDebugError::postWarning("SoProfilingReportGenerator::getDefaultReportSortCriteria",
+                              "Unsupported category %d; using NODES defaults.",
+                              static_cast<int>(category));
+    order.append(TIME_DES);
     break;
   }
   return getReportSortCriteria(order);
@@ -212,7 +220,6 @@ SoProfilingReportGenerator::getDefaultReportSortCriteria(DataCategorization cate
 void
 SoProfilingReportGenerator::freeCriteria(SbProfilingReportSortCriteria * criteria)
 {
-  assert(criteria);
   delete criteria;
 }
 
@@ -247,68 +254,73 @@ SbProfilingReportPrintCriteria *
 SoProfilingReportGenerator::getReportPrintCriteria(const SbList<Column> & order)
 {
   SbProfilingReportPrintCriteria * criteria = new SbProfilingReportPrintCriteria;
-  criteria->numfunctions = order.getLength();
-
-  criteria->functions =
-    new SoProfilingReportGeneratorP::PrintFunction * [ criteria->numfunctions ];
+  std::vector<SoProfilingReportGeneratorP::PrintFunction *> functions;
+  functions.reserve(static_cast<size_t>(order.getLength()));
 
   for (int idx=0;idx<order.getLength();++idx) {
     switch (order[idx]) {
     case SoProfilingReportGenerator::NAME:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printName;
+      functions.push_back(SoProfilingReportGeneratorP::printName);
       criteria->needstringlengths = TRUE;
       break;
     case SoProfilingReportGenerator::TYPE:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printType;
+      functions.push_back(SoProfilingReportGeneratorP::printType);
       criteria->needstringlengths = TRUE;
       break;
     case SoProfilingReportGenerator::COUNT:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printCount;
+      functions.push_back(SoProfilingReportGeneratorP::printCount);
       break;
     case SoProfilingReportGenerator::TIME_SECS:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeSecs;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeSecs);
       break;
     case SoProfilingReportGenerator::TIME_SECS_MAX:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeSecsMax;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeSecsMax);
       break;
     case SoProfilingReportGenerator::TIME_SECS_AVG:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeSecsAvg;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeSecsAvg);
       break;
     case SoProfilingReportGenerator::TIME_MSECS:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeMSecs;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeMSecs);
       break;
     case SoProfilingReportGenerator::TIME_MSECS_MAX:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeMSecsMax;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeMSecsMax);
       break;
     case SoProfilingReportGenerator::TIME_MSECS_AVG:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimeMSecsAvg;
+      functions.push_back(SoProfilingReportGeneratorP::printTimeMSecsAvg);
       break;
     case SoProfilingReportGenerator::TIME_PERCENT:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimePercent;
+      functions.push_back(SoProfilingReportGeneratorP::printTimePercent);
       break;
     case SoProfilingReportGenerator::TIME_PERCENT_MAX:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimePercentMax;
+      functions.push_back(SoProfilingReportGeneratorP::printTimePercentMax);
       break;
     case SoProfilingReportGenerator::TIME_PERCENT_AVG:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printTimePercentAvg;
+      functions.push_back(SoProfilingReportGeneratorP::printTimePercentAvg);
       break;
     case SoProfilingReportGenerator::MEM_BYTES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printMemBytes;
+      functions.push_back(SoProfilingReportGeneratorP::printMemBytes);
       break;
     case SoProfilingReportGenerator::MEM_KILOBYTES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printMemKilobytes;
+      functions.push_back(SoProfilingReportGeneratorP::printMemKilobytes);
       break;
     case SoProfilingReportGenerator::GFX_MEM_BYTES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printGfxMemBytes;
+      functions.push_back(SoProfilingReportGeneratorP::printGfxMemBytes);
       break;
     case SoProfilingReportGenerator::GFX_MEM_KILOBYTES:
-      criteria->functions[idx] = SoProfilingReportGeneratorP::printGfxMemKilobytes;
+      functions.push_back(SoProfilingReportGeneratorP::printGfxMemKilobytes);
       break;
     default:
-      assert(!"unsupported column/format id");
+      SoDebugError::postWarning("SoProfilingReportGenerator::getReportPrintCriteria",
+                                "Ignoring unsupported report column %d.",
+                                static_cast<int>(order[idx]));
       break;
     }
   }
+
+  criteria->numfunctions = static_cast<int>(functions.size());
+  criteria->functions = criteria->numfunctions > 0 ?
+    new SoProfilingReportGeneratorP::PrintFunction * [criteria->numfunctions] : NULL;
+  std::copy(functions.begin(), functions.end(), criteria->functions);
 
   return criteria;
 }
@@ -341,7 +353,13 @@ SoProfilingReportGenerator::getDefaultReportPrintCriteria(DataCategorization cat
     order.append(MEM_KILOBYTES);
     break;
   default:
-    assert(!"unsupported category");
+    SoDebugError::postWarning("SoProfilingReportGenerator::getDefaultReportPrintCriteria",
+                              "Unsupported category %d; using NODES defaults.",
+                              static_cast<int>(category));
+    order.append(NAME);
+    order.append(TIME_PERCENT);
+    order.append(TIME_MSECS);
+    order.append(MEM_KILOBYTES);
     break;
   }
   return getReportPrintCriteria(order);
@@ -350,7 +368,6 @@ SoProfilingReportGenerator::getDefaultReportPrintCriteria(DataCategorization cat
 void
 SoProfilingReportGenerator::freeCriteria(SbProfilingReportPrintCriteria * criteria)
 {
-  assert(criteria);
   delete criteria;
 }
 
@@ -450,9 +467,13 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
                                      ReportCB * reportcallback,
                                      void * userdata)
 {
-  assert(reportcallback);
-  assert(sort);
-  assert(print);
+  if (!reportcallback || !sort || !print) {
+    SoDebugError::postWarning("SoProfilingReportGenerator::generate",
+                              "Ignoring report request with a null %s.",
+                              !reportcallback ? "callback" :
+                              (!sort ? "sort criteria" : "print criteria"));
+    return;
+  }
 
   SbList<SbProfilingNodeNameKey> localnamekeys;
   SbList<SbProfilingNodeTypeKey> localtypekeys;
@@ -470,7 +491,9 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
     numindexes = localtypekeys.getLength();
     break;
   default:
-    assert(!"no such data categorization implemented");
+    SoDebugError::postWarning("SoProfilingReportGenerator::generate",
+                              "Ignoring unsupported data categorization %d.",
+                              static_cast<int>(categorization));
     return;
   }
   if (numindexes == 0) return;

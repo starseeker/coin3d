@@ -25,6 +25,10 @@ The modern suite uses GTest's CTest discovery.  A test process receives an
 explicit `SoDB::ContextManager`; non-rendering tests use a no-op manager and
 render fixtures select either OSMesa or native GLX through their CTest lane.
 Tests must not change the global rendering backend as part of ordinary setup.
+Test configuration prefers an installed GoogleTest 1.10 or newer and falls
+back to the pinned `external/googletest` submodule. Recursive repository
+checkouts already populate it; otherwise run
+`git submodule update --init external/googletest`.
 
 Stress and sanitizer-oriented checks are built explicitly, so a normal CTest
 run stays fast and repeatable:
@@ -38,10 +42,10 @@ ctest --test-dir .build-stress -L stress --output-on-failure
 
 ## Adding a test
 
-Put a new test in the smallest appropriate layer and add its source to
-`tests/framework/CMakeLists.txt`.  Use standard GTest `TEST` or `TEST_F`
-cases.  Do not add new `REGISTER_TEST` entries, standalone `main()` functions,
-or CMake-generated main wrappers.
+Put a new test in the smallest appropriate layer and add its source to the
+matching manifest under `tests/framework/cmake/`. Use standard GTest `TEST`
+or `TEST_F` cases. Do not add new `REGISTER_TEST` entries, standalone `main()`
+functions, or CMake-generated main wrappers.
 
 Rendering tests first assert a semantic contract: render succeeded,
 the image has expected dimensions, known pixels/regions are present, or a

@@ -207,6 +207,7 @@
 #include <Inventor/actions/SoAction.h>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -474,8 +475,9 @@ SoAction::apply(SoNode * root)
 
   if (root) {
 #if OBOL_DEBUG
-    static SbBool first = TRUE;
-    if ((root->getRefCount() == 0) && first) {
+    if (root->getRefCount() == 0) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
 
       // This problem has turned out to be a FAQ, the reason probably
       // being that it "works" under SGI / TGS Inventor with no
@@ -506,7 +508,7 @@ SoAction::apply(SoNode * root)
                                 "fix the bug in your application code.",
 
                                 this->getTypeId().getName().getString());
-      first = FALSE;
+      }
     }
 #endif // OBOL_DEBUG
     // So the graph is not deallocated during traversal.

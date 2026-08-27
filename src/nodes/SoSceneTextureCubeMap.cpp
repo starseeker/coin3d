@@ -31,6 +31,8 @@
 \**************************************************************************/
 
 #include <Inventor/nodes/SoSceneTextureCubeMap.h>
+
+#include <cstddef>
 #include "config.h"
 #include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoSubNode.h>
@@ -61,6 +63,8 @@
 #include "glue/glp.h"
 #include <Inventor/SoDB.h>
 #include "CoinTidbits.h"
+#include "misc/SoOnce.h"
+#include "nodes/SoSceneTextureReadback.h"
 
 
 #include <Inventor/threads/SbMutex.h>
@@ -118,7 +122,7 @@ class SoSceneTextureCubeMapP {
 
   SbBool canrendertotexture;
   unsigned char * offscreenbuffer;
-  int offscreenbuffersize;
+  std::size_t offscreenbuffersize;
   SbBool hadSceneCamera;
   SbBool hasSceneChanged;
 
@@ -263,13 +267,12 @@ SoSceneTextureCubeMap::GLRender(SoGLRenderAction * action)
   
   if (glmodel == SoMultiTextureImageElement::REPLACE) {
     if (!SoGLContext_glversion_matches_at_least(glue, 1, 1, 0)) {
-      static int didwarn = 0;
-      if (!didwarn) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoSceneTextureCubeMap::GLRender",
                                   "Unable to use the GL_REPLACE texture model. "
                                   "Your OpenGL version is < 1.1. "
                                   "Using GL_MODULATE instead.");
-        didwarn = 1;
       }
       // use MODULATE and not DECAL, since DECAL only works for RGB
       // and RGBA textures
@@ -367,6 +370,10 @@ SoSceneTextureCubeMapP::~SoSceneTextureCubeMapP()
 {
   if (this->glimage) this->glimage->unref(NULL);
   this->destroyCamera();
+  if (this->glaction) {
+    coingl_unregister_context_manager(this->contextid);
+    coingl_unregister_osmesa_context(this->contextid);
+  }
   if (this->glcontext != NULL) {
     if (this->contextManager) this->contextManager->destroyContext(this->glcontext);
   }
@@ -379,14 +386,67 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
 {
   // Update the context manager from the state element pushed by SoOffscreenRenderer.
   SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
-  if (stateMgr) this->contextManager = stateMgr;
+  if (stateMgr && stateMgr != this->contextManager) {
+    // Context handles are private to the manager that created them. Tear
+    // down every manager-owned resource before adopting a different backend
+    // (for example, when one node is rendered through system GL and OSMesa).
+    if (this->glimage) {
+      this->glimage->unref(NULL);
+      this->glimage = NULL;
+    }
+    if (this->glcontext && this->contextManager) {
+      this->contextManager->destroyContext(this->glcontext);
+      this->glcontext = NULL;
+      this->glcontextsize.setValue(-1, -1);
+    }
+    if (this->glaction) {
+      coingl_unregister_context_manager(this->contextid);
+      coingl_unregister_osmesa_context(this->contextid);
+      delete this->glaction;
+      this->glaction = NULL;
+    }
+    this->contextManager = stateMgr;
+    this->glimagevalid = FALSE;
+    this->pbuffervalid = FALSE;
+  }
 
-  SbVec2s size = PUBLIC(this)->size.getValue();
+  const SbVec2s requestedsize = PUBLIC(this)->size.getValue();
+  const bool disabled = requestedsize == SbVec2s(0, 0);
+  SbVec2s size;
+  bool validsize = !disabled &&
+    ObolSceneTextureInternal::normalizeSize(requestedsize, size);
+
+  if (validsize && this->contextManager) {
+    unsigned int maxwidth = 0;
+    unsigned int maxheight = 0;
+    this->contextManager->maxOffscreenDimensions(maxwidth, maxheight);
+    if ((maxwidth > 0 && static_cast<unsigned int>(size[0]) > maxwidth) ||
+        (maxheight > 0 && static_cast<unsigned int>(size[1]) > maxheight)) {
+      validsize = false;
+    }
+  }
+
+  if (validsize) {
+    GLint maxtexturesize = 0;
+    const SoGLContext * outerglue = sogl_glue_from_state(state);
+    if (outerglue) {
+      SoGLContext_glGetIntegerv(outerglue, GL_MAX_CUBE_MAP_TEXTURE_SIZE,
+                                &maxtexturesize);
+      if (maxtexturesize <= 0) {
+        SoGLContext_glGetIntegerv(outerglue, GL_MAX_TEXTURE_SIZE,
+                                  &maxtexturesize);
+      }
+    }
+    if (maxtexturesize > 0 &&
+        (size[0] > maxtexturesize || size[1] > maxtexturesize)) {
+      validsize = false;
+    }
+  }
 
   assert(PUBLIC(this)->scene.getValue());
 
-  if ((this->glcontext && this->glcontextsize != size) ||
-      (size == SbVec2s(0,0))) {
+  if (((this->glcontext || this->glaction) &&
+       (!validsize || this->glcontextsize != size)) || disabled) {
     if (this->glimage) {
       this->glimage->unref(state);
       this->glimage = NULL;
@@ -396,38 +456,30 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       this->glcontextsize.setValue(-1,-1);
       this->glcontext = NULL;
     }
-    delete this->glaction; 
+    if (this->glaction) {
+      coingl_unregister_context_manager(this->contextid);
+      coingl_unregister_osmesa_context(this->contextid);
+    }
+    delete this->glaction;
     this->glaction = NULL;
     this->glimagevalid = FALSE;
   }
-  if (size == SbVec2s(0,0)) return;
-
-  // FIXME: temporary until non power of two textures are supported,
-  // pederb 2003-12-05
-  size[0] = (short) coin_geq_power_of_two(size[0]);
-  size[1] = (short) coin_geq_power_of_two(size[1]);
+  if (disabled) return;
+  if (!validsize) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
+      SoDebugError::postWarning("SoSceneTextureCubeMapP::updatePBuffer",
+                                "Ignoring invalid or unsupported cube-map size %dx%d. "
+                                "Dimensions must be positive, round to a signed "
+                                "16-bit power of two, and fit the GL cube-map limit.",
+                                static_cast<int>(requestedsize[0]),
+                                static_cast<int>(requestedsize[1]));
+    }
+    return;
+  }
 
   if (this->glcontext == NULL) {
     this->glcontextsize = size;
-    // disabled until an pbuffer extension is available to create a
-    // render-to-texture pbuffer that has a non power of two size.
-    // pederb, 2003-12-05
-    if (1) { // if (!glue->has_ext_texture_rectangle) {
-      this->glcontextsize[0] = (short) coin_geq_power_of_two(size[0]);
-      this->glcontextsize[1] = (short) coin_geq_power_of_two(size[1]);
-
-      if (this->glcontextsize != size) {
-        static int didwarn = 0;
-        if (!didwarn) {
-          SoDebugError::postWarning("SoSceneTextureCubeMapP::updatePBuffer",
-                                    "Requested non power of two size, "
-                                    "but your OpenGL driver lacks support "
-                                    "for such pbuffer textures.");
-          didwarn = 1;
-        }
-      }
-    }
-    
     this->glrectangle = FALSE;
     if (!coin_is_power_of_two(this->glcontextsize[0]) ||
         !coin_is_power_of_two(this->glcontextsize[1])) {
@@ -442,6 +494,16 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     unsigned int y = this->glcontextsize[1];
     
     this->glcontext = this->contextManager ? this->contextManager->createOffscreenContext(x, y) : nullptr;
+    if (!this->glcontext) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoSceneTextureCubeMapP::updatePBuffer",
+                                  "Unable to create an offscreen context for a %dx%d cube map.",
+                                  static_cast<int>(this->glcontextsize[0]),
+                                  static_cast<int>(this->glcontextsize[1]));
+      }
+      return;
+    }
     this->canrendertotexture = 
       SoGLContext_context_can_render_to_texture(this->glcontext);
 
@@ -452,6 +514,12 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       this->glaction->
         addPreRenderCallback(SoSceneTextureCubeMapP::prerendercb, 
                              (void*) PUBLIC(this));
+      if (this->contextManager) {
+        coingl_register_context_manager(this->contextid, this->contextManager);
+        if (this->contextManager->isOSMesaContext(this->glcontext)) {
+          coingl_register_osmesa_context(this->contextid);
+        }
+      }
     } 
     else {
       this->glaction->
@@ -467,33 +535,69 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     this->glaction->setTransparencyType((SoGLRenderAction::TransparencyType)
                                         SoShapeStyleElement::getTransparencyType(state));
 
-    if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
+    if (!this->contextManager ||
+        !this->contextManager->makeContextCurrent(this->glcontext)) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoSceneTextureCubeMapP::updatePBuffer",
+                                  "Unable to make the cube-map context current.");
+      }
+      return;
+    }
+    const SoGLContext * pbglue = SoGLContext_instance(this->contextid);
+    if (!pbglue) {
+      this->contextManager->restorePreviousContext(this->glcontext);
+      return;
+    }
 
-
-    SoGLContext_glEnable(sogl_glue_from_state(state), GL_DEPTH_TEST);
+    SoGLContext_glEnable(pbglue, GL_DEPTH_TEST);
 
     if (!this->canrendertotexture) {
       SbVec2s ctx_size = this->glcontextsize;
-      int cubeSideSize = ctx_size[0]*ctx_size[1]*4;
-      int reqbytes = cubeSideSize*6; // 6 cube sides
+      unsigned int surfacewidth = 0;
+      unsigned int surfaceheight = 0;
+      this->contextManager->getActualSurfaceSize(this->glcontext,
+                                                  surfacewidth,
+                                                  surfaceheight);
+      if (surfacewidth < static_cast<unsigned int>(ctx_size[0]) ||
+          surfaceheight < static_cast<unsigned int>(ctx_size[1])) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
+          SoDebugError::postWarning("SoSceneTextureCubeMapP::updatePBuffer",
+                                    "Cannot read a %dx%d cube-map face from an "
+                                    "offscreen surface reported as %ux%u.",
+                                    static_cast<int>(ctx_size[0]),
+                                    static_cast<int>(ctx_size[1]),
+                                    surfacewidth, surfaceheight);
+        }
+        this->contextManager->restorePreviousContext(this->glcontext);
+        return;
+      }
+
+      std::size_t reqbytes = 0;
+      const bool sizeok =
+        ObolSceneTextureInternal::rgbaByteCount(ctx_size, 6, reqbytes);
+      if (!sizeok) {
+        this->contextManager->restorePreviousContext(this->glcontext);
+        return;
+      }
+      const std::size_t cubeSideSize = reqbytes / 6U;
       if (reqbytes > this->offscreenbuffersize) {
+        unsigned char * replacement = new unsigned char[reqbytes];
         delete[] this->offscreenbuffer;
-        // Extra 4096 bytes of padding: proprietary GPU drivers use
-        // vectorised/DMA stores during glReadPixels that can overrun the
-        // exact pixel-data size.  See SoSceneTexture2.cpp for details.
-        this->offscreenbuffer = new unsigned char[reqbytes + 4096];
+        this->offscreenbuffer = replacement;
         this->offscreenbuffersize = reqbytes;
       }
 
       unsigned char * cubeSidePtr = this->offscreenbuffer;
-                  
       for (int i=0; i<6; i++) {
         this->glaction->apply(this->updateCamera((SoGLCubeMapImage::Target)i));
-        SoGLContext_glFlush(sogl_glue_from_state(state));
-
-        SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 1);
-        SoGLContext_glReadPixels(sogl_glue_from_state(state), 0,0,ctx_size[0],ctx_size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
-        SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 4);
+        SoGLContext_glFlush(pbglue);
+        {
+          ObolSceneTextureInternal::PixelPackStateGuard packstate(pbglue);
+          SoGLContext_glReadPixels(pbglue, 0, 0, ctx_size[0], ctx_size[1],
+                                   GL_RGBA, GL_UNSIGNED_BYTE, cubeSidePtr);
+        }
         cubeSidePtr += cubeSideSize;
       }
     }
@@ -542,7 +646,10 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
   if (!this->canrendertotexture && !this->pbuffervalid) {
     assert(this->glimage);
     assert(this->offscreenbuffer);
-    int cubeSideSize = this->glcontextsize[0] * this->glcontextsize[1] * 4;
+    std::size_t cubeSideSize = 0;
+    const bool sizeok = ObolSceneTextureInternal::rgbaByteCount(
+      this->glcontextsize, 1, cubeSideSize);
+    if (!sizeok) return;
     unsigned char * cubeSidePtr = this->offscreenbuffer;
         
     // FIXME: what about  wrapS, wrapT, wrapR, and quality? - martin 20050427
@@ -606,13 +713,12 @@ SoSceneTextureCubeMapP::ensureCamera(void)
   }
   else if (this->hadSceneCamera || this->cachedCamera == NULL) {
     // create default camera:
-    static int didwarn = 0;
-    if (!didwarn) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoSceneTextureCubeMap::ensureCamera",
                                 "The scene does not provide a camera. "
                                 "A perspective camera at position (0,0,0) "
                                 "will be used.");
-      didwarn = 1;
     }
     if (this->cachedCamera) this->cachedCamera->unref();
     this->cachedCamera = new SoPerspectiveCamera;

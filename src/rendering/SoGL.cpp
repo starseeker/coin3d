@@ -39,7 +39,9 @@
 #include "config.h"
 
 #include <cassert>
+#include <atomic>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 
@@ -74,6 +76,7 @@
 #include <Inventor/threads/SbStorage.h>
 
 #include "glue/glp.h"
+#include "misc/SoOnce.h"
 #include "misc/SoEnvironment.h"
 
 // *************************************************************************
@@ -112,9 +115,8 @@ sogl_glue_instance(const SoState * state)
   if (action->isOfType(SoGLRenderAction::getClassTypeId())) {
     return SoGLContext_instance(action->getCacheContext());
   }
-  static int didwarn = 0;
-  if (!didwarn) {
-    didwarn = 1;
+  static std::atomic_flag didwarn = ATOMIC_FLAG_INIT;
+  if (!didwarn.test_and_set(std::memory_order_relaxed)) {
     SoDebugError::postWarning("sogl_glue_instance",
                               "Wrong action type detected. Please report this to <coin-support@coin3d.org>, "
                               "and include information about your system (compiler, Linux version, etc.");
@@ -963,18 +965,17 @@ namespace { namespace SoGL { namespace IndexedLineSet {
 
         // Variable used for counting errors and make sure not a bunch of
         // errormessages flood the screen.
-        static uint32_t current_errors = 0;
+        static SoOnceFlag warning;
 
         // This test is for robustness upon buggy data sets
         if (previ < 0 || previ >= numcoords) {
-          if (current_errors < 1) {
+          if (warning.first()) {
             SoDebugError::postWarning("[indexedlineset]::GLRender", "Erroneous coordinate "
                                       "index: %d (Should be within [0, %d]). Aborting "
                                       "rendering. This message will be shown once, but "
                                       "there might be more errors", previ, numcoords - 1);
           }
 
-          current_errors++;
           SoGLContext_glEnd(glue);
           return;
         }
@@ -1003,13 +1004,12 @@ namespace { namespace SoGL { namespace IndexedLineSet {
         while (i >= 0) {
           // For robustness upon buggy data sets
           if (i >= numcoords) {
-            if (current_errors < 1) {
+            if (warning.first()) {
               SoDebugError::postWarning("[indexedlineset]::GLRender", "Erroneous coordinate "
                                         "index: %d (Should be within [0, %d]). Aborting "
                                         "rendering. This message will be shown once, but "
                                         "there might be more errors", i, numcoords - 1);
             }
-            current_errors++;
             break;
           }
 
@@ -1072,18 +1072,17 @@ namespace { namespace SoGL { namespace IndexedLineSet {
 
         // Variable used for counting errors and make sure not a bunch of
         // errormessages flood the screen.
-        static uint32_t current_errors = 0;
+        static SoOnceFlag warning;
 
         // This test is for robustness upon buggy data sets
         if (i < 0 || i >= numcoords) {
-          if (current_errors < 1) {
+          if (warning.first()) {
             SoDebugError::postWarning("[indexedlineset]::GLRender", "Erroneous coordinate "
                                       "index: %d (Should be within [0, %d]). Aborting "
                                       "rendering. This message will be shown once, but "
                                       "there might be more errors", i, numcoords - 1);
           }
 
-          current_errors++;
           SoGLContext_glEnd(glue);
           return;
         }
@@ -1114,13 +1113,12 @@ namespace { namespace SoGL { namespace IndexedLineSet {
         while (i >= 0) {
           // For robustness upon buggy data sets
           if (i >= numcoords) {
-            if (current_errors < 1) {
+            if (warning.first()) {
               SoDebugError::postWarning("[indexedlineset]::GLRender", "Erroneous coordinate "
                                         "index: %d (Should be within [0, %d]). Aborting "
                                         "rendering. This message will be shown once, but "
                                         "there might be more errors", i, numcoords - 1);
             }
-            current_errors++;
             break;
           }
 
@@ -1355,20 +1353,19 @@ namespace { namespace SoGL { namespace FaceSet {
 
       // Variable used for counting errors and make sure not a
       // bunch of errormessages flood the screen.
-      static uint32_t current_errors = 0;
+      static SoOnceFlag warning;
 
       // This test is for robustness upon buggy data sets
       if (v1 < 0 || v2 < 0 || v3 < 0 ||
           v1 >= numverts || v2 >= numverts || v3 >= numverts) {
 
-        if (current_errors < 1) {
+        if (warning.first()) {
           SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
                                     "Ignoring (offset: %td, [%d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
                                     "more errors might be present",
                                     viptr - vistartptr - 3, v1, v2, v3, numverts - 1);
         }
-        current_errors++;
         break;
       }
       v4 = viptr < viendptr ? *viptr++ : -1;
@@ -1377,14 +1374,13 @@ namespace { namespace SoGL { namespace FaceSet {
       else if (v4 >= numverts) {
         newmode = GL_TRIANGLES;
 
-        if (current_errors < 1) {
+        if (warning.first()) {
           SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
                                     "(offset: %td, [%d %d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
                                     "more errors might be present",
                                     viptr - vistartptr - 4, v1, v2, v3, v4, numverts - 1);
         }
-        current_errors++;
       }
       else {
         v5 = viptr < viendptr ? *viptr++ : -1;
@@ -1393,14 +1389,13 @@ namespace { namespace SoGL { namespace FaceSet {
         else if (v5 >= numverts) {
           newmode = GL_QUADS;
 
-          if (current_errors < 1) {
+          if (warning.first()) {
             SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
                                       "(offset: %td, [%d %d %d %d %d]). Should be within "
                                       " [0, %d] This message will only be shown once, but "
                                       "more errors might be present",
                                       viptr - vistartptr - 5, v1, v2, v3, v4, v5, numverts - 1);
           }
-          current_errors++;
         }
         else newmode = GL_POLYGON;
       }
@@ -1595,14 +1590,13 @@ namespace { namespace SoGL { namespace FaceSet {
           while (v1 >= 0) {
             // For robustness upon buggy data sets
             if (v1 >= numverts) {
-              if (current_errors < 1) {
+              if (warning.first()) {
                 SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
                                           "(offset: %td, [... %d]). Should be within "
                                           "[0, %d] This message will only be shown once, but "
                                           "more errors might be present",
                                           viptr - vistartptr - 1, v1, numverts - 1);
               }
-              current_errors++;
               break;
             }
 
@@ -1880,8 +1874,8 @@ namespace { namespace SoGL { namespace TriStripSet {
       if (v1 < 0 || v2 < 0 || v3 < 0 ||
           v1 >= numverts || v2 >= numverts || v3 >= numverts) {
 
-        static uint32_t current_errors = 0;
-        if (current_errors < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("[tristrip]::GLRender", "Erroneous polygon detected. "
                                     "Ignoring (offset: %td, [%d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
@@ -1889,7 +1883,6 @@ namespace { namespace SoGL { namespace TriStripSet {
                                     viptr - vistartptr - 3, v1, v2, v3, numverts - 1);
         }
 
-        current_errors++;
         break;
       }
 
@@ -2334,8 +2327,6 @@ typedef void sogl_render_pointset_func(const SoGLContext * glue,
                                        int32_t numpts,
                                        int32_t idx);
 
-static sogl_render_pointset_func * sogl_render_pointset_funcs[8];
-
 void
 sogl_render_pointset(const SoGLContext * glue,
                      const SoGLCoordinateElement * coords,
@@ -2345,24 +2336,22 @@ sogl_render_pointset(const SoGLContext * glue,
                      int32_t numpts,
                      int32_t idx)
 {
-  static int first = 1;
-  if (first) {
-    sogl_render_pointset_funcs[0] = sogl_render_pointset_m0n0t0;
-    sogl_render_pointset_funcs[1] = sogl_render_pointset_m0n0t1;
-    sogl_render_pointset_funcs[2] = sogl_render_pointset_m0n1t0;
-    sogl_render_pointset_funcs[3] = sogl_render_pointset_m0n1t1;
-    sogl_render_pointset_funcs[4] = sogl_render_pointset_m1n0t0;
-    sogl_render_pointset_funcs[5] = sogl_render_pointset_m1n0t1;
-    sogl_render_pointset_funcs[6] = sogl_render_pointset_m1n1t0;
-    sogl_render_pointset_funcs[7] = sogl_render_pointset_m1n1t1;
-    first = 0;
-  }
+  static sogl_render_pointset_func * const renderfuncs[8] = {
+    sogl_render_pointset_m0n0t0,
+    sogl_render_pointset_m0n0t1,
+    sogl_render_pointset_m0n1t0,
+    sogl_render_pointset_m0n1t1,
+    sogl_render_pointset_m1n0t0,
+    sogl_render_pointset_m1n0t1,
+    sogl_render_pointset_m1n1t0,
+    sogl_render_pointset_m1n1t1
+  };
 
   int mat = mb ? 1 : 0;
   int norm = normals ? 1 : 0;
   int tex = tb ? 1 : 0;
 
-  sogl_render_pointset_funcs[ (mat << 2) | (norm << 1) | tex ]
+  renderfuncs[ (mat << 2) | (norm << 1) | tex ]
     ( glue,
       coords,
       normals,
@@ -2377,19 +2366,44 @@ sogl_render_pointset(const SoGLContext * glue,
 SbBool
 sogl_glerror_debugging(void)
 {
-  static int OBOL_GLERROR_DEBUGGING = -1;
-  if (OBOL_GLERROR_DEBUGGING == -1) {
+  static const bool enabled = [] {
     const char * str = CoinInternal::getEnvironmentVariableRaw("OBOL_GLERROR_DEBUGGING");
-    OBOL_GLERROR_DEBUGGING = str ? atoi(str) : 0;
-  }
-  return (OBOL_GLERROR_DEBUGGING == 0) ? FALSE : TRUE;
+    return str && std::atoi(str) != 0;
+  }();
+  return enabled ? TRUE : FALSE;
 }
 
-static int SOGL_AUTOCACHE_REMOTE_MIN = 500000;
-static int SOGL_AUTOCACHE_REMOTE_MAX = 5000000;
-static int SOGL_AUTOCACHE_LOCAL_MIN = 100000;
-static int SOGL_AUTOCACHE_LOCAL_MAX = 1000000;
-static int SOGL_AUTOCACHE_VBO_LIMIT = 65536;
+namespace {
+
+struct SoGLAutoCacheOptions {
+  int remoteMin = 500000;
+  int remoteMax = 5000000;
+  int localMin = 100000;
+  int localMax = 1000000;
+  int vboLimit = 65536;
+};
+
+const SoGLAutoCacheOptions &
+sogl_autocache_options()
+{
+  static const SoGLAutoCacheOptions options = [] {
+    SoGLAutoCacheOptions result;
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MIN");
+    if (env) result.remoteMin = std::atoi(env);
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MAX");
+    if (env) result.remoteMax = std::atoi(env);
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MIN");
+    if (env) result.localMin = std::atoi(env);
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MAX");
+    if (env) result.localMax = std::atoi(env);
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_VBO_LIMIT");
+    if (env) result.vboLimit = std::atoi(env);
+    return result;
+  }();
+  return options;
+}
+
+} // namespace
 
 /*!
   Called by each shape during rendering. Will enable/disable auto caching
@@ -2398,37 +2412,12 @@ static int SOGL_AUTOCACHE_VBO_LIMIT = 65536;
 void
 sogl_autocache_update(SoState * state, const int numprimitives, SbBool didusevbo)
 {
-  static SbBool didtestenv = FALSE;
-  if (!didtestenv) {
-    const char * env;
-    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MIN");
-    if (env) {
-      SOGL_AUTOCACHE_REMOTE_MIN = atoi(env);
-    }
-    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MAX");
-    if (env) {
-      SOGL_AUTOCACHE_REMOTE_MAX = atoi(env);
-    }
-    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MIN");
-    if (env) {
-      SOGL_AUTOCACHE_LOCAL_MIN = atoi(env);
-    }
-    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MAX");
-    if (env) {
-      SOGL_AUTOCACHE_LOCAL_MAX = atoi(env);
-    }
-    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_VBO_LIMIT");
-    if (env) {
-      SOGL_AUTOCACHE_VBO_LIMIT = atoi(env);
-    }
-    didtestenv = TRUE;
-  }
-
-  int minval = SOGL_AUTOCACHE_LOCAL_MIN;
-  int maxval = SOGL_AUTOCACHE_LOCAL_MAX;
+  const SoGLAutoCacheOptions & options = sogl_autocache_options();
+  int minval = options.localMin;
+  int maxval = options.localMax;
   if (SoGLCacheContextElement::getIsRemoteRendering(state)) {
-    minval = SOGL_AUTOCACHE_REMOTE_MIN;
-    maxval = SOGL_AUTOCACHE_REMOTE_MAX;
+    minval = options.remoteMin;
+    maxval = options.remoteMax;
   }
   if (numprimitives <= minval) {
     SoGLCacheContextElement::shouldAutoCache(state, SoGLCacheContextElement::DO_AUTO_CACHE);
@@ -2440,7 +2429,7 @@ sogl_autocache_update(SoState * state, const int numprimitives, SbBool didusevbo
 
   if (didusevbo) {
     // avoid creating caches when rendering large VBOs
-    if (numprimitives > SOGL_AUTOCACHE_VBO_LIMIT) {
+    if (numprimitives > options.vboLimit) {
       SoGLCacheContextElement::shouldAutoCache(state, SoGLCacheContextElement::DONT_AUTO_CACHE);
     }
   }

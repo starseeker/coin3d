@@ -136,6 +136,7 @@ option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" OFF)
 option(OBOL_BUILD_BENCHMARKS "Build standalone performance benchmarks" OFF)
 option(OBOL_BUILD_TEST_TOOLS "Build standalone image and test utilities" OFF)
+option(OBOL_BUILD_TOOLS "Build standalone Obol developer utilities" OFF)
 option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" OFF)
 option(OBOL_FETCH_SUBMODULES
   "Initialize missing registered git submodules during configure"
@@ -154,7 +155,7 @@ option(OBOL_FETCH_SUBMODULES
 # Detection and the submodule build live here so that tests/ (which processes
 # before examples/) can also use FLTK.
 # ---------------------------------------------------------------------------
-if(OBOL_BUILD_EXAMPLES)
+if(OBOL_BUILD_EXAMPLES OR (OBOL_BUILD_TESTS AND WIN32))
   find_package(FLTK QUIET)
   if(FLTK_FOUND)
     message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
@@ -200,7 +201,7 @@ if(OBOL_BUILD_EXAMPLES)
   endif()
 else()
   set(FLTK_FOUND FALSE)
-  message(STATUS "FLTK: skipped because OBOL_BUILD_EXAMPLES=OFF")
+  message(STATUS "FLTK: skipped because neither examples nor Windows tests need it")
 endif()
 
 # Internal alias used throughout src/ for Windows shared/static detection
@@ -763,91 +764,7 @@ endif()
 # Thread safety is unconditional — always report it as enabled.
 set(FEAT_HAVE_SAFETHREAD 1)
 
-# ============================================================================
-# Code coverage instrumentation flags
-#
-# When OBOL_COVERAGE=ON (and the compiler is GCC or Clang), add --coverage
-# to the compile and link flags for the entire project.  This must be done
-# BEFORE the source subdirectories are added so that the Obol library and all
-# test executables are instrumented.
-#
-# After building, run:
-#   cmake --build <dir> --target coverage
-# to execute the test suite and generate an lcov HTML report.
-# ============================================================================
-if(OBOL_COVERAGE)
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
-     CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    find_program(LCOV_EXECUTABLE    lcov    DOC "lcov coverage tool")
-    find_program(GENHTML_EXECUTABLE genhtml DOC "genhtml report generator")
-    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
-      message(STATUS "Code coverage instrumentation enabled")
-      message(STATUS "  lcov:    ${LCOV_EXECUTABLE}")
-      message(STATUS "  genhtml: ${GENHTML_EXECUTABLE}")
-      add_compile_options(--coverage)
-      add_link_options(--coverage)
-    else()
-      message(WARNING
-        "OBOL_COVERAGE=ON but lcov/genhtml not found – coverage disabled. "
-        "Install with: sudo apt-get install lcov")
-      set(OBOL_COVERAGE OFF CACHE BOOL "" FORCE)
-    endif()
-  else()
-    message(WARNING
-      "OBOL_COVERAGE=ON but compiler is not GCC/Clang – coverage disabled.")
-    set(OBOL_COVERAGE OFF CACHE BOOL "" FORCE)
-  endif()
-endif()
-
-# ============================================================================
-# ThreadSanitizer instrumentation flags
-#
-# When OBOL_TSAN=ON (and the compiler is GCC or Clang), add -fsanitize=thread
-# to the compile and link flags for the entire project.  This must be done
-# BEFORE the source subdirectories are added.
-#
-# TSan is mutually exclusive with -fsanitize=address and --coverage; do not
-# combine with OBOL_COVERAGE=ON.
-#
-# Usage:
-#   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
-#   cmake --build <dir> && ctest --output-on-failure
-# ============================================================================
-if(OBOL_ASAN_UBSAN)
-  if(OBOL_TSAN OR OBOL_COVERAGE)
-    message(FATAL_ERROR
-      "OBOL_ASAN_UBSAN cannot be combined with OBOL_TSAN or OBOL_COVERAGE")
-  elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
-         CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    message(STATUS "AddressSanitizer and UndefinedBehaviorSanitizer enabled")
-    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address,undefined)
-  else()
-    message(WARNING
-      "OBOL_ASAN_UBSAN=ON but the compiler is not GCC/Clang; sanitizers disabled")
-    set(OBOL_ASAN_UBSAN OFF CACHE BOOL "" FORCE)
-  endif()
-endif()
-
-if(OBOL_TSAN)
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
-     CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    if(OBOL_COVERAGE)
-      message(WARNING
-        "OBOL_TSAN=ON and OBOL_COVERAGE=ON are mutually exclusive. "
-        "Disabling OBOL_TSAN.")
-      set(OBOL_TSAN OFF CACHE BOOL "" FORCE)
-    else()
-      message(STATUS "ThreadSanitizer instrumentation enabled")
-      add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
-      add_link_options(-fsanitize=thread)
-    endif()
-  else()
-    message(WARNING
-      "OBOL_TSAN=ON but compiler is not GCC/Clang – ThreadSanitizer disabled.")
-    set(OBOL_TSAN OFF CACHE BOOL "" FORCE)
-  endif()
-endif()
+include(ObolInstrumentation)
 
 # ============================================================================
 # Add subdirectories
@@ -884,6 +801,10 @@ endif()
 
 if(OBOL_BUILD_TEST_TOOLS)
   add_subdirectory(tests/tools)
+endif()
+
+if(OBOL_BUILD_TOOLS)
+  add_subdirectory(tools/profiler)
 endif()
 
 # Examples are useful for standalone Obol development, but package builds do

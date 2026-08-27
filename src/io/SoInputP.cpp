@@ -44,22 +44,20 @@
 SbBool
 SoInputP::debug(void)
 {
-  static int dbg = -1;
-  if (dbg == -1) {
+  static const bool dbg = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_IMPORT");
-    dbg = (env && (atoi(env) > 0)) ? 1 : 0;
-  }
-  return dbg;
+    return env && std::atoi(env) > 0;
+  }();
+  return dbg ? TRUE : FALSE;
 }
 
 SbBool
 SoInputP::debugBinary(void)
 {
-  static int debug = -1;
-  if (debug == -1) {
+  static const bool debug = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_BINARY_INPUT");
-    debug = (env && (atoi(env) > 0)) ? 1 : 0;
-  }
+    return env && std::atoi(env) > 0;
+  }();
   return debug ? TRUE : FALSE;
 }
 

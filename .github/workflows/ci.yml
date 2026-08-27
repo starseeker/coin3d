@@ -55,7 +55,6 @@ jobs:
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
             libfltk1.3-dev \
-            libgtest-dev \
             xvfb
 
       - name: Configure
@@ -94,7 +93,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y \
             cmake libpng-dev libgl-dev libglu1-mesa-dev \
-            libx11-dev libxext-dev libgtest-dev xvfb
+            libx11-dev libxext-dev xvfb
 
       - name: Configure
         run: |
@@ -106,14 +105,14 @@ jobs:
             -DOBOL_USE_UNITY_BUILD=OFF \
             -DOBOL_BUILD_STRESS_TESTS=ON \
             -DOBOL_USE_SYSTEM_GL=ON \
-            -DOBOL_USE_SWRAST=OFF
+            -DOBOL_USE_SWRAST=ON
 
       - name: Build focused test executables
         run: |
           cmake --build build-sanitized --parallel 2 \
             --target obol_unit_tests obol_integration_tests obol_lifecycle_tests \
                      obol_dynload_tests obol_stress_tests \
-                     obol_system_gl_render_tests
+                     obol_system_gl_render_tests obol_concurrent_render_tests
 
       - name: Run focused test executables
         env:
@@ -124,6 +123,7 @@ jobs:
           build-sanitized/bin/obol_integration_tests
           build-sanitized/bin/obol_lifecycle_tests
           build-sanitized/bin/obol_stress_tests
+          build-sanitized/bin/obol_concurrent_render_tests
           xvfb-run -a build-sanitized/bin/obol_system_gl_render_tests \
             --gtest_filter='*nanort*:*NanoRT*:*arb_shader_parameter_ranges*'
           ctest --test-dir build-sanitized --output-on-failure \
@@ -143,7 +143,7 @@ jobs:
 
       - name: Install dependencies
         shell: pwsh
-        run: vcpkg install gtest:x64-windows libpng:x64-windows
+        run: vcpkg install fltk:x64-windows libpng:x64-windows
 
       - name: Configure
         shell: pwsh
@@ -161,8 +161,77 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel 2
 
-      - name: Run non-rendering and package tests
-        run: ctest --test-dir build -C Release --output-on-failure -L "unit|integration|package"
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  build-clang:
+    name: Linux Clang (non-unity)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang cmake libpng-dev
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -S . -B build-clang \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DOBOL_BUILD_TESTS=ON \
+            -DOBOL_BUILD_EXAMPLES=OFF \
+            -DOBOL_WARNINGS_AS_ERRORS=ON \
+            -DOBOL_USE_UNITY_BUILD=OFF \
+            -DOBOL_USE_SYSTEM_GL=OFF \
+            -DOBOL_USE_SWRAST=OFF
+
+      - name: Build and test
+        run: |
+          cmake --build build-clang --parallel 2
+          ctest --test-dir build-clang --output-on-failure
+
+  build-macos:
+    name: macOS dylib and package smoke
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install libpng
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+            -DOBOL_BUILD_TESTS=ON \
+            -DOBOL_BUILD_EXAMPLES=OFF \
+            -DOBOL_WARNINGS_AS_ERRORS=ON \
+            -DOBOL_USE_UNITY_BUILD=OFF \
+            -DOBOL_USE_SYSTEM_GL=OFF \
+            -DOBOL_USE_SWRAST=OFF
+
+      - name: Build and test
+        run: |
+          cmake --build build-macos --parallel 2
+          ctest --test-dir build-macos --output-on-failure
 
   thread-sanitizer:
     name: Linux ThreadSanitizer
@@ -186,8 +255,7 @@ jobs:
             libxcursor-dev libxft-dev libxinerama-dev \
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
-            libfltk1.3-dev \
-            libgtest-dev
+            libfltk1.3-dev
 
       - name: Configure
         run: |
@@ -200,14 +268,14 @@ jobs:
             -DOBOL_TSAN=ON \
             -DOBOL_USE_UNITY_BUILD=OFF \
             -DOBOL_BUILD_STRESS_TESTS=ON \
-            -DOBOL_USE_SYSTEM_GL=ON \
-            -DOBOL_USE_SWRAST=OFF
+            -DOBOL_USE_SYSTEM_GL=OFF \
+            -DOBOL_USE_SWRAST=ON
 
       - name: Build focused thread tests
         run: |
           cmake --build build-tsan --config RelWithDebInfo --parallel 2 \
             --target obol_unit_tests obol_integration_tests obol_stress_tests \
-                     obol_dynload_tests
+                     obol_dynload_tests obol_concurrent_render_tests
 
       - name: Run focused thread tests
         env:
@@ -217,3 +285,4 @@ jobs:
             --output-on-failure \
             --timeout 180 \
             -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords|ImageFormatRegistry|ErrorHandling|TypeDynamicLoading|ProfilerSuite)\.'
+          setarch "$(uname -m)" -R build-tsan/bin/obol_concurrent_render_tests

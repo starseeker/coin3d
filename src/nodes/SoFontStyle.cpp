@@ -83,6 +83,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "nodes/SoSubNodeP.h"
+#include "misc/SoOnce.h"
 
 // *************************************************************************
 
@@ -182,14 +183,13 @@ SoFontStyle::getFontName(void) const
   SbString fontname(this->name.getValue().getString());
 
 #if OBOL_DEBUG
-  static SbBool messageflag = TRUE;
-  if (messageflag && (fontname != "defaultFont")) {
+  static SoOnceFlag warning;
+  if ((fontname != "defaultFont") && warning.first()) {
     SoDebugError::postWarning("SoFontStyle::getFontName",
                               "Font name ('%s') is ignored when using "
                               "FontStyle nodes. Use the 'family' and "
                               "'style' fields instead.", 
                               fontname.getString());    
-    messageflag = FALSE; // Only display this message once.
   }
 #endif
 

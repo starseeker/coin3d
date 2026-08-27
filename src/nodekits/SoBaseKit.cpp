@@ -1122,11 +1122,10 @@ SoBaseKit::write(SoWriteAction * action)
   // state to non-intrusive "default" values before rendering the
   // dragger geometry. These settings will not be part of the exported
   // iv-file.
-  static int dump = -1;
-  if (dump == -1) {
+  static const int dump = [] {
     const char * env = coin_getenv("OBOL_DEBUG_FLATTEN_NODEKITS_ON_WRITE");
-    dump = env && (atoi(env) > 0);
-  }
+    return env && (atoi(env) > 0);
+  }();
   if (dump) {
     this->children->traverse(action);
     return;

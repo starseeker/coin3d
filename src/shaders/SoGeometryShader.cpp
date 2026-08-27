@@ -133,6 +133,7 @@
 #include <Inventor/elements/SoGLShaderProgramElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 #include "shaders/SoGLShaderProgram.h"
@@ -194,9 +195,8 @@ SoGeometryShader::GLRender(SoGLRenderAction * action)
     const SoGLContext * glue = SoGLContext_instance(cachecontext);
     
     if (!SoGLDriverDatabase::isSupported(glue, "GL_EXT_geometry_shader4")) {
-      static int first = 1;
-      if (first) {
-        first = 0;
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::post("SoGeometryShader::GLRender",
                            "Geometry shaders not support by hardware/driver");
       }

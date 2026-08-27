@@ -88,6 +88,7 @@
 #include <Inventor/nodes/SoIndexedMarkerSet.h>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/misc/SoState.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -236,12 +237,11 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
     int midx = i;
 #if OBOL_DEBUG
       if (midx < 0 || midx > this->markerIndex.getNum() - 1) {
-        static SbBool firsterror = TRUE;
-        if (firsterror) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoMarkerSet::GLRender",
                                     "no markerIndex for coordinate %d",
                                     i);
-          firsterror = FALSE;
         }
         // Don't render, jump back to top of for-loop and continue with
         // next index.

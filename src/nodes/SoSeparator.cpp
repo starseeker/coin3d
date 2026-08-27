@@ -62,7 +62,9 @@
 
 #include "config.h"
 
-#include <cstdlib> // strtol(), rand()
+#include <atomic>
+#include <cerrno>
+#include <cstdlib> // strtol()
 #include <climits> // LONG_MIN, LONG_MAX
 
 #include <Inventor/actions/SoCallbackAction.h>
@@ -107,9 +109,6 @@
 #endif
 
 // *************************************************************************
-
-// environment variable
-static int OBOL_RANDOMIZE_RENDER_CACHING = -1;
 
 // Maximum number of caches available for allocation for the
 // rendercaching.
@@ -414,23 +413,6 @@ SoSeparator::commonConstructor(void)
   SO_NODE_SET_SF_ENUM_TYPE(renderCulling, CacheEnabled);
   SO_NODE_SET_SF_ENUM_TYPE(pickCulling, CacheEnabled);
 
-  static long int maxcaches = -1;
-  if (maxcaches == -1) {
-    maxcaches = -2; // so we don't request the envvar later if it is not set
-    const char * maxcachesstr = CoinInternal::getEnvironmentVariableRaw("IV_SEPARATOR_MAX_CACHES");
-    if (maxcachesstr) {
-      maxcaches = strtol(maxcachesstr, NULL, 10);
-      if ((maxcaches == LONG_MIN) || (maxcaches == LONG_MAX) || (maxcaches < 0)) {
-        SoDebugError::post("SoSeparator::commonConstructor",
-                           "Environment variable IV_SEPARATOR_MAX_CACHES "
-                           "has invalid setting \"%s\"", maxcachesstr);
-      }
-      else {
-        SoSeparator::setNumRenderCaches(maxcaches);
-      }
-    }
-  }
-
   PRIVATE(this)->bboxcache = NULL;
   PRIVATE(this)->bboxcache_usecount = 0;
   PRIVATE(this)->bboxcache_destroycount = 0;
@@ -439,13 +421,15 @@ SoSeparator::commonConstructor(void)
   // correctness testing of the render caching. If set >= 1,
   // renderCaching will be set to "ON" with a probability of 0.5 for
   // every SoSeparator instantiated.
-  if (OBOL_RANDOMIZE_RENDER_CACHING < 0) {
+  static const bool randomizecaching = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_RANDOMIZE_RENDER_CACHING");
-    if (env) OBOL_RANDOMIZE_RENDER_CACHING = atoi(env);
-    else OBOL_RANDOMIZE_RENDER_CACHING = 0;
-  }
-  if (OBOL_RANDOMIZE_RENDER_CACHING > 0) {
-    if (rand() > (RAND_MAX/2)) { this->renderCaching = SoSeparator::ON; }
+    return env && std::atoi(env) > 0;
+  }();
+  if (randomizecaching) {
+    static std::atomic<unsigned int> sequence{0};
+    if ((sequence.fetch_add(1, std::memory_order_relaxed) & 1U) != 0) {
+      this->renderCaching = SoSeparator::ON;
+    }
   }
 
   PRIVATE(this)->hassoundchild = SoSeparatorP::MAYBE;
@@ -472,6 +456,25 @@ SoSeparator::initClass(void)
   SO_ENABLE(SoGetBoundingBoxAction, SoCacheElement);
   SO_ENABLE(SoGLRenderAction, SoCacheElement);
   SoSeparator::numrendercaches = 2;
+
+  // Environment-derived global policy belongs to the serial initialization
+  // phase, not the first concurrently-created separator.
+  const char * maxcachesstr =
+    CoinInternal::getEnvironmentVariableRaw("IV_SEPARATOR_MAX_CACHES");
+  if (maxcachesstr) {
+    errno = 0;
+    char * end = NULL;
+    const long maxcaches = std::strtol(maxcachesstr, &end, 10);
+    if (errno == ERANGE || end == maxcachesstr || *end != '\0' ||
+        maxcaches < 0 || maxcaches > INT_MAX) {
+      SoDebugError::post("SoSeparator::initClass",
+                         "Environment variable IV_SEPARATOR_MAX_CACHES "
+                         "has invalid setting \"%s\"", maxcachesstr);
+    }
+    else {
+      SoSeparator::setNumRenderCaches(static_cast<int>(maxcaches));
+    }
+  }
 }
 
 // Doc from superclass.

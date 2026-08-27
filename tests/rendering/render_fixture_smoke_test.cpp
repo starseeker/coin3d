@@ -12,6 +12,7 @@
 #include <Inventor/nodes/SoSphere.h>
 
 #include <cstdlib>
+#include <limits>
 #include <string>
 
 namespace {
@@ -27,7 +28,18 @@ TEST(RenderBackendSelection, TestProcessUsesTheRequestedContextManager)
         void * context = manager->createOffscreenContext(8, 8);
         ASSERT_NE(context, nullptr);
         EXPECT_TRUE(manager->isOSMesaContext(context));
+        unsigned int width = 0;
+        unsigned int height = 0;
+        manager->getActualSurfaceSize(context, width, height);
+        EXPECT_EQ(width, 8u);
+        EXPECT_EQ(height, 8u);
         manager->destroyContext(context);
+
+        EXPECT_EQ(manager->createOffscreenContext(0, 8), nullptr);
+        EXPECT_EQ(manager->createOffscreenContext(8, 0), nullptr);
+        EXPECT_EQ(manager->createOffscreenContext(
+                      std::numeric_limits<unsigned int>::max(), 8),
+                  nullptr);
     }
 }
 

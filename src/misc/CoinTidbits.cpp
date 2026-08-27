@@ -1056,13 +1056,11 @@ int coin_debug_normalize(void)
 int coin_debug_caching_level(void)
 {
 #if OBOL_DEBUG
-    static int OBOL_DEBUG_CACHING = -1;
-    if (OBOL_DEBUG_CACHING < 0) {
+    static const int debugcaching = [] {
         const char* env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_CACHING");
-        if (env) OBOL_DEBUG_CACHING = atoi(env);
-        else OBOL_DEBUG_CACHING = 0;
-    }
-    return OBOL_DEBUG_CACHING;
+        return env ? std::atoi(env) : 0;
+    }();
+    return debugcaching;
 #else
     return 0;
 #endif

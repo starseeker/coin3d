@@ -108,6 +108,7 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
+#include "misc/SoOnce.h"
 #include "glue/glp.h"
 
 #include "rendering/SoVBO.h"
@@ -1556,13 +1557,12 @@ SoShape::startVertexArray(SoGLRenderAction * action,
     }
     SoVBO * vbo;
     if (!SoGLDriverDatabase::isSupported(glue, SO_GL_MULTITEXTURE)) {
-      static int hasWarned = 0;
+      static SoOnceFlag warning;
       if (lastenabled>0) {
-	if (!hasWarned) {
+	if (warning.first()) {
 	  SoDebugError::postWarning("SoShape::startVertexArray",
 				    "Multitexturing is not supported on this hardware, but more than one textureunit is in use."
 				  );
-	  hasWarned = 1;
 	}
       }
       lastenabled = 0;

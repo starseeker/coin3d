@@ -55,7 +55,11 @@ class OBOL_DLL_API SoProfilingReportGenerator {
 public:
   static void init(void);
 
-  enum Column {
+  // Keep the ABI-sized underlying representation explicit.  Besides making
+  // the public ABI unambiguous, this lets callers validate deserialized or
+  // foreign integer values without the conversion itself invoking undefined
+  // behavior before the report generator can reject them.
+  enum Column : int {
     NAME,
     TYPE,
     COUNT,
@@ -74,7 +78,7 @@ public:
     GFX_MEM_KILOBYTES
   };
 
-  enum SortOrder {
+  enum SortOrder : int {
     TIME_ASC,
     TIME_DES,
     TIME_MAX_ASC,
@@ -91,13 +95,13 @@ public:
     GFX_MEM_DES
   };
 
-  enum DataCategorization {
+  enum DataCategorization : int {
     TYPES,
     NAMES,
     NODES
   };
 
-  enum CallbackResponse {
+  enum CallbackResponse : int {
     CONTINUE,
     STOP
   };

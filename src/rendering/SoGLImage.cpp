@@ -148,7 +148,9 @@
 
 #include <Inventor/misc/SoGLImage.h>
 
+#include <atomic>
 #include <cassert>
+#include <cmath>
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
@@ -187,20 +189,54 @@
 
 // *************************************************************************
 
-static float DEFAULT_LINEAR_LIMIT = 0.2f;
-static float DEFAULT_MIPMAP_LIMIT = 0.5f;
-static float DEFAULT_LINEAR_MIPMAP_LIMIT = 0.8f;
-static float DEFAULT_SCALEUP_LIMIT = 0.7f;
-static float DEFAULT_ANISOTROPIC_LIMIT = 0.85f;
+namespace {
 
-static float OBOL_TEX2_LINEAR_LIMIT = -1.0f;
-static float OBOL_TEX2_MIPMAP_LIMIT = -1.0f;
-static float OBOL_TEX2_LINEAR_MIPMAP_LIMIT = -1.0f;
-static float OBOL_TEX2_SCALEUP_LIMIT = -1.0f;
-static float OBOL_TEX2_ANISOTROPIC_LIMIT = -1.0f;
-static int OBOL_TEX2_USE_GLTEXSUBIMAGE = -1;
-static int OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = -1;
-static int OBOL_ENABLE_CONFORMANT_GL_CLAMP = -1;
+float
+soglimage_quality_option(const char * name, float fallback)
+{
+  const char * env = CoinInternal::getEnvironmentVariableRaw(name);
+  if (!env) return fallback;
+  char * end = NULL;
+  const float value = std::strtof(env, &end);
+  return end != env && *end == '\0' && std::isfinite(value) &&
+         value >= 0.0f && value <= 1.0f ? value : fallback;
+}
+
+bool
+soglimage_boolean_option(const char * name)
+{
+  const char * env = CoinInternal::getEnvironmentVariableRaw(name);
+  return env && std::atoi(env) == 1;
+}
+
+struct SoGLImageOptions {
+  float linearLimit;
+  float mipmapLimit;
+  float linearMipmapLimit;
+  float scaleupLimit;
+  float anisotropicLimit;
+  bool useTexSubImage;
+  bool useSgisGenerateMipmap;
+  bool conformantClamp;
+};
+
+const SoGLImageOptions &
+soglimage_options()
+{
+  static const SoGLImageOptions options = {
+    soglimage_quality_option("OBOL_TEX2_LINEAR_LIMIT", 0.2f),
+    soglimage_quality_option("OBOL_TEX2_MIPMAP_LIMIT", 0.5f),
+    soglimage_quality_option("OBOL_TEX2_LINEAR_MIPMAP_LIMIT", 0.8f),
+    soglimage_quality_option("OBOL_TEX2_SCALEUP_LIMIT", 0.7f),
+    soglimage_quality_option("OBOL_TEX2_ANISOTROPIC_LIMIT", 0.85f),
+    soglimage_boolean_option("OBOL_TEX2_USE_GLTEXSUBIMAGE"),
+    soglimage_boolean_option("OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP"),
+    soglimage_boolean_option("OBOL_ENABLE_CONFORMANT_GL_CLAMP")
+  };
+  return options;
+}
+
+} // namespace
 
 // *************************************************************************
 
@@ -577,8 +613,8 @@ public:
   static SbMutex * mutex;
 
   static SoType classTypeId;
-  static uint32_t current_glimageid;
-  static uint32_t getNextGLImageId(void);
+  static std::atomic<uint64_t> current_glimageid;
+  static uint64_t getNextGLImageId(void);
 
   SoGLDisplayList *createGLDisplayList(SoState *state);
   void checkTransparency(void);
@@ -635,13 +671,13 @@ public:
   void tagDL(SoState *state);
   void unrefOldDL(SoState *state, const uint32_t maxage);
   SoGLImage *owner;
-  uint32_t glimageid;
+  uint64_t glimageid;
   void init(void);
   static void contextCleanup(uint32_t context, void * closure);
 };
 
 SoType SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
-uint32_t SoGLImageP::current_glimageid = 1;
+std::atomic<uint64_t> SoGLImageP::current_glimageid{1};
 SbMutex * SoGLImageP::mutex;
 
 #undef PRIVATE
@@ -679,65 +715,6 @@ SoGLImage::SoGLImage(void)
   PRIVATE(this)->isregistered = FALSE;
   PRIVATE(this)->init(); // init members to default values
   PRIVATE(this)->owner = this;
-
-  // check environment variables
-  if (OBOL_TEX2_LINEAR_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_LINEAR_LIMIT");
-    if (env) OBOL_TEX2_LINEAR_LIMIT = (float) atof(env);
-    if (OBOL_TEX2_LINEAR_LIMIT < 0.0f || OBOL_TEX2_LINEAR_LIMIT > 1.0f) {
-      OBOL_TEX2_LINEAR_LIMIT = DEFAULT_LINEAR_LIMIT;
-    }
-  }
-  if (OBOL_TEX2_MIPMAP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_MIPMAP_LIMIT");
-    if (env) OBOL_TEX2_MIPMAP_LIMIT = (float) atof(env);
-    if (OBOL_TEX2_MIPMAP_LIMIT < 0.0f || OBOL_TEX2_MIPMAP_LIMIT > 1.0f) {
-      OBOL_TEX2_MIPMAP_LIMIT = DEFAULT_MIPMAP_LIMIT;
-    }
-  }
-  if (OBOL_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_LINEAR_MIPMAP_LIMIT");
-    if (env) OBOL_TEX2_LINEAR_MIPMAP_LIMIT = (float) atof(env);
-    if (OBOL_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f || OBOL_TEX2_LINEAR_MIPMAP_LIMIT > 1.0f) {
-      OBOL_TEX2_LINEAR_MIPMAP_LIMIT = DEFAULT_LINEAR_MIPMAP_LIMIT;
-    }
-  }
-
-  if (OBOL_TEX2_SCALEUP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_SCALEUP_LIMIT");
-    if (env) OBOL_TEX2_SCALEUP_LIMIT = (float) atof(env);
-    if (OBOL_TEX2_SCALEUP_LIMIT < 0.0f || OBOL_TEX2_SCALEUP_LIMIT > 1.0f) {
-      OBOL_TEX2_SCALEUP_LIMIT = DEFAULT_SCALEUP_LIMIT;
-    }
-  }
-
-  if (OBOL_TEX2_USE_GLTEXSUBIMAGE < 0) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_USE_GLTEXSUBIMAGE");
-    if (env && atoi(env) == 1) {
-      OBOL_TEX2_USE_GLTEXSUBIMAGE = 1;
-    }
-    else OBOL_TEX2_USE_GLTEXSUBIMAGE = 0;
-  }
-  if (OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP < 0) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP");
-    if (env && atoi(env) == 1) {
-      OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = 1;
-    }
-    else OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = 0;
-  }
-
-  if (OBOL_ENABLE_CONFORMANT_GL_CLAMP < 0) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_ENABLE_CONFORMANT_GL_CLAMP");
-    if (env && atoi(env) == 1) {
-      OBOL_ENABLE_CONFORMANT_GL_CLAMP = 1;
-    }
-    else OBOL_ENABLE_CONFORMANT_GL_CLAMP = 0;
-  }
-  if (OBOL_TEX2_ANISOTROPIC_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_ANISOTROPIC_LIMIT");
-    if (env) OBOL_TEX2_ANISOTROPIC_LIMIT = (float) atof(env);
-    else OBOL_TEX2_ANISOTROPIC_LIMIT = DEFAULT_ANISOTROPIC_LIMIT;
-  }
 }
 
 
@@ -771,7 +748,7 @@ SoGLImage::cleanupClass(void)
   SoGLImageP::mutex = NULL;
   SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
 
-  SoGLImageP::current_glimageid = 1;
+  SoGLImageP::current_glimageid.store(1, std::memory_order_relaxed);
 }
 
 /*!
@@ -999,7 +976,7 @@ SoGLImage::setData(const SbImage *image,
     copyok = copyok && bytes && (size == PRIVATE(this)->glsize) && (nc == PRIVATE(this)->glcomp);
 
     SbBool is3D = (size[2]==0)?FALSE:TRUE;
-    SbBool usesubimage = OBOL_TEX2_USE_GLTEXSUBIMAGE &&
+    SbBool usesubimage = soglimage_options().useTexSubImage &&
       ((is3D && SoGLDriverDatabase::isSupported(glw, SO_GL_3D_TEXTURES)) ||
        (!is3D && SoGLDriverDatabase::isSupported(glw, SO_GL_TEXSUBIMAGE)));
 
@@ -1390,7 +1367,7 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       if (newz > zsize && newz > 16) newz >>= 1;
     }
     else if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-      if (this->quality < OBOL_TEX2_SCALEUP_LIMIT) {
+      if (this->quality < soglimage_options().scaleupLimit) {
         if ((newx >= 256) && ((newx - (xsize-2*this->tex_border)) > (newx>>3)))
           newx >>= 1;
         if ((newy >= 256) && ((newy - (ysize-2*this->tex_border)) > (newy>>3)))
@@ -1647,7 +1624,7 @@ translate_wrap(SoState *state, const SoGLImage::Wrap wrap)
 {
   if (wrap == SoGLImage::REPEAT) return (GLenum) GL_REPEAT;
   if (wrap == SoGLImage::CLAMP_TO_BORDER) return (GLenum) GL_CLAMP_TO_BORDER;
-  if (OBOL_ENABLE_CONFORMANT_GL_CLAMP) {
+  if (soglimage_options().conformantClamp) {
     if (wrap == SoGLImage::CLAMP_TO_EDGE) {
       const SoGLContext * glw = sogl_glue_instance(state);
       if (SoGLDriverDatabase::isSupported(glw, SO_GL_TEXTURE_EDGE_CLAMP)) return (GLenum) GL_CLAMP_TO_EDGE;
@@ -1749,14 +1726,16 @@ SoGLImageP::reallyCreateTexture(SoState *state,
 
     if (mipmap && (this->flags & SoGLImage::RECTANGLE)) {
       mipmapimage = FALSE;
-      if (SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
+      if (soglimage_options().useSgisGenerateMipmap &&
+          SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
         SoGLContext_glTexParameteri(glue, target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       }
       else mipmapfilter = FALSE;
     }
     // prefer GL_SGIS_generate_mipmap to glGenerateMipmap. It seems to
     // be better supported in drivers.
-    else if (mipmap && SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
+    else if (mipmap && soglimage_options().useSgisGenerateMipmap &&
+             SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
       SoGLContext_glTexParameteri(glue, target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       mipmapimage = FALSE;
     }
@@ -1768,7 +1747,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
       mipmapimage = FALSE;
       generatemipmap = TRUE; // delay until after the texture image is set up
     }
-    if ((this->quality > OBOL_TEX2_ANISOTROPIC_LIMIT) &&
+    if ((this->quality > soglimage_options().anisotropicLimit) &&
         SoGLDriverDatabase::isSupported(glw, SO_GL_ANISOTROPIC_FILTERING)) {
       SoGLContext_glTexParameterf(glue, target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                       SoGLContext_get_max_anisotropy(glw));
@@ -1888,7 +1867,7 @@ SbBool
 SoGLImageP::shouldCreateMipmap(void)
 {
   if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-    return this->quality >= OBOL_TEX2_MIPMAP_LIMIT;
+    return this->quality >= soglimage_options().mipmapLimit;
   }
   else {
     return (this->flags & SoGLImage::NO_MIPMAP) == 0;
@@ -1912,15 +1891,15 @@ SoGLImageP::applyFilter(const SoGLContext * glue, const SbBool ismipmap)
       GL_TEXTURE_RECTANGLE_EXT : GL_TEXTURE_2D;
   }
   if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-    if (this->quality < OBOL_TEX2_LINEAR_LIMIT) {
+    if (this->quality < soglimage_options().linearLimit) {
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
-    else if ((this->quality < OBOL_TEX2_MIPMAP_LIMIT) || !ismipmap) {
+    else if ((this->quality < soglimage_options().mipmapLimit) || !ismipmap) {
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     }
-    else if (this->quality < OBOL_TEX2_LINEAR_MIPMAP_LIMIT) {
+    else if (this->quality < soglimage_options().linearMipmapLimit) {
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       SoGLContext_glTexParameteri(glue, target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
     }
@@ -1958,11 +1937,13 @@ SoGLImageP::applyFilter(const SoGLContext * glue, const SbBool ismipmap)
   }
 }
 
-// returns an unique uint32_t id for gl images
-uint32_t
+// Returns a process-unique ID for image-data generations.  The counter is
+// independent of the GL-image registry lock because setData() on independent
+// images may legitimately run on different threads.
+uint64_t
 SoGLImageP::getNextGLImageId(void)
 {
-  return current_glimageid++;
+  return current_glimageid.fetch_add(1, std::memory_order_relaxed);
 }
 
 // *************************************************************************

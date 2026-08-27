@@ -79,7 +79,10 @@
 #include <mutex>
 #include <thread>
 
-namespace {
+// These types are members of SoNanoRTContextManager::Impl below, so they need
+// a named linkage context. GCC diagnoses anonymous-namespace member types as
+// -Wsubobject-linkage when this private header is compiled in a unity TU.
+namespace ObolNanoRTDetail {
 
 // ==========================================================================
 // NrtScene: nanort BVH built from SoScTriangle data
@@ -475,7 +478,16 @@ private:
     std::exception_ptr exception_;
 };
 
-} // namespace
+} // namespace ObolNanoRTDetail
+
+using ObolNanoRTDetail::NrtRowExecutor;
+using ObolNanoRTDetail::NrtScene;
+using ObolNanoRTDetail::nrt_clamp01;
+using ObolNanoRTDetail::nrt_dot3;
+using ObolNanoRTDetail::nrt_normalize3;
+using ObolNanoRTDetail::nrt_rand01;
+using ObolNanoRTDetail::nrt_shade;
+using ObolNanoRTDetail::nrt_trace;
 
 // ==========================================================================
 // SoNanoRTContextManager

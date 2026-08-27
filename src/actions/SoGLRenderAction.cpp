@@ -61,6 +61,7 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -1767,13 +1768,12 @@ SoGLRenderActionP::render(SoNode * node)
     SoGLContext_glGetIntegerv(SoGLContext_instance(this->cachecontext), GL_ACCUM_RED_BITS, &accumbits);
 
     if (accumbits == 0) {
-      static SbBool first = TRUE;
-      if (first) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoGLRenderActionP::render",
                                   "Multipass rendering requested,\nbut current "
                                   "GL context has no accumulation buffer - "
                                   "falling back to single pass\nrendering.");
-        first = FALSE;
       }
       this->renderSingle(node);
     } else {
@@ -1795,12 +1795,11 @@ SoGLRenderActionP::render(SoNode * node)
         this->isrenderingoverlay = FALSE;
       }
     } else {
-      static SbBool first = TRUE;
-      if (first) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoGLRenderActionP::render",
                                   "Profiling overlay is only enabled for the first "
                                   "scene graph in the viewer.");
-        first = FALSE;
       }
     }
   }

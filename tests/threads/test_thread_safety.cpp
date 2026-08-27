@@ -86,13 +86,16 @@
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFInt32.h>
+#include <Inventor/fields/SoSFString.h>
 #include <Inventor/fields/SoMFFloat.h>
+#include <Inventor/fields/SoMFString.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/lists/SoEnabledElementsList.h>
 #include <Inventor/lists/SoNodeList.h>
 
 #include "shaders/SoGLShaderObject.h"
+#include "nodes/SoSceneTextureReadback.h"
 
 #include <thread>
 #include <vector>
@@ -1223,6 +1226,51 @@ static bool test_shader_ids_concurrent()
   return unique.size() == ids.size() && unique.find(0) == unique.end();
 }
 
+static bool test_field_string_conversion_concurrent()
+{
+  const std::string long_value(4096, 'x');
+  SoSFString expected_single_field;
+  expected_single_field.setValue(long_value.c_str());
+  SbString expected_single;
+  expected_single_field.get(expected_single);
+
+  SoMFString expected_multi_field;
+  expected_multi_field.set1Value(0, long_value.c_str());
+  SbString expected_multi;
+  expected_multi_field.get1(0, expected_multi);
+
+  std::atomic<bool> failure{false};
+  std::atomic<int> ready{0};
+  std::vector<std::thread> threads;
+  threads.reserve(static_cast<size_t>(kNumThreads));
+
+  for (int thread_index = 0; thread_index < kNumThreads; ++thread_index) {
+    threads.emplace_back([&] {
+      SoSFString single;
+      single.setValue(long_value.c_str());
+      SoMFString multi;
+      multi.set1Value(0, long_value.c_str());
+
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) < kNumThreads) { }
+
+      const int iterations = std::min(kItersPerThread, 250);
+      for (int iteration = 0; iteration < iterations && !failure; ++iteration) {
+        SbString single_text;
+        SbString multi_text;
+        single.get(single_text);
+        multi.get1(0, multi_text);
+        if (single_text != expected_single || multi_text != expected_multi) {
+          failure.store(true, std::memory_order_relaxed);
+        }
+      }
+    });
+  }
+  for (std::thread & thread : threads) thread.join();
+
+  return !failure.load(std::memory_order_relaxed);
+}
+
 static void prepare_thread_safety_suite()
 {
   static std::once_flag once;
@@ -1281,5 +1329,36 @@ OBOL_THREAD_STRESS_TEST(WriteActionIndependentOutputs,
                         test_write_action_concurrent)
 OBOL_THREAD_STRESS_TEST(ShaderObjectIdsAreUnique,
                         test_shader_ids_concurrent)
+OBOL_THREAD_STRESS_TEST(FieldStringConversionUsesIndependentBuffers,
+                        test_field_string_conversion_concurrent)
+
+TEST(SceneTextureSizing, ValidatesBeforeUnsignedConversion)
+{
+  SbVec2s normalized;
+  EXPECT_TRUE(ObolSceneTextureInternal::normalizeSize(SbVec2s(127, 65),
+                                                       normalized));
+  EXPECT_EQ(normalized, SbVec2s(128, 128));
+  EXPECT_TRUE(ObolSceneTextureInternal::normalizeSize(SbVec2s(16384, 16384),
+                                                       normalized));
+  EXPECT_FALSE(ObolSceneTextureInternal::normalizeSize(SbVec2s(16385, 64),
+                                                        normalized));
+  EXPECT_FALSE(ObolSceneTextureInternal::normalizeSize(SbVec2s(-1, 64),
+                                                        normalized));
+  EXPECT_FALSE(ObolSceneTextureInternal::normalizeSize(SbVec2s(0, 64),
+                                                        normalized));
+}
+
+TEST(SceneTextureSizing, ComputesCheckedRgbaReadbackSizes)
+{
+  std::size_t bytes = 0;
+  ASSERT_TRUE(ObolSceneTextureInternal::rgbaByteCount(SbVec2s(128, 64),
+                                                       1, bytes));
+  EXPECT_EQ(bytes, static_cast<std::size_t>(128 * 64 * 4));
+  ASSERT_TRUE(ObolSceneTextureInternal::rgbaByteCount(SbVec2s(128, 64),
+                                                       6, bytes));
+  EXPECT_EQ(bytes, static_cast<std::size_t>(128 * 64 * 4 * 6));
+  EXPECT_FALSE(ObolSceneTextureInternal::rgbaByteCount(SbVec2s(-1, 64),
+                                                        1, bytes));
+}
 
 #undef OBOL_THREAD_STRESS_TEST

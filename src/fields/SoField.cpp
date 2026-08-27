@@ -105,6 +105,7 @@
 #include <Inventor/fields/SoField.h>
 
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 
 #include <Inventor/fields/SoFields.h>
@@ -142,8 +143,17 @@
 #define OBOL_DEBUG_EXTRA 0
 #endif
 
-static const int SOFIELD_GET_STACKBUFFER_SIZE = 1024;
-// need one static mutex for field_buffer in SoField::get(SbString &)
+static const size_t SOFIELD_GET_INITIAL_BUFFER_SIZE = 1024;
+
+namespace {
+
+void *
+sofield_string_realloc(void * buffer, size_t size)
+{
+  return std::realloc(buffer, size);
+}
+
+} // namespace
 
 // flags for this->statusbits
 
@@ -288,67 +298,11 @@ public:
     return s;
   }
 
-  static SbHash<char *, char **> * getReallocHash(void);
-  static void * hashRealloc(void * bufptr, size_t size);
-
-  static SbHash<char *, char **> * ptrhash;
 };
-
-SbHash<char *, char **> * SoFieldP::ptrhash = NULL;
 
 extern "C" {
 // atexit callbacks
 static void SoField_cleanupClass(void);
-static void hashExitCleanup(void);
-}
-
-SbHash<char *, char **> *
-SoFieldP::getReallocHash(void)
-{
-  if (SoFieldP::ptrhash == NULL) {
-    SoFieldP::ptrhash = new SbHash<char *, char **>;
-    coin_atexit(hashExitCleanup, CC_ATEXIT_NORMAL);
-  }
-  return SoFieldP::ptrhash;
-}
-
-void
-hashExitCleanup(void)
-{
-  assert(SoFieldP::ptrhash->getNumElements() == 0);
-  delete SoFieldP::ptrhash;
-  SoFieldP::ptrhash = NULL;
-}
-
-void *
-SoFieldP::hashRealloc(void * bufptr, size_t size)
-{
-  char ** bufptrptr = NULL;
-  SbBool ok = SoFieldP::ptrhash->get(static_cast<char *>(bufptr), bufptrptr);
-  assert(ok);
-  (void)ok; /* avoid unused variable warning in release builds */
-
-  // If *bufptrptr contains a NULL pointer, this is the first
-  // invocation and the initial memory buffer was on the stack.
-  char * newbuf;
-  if (*bufptrptr == NULL) {
-    // if initial buffer was on the stack, we need to manually copy
-    // the data into the new buffer.
-    newbuf = static_cast<char *>(malloc(size));
-    memcpy(newbuf, bufptr, SOFIELD_GET_STACKBUFFER_SIZE);
-  }
-  else {
-    newbuf = static_cast<char *>(realloc(bufptr, size));
-  }
-  if (newbuf != bufptr) {
-    size_t isok = SoFieldP::ptrhash->erase(static_cast<char *>(bufptr));
-    assert(isok);
-    (void)isok; /* avoid unused variable warning in release builds */
-    *bufptrptr = newbuf;
-    SoFieldP::ptrhash->put(newbuf, bufptrptr);
-  }
-
-  return newbuf;
 }
 
 // *************************************************************************
@@ -543,9 +497,6 @@ SoField::initClass(void)
   assert(SoField::classTypeId == SoType::badType());
 
   SoField::classTypeId = SoType::createType(SoType::badType(), "Field");
-  // Eagerly initialize the realloc hash used by get()/get1() so that the
-  // lazy-init path in getReallocHash() is never exercised after SoDB::init().
-  (void)SoFieldP::getReallocHash();
   SoField::initClasses();
   coin_atexit(SoField_cleanupClass, CC_ATEXIT_NORMAL);
 }
@@ -1286,21 +1237,23 @@ SoField::get(SbString & valuestring) const
   // NOTE: this code has an almost verbatim copy in SoMField::get1(),
   // so remember to update both places if any fixes are done.
 
-  // Initial buffer setup.
+  // Use call-local storage.  Field string conversion is part of the supported
+  // init-then-read usage model, so sharing a scratch buffer (or a realloc
+  // registry) between independent fields would introduce a data race.
   SoOutput out;
-  char initbuffer[SOFIELD_GET_STACKBUFFER_SIZE];
-  char * bufferptr = NULL; // indicates that initial buffer is on the stack
-
-  SbBool ok = SoFieldP::getReallocHash()->put(initbuffer, &bufferptr);
-  assert(ok);
-  (void)ok; /* avoid unused variable warning in release builds */
-
-  out.setBuffer(initbuffer, sizeof(initbuffer), SoFieldP::hashRealloc);
+  void * initialbuffer = std::malloc(SOFIELD_GET_INITIAL_BUFFER_SIZE);
+  if (initialbuffer == NULL) {
+    valuestring = "";
+    SoDebugError::post("SoField::get", "Unable to allocate serialization buffer");
+    return;
+  }
+  out.setBuffer(initialbuffer, SOFIELD_GET_INITIAL_BUFFER_SIZE,
+                sofield_string_realloc);
 
   // Record offset to skip header.
   out.write("");
   size_t offset;
-  void * buffer;
+  void * buffer = NULL;
   out.getBuffer(buffer, offset);
 
   // Write field..
@@ -1314,12 +1267,7 @@ SoField::get(SbString & valuestring) const
   out.getBuffer(buffer, size);
   valuestring = static_cast<char *>(buffer) + offset;
 
-  // dealloc tmp memory buffer
-  free(bufferptr);
-
-  size_t isok = SoFieldP::getReallocHash()->erase(bufferptr ? bufferptr : initbuffer);
-  assert(isok);
-  (void)isok; /* avoid unused variable warning in release builds */
+  std::free(buffer);
 }
 
 /*!

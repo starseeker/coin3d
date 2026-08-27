@@ -21,8 +21,102 @@
 #include <Inventor/SoDB.h>
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
+#include <cstddef>
 #include <memory>
+#include <mutex>
+#include <new>
+#include <thread>
 #include <vector>
+
+namespace {
+
+constexpr unsigned int maxOSMesaDimension = 16384;
+
+/*
+ * The bundled Mesa GL dispatcher starts in a single-thread fast path and
+ * promotes itself to thread-specific dispatch when a second thread first
+ * makes a context current.  That legacy promotion code predates the C++
+ * memory model and is not safe when several threads attempt their first
+ * OSMesaMakeCurrent() simultaneously.
+ *
+ * Perform the transition once through a deliberately serialized handoff.
+ * Subsequent contexts retain Mesa's normal per-thread dispatch and may render
+ * concurrently; no lock is held around rendering itself.
+ */
+std::recursive_mutex &
+osmesaFallbackMutex()
+{
+  static std::recursive_mutex mutex;
+  return mutex;
+}
+
+bool
+prepareOSMesaThreadDispatch()
+{
+  static std::once_flag once;
+  static bool prepared = false;
+  std::call_once(once, [] {
+    constexpr GLsizei width = 1;
+    constexpr GLsizei height = 1;
+    OSMesaContext context = OSMesaCreateContextExt(OSMESA_RGBA, 0, 0, 0, nullptr);
+    std::unique_ptr<unsigned char[]> buffer(
+      new (std::nothrow) unsigned char[width * height * 4]);
+    if (!context || !buffer) {
+      if (context) OSMesaDestroyContext(context);
+      return;
+    }
+
+    OSMesaContext previous = OSMesaGetCurrentContext();
+    void * previousBuffer = nullptr;
+    GLsizei previousWidth = 0;
+    GLsizei previousHeight = 0;
+    GLint previousFormat = 0;
+    GLint previousType = GL_UNSIGNED_BYTE;
+    if (previous) {
+      const GLboolean gotPrevious =
+        OSMesaGetColorBuffer(previous, &previousWidth, &previousHeight,
+                             &previousFormat, &previousBuffer);
+      if (gotPrevious != GL_TRUE || !previousBuffer ||
+          previousWidth <= 0 || previousHeight <= 0) {
+        OSMesaDestroyContext(context);
+        return;
+      }
+      OSMesaGetIntegerv(OSMESA_TYPE, &previousType);
+    }
+
+    const bool firstBound =
+      OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+    const bool restored = previous && previousBuffer
+      ? OSMesaMakeCurrent(previous, previousBuffer,
+                          static_cast<GLenum>(previousType),
+                          previousWidth, previousHeight) == GL_TRUE
+      : OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0) == GL_TRUE;
+
+    if (firstBound && restored) {
+      bool secondBound = false;
+      try {
+        std::thread secondThread([&] {
+          if (OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE,
+                                width, height) == GL_TRUE) {
+            secondBound = true;
+            (void)OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+          }
+        });
+        secondThread.join();
+      }
+      catch (...) {
+        /* The manager will use its serialized fallback if a helper thread
+         * cannot be created.  Context creation remains usable in
+         * resource-constrained applications without exposing the race. */
+      }
+      prepared = secondBound;
+    }
+    OSMesaDestroyContext(context);
+  });
+  return prepared;
+}
+
+} // namespace
 
 /* -----------------------------------------------------------------------
  * Per-context state
@@ -54,8 +148,14 @@ struct CoinOSMesaCtxData {
     : ctx(nullptr), w(w_), h(h_)
   {
     ctx = OSMesaCreateContextExt(OSMESA_RGBA, 24, 0, 0, nullptr);
-    if (ctx)
-      buf = std::make_unique<unsigned char[]>((size_t)w * h * 4);
+    if (ctx) {
+      buf.reset(new (std::nothrow) unsigned char[
+        static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4U]);
+      if (!buf) {
+        OSMesaDestroyContext(ctx);
+        ctx = nullptr;
+      }
+    }
   }
 
   ~CoinOSMesaCtxData() {
@@ -78,7 +178,12 @@ struct CoinOSMesaCtxData {
       OSMesaGetIntegerv(OSMESA_TYPE, &type);
       frame.type = static_cast<GLenum>(type);
     }
-    previous.push_back(frame);
+    try {
+      previous.push_back(frame);
+    }
+    catch (...) {
+      return false;
+    }
     if (!OSMesaMakeCurrent(ctx, buf.get(), GL_UNSIGNED_BYTE, w, h)) {
       previous.pop_back();
       return false;
@@ -93,9 +198,22 @@ struct CoinOSMesaCtxData {
 
 class CoinOSMesaContextManagerImpl : public SoDB::ContextManager {
 public:
+  CoinOSMesaContextManagerImpl()
+    : concurrentDispatch(prepareOSMesaThreadDispatch())
+  {
+  }
+
   void * createOffscreenContext(unsigned int width, unsigned int height) override {
-    auto * d = new CoinOSMesaCtxData((int)width, (int)height);
-    return d->isValid() ? d : (delete d, nullptr);
+    if (width == 0 || height == 0 ||
+        width > maxOSMesaDimension || height > maxOSMesaDimension) {
+      return nullptr;
+    }
+    std::unique_lock<std::recursive_mutex> fallbackLock(
+      osmesaFallbackMutex(), std::defer_lock);
+    if (!this->concurrentDispatch) fallbackLock.lock();
+    auto * d = new (std::nothrow) CoinOSMesaCtxData(
+      static_cast<int>(width), static_cast<int>(height));
+    return d && d->isValid() ? d : (delete d, nullptr);
   }
 
   SbBool isOSMesaContext(void * /*context*/) override {
@@ -109,29 +227,50 @@ public:
   void maxOffscreenDimensions(unsigned int & width, unsigned int & height) const override {
     /* OSMesa is limited only by available RAM; 16384×16384 is large enough
      * for any realistic offscreen render request. */
-    width  = 16384;
-    height = 16384;
+    width = maxOSMesaDimension;
+    height = maxOSMesaDimension;
+  }
+
+  void getActualSurfaceSize(void * context,
+                            unsigned int & width,
+                            unsigned int & height) const override {
+    const auto * data = static_cast<const CoinOSMesaCtxData *>(context);
+    if (!data || data->w <= 0 || data->h <= 0) {
+      width = height = 0;
+      return;
+    }
+    width = static_cast<unsigned int>(data->w);
+    height = static_cast<unsigned int>(data->h);
   }
 
   SbBool makeContextCurrent(void * context) override {
-    return context &&
-           static_cast<CoinOSMesaCtxData *>(context)->makeCurrent()
-           ? TRUE : FALSE;
+    if (!this->concurrentDispatch) osmesaFallbackMutex().lock();
+    const bool current = context &&
+      static_cast<CoinOSMesaCtxData *>(context)->makeCurrent();
+    if (!current && !this->concurrentDispatch) osmesaFallbackMutex().unlock();
+    return current ? TRUE : FALSE;
   }
 
   void restorePreviousContext(void * context) override {
     auto * d = static_cast<CoinOSMesaCtxData *>(context);
-    if (!d || d->previous.empty()) return;
-    const CoinOSMesaCtxData::PreviousContext frame = d->previous.back();
-    d->previous.pop_back();
-    if (frame.ctx && frame.buf)
-      OSMesaMakeCurrent(frame.ctx, frame.buf,
-                        frame.type, frame.w, frame.h);
-    else
-      OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+    bool restored = false;
+    if (d && !d->previous.empty()) {
+      const CoinOSMesaCtxData::PreviousContext frame = d->previous.back();
+      d->previous.pop_back();
+      if (frame.ctx && frame.buf)
+        OSMesaMakeCurrent(frame.ctx, frame.buf,
+                          frame.type, frame.w, frame.h);
+      else
+        OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+      restored = true;
+    }
+    if (!this->concurrentDispatch && restored) osmesaFallbackMutex().unlock();
   }
 
   void destroyContext(void * context) override {
+    std::unique_lock<std::recursive_mutex> fallbackLock(
+      osmesaFallbackMutex(), std::defer_lock);
+    if (!this->concurrentDispatch) fallbackLock.lock();
     auto * d = static_cast<CoinOSMesaCtxData *>(context);
     if (!d) return;
     /* Unbind the context before destroying it.  If it is still current (e.g.
@@ -173,6 +312,9 @@ public:
     components = 4;
     return TRUE;
   }
+
+private:
+  const bool concurrentDispatch;
 };
 
 /* -----------------------------------------------------------------------

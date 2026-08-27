@@ -140,6 +140,7 @@
 #include <Inventor/nodes/SoAsciiText.h>
 #include "glue/glp.h"
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <cstring>
 #include <cfloat> // FLT_MIN
@@ -327,17 +328,15 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
 
   // FIXME: implement this feature. 20040820 mortene.
-  static SbBool warned = FALSE;
-  if (!warned) {
-    const int stackidx = SoTextOutlineEnabledElement::getClassStackIndex();
-    const SbBool outlinepresence = state->isElementEnabled(stackidx);
-
-    if (outlinepresence && SoTextOutlineEnabledElement::get(state)) {
+  const int outlineidx = SoTextOutlineEnabledElement::getClassStackIndex();
+  if (state->isElementEnabled(outlineidx) &&
+      SoTextOutlineEnabledElement::get(state)) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoAsciiText::GLRender",
                                 "Support for rendering SoAsciiText nodes in outline "
                                 "(i.e. heeding the SoTextOutlineEnabledElement) "
                                 "not yet implemented.");
-      warned = TRUE;
     }
   }
 
@@ -359,9 +358,8 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
   // FIXME: implement proper support for 3D-texturing, and get rid of
   // this. 20020120 mortene.
   if (do3Dtextures) {
-    static SbBool first = TRUE;
-    if (first) {
-      first = FALSE;
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoAsciiText::GLRender",
                                 "3D-textures not properly supported for this node type yet.");
     }
@@ -703,9 +701,8 @@ SoAsciiText::generatePrimitives(SoAction * action)
   // FIXME: implement proper support for 3D-texturing, and get rid of
   // this. 20020120 mortene.
   if (do3Dtextures) {
-    static SbBool first = TRUE;
-    if (first) {
-      first = FALSE;
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoAsciiText::generatePrimitives",
                                 "3D-textures not properly supported for this node type yet.");
     }

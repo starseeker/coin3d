@@ -50,5 +50,8 @@ inline std::string renderingOutputStem(const char *name)
         initCoinHeadless();                                               \
         [[maybe_unused]] const std::string outputStem =                   \
             ObolTest::renderingOutputStem(artifact_name);                 \
-        EXPECT_TRUE((expression));                                        \
+        const bool obolRenderContractPassed = (expression);               \
+        EXPECT_TRUE(obolRenderContractPassed)                             \
+            << "Render contract failed: " #expression                    \
+            << "\nArtifact prefix: " << outputStem;                       \
     }

@@ -81,6 +81,18 @@ public:
     virtual void destroyContext(void* context) override {
         delete static_cast<CoinOSMesaContext*>(context);
     }
+
+    virtual void getActualSurfaceSize(void* context,
+                                      unsigned int& width,
+                                      unsigned int& height) const override {
+        const auto* ctx = static_cast<const CoinOSMesaContext*>(context);
+        if (!ctx) {
+            width = height = 0;
+            return;
+        }
+        width = static_cast<unsigned int>(ctx->width);
+        height = static_cast<unsigned int>(ctx->height);
+    }
 };
 
 // NEW: Initialize OSMesa context management using PUBLIC API

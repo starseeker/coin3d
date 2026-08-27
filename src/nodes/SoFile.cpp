@@ -239,11 +239,10 @@ SoFile::readNamedFile(SoInput * in)
 
   this->fullname = in->getCurFileName();
 
-  static int debugreading = -1;
-  if (debugreading == -1) {
+  static const bool debugreading = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOFILE_READ");
-    debugreading = env && (atoi(env) > 0);
-  }
+    return env && (std::atoi(env) > 0);
+  }();
 
   if (debugreading) {
     SoDebugError::postInfo("SoFile::readNamedFile", "(full) name=='%s'",
@@ -285,15 +284,15 @@ SoFile::readNamedFile(SoInput * in)
       // found, so we have to read until the current file on the stack
       // is at the end.  All non-whitespace characters from now on are
       // erroneous.
-      static uint32_t fileerrors_termination = 0;
+      bool reportedterminationerror = false;
       SbString dummy;
       while (!in->eof() && in->read(dummy)) {
-        if (fileerrors_termination < 1) {
+        if (!reportedterminationerror) {
           SoReadError::post(in, "Erroneous character(s) after end of scene graph: \"%s\". "
                             "This message will only be shown once for this file, "
                             "but more errors might be present", dummy.getString());
+          reportedterminationerror = true;
         }
-        fileerrors_termination++;
       }
       assert(in->eof());
     }

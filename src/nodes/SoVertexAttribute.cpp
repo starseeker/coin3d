@@ -46,6 +46,7 @@
 #include <Inventor/fields/SoMFShort.h>
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include <Inventor/elements/SoGLShaderProgramElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
@@ -257,9 +258,8 @@ SoVertexAttribute::GLRender(SoGLRenderAction * action)
   SbBool opengl_version_match = SoGLContext_glversion_matches_at_least(glue, 2, 0, 0);
 
   if (!vertex_shader_supported || !opengl_version_match) {
-    static SbBool first = TRUE;
-    if (first) {
-      first = FALSE;
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SbString msg("\nUnable to use Vertex Attributes:\n");
       if (!opengl_version_match) msg += "OpenGL version < 2.0\n";
       if (!vertex_shader_supported) msg += "GL_ARB_vertex_shader extension not supported\n";

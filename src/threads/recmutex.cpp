@@ -46,6 +46,7 @@
 
 #include <cstdlib>
 #include <cassert>
+#include <atomic>
 
 #include "errors/CoinInternalError.h"
 
@@ -63,7 +64,7 @@
    excessive mutex construction. */
 
 /* these are declared in mutex.cpp */
-extern unsigned int cc_debug_mtxcount;
+extern std::atomic<unsigned int> cc_debug_mtxcount;
 extern const char * OBOL_DEBUG_MUTEX_COUNT;
 
 /* ********************************************************************** */
@@ -105,9 +106,9 @@ cc_recmutex_construct(void)
   { /* debugging */
     const char * env = CoinInternal::getEnvironmentVariableRaw(OBOL_DEBUG_MUTEX_COUNT);
     if (env && (atoi(env) > 0)) {
-      cc_debug_mtxcount += 1;
+      const unsigned int count = cc_debug_mtxcount.fetch_add(1, std::memory_order_relaxed) + 1;
       (void)fprintf(stderr, "DEBUG: live mutexes +1 => %u (recmutex++)\n",
-                    cc_debug_mtxcount);
+                    count);
     }
   }
 
@@ -123,10 +124,10 @@ cc_recmutex_destruct(cc_recmutex * recmutex)
   { /* debugging */
     const char * env = CoinInternal::getEnvironmentVariableRaw(OBOL_DEBUG_MUTEX_COUNT);
     if (env && (atoi(env) > 0)) {
-      assert((cc_debug_mtxcount > 0) && "skewed mutex construct/destruct pairing");
-      cc_debug_mtxcount -= 1;
+      const unsigned int previous = cc_debug_mtxcount.fetch_sub(1, std::memory_order_relaxed);
+      assert((previous > 0) && "skewed mutex construct/destruct pairing");
       (void)fprintf(stderr, "DEBUG: live mutexes -1 => %u (recmutex--)\n",
-                    cc_debug_mtxcount);
+                    previous - 1);
     }
   }
 

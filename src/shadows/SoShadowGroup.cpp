@@ -275,6 +275,7 @@
 
 #include <FXViz/nodes/SoShadowGroup.h>
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <cmath>
 
@@ -2230,9 +2231,8 @@ SoShadowGroupP::GLRender(SoGLRenderAction * action, const SbBool inpath)
   SbString reason;
   const bool supported = SoShadowGroupP::supported(glue, reason);
   if (!supported && PUBLIC(this)->isActive.getValue()) {
-    static bool first = true;
-    if (first) {
-      first = false;
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoShadowGroupP::GLRender", "%s", reason.getString());
     }
   }

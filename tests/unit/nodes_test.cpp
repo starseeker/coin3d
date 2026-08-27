@@ -7,6 +7,7 @@
 #include <Inventor/SbRotation.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/SbViewVolume.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoType.h>
 #include <Inventor/misc/SoBase.h>
@@ -99,6 +100,22 @@ TEST(Nodes, RuntimeTypesNamesAndBasicHierarchyAreAvailable)
     root->removeChild(cube);
     EXPECT_EQ(root->getNumChildren(), 1);
     root->unref();
+}
+
+TEST(Nodes, InvalidCameraViewportMappingFallsBackToLeaveAlone)
+{
+    auto * camera = new SoPerspectiveCamera;
+    camera->ref();
+    camera->viewportMapping.setValue(999);
+
+    const SbViewportRegion requested(320, 200);
+    SbViewportRegion actual = requested;
+    const SbViewVolume volume = static_cast<SoCamera *>(camera)->getViewVolume(
+        requested, actual, SbMatrix::identity());
+
+    EXPECT_EQ(actual, requested);
+    EXPECT_GT(volume.getDepth(), 0.0f);
+    camera->unref();
 }
 
 TEST(Nodes, BaseReferenceCountingNamesAndTypeNamesAreStable)

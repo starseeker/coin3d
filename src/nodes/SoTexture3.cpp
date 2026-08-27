@@ -93,6 +93,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include <Inventor/SbImage.h>
 #include "glue/glp.h"
 
@@ -283,14 +284,13 @@ SoTexture3::GLRender(SoGLRenderAction * action)
   int unit = SoTextureUnitElement::get(state);
   
   if (!SoGLDriverDatabase::isSupported(glue, SO_GL_3D_TEXTURES)) {
-    static SbBool first = TRUE;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoTexture3::GLRender",
                                 "The current OpenGL context does not support 3D textures "
                                 "(This warning message is only shown once, but "
                                 "there could be more cases of this in the "
                                 "scene graph.).");
-      first = FALSE;
     }
     return;
   }

@@ -1658,14 +1658,12 @@ SoInput::findReference(const SbName & name) const
     SoBase * base = this->getTopOfStack()->findReference(name);
     if (base) return base;
 
-    static int OBOL_SOINPUT_SEARCH_GLOBAL_DICT = -1;
-    if (OBOL_SOINPUT_SEARCH_GLOBAL_DICT < 0) {
+    static const bool searchglobaldict = [] {
       const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_SOINPUT_SEARCH_GLOBAL_DICT");
-      if (env) OBOL_SOINPUT_SEARCH_GLOBAL_DICT = atoi(env);
-      else OBOL_SOINPUT_SEARCH_GLOBAL_DICT = 0;
-    }
+      return env && std::atoi(env) != 0;
+    }();
 
-    if (OBOL_SOINPUT_SEARCH_GLOBAL_DICT) {
+    if (searchglobaldict) {
       return SoBase::getNamedBase(name, SoNode::getClassTypeId());
     }
   }

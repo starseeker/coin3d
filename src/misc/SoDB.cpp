@@ -159,16 +159,6 @@ const char * SoDBP::EnvVars::OBOL_PROFILER_OVERLAY = "OBOL_PROFILER_OVERLAY";
 
 // *************************************************************************
 
-static SbString * coin_versionstring = NULL;
-
-// atexit callback
-static void cleanup_func(void)
-{
-  delete coin_versionstring;
-  coin_versionstring = NULL;
-}
-
-
 // *************************************************************************
 
 // For sanity checking that our static variables in Coin have had a
@@ -479,11 +469,8 @@ SoDB::cleanup(void)
 const char *
 SoDB::getVersion(void)
 {
-  if (coin_versionstring == NULL) {
-    coin_versionstring = new SbString("SIM Coin " OBOL_VERSION);
-    coin_atexit((coin_atexit_f *)cleanup_func, CC_ATEXIT_NORMAL);
-  }
-  return coin_versionstring->getString();
+  static constexpr char version[] = "SIM Coin " OBOL_VERSION;
+  return version;
 }
 
 /*!
@@ -1160,20 +1147,19 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
     // found, so we have to read until the current file on the stack
     // is at the end.  All non-whitespace characters from now on are
     // erroneous.
-    static uint32_t readallerrors_termination = 0;
+    bool reportedterminationerror = false;
     char dummy = -1; // Set to -1 to make sure the variable has been
                      // read before an error is output
     char buf[2];
     buf[1] = '\0';
     while (!in->eof() && in->read(dummy)) {
-      if (readallerrors_termination < 1) {
+      if (!reportedterminationerror) {
         buf[0] = dummy;
         SoReadError::post(in, "Erroneous character(s) after end of scene graph: \"%s\". "
                           "This message will only be shown once for this file, "
                           "but more errors might be present", dummy != '\0' ? buf : "\\0");
+        reportedterminationerror = true;
       }
-
-      readallerrors_termination++;
     }
     assert(in->eof());
 

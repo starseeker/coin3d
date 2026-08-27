@@ -289,12 +289,10 @@ public:
      * application must provide for the feature to work — preventing the
      * memory corruption that results from reading beyond a tiny framebuffer.
      *
-     * The default returns (0, 0), which means "unknown".  Obol treats an
-     * unknown size as "assume it is large enough" and relies on FBO
-     * creation success/failure as the fallback guard.  Implementing this
-     * method in your ContextManager is strongly recommended for any
-     * context whose backing surface might be smaller than the largest
-     * texture the application requests.
+     * The default returns (0, 0), which means "unknown".  If framebuffer
+     * objects are unavailable, Obol will skip raw readback from a surface of
+     * unknown size rather than risk reading beyond it.  Context managers that
+     * support direct framebuffer readback must override this method.
      */
     virtual void getActualSurfaceSize(void * /*context*/,
                                       unsigned int & width,

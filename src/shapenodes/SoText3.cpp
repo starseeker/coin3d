@@ -133,6 +133,7 @@
 #include <cfloat> // FLT_MAX, FLT_MIN
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include "../base/SbUtf8.h" // Modern UTF-8 support
 
@@ -453,19 +454,17 @@ SoText3::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
 
   // FIXME: implement this feature. 20040820 mortene.
-  static SbBool warned = FALSE;
-  if (!warned) {
-    const int stackidx = SoTextOutlineEnabledElement::getClassStackIndex();
-    const SbBool outlinepresence = state->isElementEnabled(stackidx);
-
-    if (outlinepresence && SoTextOutlineEnabledElement::get(state)) {
+  const int outlineidx = SoTextOutlineEnabledElement::getClassStackIndex();
+  if (state->isElementEnabled(outlineidx) &&
+      SoTextOutlineEnabledElement::get(state)) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
 #if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "Support for rendering SoText3 nodes in outline "
                                 "(i.e. heeding the SoTextOutlineEnabledElement) "
                                 "not yet implemented.");
 #endif // OBOL_DEBUG
-      warned = TRUE;
     }
   }
 
@@ -597,9 +596,8 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
   // FIXME: implement proper support for 3D-texturing, and get rid of
   // this. (20031010 handegar)
   if (do3Dtextures) {
-    static SbBool first = TRUE;
-    if (first) {
-      first = FALSE;
+    static SoOnceFlag warning;
+    if (warning.first()) {
 #if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "3D-textures not supported for this node type yet.");
@@ -1030,9 +1028,8 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
   // FIXME: implement proper support for 3D-texturing, and get rid of
   // this. (20031010 handegar)
   if (do3Dtextures) {
-    static SbBool first = TRUE;
-    if (first) {
-      first = FALSE;
+    static SoOnceFlag warning;
+    if (warning.first()) {
 #if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "3D-textures not supported for this node type yet.");

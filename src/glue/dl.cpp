@@ -341,11 +341,10 @@ struct cc_libhandle_struct {
 static int
 cc_dl_debugging(void)
 {
-  static int d = -1;
-  if (d == -1) {
+  static const int d = [] {
     auto val = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_DL");
-    d = val.has_value() ? std::atoi(val->c_str()) : 0;
-  }
+    return val.has_value() ? std::atoi(val->c_str()) : 0;
+  }();
   return (d > 0) ? 1 : 0;
 }
 

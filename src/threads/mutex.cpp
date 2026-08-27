@@ -116,7 +116,7 @@ cc_mutex_struct_clean(cc_mutex * mutex_struct)
 
 /* don't hide 'static' these to hide them in file-scope, as they are
    used from rwmutex.cpp and recmutex.cpp as well. */
-unsigned int cc_debug_mtxcount = 0;
+std::atomic<unsigned int> cc_debug_mtxcount{0};
 const char * OBOL_DEBUG_MUTEX_COUNT = "OBOL_DEBUG_MUTEX_COUNT";
 
 /**************************************************************************/
@@ -124,11 +124,10 @@ const char * OBOL_DEBUG_MUTEX_COUNT = "OBOL_DEBUG_MUTEX_COUNT";
 /* Return value of OBOL_DEBUG_MUTEX_COUNT environment variable. */
 static int coin_debug_mutex_count(void)
 {
-  static int d = -1;
-  if (d == -1) {
+  static const int d = [] {
     const char* val = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEX_COUNT");
-    d = val ? atoi(val) : 0;
-  }
+    return val ? atoi(val) : 0;
+  }();
   return d;
 }
 
@@ -152,9 +151,9 @@ cc_mutex_construct(void)
 
   /* debugging */
   if (coin_debug_mutex_count() > 0) {
-    cc_debug_mtxcount += 1;
+    const unsigned int count = cc_debug_mtxcount.fetch_add(1, std::memory_order_relaxed) + 1;
     (void)fprintf(stderr, "DEBUG: live mutexes +1 => %u (mutex++)\n",
-                  cc_debug_mtxcount);
+                  count);
   }
 
   return mutex;
@@ -166,10 +165,10 @@ cc_mutex_destruct(cc_mutex * mutex)
 {
   /* debugging */
   if (coin_debug_mutex_count() > 0) {
-    assert((cc_debug_mtxcount > 0) && "skewed mutex construct/destruct pairing");
-    cc_debug_mtxcount -= 1;
+    const unsigned int previous = cc_debug_mtxcount.fetch_sub(1, std::memory_order_relaxed);
+    assert((previous > 0) && "skewed mutex construct/destruct pairing");
     (void)fprintf(stderr, "DEBUG: live mutexes -1 => %u (mutex--)\n",
-                  cc_debug_mtxcount);
+                  previous - 1);
   }
 
   assert(mutex != NULL);

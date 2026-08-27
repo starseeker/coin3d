@@ -309,6 +309,7 @@
 #include <Inventor/SoOffscreenRenderer.h>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <atomic>
 #include <cassert>
@@ -2219,7 +2220,15 @@ SoOffscreenRendererP::setCameraViewvolForTile(SoCamera * cam)
     vv = cam->getViewVolume(0.0f);
     break;
   default:
-    assert(0 && "unknown viewport mapping");
+    {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoOffscreenRendererP::setCameraViewvolForTile",
+                                  "Unknown viewport mapping %d; using LEAVE_ALONE.",
+                                  cam->viewportMapping.getValue());
+      }
+    }
+    vv = cam->getViewVolume(0.0f);
     break;
   }
 

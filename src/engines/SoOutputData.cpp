@@ -57,6 +57,7 @@
 
 #include "config.h" // OBOL_STUB()
 #include "SbBasicP.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/engines/SoNodeEngine.h>
@@ -250,9 +251,8 @@ SoEngineOutputData::addOutputInternal(const SoFieldContainer * base, const char 
   // resolvable while still keeping compatibility. 20000915 mortene.
   if (type.isDerivedFrom(SoType::fromName("SFEnum")) ||
       type.isDerivedFrom(SoType::fromName("MFEnum"))) {
-    static SbBool warn = TRUE;
-    if (warn) {
-      warn = FALSE; // Warn only once.
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoEngineOutputData::addOutput",
                                 "Using as engine output a field which has "
                                 "enum type is not advisable, as it contains "

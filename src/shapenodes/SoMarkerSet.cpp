@@ -73,6 +73,7 @@
 #include <cstring>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SoPrimitiveVertex.h>
@@ -1210,12 +1211,11 @@ SoMarkerSet::GLRender(SoGLRenderAction * action)
     int midx = SbMin(i, this->markerIndex.getNum() - 1);
 #if OBOL_DEBUG
       if (midx < 0 || (this->markerIndex[midx] >= markerlist->getLength())) {
-        static SbBool firsterror = TRUE;
-        if (firsterror) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoMarkerSet::GLRender",
                                     "markerIndex %d out of bound",
                                     markerIndex[i]);
-          firsterror = FALSE;
         }
         // Don't render, jump back to top of for-loop and continue with
         // next index.
@@ -1496,5 +1496,4 @@ SoMarkerSet::removeMarker(int idx)
   markerlist->remove(idx);
   return TRUE;
 }
-
 

@@ -494,3 +494,60 @@ TEST_F(ProfilerSuite, MemorySortUsesFullSizeTRange)
     SoProfilingReportGenerator::freeCriteria(sort);
     SoProfilingReportGenerator::freeCriteria(print);
 }
+
+TEST_F(ProfilerSuite, InvalidCriteriaEntriesAreIgnoredSafely)
+{
+    SampleProfilingData sample;
+    SbList<SoProfilingReportGenerator::SortOrder> sortorder;
+    sortorder.append(static_cast<SoProfilingReportGenerator::SortOrder>(999));
+    sortorder.append(SoProfilingReportGenerator::TIME_ASC);
+    SbList<SoProfilingReportGenerator::Column> columns;
+    columns.append(static_cast<SoProfilingReportGenerator::Column>(999));
+    columns.append(SoProfilingReportGenerator::NAME);
+
+    auto * sort = SoProfilingReportGenerator::getReportSortCriteria(sortorder);
+    auto * print = SoProfilingReportGenerator::getReportPrintCriteria(columns);
+    ReportCapture capture;
+    SoProfilingReportGenerator::generate(
+        sample.data, SoProfilingReportGenerator::NODES,
+        sort, print, 0, FALSE, captureReport, &capture);
+
+    EXPECT_EQ(capture.calls, sample.data.getNumNodeEntries());
+    EXPECT_FALSE(capture.lines.empty());
+    SoProfilingReportGenerator::freeCriteria(sort);
+    SoProfilingReportGenerator::freeCriteria(print);
+}
+
+TEST_F(ProfilerSuite, InvalidPublicArgumentsDegradeWithoutCrashing)
+{
+    SampleProfilingData sample;
+    auto * sort = SoProfilingReportGenerator::getDefaultReportSortCriteria(
+        static_cast<SoProfilingReportGenerator::DataCategorization>(999));
+    auto * print = SoProfilingReportGenerator::getDefaultReportPrintCriteria(
+        static_cast<SoProfilingReportGenerator::DataCategorization>(999));
+    ReportCapture capture;
+
+    SoProfilingReportGenerator::generate(
+        sample.data,
+        static_cast<SoProfilingReportGenerator::DataCategorization>(999),
+        sort, print, 0, FALSE, captureReport, &capture);
+    EXPECT_EQ(capture.calls, 0);
+
+    SoProfilingReportGenerator::generate(
+        sample.data, SoProfilingReportGenerator::NODES,
+        nullptr, print, 0, FALSE, captureReport, &capture);
+    SoProfilingReportGenerator::generate(
+        sample.data, SoProfilingReportGenerator::NODES,
+        sort, nullptr, 0, FALSE, captureReport, &capture);
+    SoProfilingReportGenerator::generate(
+        sample.data, SoProfilingReportGenerator::NODES,
+        sort, print, 0, FALSE, nullptr, &capture);
+    EXPECT_EQ(capture.calls, 0);
+
+    SoProfilingReportGenerator::freeCriteria(sort);
+    SoProfilingReportGenerator::freeCriteria(print);
+    SoProfilingReportGenerator::freeCriteria(
+        static_cast<SbProfilingReportSortCriteria *>(nullptr));
+    SoProfilingReportGenerator::freeCriteria(
+        static_cast<SbProfilingReportPrintCriteria *>(nullptr));
+}
