@@ -53,6 +53,12 @@ struct GoldenScene {
     RenderKind render_kind = RenderKind::Scene;
 };
 
+void PrintTo(const GoldenScene & scene, std::ostream * output)
+{
+    *output << scene.name << " (" << scene.width << 'x' << scene.height
+            << ", reference=" << scene.filename << ')';
+}
+
 bool renderQuadViewportLod(ObolTestSupport::RenderFixture & fixture,
                            std::vector<unsigned char> & pixels)
 {
@@ -182,7 +188,9 @@ void compareSceneToReference(const GoldenScene & golden)
 
     const ObolTestSupport::ImageComparison comparison =
         ObolTestSupport::compareRgb(actual, *expected);
-    // Retained references were produced by system GLX. Permit normal driver
+    // Retained references represent the shared canonical scene factories,
+    // not the duplicate scene setup formerly embedded in standalone tests.
+    // Permit normal driver
     // rasterization variation while still rejecting structural, material,
     // camera, texture, and lighting regressions. Exact differing-pixel counts
     // are not meaningful across drivers: a one-value background rounding

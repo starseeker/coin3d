@@ -61,13 +61,17 @@ For golden-image cases, load the PNG with
 `ObolTestSupport::loadRgbPng()`, compare it with `compareRgb()`, and assert
 against an explicit `ImageTolerance`.  The helper reports differing pixels,
 maximum channel error, and RMS error; there is no suite-wide hidden threshold.
-The retained files in `tests/control_images/` are GLX references. Portable
-scenes compare against them with an explicit RMS tolerance in both render
-lanes. Bump mapping, 3-D textures, and GLSL shadows retain native-GL golden
-coverage while the software lane checks their deterministic semantic and
-pixel-region contracts. New backend-specific references belong below
+The retained files in `tests/control_images/` are GLX references produced from
+the shared canonical scene factories. Portable scenes compare against them
+with an explicit RMS tolerance in both render lanes. Bump mapping, 3-D
+textures, and GLSL shadows retain native-GL golden and mutation-based semantic
+coverage; the bundled software lane verifies their documented fallback
+renders. New backend-specific references belong below
 `tests/rendering/golden/<backend>/`; update either set only through a reviewed,
-intentional render change.
+intentional render change. On a visual failure, CI uploads the actual and
+absolute-difference PNGs for 14 days. Review those images before replacing a
+reference; never generate a control from duplicate scene construction in a
+test executable.
 
 The CAD IDs, assembly records, resolved-draw oracle, CPU-picking tests,
 subpixel/progressive rendering contracts, base math, geometry, value types,
