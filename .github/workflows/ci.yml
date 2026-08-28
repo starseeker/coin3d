@@ -180,7 +180,7 @@ jobs:
             -DOBOL_WARNINGS_AS_ERRORS=ON `
             -DOBOL_USE_UNITY_BUILD=OFF `
             -DOBOL_USE_SYSTEM_GL=ON `
-            -DOBOL_USE_SWRAST=OFF
+            -DOBOL_USE_SWRAST=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel 2

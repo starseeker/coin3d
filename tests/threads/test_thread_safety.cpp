@@ -67,6 +67,7 @@
  * 21. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
  * 22. write_action_concurrent       — Independent SoWriteAction traversal state
  * 23. shader_ids_concurrent         — 64-bit shader cache IDs remain unique
+ * 24. field_metadata_publication    — First-instance field/enum metadata is atomic
  */
 
 #include <gtest/gtest.h>
@@ -81,11 +82,13 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/SoType.h>
 #include <Inventor/SoOutput.h>
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFInt32.h>
+#include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFString.h>
 #include <Inventor/fields/SoMFFloat.h>
 #include <Inventor/fields/SoMFString.h>
@@ -119,6 +122,61 @@ class ShaderIdProbe : public SoGLShaderObject {
 public:
   static uint64_t allocateId(void) { return allocateShaderObjectId(); }
 };
+
+class FieldMetadataPublicationProbe : public SoNode {
+  SO_NODE_HEADER(FieldMetadataPublicationProbe);
+
+public:
+  enum Mode {
+    MODE_00, MODE_01, MODE_02, MODE_03,
+    MODE_04, MODE_05, MODE_06, MODE_07,
+    MODE_08, MODE_09, MODE_10, MODE_11,
+    MODE_12, MODE_13, MODE_14, MODE_15
+  };
+
+  static void initClass(void);
+  FieldMetadataPublicationProbe(void);
+
+  SoSFEnum mode;
+  SoSFInt32 payload;
+
+protected:
+  ~FieldMetadataPublicationProbe() override = default;
+};
+
+SO_NODE_SOURCE(FieldMetadataPublicationProbe);
+
+FieldMetadataPublicationProbe::FieldMetadataPublicationProbe(void)
+{
+  SO_NODE_CONSTRUCTOR(FieldMetadataPublicationProbe);
+
+  SO_NODE_ADD_FIELD(mode, (MODE_00));
+  SO_NODE_ADD_FIELD(payload, (42));
+
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_00);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_01);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_02);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_03);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_04);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_05);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_06);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_07);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_08);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_09);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_10);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_11);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_12);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_13);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_14);
+  SO_NODE_DEFINE_ENUM_VALUE(Mode, MODE_15);
+  SO_NODE_SET_SF_ENUM_TYPE(mode, Mode);
+}
+
+void
+FieldMetadataPublicationProbe::initClass(void)
+{
+  SO_NODE_INIT_CLASS(FieldMetadataPublicationProbe, SoNode, "Node");
+}
 
 } // namespace
 
@@ -1271,23 +1329,67 @@ static bool test_field_string_conversion_concurrent()
   return !failure.load(std::memory_order_relaxed);
 }
 
+static bool test_field_metadata_publication_concurrent()
+{
+  static std::once_flag classInit;
+  std::call_once(classInit, [] {
+    FieldMetadataPublicationProbe::initClass();
+  });
+
+  constexpr int threadCount = 32;
+  std::mutex gateMutex;
+  std::condition_variable gate;
+  int ready = 0;
+  bool start = false;
+  std::vector<FieldMetadataPublicationProbe *> nodes(threadCount, nullptr);
+  std::vector<std::thread> threads;
+  threads.reserve(threadCount);
+
+  for (int index = 0; index < threadCount; ++index) {
+    threads.emplace_back([&, index] {
+      {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        ++ready;
+        gate.notify_all();
+        gate.wait(lock, [&] { return start; });
+      }
+      FieldMetadataPublicationProbe * node =
+        new FieldMetadataPublicationProbe;
+      node->ref();
+      nodes[static_cast<size_t>(index)] = node;
+    });
+  }
+
+  {
+    std::unique_lock<std::mutex> lock(gateMutex);
+    gate.wait(lock, [&] { return ready == threadCount; });
+    start = true;
+  }
+  gate.notify_all();
+  for (std::thread & thread : threads) thread.join();
+
+  bool valid = true;
+  for (FieldMetadataPublicationProbe * node : nodes) {
+    valid = valid && node != nullptr;
+    if (!node) continue;
+    valid = valid && node->getField(SbName("mode")) == &node->mode;
+    valid = valid && node->getField(SbName("payload")) == &node->payload;
+    valid = valid && node->mode.getNumEnums() == 16;
+    for (int index = 0; index < node->mode.getNumEnums(); ++index) {
+      SbName name;
+      valid = valid && node->mode.getEnum(index, name) == index;
+      valid = valid && name.getLength() != 0;
+    }
+    node->unref();
+  }
+  return valid;
+}
+
 static void prepare_thread_safety_suite()
 {
   static std::once_flag once;
   std::call_once(once, [] {
     init_test_params();
-  // Pre-warm every node type that appears in the concurrent tests.
-  // SoFieldData::addEnumValue and other per-class lazy initialisation
-  // is not thread safe (Phase 2+ fix); we prime it here so that all
-  // concurrent tests see an already-initialised class.
-  {
-    auto warm = [](SoNode * n) { n->ref(); n->unref(); };
-    warm(new SoSphere);
-    warm(new SoCone);
-    warm(new SoCube);
-    warm(new SoSeparator);
-    warm(new SoTranslation);  // Phase 3 tests use SoTranslation
-  }
   });
 }
 
@@ -1331,6 +1433,8 @@ OBOL_THREAD_STRESS_TEST(ShaderObjectIdsAreUnique,
                         test_shader_ids_concurrent)
 OBOL_THREAD_STRESS_TEST(FieldStringConversionUsesIndependentBuffers,
                         test_field_string_conversion_concurrent)
+OBOL_THREAD_STRESS_TEST(FieldMetadataFirstInstancePublishesAtomically,
+                        test_field_metadata_publication_concurrent)
 
 TEST(SceneTextureSizing, ValidatesBeforeUnsignedConversion)
 {

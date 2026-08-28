@@ -619,6 +619,7 @@ public:
   SoGLDisplayList *createGLDisplayList(SoState *state);
   void checkTransparency(void);
   void unrefDLists(SoState *state);
+  void unrefDListsLocked(SoState *state);
   void reallyCreateTexture(SoState *state,
                            const unsigned char *const texture,
                            const int numComponents,
@@ -823,7 +824,9 @@ SoGLImage::setGLDisplayList(SoGLDisplayList * dl,
   if (PRIVATE(this)->isregistered) SoGLImage::unregisterImage(this);
   PRIVATE(this)->unrefDLists(state);
   dl->ref();
+  LOCK_GLIMAGE;
   PRIVATE(this)->dlists.append(SoGLImageP::dldata(dl));
+  UNLOCK_GLIMAGE;
   PRIVATE(this)->image = NULL; // we have no data. Texture is organized outside this image
   PRIVATE(this)->wraps = wraps;
   PRIVATE(this)->wrapt = wrapt;
@@ -962,6 +965,7 @@ SoGLImage::setData(const SbImage *image,
     const SoGLContext * glw = sogl_glue_instance(createinstate);
     SoGLDisplayList *dl = NULL;
 
+    LOCK_GLIMAGE;
     SbBool copyok =
       wraps == PRIVATE(this)->wraps &&
       wrapt == PRIVATE(this)->wrapt &&
@@ -982,11 +986,14 @@ SoGLImage::setData(const SbImage *image,
 
     if (!usesubimage) copyok=FALSE;
     if (PRIVATE(this)->flags & RECTANGLE) copyok = FALSE;
+    if (copyok) dl->ref();
+    UNLOCK_GLIMAGE;
 
     if (copyok) {
-      dl->ref();
       PRIVATE(this)->unrefDLists(createinstate);
+      LOCK_GLIMAGE;
       PRIVATE(this)->dlists.append(SoGLImageP::dldata(dl));
+      UNLOCK_GLIMAGE;
       PRIVATE(this)->image = NULL; // data is temporary, and only for current context
       dl->call(createinstate);
 
@@ -1026,7 +1033,10 @@ SoGLImage::setData(const SbImage *image,
       PRIVATE(this)->tex_border = tex_border;
       PRIVATE(this)->unrefDLists(createinstate);
       if (createinstate) {
-        PRIVATE(this)->dlists.append(SoGLImageP::dldata(PRIVATE(this)->createGLDisplayList(createinstate)));
+        SoGLDisplayList * created = PRIVATE(this)->createGLDisplayList(createinstate);
+        LOCK_GLIMAGE;
+        PRIVATE(this)->dlists.append(SoGLImageP::dldata(created));
+        UNLOCK_GLIMAGE;
         PRIVATE(this)->image = NULL; // data is assumed to be temporary
       }
     }
@@ -1306,8 +1316,10 @@ SoGLImage::getQuality(void) const
 void
 SoGLImage::unrefOldDL(SoState *state, const uint32_t maxage)
 {
+  LOCK_GLIMAGE;
   PRIVATE(this)->unrefOldDL(state, maxage);
   this->incAge();
+  UNLOCK_GLIMAGE;
 }
 
 // *************************************************************************
@@ -1793,6 +1805,15 @@ SoGLImageP::reallyCreateTexture(SoState *state,
 //
 void
 SoGLImageP::unrefDLists(SoState *state)
+{
+  SoGLImageP::mutex->lock();
+  this->unrefDListsLocked(state);
+  SoGLImageP::mutex->unlock();
+}
+
+// Variant for compound list updates that already hold SoGLImageP::mutex.
+void
+SoGLImageP::unrefDListsLocked(SoState *state)
 {
   int n = this->dlists.getLength();
   for (int i = 0; i < n; i++) {

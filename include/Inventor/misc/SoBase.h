@@ -136,6 +136,28 @@ protected:
   static void staticDataLock(void);
   static void staticDataUnlock(void);
 
+  // Keeps the process-wide class metadata lock held across the first
+  // constructor body that publishes a node or engine's field data.  The
+  // constructor macros may release it early once that metadata is complete.
+  class StaticDataLockGuard {
+  public:
+    StaticDataLockGuard(void) : locked(TRUE) { SoBase::staticDataLock(); }
+    ~StaticDataLockGuard() { if (this->locked) SoBase::staticDataUnlock(); }
+
+    void release(void) {
+      if (this->locked) {
+        SoBase::staticDataUnlock();
+        this->locked = FALSE;
+      }
+    }
+
+  private:
+    StaticDataLockGuard(const StaticDataLockGuard &) = delete;
+    StaticDataLockGuard & operator=(const StaticDataLockGuard &) = delete;
+
+    SbBool locked;
+  };
+
   virtual SoNotRec createNotRec(void);
 
 private:

@@ -52,6 +52,9 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/system/gl.h>
+#include <Inventor/threads/SbMutex.h>
+
+#include <mutex>
 
 #include "CoinTidbits.h"
 #include "glue/glp.h"
@@ -92,6 +95,11 @@ obol_smart_caching(void)
 
 class SoGLCacheListP {
 public:
+  // A cache list normally belongs to one separator's per-thread storage, but
+  // context destruction is broadcast from whichever thread destroys the GL
+  // context.  Consequently contextCleanup() can inspect and remove entries
+  // while the owning render thread is using this list.
+  SbMutex mutex;
   SbList <SoGLRenderCache *> itemlist;
   int numcaches;
   SoGLRenderCache * opencache;
@@ -109,6 +117,7 @@ public:
   //
   static void contextCleanup(uint32_t context, void * closure) {
     SoGLCacheListP * thisp = static_cast<SoGLCacheListP *>(closure);
+    const std::lock_guard<SbMutex> guard(thisp->mutex);
 
     int i = 0;
     int n = thisp->itemlist.getLength();
@@ -181,6 +190,8 @@ SoGLCacheList::~SoGLCacheList()
 SbBool
 SoGLCacheList::call(SoGLRenderAction * action)
 {
+  const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+
   // do a quick return if there are no caches in the list
   int n = PRIVATE(this)->itemlist.getLength();
   if (n == 0) return FALSE;
@@ -463,6 +474,8 @@ SoGLCacheList::call(SoGLRenderAction * action)
 void
 SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
 {
+  const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+
   // needclose is used to quickly return in close()
   if (PRIVATE(this)->numcaches == 0 || (autocache && obol_auto_caching() == 0)) {
     PRIVATE(this)->needclose = FALSE;
@@ -572,6 +585,8 @@ SoGLCacheList::open(SoGLRenderAction * action, SbBool autocache)
 void
 SoGLCacheList::close(SoGLRenderAction * action)
 {
+  const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+
   if (!PRIVATE(this)->needclose) return;
 
   SoState * state = action->getState();
@@ -628,6 +643,8 @@ SoGLCacheList::close(SoGLRenderAction * action)
 void
 SoGLCacheList::invalidateAll(void)
 {
+  const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+
   int n = PRIVATE(this)->itemlist.getLength();
 #if OBOL_DEBUG
   if (n && coin_debug_caching_level() > 1) {

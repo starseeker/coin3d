@@ -215,10 +215,20 @@ set_tests_properties(obol_lifecycle_tests PROPERTIES
 # module to a static Obol archive would give the module a second registry and
 # cannot exercise dynamic loading correctly.
 if(BUILD_SHARED_LIBS)
+    # CMake's WINDOWS_EXPORT_ALL_SYMBOLS only applies to SHARED libraries, not
+    # MODULE libraries.  Windows plugins are DLLs in either case, so model the
+    # probes as SHARED there to export their C++ initClass symbols.  Other
+    # platforms retain the semantically appropriate MODULE target type.
+    if(WIN32)
+        set(_obol_dynload_library_type SHARED)
+    else()
+        set(_obol_dynload_library_type MODULE)
+    endif()
+
     # Exercise the extension-node loader with a real shared object.  The
     # deliberately short class name guards against heuristic filtering of
     # valid third-party types.
-    add_library(obol_dynload_probe MODULE
+    add_library(obol_dynload_probe ${_obol_dynload_library_type}
         ${PROJECT_SOURCE_DIR}/tests/unit/dynload_probe.cpp)
     set_target_properties(obol_dynload_probe PROPERTIES
         OUTPUT_NAME Probe
@@ -230,7 +240,7 @@ if(BUILD_SHARED_LIBS)
 
     function(obol_add_dynload_probe probe source)
         string(TOLOWER "${probe}" _probe_lower)
-        add_library(obol_dynload_${_probe_lower} MODULE
+        add_library(obol_dynload_${_probe_lower} ${_obol_dynload_library_type}
             ${source})
         set_target_properties(obol_dynload_${_probe_lower} PROPERTIES
             OUTPUT_NAME ${probe}
@@ -262,6 +272,7 @@ if(BUILD_SHARED_LIBS)
         obol_dynload_probe
         obol_dynload_throwprobe
         obol_dynload_wrongprobe)
+    unset(_obol_dynload_library_type)
 endif()
 
 # Exhausting SoType mutates process-global state irreversibly.  Keep this one
@@ -322,13 +333,15 @@ endif()
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
-        SKIP_REGULAR_EXPRESSION "system OpenGL backend is unavailable"
+        SKIP_REGULAR_EXPRESSION
+            "system OpenGL (backend is unavailable|has no framebuffer-object support)"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     obol_configure_render_target(obol_system_gl_render_tests)
 elseif(OBOL_USE_SYSTEM_GL AND WIN32 AND FLTK_FOUND)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
-        SKIP_REGULAR_EXPRESSION "system OpenGL backend is unavailable"
+        SKIP_REGULAR_EXPRESSION
+            "system OpenGL (backend is unavailable|has no framebuffer-object support)"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     target_compile_definitions(obol_system_gl_render_tests PRIVATE OBOL_TEST_WGL)
     obol_configure_render_target(obol_system_gl_render_tests)

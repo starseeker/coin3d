@@ -176,8 +176,8 @@ _class_::createInstance(void * /*ctx*/) \
    (classinstances == 1)
 
 #define SO_ENGINE_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_engine_constructor_lock; \
   do { \
-    SoBase::staticDataLock(); \
     _class_::classinstances++; \
     /* Catch attempts to use an engine class which has not been initialized. */ \
     assert(_class_::classTypeId != SoType::badType()); \
@@ -194,7 +194,6 @@ _class_::createInstance(void * /*ctx*/) \
     /* considered native. This is important to get the export code to do */ \
     /* the Right Thing. */ \
     this->isBuiltIn = FALSE; \
-    SoBase::staticDataUnlock(); \
   } WHILE_0
 
 // *************************************************************************

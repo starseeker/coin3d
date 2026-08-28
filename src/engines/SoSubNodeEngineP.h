@@ -56,8 +56,18 @@
 
 
 #define SO_NODEENGINE_INTERNAL_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_nodeengine_constructor_lock; \
   do { \
-    SO_NODEENGINE_CONSTRUCTOR(_class_); \
+    _class_::classinstances++; \
+    assert(_class_::classTypeId != SoType::badType()); \
+    if (!_class_::fieldData) { \
+      _class_::fieldData = \
+        new SoFieldData(_class_::parentFieldData ? \
+                        *_class_::parentFieldData : NULL); \
+      _class_::outputdata = \
+        new SoEngineOutputData(_class_::parentoutputdata ? \
+                               *_class_::parentoutputdata : NULL); \
+    } \
     /* Restore value of isBuiltIn flag (which is set to FALSE */ \
     /* in the SO_ENGINE_CONSTRUCTOR() macro). */ \
     this->isBuiltIn = TRUE; \

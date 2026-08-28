@@ -28,7 +28,7 @@ reproducibility; CI repeats the unit executable with time-derived seeds.
 Lifecycle and irreversible type-capacity contracts remain in dedicated
 executables. A test process receives an explicit `SoDB::ContextManager`;
 non-rendering tests use a no-op manager and render fixtures select either
-OSMesa or native GLX through their CTest lane.
+OSMesa or native GLX/WGL through their CTest lane.
 Tests must not change the global rendering backend as part of ordinary setup.
 Test configuration prefers an installed GoogleTest 1.10 or newer and falls
 back to the pinned `external/googletest` submodule. Recursive repository
@@ -114,6 +114,15 @@ cmake -S . -B .build-glx -DOBOL_BUILD_TESTS=ON \
 cmake --build .build-glx --target obol_system_gl_render_tests
 xvfb-run -a ctest --test-dir .build-glx -L system-gl --output-on-failure
 ```
+
+The system-GL render suite requires framebuffer objects (OpenGL 3.0 or
+`GL_EXT_framebuffer_object`). CTest reports that lane as skipped when context
+creation or this baseline capability is unavailable. In particular, hosted
+Windows runners commonly expose only Microsoft's OpenGL 1.1 software WGL
+implementation. Windows CI therefore builds the dual backend, runs the full
+portable render corpus with OSMesa, and also attempts the WGL corpus; WGL is
+skipped only when the host driver cannot meet the baseline. A machine with a
+modern Windows OpenGL driver runs both suites from the same executable corpus.
 
 ## Demos
 

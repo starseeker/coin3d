@@ -58,9 +58,10 @@
 
 
 #define SO_KIT_INTERNAL_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_kit_constructor_lock; \
   do { \
-    SO_NODE_INTERNAL_CONSTRUCTOR(_class_); \
-    SoBase::staticDataLock(); \
+    SO_NODE_CONSTRUCTOR_NOLOCK(_class_); \
+    this->isBuiltIn = TRUE; \
     if (_class_::classcatalog == NULL) { \
       SoType mytype = SoType::fromName(SO__QUOTE(_class_)); \
       if (_class_::parentcatalogptr) \
@@ -69,7 +70,6 @@
         _class_::classcatalog = new SoNodekitCatalog; \
       SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f*>(_class_::atexit_cleanupkit)); \
     } \
-    SoBase::staticDataUnlock(); \
   } while (0)
 
 #endif // !OBOL_SOSUBKITP_H
