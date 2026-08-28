@@ -97,6 +97,7 @@ jobs:
   address-undefined-sanitizers:
     name: Linux ASan + UBSan
     runs-on: ubuntu-latest
+    needs: [build-linux]
     permissions:
       contents: read
 
@@ -189,6 +190,7 @@ jobs:
   build-clang:
     name: Linux Clang (non-unity)
     runs-on: ubuntu-latest
+    needs: [build-linux]
     permissions:
       contents: read
 
@@ -226,6 +228,7 @@ jobs:
   build-macos:
     name: macOS dylib and package smoke
     runs-on: macos-latest
+    needs: [build-linux]
     permissions:
       contents: read
 
@@ -258,6 +261,7 @@ jobs:
   thread-sanitizer:
     name: Linux ThreadSanitizer
     runs-on: ubuntu-latest
+    needs: [build-linux]
     permissions:
       contents: read
 
