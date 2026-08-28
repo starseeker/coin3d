@@ -55,10 +55,20 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 
 using namespace ObolTest;
 
 static void silentErrCb(const SoError *, void *) {}
+
+namespace fs = std::filesystem;
+
+static fs::path tempPath(const char * suffix)
+{
+    return fs::path(::testing::TempDir()) /
+        (std::string("obol_test_io_file_ops_") + suffix + ".iv");
+}
 
 // -------------------------------------------------------------------------
 // Write a minimal IV ASCII scene to a temp file and return the path.
@@ -66,19 +76,16 @@ static void silentErrCb(const SoError *, void *) {}
 // -------------------------------------------------------------------------
 static std::string writeTempIV(const char * suffix)
 {
-    // Build temp path
-    char path[512];
-    snprintf(path, sizeof(path), "/tmp/test_io_file_ops_%s.iv", suffix);
+    const fs::path path = tempPath(suffix);
+    std::ofstream file(path, std::ios::out | std::ios::trunc);
+    if (!file) return "";
 
-    FILE * f = fopen(path, "w");
-    if (!f) return "";
-
-    fprintf(f, "#Inventor V2.1 ascii\n\n");
-    fprintf(f, "Separator {\n");
-    fprintf(f, "  Cube { width 1 height 1 depth 1 }\n");
-    fprintf(f, "}\n");
-    fclose(f);
-    return std::string(path);
+    file << "#Inventor V2.1 ascii\n\n"
+            "Separator {\n"
+            "  Cube { width 1 height 1 depth 1 }\n"
+            "}\n";
+    file.close();
+    return file ? path.string() : std::string();
 }
 
 TEST(IoFileOps, SoInputOpenFileReturnsTRUEForValidIVFile)
@@ -90,7 +97,7 @@ TEST(IoFileOps, SoInputOpenFileReturnsTRUEForValidIVFile)
         SbBool ok = in.openFile(path.c_str());
         EXPECT_TRUE(ok);
         if (ok) in.closeFile();
-        remove(path.c_str());
+        fs::remove(path);
     }
 }
 
@@ -100,8 +107,13 @@ TEST(IoFileOps, SoInputOpenFileReturnsFALSEForNonExistentFile)
     SoErrorCB * old = SoError::getHandlerCallback();
     SoError::setHandlerCallback(silentErrCb, nullptr);
 
+    const fs::path path = tempPath("does_not_exist");
+    std::error_code ignored;
+    fs::remove(path, ignored);
+
     SoInput in;
-    SbBool ok = in.openFile("/tmp/does_not_exist_test_io.iv");
+    const std::string pathString = path.string();
+    SbBool ok = in.openFile(pathString.c_str());
 
     SoError::setHandlerCallback(old, nullptr);
 
@@ -122,7 +134,7 @@ TEST(IoFileOps, SoInputGetCurFileNameReturnsPathAfterOpenFile)
             EXPECT_NE(strstr(name.getString(), "test_io_file_ops_"), nullptr);
             in.closeFile();
         }
-        remove(path.c_str());
+        fs::remove(path);
     }
 }
 
@@ -144,7 +156,7 @@ TEST(IoFileOps, SoDBReadAllFromOpenFileLoadsScene)
             }
             in.closeFile();
         }
-        remove(path.c_str());
+        fs::remove(path);
     }
 }
 
@@ -187,14 +199,15 @@ TEST(IoFileOps, SoOutputSetHeaderStringGetDefaultASCIIHeader)
 
 TEST(IoFileOps, SoWriteActionWritesToFileSuccessfully)
 {
-    const char * outPath = "/tmp/test_io_file_ops_writeaction.iv";
+    const fs::path outPath = tempPath("writeaction");
+    const std::string outPathString = outPath.string();
 
     SoSeparator * root = new SoSeparator;
     root->ref();
     root->addChild(new SoCube);
 
     SoOutput out;
-    bool opened = out.openFile(outPath);
+    bool opened = out.openFile(outPathString.c_str());
     EXPECT_TRUE(opened);
     long fileSize = -1;
     if (opened) {
@@ -203,13 +216,10 @@ TEST(IoFileOps, SoWriteActionWritesToFileSuccessfully)
         out.closeFile();
 
         // Verify the file was created and is non-empty
-        FILE * f = fopen(outPath, "r");
-        if (f) {
-            fseek(f, 0, SEEK_END);
-            fileSize = ftell(f);
-            fclose(f);
-        }
-        remove(outPath);
+        std::error_code error;
+        const std::uintmax_t size = fs::file_size(outPath, error);
+        if (!error) fileSize = static_cast<long>(size);
+        fs::remove(outPath, error);
     }
     root->unref();
     EXPECT_GT(fileSize, 0);
@@ -240,7 +250,7 @@ TEST(IoFileOps, SoInputMultipleOpenFileCallsStackAndCloseFile)
             }
             in.closeFile();     // pop path1
         }
-        remove(path1.c_str());
-        remove(path2.c_str());
+        fs::remove(path1);
+        fs::remove(path2);
     }
 }

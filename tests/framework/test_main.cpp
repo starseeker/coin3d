@@ -1,6 +1,7 @@
 #include "test_context.h"
 
 #include <gtest/gtest.h>
+#include <cstdio>
 
 #ifdef OBOL_RENDER_TEST_MAIN
 #include "headless_utils.h"
@@ -48,9 +49,25 @@ public:
 
 int main(int argc, char ** argv)
 {
+#if defined(_WIN32) && defined(OBOL_RENDER_TEST_MAIN)
+    // CTest captures redirected stdout as fully buffered.  Keep startup and
+    // the last GoogleTest case visible if a Windows graphics driver raises a
+    // structured exception before normal process teardown can flush it.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+#endif
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef OBOL_RENDER_TEST_MAIN
+#ifdef _WIN32
+    const char * backend = std::getenv("OBOL_TEST_RENDER_BACKEND");
+    std::fprintf(stderr, "Obol render test startup: backend=%s\n",
+                 backend ? backend : "default");
+    std::fprintf(stderr, "Obol render test startup: initializing Obol\n");
+#endif
     initCoinHeadless();
+#ifdef _WIN32
+    std::fprintf(stderr, "Obol render test startup: initialization complete\n");
+#endif
     ::testing::AddGlobalTestEnvironment(new RenderBackendEnvironment);
 #else
     ObolTestSupport::initializeObol();

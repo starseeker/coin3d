@@ -232,6 +232,10 @@ if(BUILD_SHARED_LIBS)
         ${PROJECT_SOURCE_DIR}/tests/unit/dynload_probe.cpp)
     set_target_properties(obol_dynload_probe PROPERTIES
         OUTPUT_NAME Probe
+        DEBUG_POSTFIX ""
+        RELEASE_POSTFIX ""
+        RELWITHDEBINFO_POSTFIX ""
+        MINSIZEREL_POSTFIX ""
         WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
     target_link_libraries(obol_dynload_probe PRIVATE ${PROJECT_NAME})
     target_include_directories(obol_dynload_probe PRIVATE
@@ -244,6 +248,10 @@ if(BUILD_SHARED_LIBS)
             ${source})
         set_target_properties(obol_dynload_${_probe_lower} PROPERTIES
             OUTPUT_NAME ${probe}
+            DEBUG_POSTFIX ""
+            RELEASE_POSTFIX ""
+            RELWITHDEBINFO_POSTFIX ""
+            MINSIZEREL_POSTFIX ""
             WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
         target_link_libraries(obol_dynload_${_probe_lower} PRIVATE ${PROJECT_NAME})
         target_include_directories(obol_dynload_${_probe_lower} PRIVATE

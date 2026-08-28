@@ -90,6 +90,10 @@ public:
   int getIndex(const int index) const;
   int getIndexFromTail(const int index) const;
   int getLength(void) const;
+  // Type-safe access to the complete path, including children hidden by
+  // nodekits. Prefer this together with getNode()/getIndex() over the legacy
+  // convention of downcasting an ordinary SoPath to SoFullPath.
+  int getFullLength(void) const;
   void truncate(const int length);
 
   int findFork(const SoPath * const path) const;
@@ -120,7 +124,6 @@ private:
   static void cleanupClass(void);
   static void * createInstance(void *);
   void append(SoNode * const node, const int index);
-  int getFullLength(void) const;
   void truncate(const int length, const SbBool donotify);
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
   void setFirstHidden(void);

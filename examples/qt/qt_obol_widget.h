@@ -302,8 +302,9 @@ public:
 
         SoCamera * cam = nullptr;
         if (sa.getPath()) {
-            SoFullPath * fp = static_cast<SoFullPath *>(sa.getPath());
-            cam = static_cast<SoCamera *>(fp->getTail());
+            SoPath * path = sa.getPath();
+            cam = static_cast<SoCamera *>(
+                path->getNode(path->getFullLength() - 1));
         }
         if (!cam) cam = new SoPerspectiveCamera;
 

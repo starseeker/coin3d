@@ -48,6 +48,8 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/nodekits/SoNodeKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
+#include <Inventor/SoNodeKitPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/nodekits/SoShapeKit.h>
 #include <Inventor/nodekits/SoAppearanceKit.h>
 #include <Inventor/nodekits/SoNodekitCatalog.h>
@@ -208,5 +210,26 @@ TEST(NodesNodekitTraversal, SoShapeKitGetPartStringForCubeShapePart)
     SbString ps = kit->getPartString(cube);
     // Should return "shape" (the part name)
     EXPECT_TRUE((ps == "shape")) << "SoShapeKit getPartString did not return \"shape\"";
+    kit->unref();
+}
+
+TEST(NodesNodekitTraversal, CreatePathToPartReturnsRealNodeKitPath)
+{
+    SoShapeKit *kit = new SoShapeKit;
+    kit->ref();
+    SoCube *cube = new SoCube;
+    ASSERT_TRUE(kit->setPart("shape", cube));
+
+    SoNodeKitPath *kitPath = kit->createPathToPart("shape", FALSE);
+    ASSERT_NE(kitPath, nullptr);
+    kitPath->ref();
+
+    SoPath *fullPath = static_cast<SoPath *>(kitPath);
+    EXPECT_EQ(dynamic_cast<SoNodeKitPath *>(fullPath), kitPath);
+    ASSERT_GT(fullPath->getFullLength(), 1);
+    EXPECT_EQ(fullPath->getNode(fullPath->getFullLength() - 1), cube);
+    EXPECT_EQ(kitPath->getTail(), kit);
+
+    kitPath->unref();
     kit->unref();
 }

@@ -50,6 +50,7 @@ osmesaGlobalMutex()
   return mutex;
 }
 
+#ifndef _WIN32
 bool
 prepareOSMesaThreadDispatch()
 {
@@ -115,6 +116,7 @@ prepareOSMesaThreadDispatch()
   });
   return prepared;
 }
+#endif
 
 } // namespace
 
@@ -199,7 +201,16 @@ struct CoinOSMesaCtxData {
 class CoinOSMesaContextManagerImpl : public SoDB::ContextManager {
 public:
   CoinOSMesaContextManagerImpl()
+#ifdef _WIN32
+    /* The bundled Mesa's proactive single-context handoff is not reliable
+     * with its legacy Win32 TLS implementation.  Keep complete context
+     * activation/render/restore transactions serialized on Windows.  Mesa
+     * can still promote its dispatch state during an ordinary, serialized
+     * handoff between distinct rendering contexts. */
+    : concurrentDispatch(false)
+#else
     : concurrentDispatch(prepareOSMesaThreadDispatch())
+#endif
   {
   }
 

@@ -5,7 +5,7 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoWriteAction.h>
 
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 
 #include <cassert>
 #include <iostream>
@@ -40,8 +40,9 @@ inlineTextures(void)
 
   const SoPathList & pl = searchaction.getPaths();
   for (int i = 0; i < pl.getLength(); ++i) {
-    SoFullPath * fp = static_cast<SoFullPath *>(pl[i]);
-    SoTexture2 * tex = static_cast<SoTexture2 *>(fp->getTail());
+    SoPath * path = pl[i];
+    SoTexture2 * tex = static_cast<SoTexture2 *>(
+      path->getNode(path->getFullLength() - 1));
     assert(tex->getTypeId() == SoTexture2::getClassTypeId());
     tex->image.touch();
   }

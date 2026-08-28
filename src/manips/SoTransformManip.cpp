@@ -228,8 +228,8 @@ SoTransformManip::getDragger(void) const
 SbBool
 SoTransformManip::replaceNode(SoPath * path)
 {
-  SoFullPath *fullpath = (SoFullPath*)path;
-  SoNode *fulltail = fullpath->getTail();
+  if (!path || path->getFullLength() == 0) return FALSE;
+  SoNode *fulltail = path->getNode(path->getFullLength() - 1);
   if (!fulltail->isOfType(SoTransform::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode",
@@ -241,7 +241,15 @@ SoTransformManip::replaceNode(SoPath * path)
   }
   SoNode *tail = path->getTail();
   if (tail->isOfType(SoBaseKit::getClassTypeId())) {
-    SoBaseKit *kit = (SoBaseKit*) ((SoNodeKitPath*)path)->getTail();
+    SoBaseKit *kit = nullptr;
+    for (int i = path->getFullLength() - 1; i >= 0; --i) {
+      SoNode *node = path->getNode(i);
+      if (node->isOfType(SoBaseKit::getClassTypeId())) {
+        kit = static_cast<SoBaseKit *>(node);
+        break;
+      }
+    }
+    assert(kit);
     SbString partname = kit->getPartString(path);
     if (partname != "") {  // FIXME: isn't this an assert condition? 20010909 mortene.
       SoTransform *oldpart = (SoTransform*) kit->getPart(partname, TRUE);
@@ -262,14 +270,14 @@ SoTransformManip::replaceNode(SoPath * path)
   // This will happen if the path contains nothing but the single
   // SoTransform node (i.e., the node is root, head and tail of the
   // path).
-  if (fullpath->getLength() < 2) {
+  if (path->getFullLength() < 2) {
 #if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode", "Path is too short");
 #endif // OBOL_DEBUG
     return FALSE;
   }
 
-  SoNode *parent = fullpath->getNodeFromTail(1);
+  SoNode *parent = path->getNode(path->getFullLength() - 2);
   // This could at least happen if the parent of the SoTransform is an
   // user-extension node that is "SoGroup-like", but does not actually
   // inherit SoGroup.  Would be an immensely silly thing to do, but

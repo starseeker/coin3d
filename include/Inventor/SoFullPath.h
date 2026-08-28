@@ -41,10 +41,13 @@
 
   \ingroup coin_nodes
 
-  SoFullPath is an SoPath variant that provides direct indexed access
-  to every node in the path, including children that are normally
-  hidden (e.g., inside node kits).  Construction is private; instances
-  are obtained from actions that produce full paths.
+  SoFullPath is a compatibility subtype that provides direct access to
+  every node in a path, including children that are normally hidden
+  (e.g., inside node kits). New code can use SoPath::getFullLength(),
+  SoPath::getNode(), and SoPath::getIndex() without downcasting.
+
+  Do not cast an ordinary SoPath to this type. Such a cast is undefined
+  unless the object is actually an SoFullPath or a derived class.
 
   \sa SoPath, SoNodeKitPath
 */

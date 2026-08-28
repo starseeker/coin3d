@@ -205,8 +205,8 @@ SoSpotLightManip::getDragger(void) const
 SbBool
 SoSpotLightManip::replaceNode(SoPath * path)
 {
-  SoFullPath *fullpath = (SoFullPath*)path;
-  SoNode *fulltail = fullpath->getTail();
+  if (!path || path->getFullLength() == 0) return FALSE;
+  SoNode *fulltail = path->getNode(path->getFullLength() - 1);
   if (!fulltail->isOfType(SoSpotLight::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",
@@ -216,7 +216,15 @@ SoSpotLightManip::replaceNode(SoPath * path)
   }
   SoNode *tail = path->getTail();
   if (tail->isOfType(SoBaseKit::getClassTypeId())) {
-    SoBaseKit *kit = (SoBaseKit*) ((SoNodeKitPath*)path)->getTail();
+    SoBaseKit *kit = nullptr;
+    for (int i = path->getFullLength() - 1; i >= 0; --i) {
+      SoNode *node = path->getNode(i);
+      if (node->isOfType(SoBaseKit::getClassTypeId())) {
+        kit = static_cast<SoBaseKit *>(node);
+        break;
+      }
+    }
+    assert(kit);
     SbString partname = kit->getPartString(path);
     if (partname != "") {
       SoSpotLight *oldpart = (SoSpotLight*) kit->getPart(partname, TRUE);
@@ -233,14 +241,14 @@ SoSpotLightManip::replaceNode(SoPath * path)
       }
     }
   }
-  if (fullpath->getLength() < 2) {
+  if (path->getFullLength() < 2) {
 #if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",
                        "Path is too short");
 #endif // debug
     return FALSE;
   }
-  SoNode *parent = fullpath->getNodeFromTail(1);
+  SoNode *parent = path->getNode(path->getFullLength() - 2);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",

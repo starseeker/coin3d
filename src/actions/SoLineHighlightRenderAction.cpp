@@ -218,19 +218,20 @@ SoLineHighlightRenderAction::apply(SoNode * node)
       if (pathlist.getLength() > 0) {
         int i;
         for (i = 0; i < pathlist.getLength(); i++) {
-          SoFullPath * path = static_cast<SoFullPath *>(pathlist[i]);
+          SoPath * path = pathlist[i];
           assert(path);
-          SoSelection * selection = static_cast<SoSelection *>(path->getTail());
+          SoSelection * selection = static_cast<SoSelection *>(
+            path->getNode(path->getFullLength() - 1));
           if (selection->getNumSelected() > 0)
             PRIVATE(this)->drawBoxes(path, selection->getList());
         }
       }
     }
     else {
-      SoFullPath * path =
-        static_cast<SoFullPath *>(PRIVATE(this)->searchaction->getPath());
+      SoPath * path = PRIVATE(this)->searchaction->getPath();
       if (path) {
-        SoSelection * selection = static_cast<SoSelection *>(path->getTail());
+        SoSelection * selection = static_cast<SoSelection *>(
+          path->getNode(path->getFullLength() - 1));
         assert(selection->getTypeId().isDerivedFrom(SoSelection::getClassTypeId()));
         if (selection->getNumSelected() > 0) {
           PRIVATE(this)->drawBoxes(path, selection->getList());
@@ -347,7 +348,7 @@ SoLineHighlightRenderActionP::drawBoxes(SoPath * pathtothis,
                                         const SoPathList * pathlist)
 {
   int i;
-  int thispos = static_cast<SoFullPath *>(pathtothis)->getLength()-1;
+  int thispos = pathtothis->getFullLength() - 1;
   assert(thispos >= 0);
   this->postprocpath->setHead(pathtothis->getHead()); // reset
 
@@ -390,10 +391,10 @@ SoLineHighlightRenderActionP::drawBoxes(SoPath * pathtothis,
   SoTextureOverrideElement::setQualityOverride(state, TRUE);
 
   for (i = 0; i < pathlist->getLength(); i++) {
-    SoFullPath * path = static_cast<SoFullPath *>((*pathlist)[i]);
+    SoPath * path = (*pathlist)[i];
 
     this->postprocpath->append(path->getHead());
-    for (int j = 1; j < path->getLength(); j++) {
+    for (int j = 1; j < path->getFullLength(); j++) {
       this->postprocpath->append(path->getIndex(j));
     }
 

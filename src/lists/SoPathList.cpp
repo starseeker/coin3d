@@ -43,9 +43,9 @@
 
 #include <Inventor/lists/SoPathList.h>
 #include <Inventor/SoPath.h>
-#include <Inventor/SoFullPath.h>
 #include "CoinTidbits.h"
 #include <cassert>
+#include <functional>
 
 
 /*!
@@ -146,20 +146,26 @@ extern "C" {
 static int
 compare_paths(const void * v0, const void * v1)
 {
-  SoFullPath * p0 = *const_cast<SoFullPath**>(static_cast<const SoFullPath* const*>(v0));
-  SoFullPath * p1 = *const_cast<SoFullPath**>(static_cast<const SoFullPath* const*>(v1));
+  SoPath * p0 = static_cast<SoPath *>(*static_cast<void * const *>(v0));
+  SoPath * p1 = static_cast<SoPath *>(*static_cast<void * const *>(v1));
 
-  const ptrdiff_t diff = (char *)p0->getHead() - (char *)p1->getHead();
-  if (diff != 0) { return (int)diff; }
+  SoNode * head0 = p0->getHead();
+  SoNode * head1 = p1->getHead();
+  if (head0 != head1) {
+    return std::less<SoNode *>()(head0, head1) ? -1 : 1;
+  }
 
-  int n = SbMin(p0->getLength(), p1->getLength());
+  int n = SbMin(p0->getFullLength(), p1->getFullLength());
   int i;
   for (i = 1; i < n; i++) {
-    const int idx_diff = p0->getIndex(i) - p1->getIndex(i);
-    if (idx_diff != 0) { return (int)idx_diff; }
+    const int idx0 = p0->getIndex(i);
+    const int idx1 = p1->getIndex(i);
+    if (idx0 != idx1) { return idx0 < idx1 ? -1 : 1; }
   }
   // shortest path first
-  return p0->getLength() - p1->getLength();
+  const int length0 = p0->getFullLength();
+  const int length1 = p1->getFullLength();
+  return length0 == length1 ? 0 : (length0 < length1 ? -1 : 1);
 }
 }
 
@@ -184,19 +190,15 @@ SoPathList::sort(void)
 void
 SoPathList::uniquify(void)
 {
-  SoFullPath ** array = (SoFullPath**) this->getArrayPtr();
-  
   for (int i = this->getLength()-2; i >= 0; i--) {
-    SoFullPath * p = array[i];
+    SoPath * p = (*this)[i];
     int j = i+1;
     // if fork is at tail of current path, remove next path. We might
     // have more than one path that go through this path's tail, so do
     // the test in a while loop
-    while ((j < this->getLength()) && (p->findFork(array[j]) == p->getLength()-1)) {
+    while ((j < this->getLength()) &&
+           (p->findFork((*this)[j]) == p->getFullLength() - 1)) {
       this->remove(j);
-      // get array pointer again even though it shouldn't change, but
-      // it might do in the future so...
-      array = (SoFullPath**) this->getArrayPtr();
     }
   }
 }

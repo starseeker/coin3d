@@ -53,7 +53,7 @@
 #include <vector>
 
 #include <Inventor/SbName.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/nodes/SoNode.h>
 
 // *************************************************************************
@@ -486,9 +486,9 @@ SbProfilingData::getActionDuration(void) const
  */
 
 SbBool
-SbProfilingData::isPathMatch(const SoFullPath * fullpath, int pathlen, int idx)
+SbProfilingData::isPathMatch(const SoPath * fullpath, int pathlen, int idx)
 {
-  assert(pathlen > 0 && pathlen <= fullpath->getLength());
+  assert(pathlen > 0 && pathlen <= fullpath->getFullLength());
   while (pathlen > 0 && idx != -1) {
     SbProfilingNodeKey node =
       static_cast<SbProfilingNodeKey>(fullpath->getNode(pathlen-1));
@@ -512,17 +512,17 @@ SbProfilingData::isPathMatch(const SoFullPath * fullpath, int pathlen, int idx)
 int
 SbProfilingData::getIndex(const SoPath * path, SbBool create)
 {
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
+  const SoPath * fullpath = path;
   if ((PRIVATE(this)->lastPathIndex != -1) &&
-      isPathMatch(fullpath, fullpath->getLength(),
+      isPathMatch(fullpath, fullpath->getFullLength(),
                   PRIVATE(this)->lastPathIndex)) {
     return PRIVATE(this)->lastPathIndex;
   }
   int idx = -1;
   if (create) {
-    idx =  this->getIndexCreate(fullpath, fullpath->getLength());
+    idx =  this->getIndexCreate(fullpath, fullpath->getFullLength());
   } else {
-    idx = this->getIndexNoCreate(fullpath, fullpath->getLength());
+    idx = this->getIndexNoCreate(fullpath, fullpath->getFullLength());
   }
   if (idx != -1) { PRIVATE(this)->lastPathIndex = idx; }
   return idx;
@@ -546,7 +546,7 @@ SbProfilingData::getParentIndex(int idx) const
  */
 
 int
-SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int OBOL_UNUSED_ARG(pathlen))
+SbProfilingData::getIndexCreate(const SoPath * fullpath, int OBOL_UNUSED_ARG(pathlen))
 {
 
   std::vector<int> lastentrypathindexes;
@@ -560,7 +560,7 @@ SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int OBOL_UNUSED_ARG
   int samelength = 0;
   if (lastentrypathindexes.size() > 0) {
     const int pathlength =
-      SbMin(fullpath->getLength(), (int) lastentrypathindexes.size());
+      SbMin(fullpath->getFullLength(), (int) lastentrypathindexes.size());
     while (samelength < pathlength) {
       if ((PRIVATE(this)->nodeData[lastentrypathindexes[samelength]].node !=
            static_cast<SbProfilingNodeKey>(fullpath->getNode(samelength))) ||
@@ -592,7 +592,7 @@ SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int OBOL_UNUSED_ARG
   int pos = samelength;
   idx = lastentrypathindexes[pos-1];
   ++pos;
-  while (pos <= fullpath->getLength()) {
+  while (pos <= fullpath->getFullLength()) {
     idx = this->getIndexForwardCreate(fullpath, pos, idx);
     ++pos;
   }
@@ -608,7 +608,7 @@ SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int OBOL_UNUSED_ARG
 int
 SbProfilingData::getIndexNoCreate(const SoPath * path, int OBOL_UNUSED_ARG(pathlen)) const
 {
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
+  const SoPath * fullpath = path;
 
   std::vector<int> lastentrypathindexes;
   int idx = (int)PRIVATE(this)->nodeData.size() - 1;
@@ -624,7 +624,7 @@ SbProfilingData::getIndexNoCreate(const SoPath * path, int OBOL_UNUSED_ARG(pathl
   int samelength = 0;
   if (lastentrypathindexes.size() > 0) {
     const int pathlength =
-      SbMin(fullpath->getLength(), (int) lastentrypathindexes.size());
+      SbMin(fullpath->getFullLength(), (int) lastentrypathindexes.size());
     while (samelength < pathlength) {
       if ((PRIVATE(this)->nodeData[lastentrypathindexes[samelength]].node !=
            static_cast<SbProfilingNodeKey>(fullpath->getNode(samelength))) ||
@@ -644,7 +644,7 @@ SbProfilingData::getIndexNoCreate(const SoPath * path, int OBOL_UNUSED_ARG(pathl
   int pos = samelength;
   idx = lastentrypathindexes[pos-1];
   ++pos;
-  while (pos < fullpath->getLength() && idx != -1) {
+  while (pos < fullpath->getFullLength() && idx != -1) {
     idx = this->getIndexForwardNoCreate(fullpath, pos, idx);
     ++pos;
   }
@@ -664,7 +664,7 @@ SbProfilingData::getIndexNoCreate(const SoPath * path, int OBOL_UNUSED_ARG(pathl
  */
 
 int
-SbProfilingData::getIndexForwardCreate(const SoFullPath * fullpath, int pathlen, int parentidx)
+SbProfilingData::getIndexForwardCreate(const SoPath * fullpath, int pathlen, int parentidx)
 {
   assert(parentidx != -1); // illegal usage
   assert(parentidx < static_cast<int>(PRIVATE(this)->nodeData.size()));
@@ -709,7 +709,7 @@ SbProfilingData::getIndexForwardCreate(const SoFullPath * fullpath, int pathlen,
  */
 
 int
-SbProfilingData::getIndexForwardNoCreate(const SoFullPath * fullpath, int pathlen, int parentidx) const
+SbProfilingData::getIndexForwardNoCreate(const SoPath * fullpath, int pathlen, int parentidx) const
 {
   assert(parentidx != -1); // illegal usage
   assert(pathlen > 1);
@@ -852,8 +852,8 @@ SbProfilingData::preOffsetNodeTiming(int idx, SbTime timing)
 SbTime
 SbProfilingData::getNodeTiming(const SoPath * path, unsigned int flags) const
 {
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
-  int idx = this->getIndexNoCreate(fullpath, fullpath->getLength());
+  const SoPath * fullpath = path;
+  int idx = this->getIndexNoCreate(fullpath, fullpath->getFullLength());
   return this->getNodeTiming(idx, flags);
 }
 
@@ -883,10 +883,10 @@ void
 SbProfilingData::setNodeFootprint(const SoPath * path, FootprintType footprinttype, size_t footprint)
 {
   assert(path);
-  assert(static_cast<const SoFullPath *>(path)->getLength() > 0);
+  assert(path->getFullLength() > 0);
 
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
-  const int idx = this->getIndexCreate(fullpath, fullpath->getLength());
+  const SoPath * fullpath = path;
+  const int idx = this->getIndexCreate(fullpath, fullpath->getFullLength());
   assert(idx >= 0 && idx < static_cast<int>(PRIVATE(this)->nodeData.size()));
 
   this->setNodeFootprint(idx, footprinttype, footprint);
@@ -918,8 +918,8 @@ SbProfilingData::setNodeFootprint(int idx, FootprintType footprinttype, size_t f
 size_t
 SbProfilingData::getNodeFootprint(const SoPath * path, FootprintType footprinttype, unsigned int flags) const
 {
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
-  const int idx = this->getIndexNoCreate(fullpath, fullpath->getLength());
+  const SoPath * fullpath = path;
+  const int idx = this->getIndexNoCreate(fullpath, fullpath->getFullLength());
   if (idx == -1) return 0;
 
   return this->getNodeFootprint(idx, footprinttype, flags);
@@ -961,10 +961,10 @@ void
 SbProfilingData::setNodeFlag(const SoPath * path, NodeFlag flag, SbBool on)
 {
   assert(path);
-  assert(static_cast<const SoFullPath *>(path)->getLength() > 0);
+  assert(path->getFullLength() > 0);
 
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
-  const int idx = this->getIndexCreate(fullpath, fullpath->getLength());
+  const SoPath * fullpath = path;
+  const int idx = this->getIndexCreate(fullpath, fullpath->getFullLength());
   assert(idx >= 0 && idx < static_cast<int>(PRIVATE(this)->nodeData.size()));
   this->setNodeFlag(idx, flag, on);
 }
@@ -995,8 +995,8 @@ SbProfilingData::setNodeFlag(int idx, NodeFlag flag, SbBool on)
 SbBool
 SbProfilingData::getNodeFlag(const SoPath * path, NodeFlag flag) const
 {
-  const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
-  const int idx = this->getIndexNoCreate(fullpath, fullpath->getLength());
+  const SoPath * fullpath = path;
+  const int idx = this->getIndexNoCreate(fullpath, fullpath->getFullLength());
   if (idx == -1) return 0;
   return this->getNodeFlag(idx, flag);
 }

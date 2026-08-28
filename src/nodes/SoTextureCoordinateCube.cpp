@@ -56,7 +56,7 @@
 
 #include "glue/glp.h"
 #include <Inventor/SbBox3f.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>
@@ -172,8 +172,8 @@ textureCoordinateCubeCallback(void * userdata,
   so_texcoordcube_data * data = pimpl->so_texcoord_get_data();
 
   SoState * state = data->currentstate;
-  const SoFullPath * path = static_cast<const SoFullPath*>(state->getAction()->getCurPath());
-  SoNode * node = path->getTail();
+  const SoPath * path = state->getAction()->getCurPath();
+  SoNode * node = path->getNode(path->getFullLength() - 1);
 
 
   if (!node->isOfType(SoShape::getClassTypeId())) {

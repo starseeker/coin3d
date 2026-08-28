@@ -58,7 +58,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/SoPickedPoint.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SbLine.h>
 #include <Inventor/SbVec3f.h>
@@ -5351,10 +5351,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     if (detail) {
         SoNode* detailNode = this;
         SoPath* path = pp->getPath();
-        if (!path || path->findNode(this) < 0) {
-            SoFullPath* fullPath = static_cast<SoFullPath*>(path);
-            if (fullPath && fullPath->getLength() > 0)
-                detailNode = fullPath->getTail();
+        if (path && path->findNode(this) < 0 && path->getFullLength() > 0) {
+            detailNode = path->getNode(path->getFullLength() - 1);
         }
         pp->setDetail(detail, detailNode);
     }

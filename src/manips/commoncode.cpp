@@ -47,9 +47,8 @@
 #include <Inventor/manips/SoClipPlaneManip.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/nodekits/SoBaseKit.h>
-#include <Inventor/SoNodeKitPath.h>
 #include <Inventor/nodes/SoGroup.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 
 /***************************************************************************/
 
@@ -105,8 +104,8 @@
 SbBool \
 _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
 { \
-  SoFullPath * fullpath = (SoFullPath *) path; \
-  SoNode * fulltail = fullpath->getTail(); \
+  if (!path || path->getFullLength() == 0) return FALSE; \
+  SoNode * fulltail = path->getNode(path->getFullLength() - 1); \
  \
   if (fulltail != const_cast<SoNode*>(static_cast<const SoNode*>(this))) { \
     SoDebugError::post("_class_::replaceManip", \
@@ -124,8 +123,17 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
  \
   this->transferFieldValues(this, newone); \
  \
-  if (path->getTail()->isOfType(SoBaseKit::getClassTypeId())) { \
-    SoBaseKit * kit = (SoBaseKit *) ((SoNodeKitPath *)path)->getTail(); \
+  SoNode * visibletail = path->getTail(); \
+  if (visibletail->isOfType(SoBaseKit::getClassTypeId())) { \
+    SoBaseKit * kit = NULL; \
+    for (int i = path->getFullLength() - 1; i >= 0; --i) { \
+      SoNode * node = path->getNode(i); \
+      if (node->isOfType(SoBaseKit::getClassTypeId())) { \
+        kit = static_cast<SoBaseKit *>(node); \
+        break; \
+      } \
+    } \
+    assert(kit); \
     SbString partname = kit->getPartString(path); \
     if (partname == "" || !kit->setPart(partname, newone)) { \
       SoDebugError::postWarning("_class_::replaceManip", \
@@ -143,7 +151,7 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
     } \
   } \
   else { \
-    if (fullpath->getLength() < 2) { \
+    if (path->getFullLength() < 2) { \
       SoDebugError::post("_class_::replaceManip", "path is too short"); \
       if (constructed) { \
         newone->ref(); \
@@ -152,7 +160,7 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
       return FALSE; \
     } \
  \
-    SoNode * parent = fullpath->getNodeFromTail(1); \
+    SoNode * parent = path->getNode(path->getFullLength() - 2); \
  \
     if (!parent->isOfType(SoGroup::getClassTypeId())) { \
       SoDebugError::post("_class_::replaceNode", \

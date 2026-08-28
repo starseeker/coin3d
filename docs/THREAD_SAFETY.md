@@ -262,6 +262,11 @@ recursive mutex. This covers shared state inside OSMesa/Mesa implementations
 that is not safe to initialize concurrently. Once dispatch preparation has
 succeeded, independent contexts may still be made current and used for
 rendering concurrently; the lifecycle lock is not held on the render path.
+On Windows, the bundled legacy Mesa dispatcher cannot safely perform the
+preparatory cross-thread context handoff, so activation, rendering, and restore
+transactions are serialized as a conservative fallback. This limits parallel
+OSMesa throughput on Windows but does not affect system-WGL rendering or
+backend selection.
 
 ---
 

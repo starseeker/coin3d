@@ -38,7 +38,6 @@
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-class SoFullPath;
 class SoLocateHighlightP;
 
 /*!
