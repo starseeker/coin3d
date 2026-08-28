@@ -158,6 +158,17 @@ option(OBOL_FETCH_SUBMODULES
 if(OBOL_BUILD_EXAMPLES OR (OBOL_BUILD_TESTS AND WIN32))
   find_package(FLTK QUIET)
   if(FLTK_FOUND)
+    # CMake's built-in FindFLTK module documents FLTK_INCLUDE_DIR (singular),
+    # while FLTK's config package exports FLTK_INCLUDE_DIRS. Normalize both
+    # forms before consumers are configured.  vcpkg on Windows currently
+    # exercises the built-in-module form.
+    if(NOT FLTK_INCLUDE_DIRS AND FLTK_INCLUDE_DIR)
+      set(FLTK_INCLUDE_DIRS "${FLTK_INCLUDE_DIR}")
+    endif()
+    if(NOT FLTK_INCLUDE_DIRS)
+      message(FATAL_ERROR
+        "FLTK reported itself found but provided no include directory")
+    endif()
     message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
   else()
     # System FLTK not found.  Try the explicitly opted-in submodule fallback.

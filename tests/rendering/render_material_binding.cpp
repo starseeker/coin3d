@@ -437,7 +437,10 @@ static bool test7_vertexPropertyColors(const char *basepath)
         0xff00ffff   // yellow
     };
     vp_node->orderedRGBA.setValues(0, 4, colors);
-    vp_node->materialBinding.setValue(SoVertexProperty::PER_VERTEX);
+    // The indexed face set reuses four coordinate vertices across two
+    // triangles, so colors must follow coordIndex rather than the six vertex
+    // occurrences in traversal order.
+    vp_node->materialBinding.setValue(SoVertexProperty::PER_VERTEX_INDEXED);
 
     static const int32_t cidx[] = { 0, 1, 2, -1, 0, 2, 3, -1 };
     ifs->coordIndex.setValues(0, 8, cidx);
@@ -498,14 +501,14 @@ static bool test8_perPartIndexed(const char *basepath)
         0, 1, 2, 3, -1,
         4, 5, 6, 7, -1
     };
-    static const int32_t midx[] = {
-        0, -1,
-        1, -1
-    };
+    // PER_PART_INDEXED maps to one material index per face for
+    // SoIndexedFaceSet; unlike PER_VERTEX_INDEXED, this array has no -1
+    // delimiters.
+    static const int32_t midx[] = {0, 1};
 
     SoIndexedFaceSet *ifs = new SoIndexedFaceSet;
     ifs->coordIndex.setValues(0, 10, cidx);
-    ifs->materialIndex.setValues(0, 4, midx);
+    ifs->materialIndex.setValues(0, 2, midx);
     root->addChild(ifs);
 
     char outpath[1024];

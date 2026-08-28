@@ -55,7 +55,7 @@ jobs:
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
             libfltk1.3-dev \
-            xvfb
+            mesa-utils xvfb
 
       - name: Configure
         run: |
@@ -71,6 +71,10 @@ jobs:
       - name: Build
         run: cmake --build build --config Release -- -j$(nproc)
 
+      - name: Report system OpenGL implementation
+        if: matrix.name == 'system-only' || matrix.name == 'dual-with-examples' || matrix.name == 'non-unity'
+        run: xvfb-run -a glxinfo -B
+
       - name: Run tests
         run: |
           cd build
@@ -79,6 +83,16 @@ jobs:
       - name: Repeat unit tests in randomized orders
         if: matrix.name == 'no-gl-static'
         run: build/bin/obol_unit_tests --gtest_shuffle --gtest_random_seed=0 --gtest_repeat=3
+
+      - name: Upload render failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-failures-${{ matrix.name }}
+          path: |
+            build/test-output/**/visual_*_actual.png
+            build/test-output/**/visual_*_difference.png
+          if-no-files-found: ignore
 
   address-undefined-sanitizers:
     name: Linux ASan + UBSan
@@ -128,9 +142,14 @@ jobs:
           build-sanitized/bin/obol_lifecycle_tests
           build-sanitized/bin/obol_stress_tests
           build-sanitized/bin/obol_concurrent_render_tests
+          render_filter='*nanort*:*NanoRT*:*arb_shader_parameter_ranges*'
+          render_filter="${render_filter}:PortableFeatureContracts.IndexedShapesAndMaterialBindingsRender"
+          render_filter="${render_filter}:MaterialBindingRenderTest.*:GLBindingVariantTest.*"
+          render_filter="${render_filter}:RenderSceneFactories.SceneTextureSurvivesDifferentContextManagers"
           xvfb-run -a build-sanitized/bin/obol_system_gl_render_tests \
-            --gtest_filter='*nanort*:*NanoRT*:*arb_shader_parameter_ranges*'
-          build-sanitized/bin/obol_dynload_tests
+            --gtest_filter="${render_filter}"
+          ctest --test-dir build-sanitized --output-on-failure \
+            -R '^obol_dynload_tests$'
 
   build-windows:
     name: Windows MSVC
@@ -290,5 +309,6 @@ jobs:
             --gtest_filter='CadInstanceRecords.*'
           setarch "$(uname -m)" -R build-tsan/bin/obol_stress_tests \
             --gtest_filter='ThreadSafetyStress.*'
-          setarch "$(uname -m)" -R build-tsan/bin/obol_dynload_tests
+          setarch "$(uname -m)" -R ctest --test-dir build-tsan \
+            --output-on-failure -R '^obol_dynload_tests$'
           setarch "$(uname -m)" -R build-tsan/bin/obol_concurrent_render_tests

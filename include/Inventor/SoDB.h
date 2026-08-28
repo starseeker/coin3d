@@ -365,8 +365,12 @@ public:
    * and OBOL_DUAL_GL_BUILD are both absent).
    *
    * The caller owns the returned object and is responsible for deleting it
-   * after all SoOffscreenRenderer instances that reference it have been
-   * destroyed.  A typical use is to store it in a std::unique_ptr:
+   * after all SoOffscreenRenderer instances and rendered scene graphs that
+   * reference it have been destroyed.  Some rendering nodes retain
+   * manager-owned context resources as part of their render cache, so the
+   * manager must outlive those nodes as well as the renderer itself.  A
+   * typical use is to store it in a std::unique_ptr declared before both the
+   * renderer and scene owner:
    *
    *   auto mgr = std::unique_ptr<SoDB::ContextManager>(
    *                   SoDB::createOSMesaContextManager());

@@ -47,9 +47,9 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <climits>
 #include <cerrno>
 #include <cmath>
+#include <limits>
 
 #include "config.h"
 
@@ -316,9 +316,31 @@ unsigned long
 SbTime::getMsecValue(void) const
 {
   double d = this->dtime * 1000.0;
+  // The range size of unsigned long is exactly 2^digits and is therefore
+  // representable as a double even when ULONG_MAX itself is not (notably on
+  // 64-bit platforms). Using ULONG_MAX as fmod's double operand rounded it
+  // up to 2^64, triggered Clang's precision warning, and left the exact 2^64
+  // boundary to an undefined floating-to-integer conversion.
+  const double modulus =
+    std::ldexp(1.0, std::numeric_limits<unsigned long>::digits);
 
-  // Check for overflow in the double->ulong cast at return.
-  if (d > static_cast<double>(ULONG_MAX)) {
+  // Floating-to-integer conversion is undefined for non-finite or
+  // out-of-range values. Define finite overflow (including negative times)
+  // as modulo-2^N wrapping, matching unsigned integer conversion semantics.
+  if (!std::isfinite(d)) {
+#if OBOL_DEBUG
+    static SoOnceFlag warning;
+    if (warning.first()) {
+      SoDebugError::postWarning("SbTime::getMsecValue",
+                                "non-finite timer value -- consider using "
+                                "SbTime::getValue() instead");
+    }
+#endif // OBOL_DEBUG
+
+    return 0;
+  }
+
+  if (d < 0.0 || d >= modulus) {
 #if OBOL_DEBUG
     static SoOnceFlag warning;
     if (warning.first()) {
@@ -344,7 +366,18 @@ SbTime::getMsecValue(void) const
     // code already written for Coin / SGI/TGS Inventor which depends
     // on the modulo behavior.)
 
-    d = fmod(d, ULONG_MAX);
+    if (d < 0.0) {
+      // Adding 2^N to a negative remainder is not safe when N meets the
+      // precision boundary of double: for example, 2^64 - 1 rounds back to
+      // 2^64 and is still outside unsigned long's range. Convert the
+      // magnitude while it is representable, then use defined unsigned
+      // subtraction to obtain the modulo-2^N result.
+      const double magnitude = std::fmod(-d, modulus);
+      const unsigned long remainder = static_cast<unsigned long>(magnitude);
+      return 0ul - remainder;
+    }
+
+    d = std::fmod(d, modulus);
   }
 
 

@@ -20,11 +20,16 @@
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <filesystem>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #ifndef OBOL_CONTROL_IMAGES_DIR
 #error OBOL_CONTROL_IMAGES_DIR must identify the retained rendering references
+#endif
+#ifndef OBOL_TEST_OUTPUT_DIR
+#error OBOL_TEST_OUTPUT_DIR must identify the rendering artifact directory
 #endif
 
 namespace {
@@ -185,9 +190,53 @@ void compareSceneToReference(const GoldenScene & golden)
     const ObolTestSupport::ImageTolerance tolerance{
         static_cast<std::size_t>(actual.width) * actual.height, 255, 15.0
     };
-    EXPECT_TRUE(ObolTestSupport::isWithinTolerance(comparison, tolerance))
-        << fixture.backendName() << ": "
-        << ObolTestSupport::describeComparison(comparison);
+    const bool within_tolerance =
+        ObolTestSupport::isWithinTolerance(comparison, tolerance);
+
+    std::ostringstream diagnostic;
+    diagnostic << fixture.backendName() << ": "
+               << ObolTestSupport::describeComparison(comparison)
+               << "\nReference image: " << path;
+    if (!within_tolerance) {
+        const std::filesystem::path output_directory(OBOL_TEST_OUTPUT_DIR);
+        std::error_code directory_error;
+        std::filesystem::create_directories(output_directory, directory_error);
+        if (directory_error) {
+            diagnostic << "\nCould not create artifact directory '"
+                       << output_directory.string() << "': "
+                       << directory_error.message();
+        }
+        else {
+            const std::string stem =
+                (output_directory / (std::string("visual_") + golden.name)).string();
+            const std::string actual_path = stem + "_actual.png";
+            std::string artifact_error;
+            if (ObolTestSupport::saveRgbPng(actual, actual_path,
+                                            &artifact_error)) {
+                diagnostic << "\nActual image: " << actual_path;
+            }
+            else {
+                diagnostic << "\nActual image write failed: " << artifact_error;
+            }
+
+            const auto difference =
+                ObolTestSupport::absoluteDifferenceRgb(actual, *expected);
+            if (difference) {
+                const std::string difference_path = stem + "_difference.png";
+                artifact_error.clear();
+                if (ObolTestSupport::saveRgbPng(
+                        *difference, difference_path, &artifact_error)) {
+                    diagnostic << "\nDifference image: " << difference_path;
+                }
+                else {
+                    diagnostic << "\nDifference image write failed: "
+                               << artifact_error;
+                }
+            }
+        }
+    }
+
+    EXPECT_TRUE(within_tolerance) << diagnostic.str();
 }
 
 const std::array<GoldenScene, 36> retained_scenes{{

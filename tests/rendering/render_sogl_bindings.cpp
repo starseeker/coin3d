@@ -220,7 +220,7 @@ static bool testPointSet(int m, int n, int t,
 
 /*
  * Build a scene with two polylines using the given material binding.
- * binding: 0=OVERALL, 1=PER_PART(per-line), 2=PER_VERTEX
+ * binding: 0=OVERALL, 1=PER_PART(per-segment), 2=PER_VERTEX
  */
 static bool testIndexedLineSet(int matbind, int tex,
                                const char *basepath, const char *suffix)
@@ -251,13 +251,15 @@ static bool testIndexedLineSet(int matbind, int tex,
         mat->diffuseColor.setValue(SbColor(0.9f, 0.9f, 0.2f));
         root->addChild(mat);
     } else if (matbind == 1) {
-        /* PER_PART = one colour per polyline */
+        /* PER_PART = one colour per line segment (four total) */
         SoMaterialBinding *mb = new SoMaterialBinding;
         mb->value.setValue(SoMaterialBinding::PER_PART);
         root->addChild(mb);
         SoMaterial *mat = new SoMaterial;
         mat->diffuseColor.set1Value(0, SbColor(0.9f, 0.2f, 0.2f)); /* red  */
         mat->diffuseColor.set1Value(1, SbColor(0.2f, 0.2f, 0.9f)); /* blue */
+        mat->diffuseColor.set1Value(2, SbColor(0.2f, 0.8f, 0.2f)); /* green */
+        mat->diffuseColor.set1Value(3, SbColor(0.8f, 0.2f, 0.8f)); /* violet */
         root->addChild(mat);
     } else {
         /* PER_VERTEX */

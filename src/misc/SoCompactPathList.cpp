@@ -34,7 +34,7 @@
 
 #include <cassert>
 
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/lists/SoPathList.h>
 #include <Inventor/errors/SoDebugError.h>
 
@@ -54,8 +54,6 @@
 
 */
 
-#define FULL_PATH(list, i) ((SoFullPath *) list[i])
-
 /*!
   Constructor.
 */
@@ -64,13 +62,16 @@ SoCompactPathList::SoCompactPathList(const SoPathList & list)
 {
   assert(list.getLength());
 #if OBOL_DEBUG
-  SoNode * head = FULL_PATH(list, 0)->getHead();
+  SoNode * head = list[0]->getHead();
 #endif // OBOL_DEBUG
   int numnodes = 0;
 
   for (int i = 0; i < list.getLength(); i++) {
-    assert(FULL_PATH(list, i)->getHead() == head);
-    numnodes += FULL_PATH(list, i)->getLength() - 1;
+    const SoPath * path = list[i];
+#if OBOL_DEBUG
+    assert(path->getHead() == head);
+#endif // OBOL_DEBUG
+    numnodes += path->getLength() - 1;
   }
   // 3 entries for each node + one extra for the root. This is a
   // worst-case size, but memory usage isn't an issue for this class
@@ -161,7 +162,7 @@ SoCompactPathList::createLookupTable(int curidx, int depth,
 {
   // When we get to the tail, store a 0 for no children. The traversal
   // will switch to BELOW_PATH when this happens.
-  if (depth >= FULL_PATH(list, firstpath)->getLength()) {
+  if (depth >= list[firstpath]->getLength()) {
     this->lookuptable[curidx] = 0;
     return curidx + 1;
   }
@@ -174,7 +175,7 @@ SoCompactPathList::createLookupTable(int curidx, int depth,
   int prevchildidx = -1;
 
   for (i = 0; i < numpaths; i++) {
-    int childidx = FULL_PATH(list, firstpath + i)->getIndex(depth);
+    int childidx = list[firstpath + i]->getIndex(depth);
     if (childidx != prevchildidx) {
       // fill in the IN_PATH table indices
       this->lookuptable[curidx + 1 + numchildren] = childidx;
@@ -196,11 +197,12 @@ SoCompactPathList::createLookupTable(int curidx, int depth,
 
   while (i < numpaths) {
     int startpath = i + firstpath;
-    int childidx = FULL_PATH(list, firstpath + i)->getIndex(depth);
+    int childidx = list[firstpath + i]->getIndex(depth);
     int pathcounter = 1;
     i++;
     // find all paths that go through childidx
-    while ((i < numpaths) && (FULL_PATH(list, firstpath + i)->getIndex(depth) == childidx)) {
+    while ((i < numpaths) &&
+           (list[firstpath + i]->getIndex(depth) == childidx)) {
       i++;
       pathcounter++;
     }
@@ -213,8 +215,6 @@ SoCompactPathList::createLookupTable(int curidx, int depth,
   return nextidx;
 }
 
-
-#undef FULL_PATH
 
 /*!
   Returns the number of IN_PATH children for the current node.
