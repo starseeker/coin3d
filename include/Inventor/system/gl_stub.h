@@ -1164,6 +1164,12 @@ typedef unsigned int      GLhandleARB;
 #ifndef GL_MAX_EVAL_ORDER
 #  define GL_MAX_EVAL_ORDER               0x0D30
 #endif
+#ifndef GL_ATTRIB_STACK_DEPTH
+#  define GL_ATTRIB_STACK_DEPTH           0x0BB0
+#endif
+#ifndef GL_CLIENT_ATTRIB_STACK_DEPTH
+#  define GL_CLIENT_ATTRIB_STACK_DEPTH    0x0BB1
+#endif
 #ifndef GL_MAX_ATTRIB_STACK_DEPTH
 #  define GL_MAX_ATTRIB_STACK_DEPTH       0x0D35
 #endif

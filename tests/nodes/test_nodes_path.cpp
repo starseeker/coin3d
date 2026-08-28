@@ -54,8 +54,7 @@ using namespace ObolTest;
 
 TEST(NodesPath, SoPathGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoPath::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPath has bad class type";
+    EXPECT_TRUE((SoPath::getClassTypeId() != SoType::badType())) << "SoPath has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -70,11 +69,10 @@ TEST(NodesPath, SoPathHeadConstructorGetHeadReturnsHeadAndGetLength1)
     SoPath * path = new SoPath(root);
     path->ref();
 
-    bool pass = (path->getHead() == root) && (path->getLength() == 1);
+    EXPECT_TRUE((path->getHead() == root) && (path->getLength() == 1)) << "SoPath(head): getHead or getLength incorrect";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath(head): getHead or getLength incorrect";
 }
 
 // -----------------------------------------------------------------------
@@ -90,11 +88,10 @@ TEST(NodesPath, SoPathSetHeadSetsHeadCorrectly)
     path->ref();
     path->setHead(root);
 
-    bool pass = (path->getHead() == root);
+    EXPECT_TRUE((path->getHead() == root)) << "SoPath::setHead: getHead did not return the set node";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::setHead: getHead did not return the set node";
 }
 
 // -----------------------------------------------------------------------
@@ -113,11 +110,10 @@ TEST(NodesPath, SoPathAppendIndexGetLength2AndGetTailReturnsChild)
     path->ref();
     path->append(0); // child is at index 0 under root
 
-    bool pass = (path->getLength() == 2) && (path->getTail() == child);
+    EXPECT_TRUE((path->getLength() == 2) && (path->getTail() == child)) << "SoPath::append(index): getLength or getTail incorrect";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::append(index): getLength or getTail incorrect";
 }
 
 // -----------------------------------------------------------------------
@@ -136,12 +132,11 @@ TEST(NodesPath, SoPathGetNodeFromTailIndex0IsTailAndIndex1IsHeadLength2)
     path->ref();
     path->append(0);
 
-    bool pass = (path->getNodeFromTail(0) == path->getTail()) &&
-                (path->getNodeFromTail(1) == path->getHead());
+    EXPECT_TRUE((path->getNodeFromTail(0) == path->getTail()) &&
+                (path->getNodeFromTail(1) == path->getHead())) << "SoPath::getNodeFromTail: unexpected node at tail-relative index";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::getNodeFromTail: unexpected node at tail-relative index";
 }
 
 // -----------------------------------------------------------------------
@@ -160,15 +155,14 @@ TEST(NodesPath, SoPathGetLengthIncreasesAfterEachAppend)
     SoPath * path = new SoPath(root);
     path->ref();
 
-    bool pass = (path->getLength() == 1);
+    EXPECT_EQ(path->getLength(), 1);
     path->append(0); // root -> child
-    pass = pass && (path->getLength() == 2);
+    EXPECT_EQ(path->getLength(), 2);
     path->append(0); // child -> leaf
-    pass = pass && (path->getLength() == 3);
+    EXPECT_EQ(path->getLength(), 3);
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::getLength did not increase correctly after appends";
 }
 
 // -----------------------------------------------------------------------
@@ -187,12 +181,11 @@ TEST(NodesPath, SoPathTruncateToLength1GetTailGetHead)
     path->append(0);
     path->truncate(1);
 
-    bool pass = (path->getLength() == 1) &&
-                (path->getTail() == path->getHead());
+    EXPECT_TRUE((path->getLength() == 1) &&
+                (path->getTail() == path->getHead())) << "SoPath::truncate: length or tail incorrect after truncate(1)";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::truncate: length or tail incorrect after truncate(1)";
 }
 
 // -----------------------------------------------------------------------
@@ -212,14 +205,13 @@ TEST(NodesPath, SoPathContainsNodeTRUEForHeadAndChildFALSEForUnrelatedNode)
     path->ref();
     path->append(0);
 
-    bool pass = (path->containsNode(root)      == TRUE)  &&
+    EXPECT_TRUE((path->containsNode(root)      == TRUE)  &&
                 (path->containsNode(child)     == TRUE)  &&
-                (path->containsNode(unrelated) == FALSE);
+                (path->containsNode(unrelated) == FALSE)) << "SoPath::containsNode returned unexpected result";
 
     path->unref();
     unrelated->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::containsNode returned unexpected result";
 }
 
 // -----------------------------------------------------------------------
@@ -240,13 +232,12 @@ TEST(NodesPath, SoPathCopyCopiedPathHasSameLengthAndHead)
     SoPath * copied = path->copy();
     copied->ref();
 
-    bool pass = (copied->getLength() == path->getLength()) &&
-                (copied->getHead()   == path->getHead());
+    EXPECT_TRUE((copied->getLength() == path->getLength()) &&
+                (copied->getHead()   == path->getHead())) << "SoPath::copy: copied path has different length or head";
 
     copied->unref();
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::copy: copied path has different length or head";
 }
 
 // -----------------------------------------------------------------------
@@ -268,12 +259,11 @@ TEST(NodesPath, SoPathOperatorPathsWithSameNodesAreEqual)
     pathB->ref();
     pathB->append(0);
 
-    bool pass = (*pathA == *pathB);
+    EXPECT_TRUE((*pathA == *pathB)) << "SoPath::operator==: identical paths not equal";
 
     pathA->unref();
     pathB->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::operator==: identical paths not equal";
 }
 
 // -----------------------------------------------------------------------
@@ -297,12 +287,11 @@ TEST(NodesPath, SoPathOperatorPathsWithDifferentTailsAreNotEqual)
     pathB->ref();
     pathB->append(1); // -> childB
 
-    bool pass = (*pathA != *pathB);
+    EXPECT_TRUE((*pathA != *pathB)) << "SoPath::operator!=: paths with different tails reported equal";
 
     pathA->unref();
     pathB->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::operator!=: paths with different tails reported equal";
 }
 
 // -----------------------------------------------------------------------
@@ -332,13 +321,12 @@ TEST(NodesPath, SoPathAppendSoPathAppendedPathYieldsCorrectLengthAndTail)
     // Append pathB onto pathA; the head of pathB must be the tail of pathA
     pathA->append(pathB);
 
-    bool pass = (pathA->getLength() == 3) &&
-                (pathA->getTail()   == child2);
+    EXPECT_TRUE((pathA->getLength() == 3) &&
+                (pathA->getTail()   == child2)) << "SoPath::append(SoPath*): unexpected length or tail after path-append";
 
     pathB->unref();
     pathA->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::append(SoPath*): unexpected length or tail after path-append";
 }
 
 // -----------------------------------------------------------------------
@@ -366,12 +354,11 @@ TEST(NodesPath, SoPathFindForkReturnsIndexOfLastCommonAncestor)
 
     // Fork is at index 0 (root is the last common node)
     int forkIndex = pathA->findFork(pathB);
-    bool pass = (forkIndex == 0);
+    EXPECT_TRUE((forkIndex == 0)) << "SoPath::findFork: unexpected fork index";
 
     pathA->unref();
     pathB->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::findFork: unexpected fork index";
 }
 
 // -----------------------------------------------------------------------
@@ -398,13 +385,12 @@ TEST(NodesPath, SoPathContainsPathLongerPathContainsItsSubPath)
     sub->ref();
     sub->append(0);
 
-    bool pass = (full->containsPath(sub)  == TRUE)  &&
-                (sub->containsPath(full)  == FALSE);
+    EXPECT_TRUE((full->containsPath(sub)  == TRUE)  &&
+                (sub->containsPath(full)  == FALSE)) << "SoPath::containsPath: unexpected containment result";
 
     full->unref();
     sub->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::containsPath: unexpected containment result";
 }
 
 // -----------------------------------------------------------------------
@@ -427,11 +413,10 @@ TEST(NodesPath, SoPathPushPopLengthChangesCorrectly)
     path->pop();
     int lenAfterPop = path->getLength();
 
-    bool pass = (lenBefore == 1) &&
+    EXPECT_TRUE((lenBefore == 1) &&
                 (lenAfterPush == 2) &&
-                (lenAfterPop  == 1);
+                (lenAfterPop  == 1)) << "SoPath::push/pop: unexpected path length";
 
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::push/pop: unexpected path length";
 }

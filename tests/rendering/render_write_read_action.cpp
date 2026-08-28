@@ -338,44 +338,10 @@ static bool test4_getOutput()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_write_read_action";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createWriteReadAction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoWriteAction + SoDB::readAll tests ===\n");
-
-    if (!test1_writeReadBuffer())  ++failures;
-    if (!test2_writeReadFile(basepath)) ++failures;
-    if (!test3_complexWrite())     ++failures;
-    if (!test4_getOutput())        ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_write_read_action) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_write_read_action");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(WriteReadActionRenderTest, MemoryRoundTrip, "write_read_memory", test1_writeReadBuffer())
+OBOL_RENDER_TEST_CASE(WriteReadActionRenderTest, FileRoundTrip, "write_read_file", test2_writeReadFile(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(WriteReadActionRenderTest, ComplexGraph, "write_read_complex", test3_complexWrite())
+OBOL_RENDER_TEST_CASE(WriteReadActionRenderTest, OutputAccess, "write_read_output", test4_getOutput())

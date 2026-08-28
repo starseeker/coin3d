@@ -35,8 +35,6 @@
 
 #include "actions/SoActionP.h"
 
-#include <mutex>
-
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #ifdef HAVE_NODEKITS
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
@@ -47,25 +45,28 @@
 
 namespace {
 
-struct ProfilerStatsState {
-  std::mutex mutex;
+struct ProfilerThreadState {
   SoProfilerStats * node = NULL;
-};
-
-struct ProfilerOverlayState {
-  std::mutex mutex;
   SoNode * nodekit = NULL;
+
+  ~ProfilerThreadState() { this->release(); }
+
+  void release(void) {
+    // The overlay owns references into the stats node, so release it first.
+    if (this->nodekit) {
+      this->nodekit->unref();
+      this->nodekit = NULL;
+    }
+    if (this->node) {
+      this->node->unref();
+      this->node = NULL;
+    }
+  }
 };
 
-ProfilerStatsState & profilerStatsState(void)
+ProfilerThreadState & profilerThreadState(void)
 {
-  static ProfilerStatsState state;
-  return state;
-}
-
-ProfilerOverlayState & profilerOverlayState(void)
-{
-  static ProfilerOverlayState state;
+  static thread_local ProfilerThreadState state;
   return state;
 }
 
@@ -76,8 +77,7 @@ ProfilerOverlayState & profilerOverlayState(void)
 SoProfilerStats *
 SoActionP::getProfilerStatsNode(void)
 {
-  ProfilerStatsState & state = profilerStatsState();
-  std::lock_guard<std::mutex> lock(state.mutex);
+  ProfilerThreadState & state = profilerThreadState();
   if (!state.node) {
     state.node = new SoProfilerStats;
     state.node->ref();
@@ -91,8 +91,7 @@ SoActionP::getProfilerOverlay(void)
   if (!SoProfiler::isEnabled() || !SoProfiler::isOverlayActive())
     return NULL;
 
-  ProfilerOverlayState & state = profilerOverlayState();
-  std::lock_guard<std::mutex> lock(state.mutex);
+  ProfilerThreadState & state = profilerThreadState();
 #ifdef HAVE_NODEKITS
   if (!state.nodekit) {
     SoProfilerTopKit * kit = new SoProfilerTopKit;
@@ -111,22 +110,7 @@ SoActionP::getProfilerOverlay(void)
 void
 SoActionP::cleanupProfilerResources(void)
 {
-  {
-    ProfilerOverlayState & state = profilerOverlayState();
-    std::lock_guard<std::mutex> lock(state.mutex);
-    if (state.nodekit) {
-      state.nodekit->unref();
-      state.nodekit = NULL;
-    }
-  }
-  {
-    ProfilerStatsState & state = profilerStatsState();
-    std::lock_guard<std::mutex> lock(state.mutex);
-    if (state.node) {
-      state.node->unref();
-      state.node = NULL;
-    }
-  }
+  profilerThreadState().release();
 }
 
 // *************************************************************************

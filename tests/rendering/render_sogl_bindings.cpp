@@ -306,72 +306,19 @@ static bool testIndexedLineSet(int matbind, int tex,
 /* ==========================================================================
  * main
  * ======================================================================== */
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath =
-        (outputStem != nullptr) ? outputStem : "render_sogl_bindings";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *root = ObolTest::Scenes::createSOGLBindings(W, H);
-        SbViewportRegion vp(W, H);
-        SoOffscreenRenderer ren(vp);
-        ren.setComponents(SoOffscreenRenderer::RGB);
-        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (ren.render(root)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            ren.writeToRGB(primaryPath);
-        }
-        root->unref();
-    }
-
-    printf("\n=== SoGL PointSet/IndexedLineSet binding variant tests ===\n");
-
-    int failures = 0;
-
-    /* SoPointSet m/n/t variants */
-    if (!testPointSet(0, 0, 0, basepath, "ps_m0n0t0"))
-        { printf("FAIL ps_m0n0t0\n"); ++failures; }
-    if (!testPointSet(0, 1, 0, basepath, "ps_m0n1t0"))
-        { printf("FAIL ps_m0n1t0\n"); ++failures; }
-    if (!testPointSet(0, 0, 1, basepath, "ps_m0n0t1"))
-        { printf("FAIL ps_m0n0t1\n"); ++failures; }
-    if (!testPointSet(0, 1, 1, basepath, "ps_m0n1t1"))
-        { printf("FAIL ps_m0n1t1\n"); ++failures; }
-    if (!testPointSet(1, 0, 0, basepath, "ps_m1n0t0"))
-        { printf("FAIL ps_m1n0t0\n"); ++failures; }
-    if (!testPointSet(1, 1, 0, basepath, "ps_m1n1t0"))
-        { printf("FAIL ps_m1n1t0\n"); ++failures; }
-    if (!testPointSet(1, 0, 1, basepath, "ps_m1n0t1"))
-        { printf("FAIL ps_m1n0t1\n"); ++failures; }
-    if (!testPointSet(1, 1, 1, basepath, "ps_m1n1t1"))
-        { printf("FAIL ps_m1n1t1\n"); ++failures; }
-
-    /* SoIndexedLineSet material binding variants */
-    if (!testIndexedLineSet(0, 0, basepath, "ils_overall"))
-        { printf("FAIL ils_overall\n"); ++failures; }
-    if (!testIndexedLineSet(1, 0, basepath, "ils_perline"))
-        { printf("FAIL ils_perline\n"); ++failures; }
-    if (!testIndexedLineSet(2, 0, basepath, "ils_pervert"))
-        { printf("FAIL ils_pervert\n"); ++failures; }
-    if (!testIndexedLineSet(0, 1, basepath, "ils_overall_tex"))
-        { printf("FAIL ils_overall_tex\n"); ++failures; }
-    if (!testIndexedLineSet(1, 1, basepath, "ils_perline_tex"))
-        { printf("FAIL ils_perline_tex\n"); ++failures; }
-    if (!testIndexedLineSet(2, 1, basepath, "ils_pervert_tex"))
-        { printf("FAIL ils_pervert_tex\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_sogl_bindings) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_sogl_bindings");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointOverall, "binding_ps_000", testPointSet(0, 0, 0, outputStem.c_str(), "ps_m0n0t0"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointNormals, "binding_ps_010", testPointSet(0, 1, 0, outputStem.c_str(), "ps_m0n1t0"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointTexture, "binding_ps_001", testPointSet(0, 0, 1, outputStem.c_str(), "ps_m0n0t1"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointNormalsTexture, "binding_ps_011", testPointSet(0, 1, 1, outputStem.c_str(), "ps_m0n1t1"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointMaterial, "binding_ps_100", testPointSet(1, 0, 0, outputStem.c_str(), "ps_m1n0t0"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointMaterialNormals, "binding_ps_110", testPointSet(1, 1, 0, outputStem.c_str(), "ps_m1n1t0"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointMaterialTexture, "binding_ps_101", testPointSet(1, 0, 1, outputStem.c_str(), "ps_m1n0t1"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, PointAllBindings, "binding_ps_111", testPointSet(1, 1, 1, outputStem.c_str(), "ps_m1n1t1"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, LineOverall, "binding_line_overall", testIndexedLineSet(0, 0, outputStem.c_str(), "ils_overall"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, LinePerPart, "binding_line_part", testIndexedLineSet(1, 0, outputStem.c_str(), "ils_perline"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, LinePerVertex, "binding_line_vertex", testIndexedLineSet(2, 0, outputStem.c_str(), "ils_pervert"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, TexturedLineOverall, "binding_line_overall_tex", testIndexedLineSet(0, 1, outputStem.c_str(), "ils_overall_tex"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, TexturedLinePerPart, "binding_line_part_tex", testIndexedLineSet(1, 1, outputStem.c_str(), "ils_perline_tex"))
+OBOL_RENDER_TEST_CASE(GLBindingVariantTest, TexturedLinePerVertex, "binding_line_vertex_tex", testIndexedLineSet(2, 1, outputStem.c_str(), "ils_pervert_tex"))

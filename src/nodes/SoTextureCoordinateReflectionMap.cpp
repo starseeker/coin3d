@@ -58,7 +58,10 @@
 
 
 #include <Inventor/SbVec3f.h>
+#include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
+#include <Inventor/actions/SoPickAction.h>
+#include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLMultiTextureCoordinateElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/elements/SoViewingMatrixElement.h>
@@ -66,23 +69,6 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "CoinTidbits.h"
-
-// *************************************************************************
-
-class SoTextureCoordinateReflectionMapP {
-public:
-  static SbVec4f * dummy_texcoords;
-  static void cleanup_func(void);
-};
-
-SbVec4f * SoTextureCoordinateReflectionMapP::dummy_texcoords = NULL;
-
-void
-SoTextureCoordinateReflectionMapP::cleanup_func(void)
-{
-  delete SoTextureCoordinateReflectionMapP::dummy_texcoords;
-}
 
 // *************************************************************************
 
@@ -112,8 +98,9 @@ SoTextureCoordinateReflectionMap::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateReflectionMap, SO_FROM_INVENTOR_1);
 
-  SoTextureCoordinateReflectionMapP::dummy_texcoords = new SbVec4f(0.0f, 0.0f, 0.0f, 1.0f);
-  coin_atexit((coin_atexit_f *)SoTextureCoordinateReflectionMapP::cleanup_func, CC_ATEXIT_NORMAL);
+  SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
+  SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);
+  SO_ENABLE(SoPickAction, SoMultiTextureCoordinateElement);
 }
 
 // generates texture coordinates for GLRender, callback and pick actions
@@ -122,6 +109,7 @@ SoTextureCoordinateReflectionMap::generate(void *userdata,
                                          const SbVec3f & /* p */,
                                          const SbVec3f &n)
 {
+  static thread_local SbVec4f texcoords(0.0f, 0.0f, 0.0f, 1.0f);
   SoState *state = (SoState*)userdata;
   SbVec3f wn; // normal in world (eye) coordinates
   SoModelMatrixElement::get(state).multDirMatrix(n, wn);
@@ -136,11 +124,8 @@ SoTextureCoordinateReflectionMap::generate(void *userdata,
                           2.0f*wn[2]*wn[2]*u[2]);
   r.normalize();
 
-  (*SoTextureCoordinateReflectionMapP::dummy_texcoords)[0] = r[0];
-  (*SoTextureCoordinateReflectionMapP::dummy_texcoords)[1] = r[1];
-  (*SoTextureCoordinateReflectionMapP::dummy_texcoords)[2] = r[2];
-  (*SoTextureCoordinateReflectionMapP::dummy_texcoords)[3] = 1.0f;
-  return *SoTextureCoordinateReflectionMapP::dummy_texcoords;
+  texcoords.setValue(r[0], r[1], r[2], 1.0f);
+  return texcoords;
 }
 
 // doc from parent
@@ -161,13 +146,15 @@ SoTextureCoordinateReflectionMap::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
   int unit = SoTextureUnitElement::get(state);
+  const SoGLContext * glue =
+    SoGLContext_instance(SoGLCacheContextElement::get(state));
   SoMultiTextureCoordinateElement::setFunction(action->getState(), this,
                                                unit,
                                                generate,
                                                action->getState());
   SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
                                                this, unit, handleTexgen, 
-                                               this,
+                                               const_cast<SoGLContext *>(glue),
                                                  generate,
                                                action->getState());
   
@@ -190,8 +177,8 @@ SoTextureCoordinateReflectionMap::pick(SoPickAction * action)
 void
 SoTextureCoordinateReflectionMap::handleTexgen(void * data)
 {
-  SoTextureCoordinateReflectionMap * thisp = (SoTextureCoordinateReflectionMap*)data;
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);  
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  const SoGLContext * glue = static_cast<const SoGLContext *>(data);
+  SoGLContext_glTexGeni(glue, GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoGLContext_glTexGeni(glue, GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoGLContext_glTexGeni(glue, GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
 }

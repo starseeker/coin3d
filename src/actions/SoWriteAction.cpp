@@ -220,6 +220,31 @@ static void sensorCB(void * OBOL_UNUSED_ARG(data), SoSensor * OBOL_UNUSED_ARG(se
 }
 #endif
 
+namespace {
+
+class CurrentWriterefScope {
+public:
+  explicit CurrentWriterefScope(SoOutput * output)
+    : previous(SoWriterefCounter::instance(NULL)),
+      current(SoWriterefCounter::instance(output))
+  {
+    SoWriterefCounter::setCurrent(this->current);
+  }
+
+  ~CurrentWriterefScope()
+  {
+    SoWriterefCounter::setCurrent(this->previous);
+  }
+
+  SoWriterefCounter * get(void) const { return this->current; }
+
+private:
+  SoWriterefCounter * previous;
+  SoWriterefCounter * current;
+};
+
+} // namespace
+
 // Documented for Doxygen in superclass.
 //
 // Overridden from parent class, as the write action is actually done
@@ -231,15 +256,15 @@ static void sensorCB(void * OBOL_UNUSED_ARG(data), SoSensor * OBOL_UNUSED_ARG(se
 void
 SoWriteAction::beginTraversal(SoNode * node)
 {
+  // SoBase's legacy no-argument writeref queries resolve through this
+  // thread-local binding.  Save and restore it so nested write actions return
+  // to the outer output rather than leaving a stale process-global current
+  // counter behind.
+  CurrentWriterefScope writerefscope(this->getOutput());
 #if OBOL_DEBUG
   SoNodeSensor *sensor = NULL;
 #endif
   if (this->continuing == FALSE) { // Run through both stages.
-    // call SoWriterefCounter::instance() before traversing to set the
-    // "current" pointer in SoWriterefCounter. This is needed to be
-    // backwards compatible with old code that uses the writeref
-    // system in SoBase.
-
 #if OBOL_DEBUG
     if (SoWriterefCounter::debugWriterefs()) {
       sensor = new SoNodeSensor(sensorCB, NULL);
@@ -248,7 +273,6 @@ SoWriteAction::beginTraversal(SoNode * node)
     }
 #endif
 
-    (void) SoWriterefCounter::instance(this->getOutput());
     this->outobj->setStage(SoOutput::COUNT_REFS);
     this->traverse(node);
     this->outobj->setStage(SoOutput::WRITE);
@@ -259,7 +283,7 @@ SoWriteAction::beginTraversal(SoNode * node)
     outobj->resolveRoutes();
   }
   if (!this->continuing) {
-    SoWriterefCounter::instance(this->getOutput())->debugCleanup();
+    writerefscope.get()->debugCleanup();
 #if OBOL_DEBUG
     delete sensor;
 #endif
@@ -281,4 +305,3 @@ SoWriteAction::shouldCompactPathLists(void) const
 {
   return FALSE;
 }
-

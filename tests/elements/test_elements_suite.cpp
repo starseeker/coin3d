@@ -89,8 +89,7 @@ static SoCallbackAction::Response nodeCallback(void * /*data*/,
 
 TEST(ElementsSuite, SoDrawStyleElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoDrawStyleElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoDrawStyleElement has bad class type";
+    EXPECT_TRUE((SoDrawStyleElement::getClassTypeId() != SoType::badType())) << "SoDrawStyleElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -99,8 +98,7 @@ TEST(ElementsSuite, SoDrawStyleElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoDrawStyleElementGetClassStackIndex0)
 {
-    bool pass = (SoDrawStyleElement::getClassStackIndex() >= 0);
-    EXPECT_TRUE(pass) << "SoDrawStyleElement::getClassStackIndex < 0";
+    EXPECT_TRUE((SoDrawStyleElement::getClassStackIndex() >= 0)) << "SoDrawStyleElement::getClassStackIndex < 0";
 }
 
 // -----------------------------------------------------------------------
@@ -109,8 +107,7 @@ TEST(ElementsSuite, SoDrawStyleElementGetClassStackIndex0)
 
 TEST(ElementsSuite, SoDrawStyleElementGetDefaultFILLED)
 {
-    bool pass = (SoDrawStyleElement::getDefault() == SoDrawStyleElement::FILLED);
-    EXPECT_TRUE(pass) << "SoDrawStyleElement default should be FILLED";
+    EXPECT_TRUE((SoDrawStyleElement::getDefault() == SoDrawStyleElement::FILLED)) << "SoDrawStyleElement default should be FILLED";
 }
 
 // -----------------------------------------------------------------------
@@ -119,8 +116,7 @@ TEST(ElementsSuite, SoDrawStyleElementGetDefaultFILLED)
 
 TEST(ElementsSuite, SoComplexityElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoComplexityElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoComplexityElement has bad class type";
+    EXPECT_TRUE((SoComplexityElement::getClassTypeId() != SoType::badType())) << "SoComplexityElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -130,8 +126,7 @@ TEST(ElementsSuite, SoComplexityElementGetClassTypeIdIsNotBadType)
 TEST(ElementsSuite, SoComplexityElementGetDefaultIsIn01)
 {
     float def = SoComplexityElement::getDefault();
-    bool pass = (def >= 0.0f && def <= 1.0f);
-    EXPECT_TRUE(pass) << "SoComplexityElement default should be in [0, 1]";
+    EXPECT_TRUE((def >= 0.0f && def <= 1.0f)) << "SoComplexityElement default should be in [0, 1]";
 }
 
 // -----------------------------------------------------------------------
@@ -140,8 +135,7 @@ TEST(ElementsSuite, SoComplexityElementGetDefaultIsIn01)
 
 TEST(ElementsSuite, SoNormalBindingElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoNormalBindingElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoNormalBindingElement has bad class type";
+    EXPECT_TRUE((SoNormalBindingElement::getClassTypeId() != SoType::badType())) << "SoNormalBindingElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -152,9 +146,8 @@ TEST(ElementsSuite, SoNormalBindingElementGetDefaultIsAValidBinding)
 {
     SoNormalBindingElement::Binding def = SoNormalBindingElement::getDefault();
     // Valid bindings range from OVERALL to PER_VERTEX_INDEXED
-    bool pass = (def >= SoNormalBindingElement::OVERALL &&
-                 def <= SoNormalBindingElement::PER_VERTEX_INDEXED);
-    EXPECT_TRUE(pass) << "SoNormalBindingElement::getDefault() out of valid binding range";
+    EXPECT_TRUE((def >= SoNormalBindingElement::OVERALL &&
+                 def <= SoNormalBindingElement::PER_VERTEX_INDEXED)) << "SoNormalBindingElement::getDefault() out of valid binding range";
 }
 
 // -----------------------------------------------------------------------
@@ -163,8 +156,7 @@ TEST(ElementsSuite, SoNormalBindingElementGetDefaultIsAValidBinding)
 
 TEST(ElementsSuite, SoTextureCoordinateBindingElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoTextureCoordinateBindingElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTextureCoordinateBindingElement has bad class type";
+    EXPECT_TRUE((SoTextureCoordinateBindingElement::getClassTypeId() != SoType::badType())) << "SoTextureCoordinateBindingElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -173,8 +165,7 @@ TEST(ElementsSuite, SoTextureCoordinateBindingElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoShapeHintsElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoShapeHintsElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoShapeHintsElement has bad class type";
+    EXPECT_TRUE((SoShapeHintsElement::getClassTypeId() != SoType::badType())) << "SoShapeHintsElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -183,8 +174,7 @@ TEST(ElementsSuite, SoShapeHintsElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoPolygonOffsetElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoPolygonOffsetElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPolygonOffsetElement has bad class type";
+    EXPECT_TRUE((SoPolygonOffsetElement::getClassTypeId() != SoType::badType())) << "SoPolygonOffsetElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -193,8 +183,7 @@ TEST(ElementsSuite, SoPolygonOffsetElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoPointSizeElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoPointSizeElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPointSizeElement has bad class type";
+    EXPECT_TRUE((SoPointSizeElement::getClassTypeId() != SoType::badType())) << "SoPointSizeElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -203,8 +192,7 @@ TEST(ElementsSuite, SoPointSizeElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoUnitsElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoUnitsElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoUnitsElement has bad class type";
+    EXPECT_TRUE((SoUnitsElement::getClassTypeId() != SoType::badType())) << "SoUnitsElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -213,8 +201,7 @@ TEST(ElementsSuite, SoUnitsElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoFontNameElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoFontNameElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoFontNameElement has bad class type";
+    EXPECT_TRUE((SoFontNameElement::getClassTypeId() != SoType::badType())) << "SoFontNameElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -223,8 +210,7 @@ TEST(ElementsSuite, SoFontNameElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoFontSizeElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoFontSizeElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoFontSizeElement has bad class type";
+    EXPECT_TRUE((SoFontSizeElement::getClassTypeId() != SoType::badType())) << "SoFontSizeElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -233,8 +219,7 @@ TEST(ElementsSuite, SoFontSizeElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoPickStyleElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoPickStyleElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPickStyleElement has bad class type";
+    EXPECT_TRUE((SoPickStyleElement::getClassTypeId() != SoType::badType())) << "SoPickStyleElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -243,8 +228,7 @@ TEST(ElementsSuite, SoPickStyleElementGetClassTypeIdIsNotBadType)
 
 TEST(ElementsSuite, SoOverrideElementGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoOverrideElement::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoOverrideElement has bad class type";
+    EXPECT_TRUE((SoOverrideElement::getClassTypeId() != SoType::badType())) << "SoOverrideElement has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -266,9 +250,8 @@ TEST(ElementsSuite, SoDrawStyleTraversalWithSoCallbackActionDoesNotCrash)
     cba.addPreCallback(SoNode::getClassTypeId(), nodeCallback, nullptr);
     cba.apply(root);
 
-    bool pass = (g_callbackCount > 0);
+    EXPECT_TRUE((g_callbackCount > 0)) << "SoCallbackAction pre-callback was never called";
     root->unref();
-    EXPECT_TRUE(pass) << "SoCallbackAction pre-callback was never called";
 }
 
 TEST(ElementsSuite, SoDrawStyleStyleFieldSetToLINES)
@@ -276,9 +259,8 @@ TEST(ElementsSuite, SoDrawStyleStyleFieldSetToLINES)
     SoDrawStyle * ds = new SoDrawStyle;
     ds->ref();
     ds->style = SoDrawStyle::LINES;
-    bool pass = (ds->style.getValue() == SoDrawStyle::LINES);
+    EXPECT_TRUE((ds->style.getValue() == SoDrawStyle::LINES)) << "SoDrawStyle::style field should be LINES after assignment";
     ds->unref();
-    EXPECT_TRUE(pass) << "SoDrawStyle::style field should be LINES after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -290,9 +272,8 @@ TEST(ElementsSuite, SoComplexityComplexityFieldSetTo08f)
     SoComplexity * cx = new SoComplexity;
     cx->ref();
     cx->value = 0.8f;
-    bool pass = (cx->value.getValue() == 0.8f);
+    EXPECT_TRUE((cx->value.getValue() == 0.8f)) << "SoComplexity::value field should be 0.8f after assignment";
     cx->unref();
-    EXPECT_TRUE(pass) << "SoComplexity::value field should be 0.8f after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -304,9 +285,8 @@ TEST(ElementsSuite, SoNormalBindingValueFieldSetToPERFACE)
     SoNormalBinding * nb = new SoNormalBinding;
     nb->ref();
     nb->value = SoNormalBinding::PER_FACE;
-    bool pass = (nb->value.getValue() == SoNormalBinding::PER_FACE);
+    EXPECT_TRUE((nb->value.getValue() == SoNormalBinding::PER_FACE)) << "SoNormalBinding::value field should be PER_FACE after assignment";
     nb->unref();
-    EXPECT_TRUE(pass) << "SoNormalBinding::value field should be PER_FACE after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -318,9 +298,8 @@ TEST(ElementsSuite, SoShapeHintsVertexOrderingSetToCOUNTERCLOCKWISE)
     SoShapeHints * sh = new SoShapeHints;
     sh->ref();
     sh->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
-    bool pass = (sh->vertexOrdering.getValue() == SoShapeHints::COUNTERCLOCKWISE);
+    EXPECT_TRUE((sh->vertexOrdering.getValue() == SoShapeHints::COUNTERCLOCKWISE)) << "SoShapeHints::vertexOrdering should be COUNTERCLOCKWISE after assignment";
     sh->unref();
-    EXPECT_TRUE(pass) << "SoShapeHints::vertexOrdering should be COUNTERCLOCKWISE after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -332,9 +311,8 @@ TEST(ElementsSuite, SoFontNameFieldSetToHelvetica)
     SoFont * font = new SoFont;
     font->ref();
     font->name = SbName("Helvetica");
-    bool pass = (strcmp(font->name.getValue().getString(), "Helvetica") == 0);
+    EXPECT_TRUE((strcmp(font->name.getValue().getString(), "Helvetica") == 0)) << "SoFont::name field should be 'Helvetica' after assignment";
     font->unref();
-    EXPECT_TRUE(pass) << "SoFont::name field should be 'Helvetica' after assignment";
 }
 
 TEST(ElementsSuite, SoFontSizeFieldSetTo120f)
@@ -342,9 +320,8 @@ TEST(ElementsSuite, SoFontSizeFieldSetTo120f)
     SoFont * font = new SoFont;
     font->ref();
     font->size = 12.0f;
-    bool pass = (font->size.getValue() == 12.0f);
+    EXPECT_TRUE((font->size.getValue() == 12.0f)) << "SoFont::size field should be 12.0f after assignment";
     font->unref();
-    EXPECT_TRUE(pass) << "SoFont::size field should be 12.0f after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -356,9 +333,8 @@ TEST(ElementsSuite, SoPickStyleStyleFieldSetToBOUNDINGBOX)
     SoPickStyle * ps = new SoPickStyle;
     ps->ref();
     ps->style = SoPickStyle::BOUNDING_BOX;
-    bool pass = (ps->style.getValue() == SoPickStyle::BOUNDING_BOX);
+    EXPECT_TRUE((ps->style.getValue() == SoPickStyle::BOUNDING_BOX)) << "SoPickStyle::style field should be BOUNDING_BOX after assignment";
     ps->unref();
-    EXPECT_TRUE(pass) << "SoPickStyle::style field should be BOUNDING_BOX after assignment";
 }
 
 // -----------------------------------------------------------------------
@@ -370,7 +346,6 @@ TEST(ElementsSuite, SoUnitsUnitsFieldSetToMILLIMETERS)
     SoUnits * u = new SoUnits;
     u->ref();
     u->units = SoUnits::MILLIMETERS;
-    bool pass = (u->units.getValue() == SoUnits::MILLIMETERS);
+    EXPECT_TRUE((u->units.getValue() == SoUnits::MILLIMETERS)) << "SoUnits::units field should be MILLIMETERS after assignment";
     u->unref();
-    EXPECT_TRUE(pass) << "SoUnits::units field should be MILLIMETERS after assignment";
 }

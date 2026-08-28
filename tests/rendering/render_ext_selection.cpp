@@ -340,46 +340,11 @@ static bool test5_3dlasso(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_ext_selection";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createExtSelection(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoExtSelection tests ===\n");
-
-    if (!test1_fullBBoxLasso(basepath))  ++failures;
-    if (!test2_partBBoxRect(basepath))   ++failures;
-    if (!test3_triangleFilter(basepath)) ++failures;
-    if (!test4_lassoFilter(basepath))    ++failures;
-    if (!test5_3dlasso(basepath))        ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_ext_selection) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_ext_selection");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ExtendedSelectionRenderTest, FullBoundingBoxLasso, "extsel_bbox", test1_fullBBoxLasso(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionRenderTest, PartialBoundingBoxRectangle, "extsel_rect", test2_partBBoxRect(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionRenderTest, TriangleFilter, "extsel_triangle", test3_triangleFilter(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionRenderTest, LassoFilter, "extsel_lasso", test4_lassoFilter(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionRenderTest, ThreeDimensionalLasso, "extsel_3d", test5_3dlasso(outputStem.c_str()))

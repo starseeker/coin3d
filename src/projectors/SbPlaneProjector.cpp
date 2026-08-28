@@ -46,6 +46,7 @@
 
 #if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #endif // OBOL_DEBUG
 
 
@@ -166,12 +167,11 @@ SbPlaneProjector::tryProject(const SbVec2f & point, const float epsilon, SbVec3f
     // this can happen for instance with orthographic view volumes,
     // when the plane is perpendicular to the view.
 #if OBOL_DEBUG
-    static int first = 1;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::post("SbPlaneProjector::project",
                          "Unable to find projection point. "
                          "Setting result to middle of view volume.");
-      first = 0;
     }
 #endif // OBOL_DEBUG
     float depth = this->viewVol.getNearDist() + this->viewVol.getDepth() * 0.5f;

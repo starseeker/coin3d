@@ -70,6 +70,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <atomic>
 
 
 #include "threads/threads.h"
@@ -89,7 +90,7 @@
 // the number of subtextures that can be changed (resized) each frame.
 // By keeping this number small, we avoid slow updates when zooming in
 // on an image, as only few textures are changed each frame.
-static int CHANGELIMIT = 4;
+static std::atomic<int> CHANGELIMIT{4};
 
 // the texturequality limit when linear filtering will be used
 #define LINEAR_LIMIT 0.1f
@@ -520,7 +521,8 @@ SoGLBigImage::applySubImage(SoState * state, const int idx,
 SbBool
 SoGLBigImage::exceededChangeLimit(void)
 {
-  return PRIVATE(this)->getTls()->changecnt >= CHANGELIMIT;
+  return PRIVATE(this)->getTls()->changecnt >=
+    CHANGELIMIT.load(std::memory_order_relaxed);
 }
 
 /*!
@@ -532,9 +534,7 @@ SoGLBigImage::exceededChangeLimit(void)
 int
 SoGLBigImage::setChangeLimit(const int limit)
 {
-  int old = CHANGELIMIT;
-  CHANGELIMIT = limit;
-  return old;
+  return CHANGELIMIT.exchange(limit, std::memory_order_acq_rel);
 }
 
 // needed for cc_storage_apply_to_all() callback

@@ -81,32 +81,28 @@ TEST(BaseSbViewvolume, SbViewVolumeOrthoGetNearDist)
 {
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
-    bool pass = floatNear(orthoVV.getNearDist(), 1.0f);
-    EXPECT_TRUE(pass) << "ortho getNearDist != 1.0";
+    EXPECT_TRUE(floatNear(orthoVV.getNearDist(), 1.0f)) << "ortho getNearDist != 1.0";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeOrthoGetWidth)
 {
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
-    bool pass = floatNear(orthoVV.getWidth(), 2.0f);
-    EXPECT_TRUE(pass) << "ortho getWidth != 2.0 (-1 to +1)";
+    EXPECT_TRUE(floatNear(orthoVV.getWidth(), 2.0f)) << "ortho getWidth != 2.0 (-1 to +1)";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeOrthoGetHeight)
 {
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
-    bool pass = floatNear(orthoVV.getHeight(), 2.0f);
-    EXPECT_TRUE(pass) << "ortho getHeight != 2.0";
+    EXPECT_TRUE(floatNear(orthoVV.getHeight(), 2.0f)) << "ortho getHeight != 2.0";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeOrthoGetDepth)
 {
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
-    bool pass = floatNear(orthoVV.getDepth(), 9.0f); // far - near = 10 - 1
-    EXPECT_TRUE(pass) << "ortho getDepth != 9.0";
+    EXPECT_NEAR(orthoVV.getDepth(), 9.0f, 1e-4f); // far - near = 10 - 1
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeOrthoGetViewVolumePlanesReturns6Planes)
@@ -116,12 +112,10 @@ TEST(BaseSbViewvolume, SbViewVolumeOrthoGetViewVolumePlanesReturns6Planes)
     SbPlane planes[6];
     orthoVV.getViewVolumePlanes(planes);
     // Just verify they have non-zero normals
-    bool pass = true;
     for (int i = 0; i < 6; ++i) {
         SbVec3f n = planes[i].getNormal();
-        if (floatNear(n.length(), 0.0f)) { pass = false; break; }
+        EXPECT_GT(n.length(), 0.0f) << "plane " << i;
     }
-    EXPECT_TRUE(pass) << "getViewVolumePlanes returned invalid planes";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeProjectToScreenCentreMapsTo0505)
@@ -132,8 +126,7 @@ TEST(BaseSbViewvolume, SbViewVolumeProjectToScreenCentreMapsTo0505)
     SbVec3f origin(0.0f, 0.0f, 0.0f);
     SbVec3f screen;
     orthoVV.projectToScreen(origin, screen);
-    bool pass = floatNear(screen[0], 0.5f) && floatNear(screen[1], 0.5f);
-    EXPECT_TRUE(pass) << "projectToScreen of origin != (0.5, 0.5)";
+    EXPECT_TRUE(floatNear(screen[0], 0.5f) && floatNear(screen[1], 0.5f)) << "projectToScreen of origin != (0.5, 0.5)";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeIntersectPointPointInsideOrthoFrustum)
@@ -142,8 +135,7 @@ TEST(BaseSbViewvolume, SbViewVolumeIntersectPointPointInsideOrthoFrustum)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     // Near=1, Far=10, viewing down -z. The point must be between z=-1 and z=-10
     SbVec3f inside(0.0f, 0.0f, -5.0f);
-    bool pass = orthoVV.intersect(inside);
-    EXPECT_TRUE(pass) << "ortho frustum: point at z=-5 should be inside";
+    EXPECT_TRUE(orthoVV.intersect(inside)) << "ortho frustum: point at z=-5 should be inside";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeIntersectPointFarAwayPointIsOutside)
@@ -151,8 +143,7 @@ TEST(BaseSbViewvolume, SbViewVolumeIntersectPointFarAwayPointIsOutside)
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbVec3f far(100.0f, 100.0f, 100.0f);
-    bool pass = !orthoVV.intersect(far);
-    EXPECT_TRUE(pass) << "ortho frustum: distant point should be outside";
+    EXPECT_TRUE(!orthoVV.intersect(far)) << "ortho frustum: distant point should be outside";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeIntersectSbBox3fBoxInsideOrthoFrustum)
@@ -161,8 +152,7 @@ TEST(BaseSbViewvolume, SbViewVolumeIntersectSbBox3fBoxInsideOrthoFrustum)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     // Box centred at z=-5 (well between near=1 and far=10)
     SbBox3f box(SbVec3f(-0.5f, -0.5f, -5.5f), SbVec3f(0.5f, 0.5f, -4.5f));
-    bool pass = orthoVV.intersect(box);
-    EXPECT_TRUE(pass) << "ortho frustum: box at z=-5 should be inside";
+    EXPECT_TRUE(orthoVV.intersect(box)) << "ortho frustum: box at z=-5 should be inside";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeGetPlaneReturnsValidPlaneAtNearDist)
@@ -170,8 +160,7 @@ TEST(BaseSbViewvolume, SbViewVolumeGetPlaneReturnsValidPlaneAtNearDist)
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbPlane p = orthoVV.getPlane(orthoVV.getNearDist());
-    bool pass = floatNear(p.getNormal().length(), 1.0f, 1e-3f);
-    EXPECT_TRUE(pass) << "getPlane at near dist returned plane with non-unit normal";
+    EXPECT_TRUE(floatNear(p.getNormal().length(), 1.0f, 1e-3f)) << "getPlane at near dist returned plane with non-unit normal";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeGetSightPointIsAlongZAxisForOrtho)
@@ -180,8 +169,9 @@ TEST(BaseSbViewvolume, SbViewVolumeGetSightPointIsAlongZAxisForOrtho)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbVec3f sp = orthoVV.getSightPoint(5.0f); // at depth 5
     // For standard ortho looking down -z, this should have z component
-    bool pass = (std::fabs(sp[2]) > 0.0f || std::fabs(sp[0]) >= 0.0f); // just check it's a valid vec
-    EXPECT_TRUE(pass) << "getSightPoint returned invalid point";
+    EXPECT_TRUE(std::isfinite(sp[0]));
+    EXPECT_TRUE(std::isfinite(sp[1]));
+    EXPECT_TRUE(std::isfinite(sp[2]));
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeGetMatricesReturnsNonIdentityMatrices)
@@ -192,8 +182,7 @@ TEST(BaseSbViewvolume, SbViewVolumeGetMatricesReturnsNonIdentityMatrices)
     orthoVV.getMatrices(affine, proj);
     // Ortho projection matrix is not identity
     SbMatrix ident = SbMatrix::identity();
-    bool pass = (proj != ident);
-    EXPECT_TRUE(pass) << "getMatrices returned identity projection for ortho";
+    EXPECT_NE(proj, ident);
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeZVectorIsUnitLength)
@@ -201,8 +190,7 @@ TEST(BaseSbViewvolume, SbViewVolumeZVectorIsUnitLength)
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbVec3f z = orthoVV.zVector();
-    bool pass = floatNear(z.length(), 1.0f);
-    EXPECT_TRUE(pass) << "zVector is not unit length";
+    EXPECT_TRUE(floatNear(z.length(), 1.0f)) << "zVector is not unit length";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeGetViewUpIsUnitLength)
@@ -210,8 +198,7 @@ TEST(BaseSbViewvolume, SbViewVolumeGetViewUpIsUnitLength)
     SbViewVolume orthoVV;
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbVec3f up = orthoVV.getViewUp();
-    bool pass = floatNear(up.length(), 1.0f);
-    EXPECT_TRUE(pass) << "getViewUp is not unit length";
+    EXPECT_TRUE(floatNear(up.length(), 1.0f)) << "getViewUp is not unit length";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeProjectPointToLineReturnsValidLine)
@@ -222,8 +209,7 @@ TEST(BaseSbViewvolume, SbViewVolumeProjectPointToLineReturnsValidLine)
     SbLine line;
     orthoVV.projectPointToLine(screenPt, line);
     // Direction should be non-zero
-    bool pass = floatNear(line.getDirection().length(), 1.0f, 1e-3f);
-    EXPECT_TRUE(pass) << "projectPointToLine returned invalid line";
+    EXPECT_TRUE(floatNear(line.getDirection().length(), 1.0f, 1e-3f)) << "projectPointToLine returned invalid line";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeProjectBoxReturnsValid2DSize)
@@ -232,8 +218,7 @@ TEST(BaseSbViewvolume, SbViewVolumeProjectBoxReturnsValid2DSize)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbBox3f box(SbVec3f(-0.5f, -0.5f, -0.5f), SbVec3f(0.5f, 0.5f, 0.5f));
     SbVec2f size = orthoVV.projectBox(box);
-    bool pass = (size[0] > 0.0f) && (size[1] > 0.0f);
-    EXPECT_TRUE(pass) << "projectBox returned non-positive size";
+    EXPECT_TRUE((size[0] > 0.0f) && (size[1] > 0.0f)) << "projectBox returned non-positive size";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeGetWorldToScreenScaleReturnsPositiveScale)
@@ -242,8 +227,7 @@ TEST(BaseSbViewvolume, SbViewVolumeGetWorldToScreenScaleReturnsPositiveScale)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbVec3f centre(0.0f, 0.0f, 0.0f);
     float scale = orthoVV.getWorldToScreenScale(centre, 1.0f);
-    bool pass = (scale > 0.0f);
-    EXPECT_TRUE(pass) << "getWorldToScreenScale returned non-positive value";
+    EXPECT_TRUE((scale > 0.0f)) << "getWorldToScreenScale returned non-positive value";
 }
 
 // -----------------------------------------------------------------------
@@ -256,8 +240,7 @@ TEST(BaseSbViewvolume, SbViewVolumePerspectiveGetNearDist)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbViewVolume perspVV;
     perspVV.perspective(static_cast<float>(M_PI / 4.0), 1.0f, 1.0f, 100.0f);
-    bool pass = floatNear(perspVV.getNearDist(), 1.0f);
-    EXPECT_TRUE(pass) << "perspective getNearDist != 1.0";
+    EXPECT_TRUE(floatNear(perspVV.getNearDist(), 1.0f)) << "perspective getNearDist != 1.0";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumePerspectiveGetDepth)
@@ -266,8 +249,7 @@ TEST(BaseSbViewvolume, SbViewVolumePerspectiveGetDepth)
     orthoVV.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     SbViewVolume perspVV;
     perspVV.perspective(static_cast<float>(M_PI / 4.0), 1.0f, 1.0f, 100.0f);
-    bool pass = floatNear(perspVV.getDepth(), 99.0f);
-    EXPECT_TRUE(pass) << "perspective getDepth != 99.0";
+    EXPECT_TRUE(floatNear(perspVV.getDepth(), 99.0f)) << "perspective getDepth != 99.0";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumePerspectivePointInsideFrustum)
@@ -277,8 +259,7 @@ TEST(BaseSbViewvolume, SbViewVolumePerspectivePointInsideFrustum)
     SbViewVolume perspVV;
     perspVV.perspective(static_cast<float>(M_PI / 4.0), 1.0f, 1.0f, 100.0f);
     SbVec3f pt(0.0f, 0.0f, -50.0f); // between near=1 and far=100 along -z
-    bool pass = perspVV.intersect(pt);
-    EXPECT_TRUE(pass) << "perspective frustum: point at z=-50 should be inside";
+    EXPECT_TRUE(perspVV.intersect(pt)) << "perspective frustum: point at z=-50 should be inside";
 }
 
 // -----------------------------------------------------------------------
@@ -293,8 +274,7 @@ TEST(BaseSbViewvolume, SbViewVolumeScaleChangesWidth)
     vv.ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f);
     float origWidth = vv.getWidth();
     vv.scale(2.0f);
-    bool pass = floatNear(vv.getWidth(), origWidth * 2.0f, 0.01f);
-    EXPECT_TRUE(pass) << "SbViewVolume::scale did not change width";
+    EXPECT_TRUE(floatNear(vv.getWidth(), origWidth * 2.0f, 0.01f)) << "SbViewVolume::scale did not change width";
 }
 
 TEST(BaseSbViewvolume, SbViewVolumeTranslateCameraShiftsSightPoint)
@@ -307,6 +287,5 @@ TEST(BaseSbViewvolume, SbViewVolumeTranslateCameraShiftsSightPoint)
     vv.translateCamera(SbVec3f(1.0f, 0.0f, 0.0f));
     SbVec3f sp_after = vv.getSightPoint(5.0f);
     // The x component should differ
-    bool pass = !floatNear(sp_before[0], sp_after[0]);
-    EXPECT_TRUE(pass) << "translateCamera did not shift sight point";
+    EXPECT_TRUE(!floatNear(sp_before[0], sp_after[0])) << "translateCamera did not shift sight point";
 }

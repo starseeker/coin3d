@@ -164,7 +164,7 @@ SoGLShaderProgram::addProgramParameter(int name, int value)
 }
 
 void
-SoGLShaderProgram::getShaderObjectIds(SbList <uint32_t> & ids) const
+SoGLShaderProgram::getShaderObjectIds(SbList <uint64_t> & ids) const
 {
   ids = this->objectids;
 }

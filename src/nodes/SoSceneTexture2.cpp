@@ -264,6 +264,7 @@
 #include "config.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 
 #include <Inventor/errors/SoDebugError.h>
@@ -313,7 +314,9 @@
 #include <Inventor/threads/SbMutex.h>
 
 #include "nodes/SoSubNodeP.h"
+#include "nodes/SoSceneTextureReadback.h"
 #include "elements/SoTextureScalePolicyElement.h"
+#include "misc/SoOnce.h"
 
 
 // FIXME: The multicontex handling in this class is very messy. Clean
@@ -406,7 +409,7 @@ public:
   SbMutex mutex;
   SbBool canrendertotexture;
   unsigned char * offscreenbuffer;
-  int offscreenbuffersize;
+  std::size_t offscreenbuffersize;
 };
 
 // *************************************************************************
@@ -557,13 +560,12 @@ SoSceneTexture2::GLRender(SoGLRenderAction * action)
 
   if (glmodel == SoMultiTextureImageElement::REPLACE) {
     if (!SoGLContext_glversion_matches_at_least(glue, 1, 1, 0)) {
-      static int didwarn = 0;
-      if (!didwarn) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoSceneTexture2::GLRender",
                                   "Unable to use the GL_REPLACE texture model. "
                                   "Your OpenGL version is < 1.1. "
                                   "Using GL_MODULATE instead.");
-        didwarn = 1;
       }
       // use MODULATE and not DECAL, since DECAL only works for RGB
       // and RGBA textures
@@ -750,12 +752,48 @@ void
 SoSceneTexture2P::updateFrameBuffer(SoState * state, const float OBOL_UNUSED_ARG(quality))
 {
   int i;
-  SbVec2s size = PUBLIC(this)->size.getValue();
+  const SbVec2s requestedsize = PUBLIC(this)->size.getValue();
+  const bool disabled = requestedsize == SbVec2s(0, 0);
+  SbVec2s size;
+  bool validsize = !disabled &&
+    ObolSceneTextureInternal::normalizeSize(requestedsize, size);
   SoNode * scene = PUBLIC(this)->scene.getValue();
   assert(scene);
 
   int cachecontext = SoGLCacheContextElement::get(state);
   const SoGLContext * glue = SoGLContext_instance(cachecontext);
+  if (validsize) {
+    GLint maxtexturesize = 0;
+    SoGLContext_glGetIntegerv(glue, GL_MAX_TEXTURE_SIZE, &maxtexturesize);
+    if (maxtexturesize > 0 &&
+        (size[0] > maxtexturesize || size[1] > maxtexturesize)) {
+      validsize = false;
+    }
+  }
+
+  if (!validsize) {
+    this->deleteFrameBufferObjects(glue, state);
+    if (this->fbodata) this->fbodata->fbo_size.setValue(-1, -1);
+    if (this->glimage) {
+      this->glimage->unref(state);
+      this->glimage = NULL;
+      this->glimagecontext = 0;
+    }
+    this->buffervalid = disabled ? TRUE : FALSE;
+    this->glimagevalid = FALSE;
+    if (!disabled) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoSceneTexture2P::updateFrameBuffer",
+                                  "Ignoring invalid or unsupported texture size %dx%d. "
+                                  "Dimensions must be positive, round to a signed "
+                                  "16-bit power of two, and fit GL_MAX_TEXTURE_SIZE.",
+                                  static_cast<int>(requestedsize[0]),
+                                  static_cast<int>(requestedsize[1]));
+      }
+    }
+    return;
+  }
   SbBool mipmap = this->shouldCreateMipmap(state);
 
   fbo_data * local_fbodata = this->fbodata;
@@ -933,12 +971,39 @@ SoSceneTexture2P::updateFrameBuffer(SoState * state, const float OBOL_UNUSED_ARG
 void
 SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
 {
-  SbVec2s size = PUBLIC(this)->size.getValue();
+  const SbVec2s requestedsize = PUBLIC(this)->size.getValue();
+  const bool disabled = requestedsize == SbVec2s(0, 0);
+  SbVec2s size;
+  bool validsize = !disabled &&
+    ObolSceneTextureInternal::normalizeSize(requestedsize, size);
+
+  if (validsize && this->contextManager) {
+    unsigned int maxwidth = 0;
+    unsigned int maxheight = 0;
+    this->contextManager->maxOffscreenDimensions(maxwidth, maxheight);
+    if ((maxwidth > 0 && static_cast<unsigned int>(size[0]) > maxwidth) ||
+        (maxheight > 0 && static_cast<unsigned int>(size[1]) > maxheight)) {
+      validsize = false;
+    }
+  }
+
+  if (validsize) {
+    GLint maxtexturesize = 0;
+    const SoGLContext * outerglue = sogl_glue_from_state(state);
+    if (outerglue) {
+      SoGLContext_glGetIntegerv(outerglue, GL_MAX_TEXTURE_SIZE, &maxtexturesize);
+    }
+    if (maxtexturesize > 0 &&
+        (size[0] > maxtexturesize || size[1] > maxtexturesize)) {
+      validsize = false;
+    }
+  }
 
   SoNode * scene = PUBLIC(this)->scene.getValue();
   assert(scene);
 
-  if ((this->glcontext && this->glcontextsize != size) || (size == SbVec2s(0,0))) {
+  if (((this->glcontext || this->glaction) &&
+       (!validsize || this->glcontextsize != size)) || disabled) {
     if (this->glimage) {
       this->glimage->unref(state);
       this->glimage = NULL;
@@ -958,32 +1023,22 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
     this->glaction = NULL;
     this->glimagevalid = FALSE;
   }
-  if (size == SbVec2s(0,0)) return;
-
-  // FIXME: temporary until non power of two textures are supported,
-  // pederb 2003-12-05
-  size[0] = (short) coin_geq_power_of_two(size[0]);
-  size[1] = (short) coin_geq_power_of_two(size[1]);
+  if (disabled) return;
+  if (!validsize) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
+      SoDebugError::postWarning("SoSceneTexture2P::updatePBuffer",
+                                "Ignoring invalid or unsupported texture size %dx%d. "
+                                "Dimensions must be positive, round to a signed "
+                                "16-bit power of two, and fit GL_MAX_TEXTURE_SIZE.",
+                                static_cast<int>(requestedsize[0]),
+                                static_cast<int>(requestedsize[1]));
+    }
+    return;
+  }
 
   if (this->glcontext == NULL) {
     this->glcontextsize = size;
-     // disabled until an pbuffer extension is available to create a
-    // render-to-texture pbuffer that has a non power of two size.
-    // pederb, 2003-12-05
-    if (1) {
-      this->glcontextsize[0] = (short) coin_geq_power_of_two(size[0]);
-      this->glcontextsize[1] = (short) coin_geq_power_of_two(size[1]);
-
-      if (this->glcontextsize != size) {
-        static int didwarn = 0;
-        if (!didwarn) {
-          SoDebugError::postWarning("SoSceneTexture2P::updatePBuffer",
-                                    "Requested non power of two size, but your OpenGL "
-                                    "driver lacks support for such pbuffer textures.");
-          didwarn = 1;
-        }
-      }
-    }
     this->glrectangle = FALSE;
     if (!coin_is_power_of_two(this->glcontextsize[0]) ||
         !coin_is_power_of_two(this->glcontextsize[1])) {
@@ -994,6 +1049,16 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
     // FIXME: make it possible to specify what kind of context you want
     // (RGB or RGBA, I guess). pederb, 2003-11-27
     this->glcontext = this->contextManager ? this->contextManager->createOffscreenContext(this->glcontextsize[0], this->glcontextsize[1]) : nullptr;
+    if (!this->glcontext) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoSceneTexture2P::updatePBuffer",
+                                  "Unable to create an offscreen context for a %dx%d texture.",
+                                  static_cast<int>(this->glcontextsize[0]),
+                                  static_cast<int>(this->glcontextsize[1]));
+      }
+      return;
+    }
     this->canrendertotexture = SoGLContext_context_can_render_to_texture(this->glcontext);
 
     if (!this->glaction) {
@@ -1029,7 +1094,15 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
     this->glaction->setTransparencyType((SoGLRenderAction::TransparencyType)
                                         SoShapeStyleElement::getTransparencyType(state));
 
-    if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
+    if (!this->contextManager ||
+        !this->contextManager->makeContextCurrent(this->glcontext)) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoSceneTexture2::updatePBuffer",
+                                  "Unable to make the scene-texture context current.");
+      }
+      return;
+    }
     const SoGLContext * pbglue = SoGLContext_instance(this->contextid);
     if (!pbglue) {
       SoDebugError::postWarning("SoSceneTexture2::updatePBuffer",
@@ -1123,14 +1196,12 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
         if (this->contextManager)
           this->contextManager->getActualSurfaceSize(this->glcontext, surf_w, surf_h);
 
-        bool surface_ok = (surf_w == 0) // Unknown size — attempt and trust FBO guard
-                       || (surf_w  >= (unsigned int)this->glcontextsize[0] &&
-                           surf_h  >= (unsigned int)this->glcontextsize[1]);
+        const bool surface_ok = surf_w >= static_cast<unsigned int>(this->glcontextsize[0]) &&
+                                surf_h >= static_cast<unsigned int>(this->glcontextsize[1]);
 
         if (!surface_ok) {
-          static SbBool s_surface_warned = FALSE;
-          if (!s_surface_warned) {
-            s_surface_warned = TRUE;
+          static SoOnceFlag warning;
+          if (warning.first()) {
             SoDebugError::postWarning("SoSceneTexture2::updatePBuffer",
               "Cannot render scene texture (%dx%d): the GL context's backing "
               "surface is only %dx%d, and framebuffer objects are unavailable "
@@ -1160,34 +1231,35 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
       if (hasTmpFbo)
         SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT, tmpFbo);
       SbVec2s ctx_size = this->glcontextsize;
-      int reqbytes = ctx_size[0]*ctx_size[1]*4;
+      std::size_t reqbytes = 0;
+      if (!ObolSceneTextureInternal::rgbaByteCount(ctx_size, 1, reqbytes)) {
+        SoDebugError::postWarning("SoSceneTexture2P::updatePBuffer",
+                                  "Texture readback size overflow for %dx%d.",
+                                  static_cast<int>(ctx_size[0]),
+                                  static_cast<int>(ctx_size[1]));
+        if (hasTmpFbo) {
+          if (savedFbo != 0) {
+            SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT,
+                                          static_cast<GLuint>(savedFbo));
+          }
+          SoGLContext_glDeleteFramebuffers(pbglue, 1, &tmpFbo);
+          SoGLContext_glDeleteRenderbuffers(pbglue, 1, &tmpDepthRbo);
+          SoGLContext_glDeleteTextures(pbglue, 1, &tmpColorTex);
+        }
+        if (this->contextManager) {
+          this->contextManager->restorePreviousContext(this->glcontext);
+        }
+        return;
+      }
       if (reqbytes > this->offscreenbuffersize) {
+        unsigned char * replacement = new unsigned char[reqbytes];
         delete[] this->offscreenbuffer;
-        // Allocate with extra padding: proprietary GPU drivers (NVIDIA,
-        // radeonsi) use vectorised/DMA stores during glReadPixels that
-        // overrun the exact pixel-data size.  Valgrind on NVIDIA 535
-        // confirms writes at reqbytes+256 and reqbytes+272, meaning the
-        // driver overshoots the 256-byte zone entirely.  4096 bytes (one
-        // page) gives a safe margin for any conceivable DMA burst size
-        // without wasting meaningful memory.
-        this->offscreenbuffer = new unsigned char[reqbytes + 4096];
+        this->offscreenbuffer = replacement;
         this->offscreenbuffersize = reqbytes;
       }
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 1);
-      // Defensively reset GL_PACK_ROW_LENGTH to the default (0 = tightly
-      // packed) before calling glReadPixels.  GL_PACK_* are client
-      // pixel-store parameters that are NOT saved/restored by
-      // glPushAttrib/glPopAttrib; if the outer renderer (CoinOffscreenGLCanvas)
-      // left GL_PACK_ROW_LENGTH set to its full-image width, the inner
-      // glReadPixels would use an oversized row stride and overflow the buffer.
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_ROW_LENGTH,  0);
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_SKIP_ROWS,   0);
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_SKIP_PIXELS, 0);
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_SWAP_BYTES,  0);
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_LSB_FIRST,   0);
+      ObolSceneTextureInternal::PixelPackStateGuard packstate(pbglue);
       SoGLContext_glReadPixels(pbglue, 0, 0, ctx_size[0], ctx_size[1], GL_RGBA, GL_UNSIGNED_BYTE,
                    this->offscreenbuffer);
-      SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 4);
     }
 
     // Clean up temporary FBO now that pixel readback is complete.

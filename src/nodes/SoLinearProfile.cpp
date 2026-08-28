@@ -62,6 +62,7 @@
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
+#include "misc/SoOnce.h"
 
 // *************************************************************************
 
@@ -190,13 +191,12 @@ SoLinearProfile::getTrimCurve(SoState * state, int32_t & numpoints,
       }
       
       // Print errormessage
-      static uint32_t current_errors = 0;
-      if (current_errors < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoLinearProfile::getVertices", "Illegal profile "
                                   "coordinate index specified: %d. Should be within "
                                   "[0, %d]", idx, numcoords - 1);
       }
-      current_errors++;
     }
   }
 
@@ -259,13 +259,12 @@ SoLinearProfile::getVertices(SoState * state, int32_t & numvertices,
         coordListLinearProfile->append(0.0f);
 
         // Print errormessage
-        static uint32_t current_errors = 0;
-        if (current_errors < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoLinearProfile::getVertices", "Illegal profile "
                                     "coordinate index specified: %d. Should be within "
                                     "[0, %d]", idx, numcoords - 1);
         }
-        current_errors++;
       }
     }
 

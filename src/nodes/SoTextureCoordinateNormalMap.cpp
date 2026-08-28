@@ -78,30 +78,16 @@
 
 
 #include <Inventor/SbVec3f.h>
+#include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
+#include <Inventor/actions/SoPickAction.h>
+#include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLMultiTextureCoordinateElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/system/gl.h>
 
-#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
-
-// *************************************************************************
-
-class SoTextureCoordinateNormalMapP {
-public:
-  static SbVec4f * dummy_texcoords;
-  static void cleanup_func(void);
-};
-
-SbVec4f * SoTextureCoordinateNormalMapP::dummy_texcoords = NULL;
-
-void
-SoTextureCoordinateNormalMapP::cleanup_func(void)
-{
-  delete SoTextureCoordinateNormalMapP::dummy_texcoords;
-}
 
 // *************************************************************************
 
@@ -131,17 +117,20 @@ SoTextureCoordinateNormalMap::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateNormalMap, SO_FROM_INVENTOR_1);
 
-  SoTextureCoordinateNormalMapP::dummy_texcoords = new SbVec4f(0.0f, 0.0f, 0.0f, 1.0f);
-  coin_atexit((coin_atexit_f *)SoTextureCoordinateNormalMapP::cleanup_func, CC_ATEXIT_NORMAL);
+  SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
+  SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);
+  SO_ENABLE(SoPickAction, SoMultiTextureCoordinateElement);
 }
 
 // generates texture coordinates for GLRender, callback and pick actions
 const SbVec4f &
 SoTextureCoordinateNormalMap::generate(void * OBOL_UNUSED_ARG(userdata),
                                          const SbVec3f & OBOL_UNUSED_ARG(p),
-                                         const SbVec3f & OBOL_UNUSED_ARG(n))
+                                         const SbVec3f & n)
 {
-  return *SoTextureCoordinateNormalMapP::dummy_texcoords;
+  static thread_local SbVec4f texcoords;
+  texcoords.setValue(n[0], n[1], n[2], 1.0f);
+  return texcoords;
 }
 
 // doc from parent
@@ -161,13 +150,15 @@ SoTextureCoordinateNormalMap::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
   int unit = SoTextureUnitElement::get(state);
+  const SoGLContext * glue =
+    SoGLContext_instance(SoGLCacheContextElement::get(state));
   SoMultiTextureCoordinateElement::setFunction(action->getState(), this,
                                                unit,
                                                generate,
                                                action->getState());
   SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
                                                this, unit, handleTexgen, 
-                                               this,
+                                               const_cast<SoGLContext *>(glue),
                                                generate,
                                                action->getState());
   
@@ -190,8 +181,8 @@ SoTextureCoordinateNormalMap::pick(SoPickAction * action)
 void
 SoTextureCoordinateNormalMap::handleTexgen(void * data)
 {
-  SoTextureCoordinateNormalMap * thisp = (SoTextureCoordinateNormalMap*)data;
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);  
-  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  const SoGLContext * glue = static_cast<const SoGLContext *>(data);
+  SoGLContext_glTexGeni(glue, GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoGLContext_glTexGeni(glue, GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoGLContext_glTexGeni(glue, GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
 }

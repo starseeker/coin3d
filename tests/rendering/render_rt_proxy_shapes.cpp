@@ -217,28 +217,22 @@ static bool validateScaleCompensation(const char * outpath)
 }
 #endif // OBOL_NANORT_BUILD
 
-static int runScenario(const char *outputStem)
+static bool renderRaytraceProxyFactoryScene(const char * outputStem)
 {
-    initCoinHeadless();
+    char outpath[1024];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
+    SoSeparator * root = ObolTest::Scenes::createRTProxyShapes(256, 256);
+    SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool ok = renderer.render(root) && renderer.getBuffer() != nullptr &&
+        renderer.writeToRGB(outpath);
+    root->unref();
+    return ok;
+}
 
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        const char *primaryBase = (outputStem != nullptr) ? outputStem : "render_rt_proxy_shapes";
-        SoSeparator *fRoot = ObolTest::Scenes::createRTProxyShapes(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", primaryBase);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-
+static bool renderRaytraceProxyVariants(const char * outputStem)
+{
     SoSeparator *root = new SoSeparator;
     root->ref();
 
@@ -345,10 +339,7 @@ static int runScenario(const char *outputStem)
     cam->position.setValue(cam->position.getValue() * 1.1f);
 
     char outpath[1024];
-    if (outputStem != nullptr)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
-    else
-        snprintf(outpath, sizeof(outpath), "render_rt_proxy_shapes.rgb");
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
 
     bool ok = false;
 #ifdef OBOL_NANORT_BUILD
@@ -365,21 +356,21 @@ static int runScenario(const char *outputStem)
         fprintf(stderr, "render_rt_proxy_shapes: render() failed\n");
     }
 
-    // Additional test: verify that Scale nodes do not inflate proxy cylinder radii.
-    const char * scaleBase = (outputStem != nullptr) ? outputStem : "render_rt_proxy_shapes";
-    if (!validateScaleCompensation(scaleBase))
-        ok = false;
 #else
     ok = renderToFile(root, outpath);
 #endif
 
     root->unref();
-    return ok ? 0 : 1;
+    return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_rt_proxy_shapes) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_rt_proxy_shapes");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(RaytraceProxyRenderTest, FactorySceneRenders,
+    "rt_proxy_factory", renderRaytraceProxyFactoryScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(RaytraceProxyRenderTest, LinesPointsAndSolidRender,
+    "rt_proxy_variants", renderRaytraceProxyVariants(outputStem.c_str()))
+#ifdef OBOL_NANORT_BUILD
+OBOL_RENDER_TEST_CASE(RaytraceProxyRenderTest, ScaleDoesNotInflateLineRadius,
+    "rt_proxy_scale", validateScaleCompensation(outputStem.c_str()))
+#endif

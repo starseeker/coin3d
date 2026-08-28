@@ -41,3 +41,17 @@ inline std::string renderingOutputStem(const char *name)
 }
 
 } // namespace ObolTest
+
+// Register one independently discoverable contract from a long-form render
+// source.  The expression may use outputStem.c_str(); each case receives a
+// distinct artifact prefix and initializes the selected runtime GL backend.
+#define OBOL_RENDER_TEST_CASE(suite, case_name, artifact_name, expression) \
+    TEST(suite, case_name) {                                               \
+        initCoinHeadless();                                               \
+        [[maybe_unused]] const std::string outputStem =                   \
+            ObolTest::renderingOutputStem(artifact_name);                 \
+        const bool obolRenderContractPassed = (expression);               \
+        EXPECT_TRUE(obolRenderContractPassed)                             \
+            << "Render contract failed: " #expression                    \
+            << "\nArtifact prefix: " << outputStem;                       \
+    }

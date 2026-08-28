@@ -166,6 +166,9 @@ public:
                                     const char * separator = ":\t ");
   static void removeDirectory(const char * dirName);
   static void clearDirectories(void);
+  // When no SoInput is active on this thread, this returns a thread-local
+  // snapshot. The reference remains valid until the next getDirectories()
+  // call on the same thread.
   static const SbStringList & getDirectories(void);
 
   static void init(void);

@@ -98,15 +98,10 @@ static bool validateShadow(const unsigned char *buf)
     return true;
 }
 
-static int runScenario(const char *outputStem)
+static bool renderNanoRTShadow(const char * outputStem)
 {
-    initCoinHeadless();
-
     char outpath[1024];
-    if (outputStem != nullptr)
-        snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
-    else
-        snprintf(outpath, sizeof(outpath), "render_nanort_shadow.rgb");
+    snprintf(outpath, sizeof(outpath), "%s.rgb", outputStem);
 
     // -----------------------------------------------------------------------
     // Scene graph
@@ -233,12 +228,10 @@ static int runScenario(const char *outputStem)
 #endif
 
     root->unref();
-    return ok ? 0 : 1;
+    return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_nanort_shadow) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_nanort_shadow");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(NanoRTShadowRenderTest, SuspendedSphereCastsGroundShadow,
+    "nanort_shadow", renderNanoRTShadow(outputStem.c_str()))

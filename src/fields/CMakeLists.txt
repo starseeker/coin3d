@@ -96,22 +96,6 @@ set(OBOL_FIELDS_FILES
 	shared.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_FIELDS_INTERNAL_FILES
-	SoGlobalField.h
-	SoGlobalField.cpp
-	shared.h
-	shared.cpp
-	SoSubFieldP.h
-)
 
 # build module object library
 obol_add_source_module(fields ${OBOL_FIELDS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_FIELDS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/fields/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_FIELDS_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/fields/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

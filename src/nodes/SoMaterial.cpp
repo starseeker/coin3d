@@ -150,6 +150,7 @@
 #endif
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/threads/SbStorage.h>
 
@@ -455,15 +456,15 @@ SoMaterial::doAction(SoAction * action)
 
 #if OBOL_DEBUG
     if (bitmask & SoLazyElement::SHININESS_MASK) {
-      static int didwarn = 0;
-      if (!didwarn && (this->shininess[0] < 0.0f || this->shininess[0] > 1.0f)) {
+      if (this->shininess[0] < 0.0f || this->shininess[0] > 1.0f) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
         SoDebugError::postWarning("SoMaterial::GLRender",
                                   "Shininess out of range [0-1]. "
                                   "The shininess value will be clamped."
                                   "This warning will be printed only once, but there might be more errors. "
                                   "You should check and fix your code and/or Inventor exporter.");
-
-        didwarn = 1;
+        }
       }
     }
 #endif // OBOL_DEBUG

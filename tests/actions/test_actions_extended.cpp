@@ -107,9 +107,8 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionGetTriangleCountOnCubeScene)
     action.apply(root);
 
     int tris = action.getTriangleCount();
-    bool pass = (tris > 0);
+    EXPECT_TRUE((tris > 0)) << "Expected >0 triangles from a cube";
     root->unref();
-    EXPECT_TRUE(pass) << "Expected >0 triangles from a cube";
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNoPrimitivesOnEmptySep)
@@ -121,9 +120,8 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNoPrimitivesOnEmptySep)
     SoGetPrimitiveCountAction action(vp);
     action.apply(root);
 
-    bool pass = action.containsNoPrimitives();
+    EXPECT_TRUE(action.containsNoPrimitives()) << "Empty scene should have no primitives";
     root->unref();
-    EXPECT_TRUE(pass) << "Empty scene should have no primitives";
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNonTriangleShapesOnLineScene)
@@ -143,9 +141,8 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionContainsNonTriangleShapesOnLineSc
     SoGetPrimitiveCountAction action(vp);
     action.apply(root);
 
-    bool pass = action.containsNonTriangleShapes();
+    EXPECT_TRUE(action.containsNonTriangleShapes()) << "Line scene should have non-triangle shapes";
     root->unref();
-    EXPECT_TRUE(pass) << "Line scene should have non-triangle shapes";
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionSetCanApproximateRoundTrip)
@@ -153,8 +150,7 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionSetCanApproximateRoundTrip)
     SbViewportRegion vp(512, 512);
     SoGetPrimitiveCountAction action(vp);
     action.setCanApproximate(TRUE);
-    bool pass = (action.canApproximateCount() == TRUE);
-    EXPECT_TRUE(pass) << "setCanApproximate/canApproximateCount round-trip failed";
+    EXPECT_TRUE((action.canApproximateCount() == TRUE)) << "setCanApproximate/canApproximateCount round-trip failed";
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionSetDecimationValueRoundTrip)
@@ -162,10 +158,8 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionSetDecimationValueRoundTrip)
     SbViewportRegion vp(512, 512);
     SoGetPrimitiveCountAction action(vp);
     action.setDecimationValue(SoDecimationTypeElement::PERCENTAGE, 0.5f);
-    bool passType = (action.getDecimationType() == SoDecimationTypeElement::PERCENTAGE);
-    bool passPct  = floatNear(action.getDecimationPercentage(), 0.5f);
-    bool pass = passType && passPct;
-    EXPECT_TRUE(pass) << "setDecimationValue/getDecimationType/getDecimationPercentage failed";
+    EXPECT_EQ(action.getDecimationType(), SoDecimationTypeElement::PERCENTAGE);
+    EXPECT_TRUE(floatNear(action.getDecimationPercentage(), 0.5f));
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionSetCount3DTextAsTrianglesRoundTrip)
@@ -173,8 +167,7 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionSetCount3DTextAsTrianglesRoundTri
     SbViewportRegion vp(512, 512);
     SoGetPrimitiveCountAction action(vp);
     action.setCount3DTextAsTriangles(TRUE);
-    bool pass = (action.is3DTextCountedAsTriangles() == TRUE);
-    EXPECT_TRUE(pass) << "setCount3DTextAsTriangles/is3DTextCountedAsTriangles failed";
+    EXPECT_TRUE((action.is3DTextCountedAsTriangles() == TRUE)) << "setCount3DTextAsTriangles/is3DTextCountedAsTriangles failed";
 }
 
 TEST(ActionsExtended, SoGetPrimitiveCountActionAddNumTrianglesLinesPoints)
@@ -194,12 +187,11 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionAddNumTrianglesLinesPoints)
     action.addNumText(2);
     action.addNumImage(1);
 
-    bool pass = (action.getTriangleCount() >= 10) &&
+    EXPECT_TRUE((action.getTriangleCount() >= 10) &&
                 (action.getLineCount()     >= 5)  &&
                 (action.getPointCount()    >= 3)  &&
                 (action.getTextCount()     >= 2)  &&
-                (action.getImageCount()    >= 1);
-    EXPECT_TRUE(pass) << "addNum* methods failed";
+                (action.getImageCount()    >= 1)) << "addNum* methods failed";
 }
 
 // =======================================================================
@@ -219,10 +211,9 @@ TEST(ActionsExtended, SoSearchActionFindNodeByInstance)
     sa.apply(root);
 
     SoPath * path = sa.getPath();
-    bool pass = (path != nullptr) &&
-                (path->getTail() == cube);
+    EXPECT_TRUE((path != nullptr) &&
+                (path->getTail() == cube)) << "SoSearchAction by node failed";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction by node failed";
 }
 
 TEST(ActionsExtended, SoSearchActionFindFirstNodeOfType)
@@ -238,10 +229,9 @@ TEST(ActionsExtended, SoSearchActionFindFirstNodeOfType)
     sa.apply(root);
 
     SoPath * path = sa.getPath();
-    bool pass = (path != nullptr) &&
-                (path->getTail() == cube);
+    EXPECT_TRUE((path != nullptr) &&
+                (path->getTail() == cube)) << "SoSearchAction find by type failed";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction find by type failed";
 }
 
 TEST(ActionsExtended, SoSearchActionFindALLNodesOfType)
@@ -258,9 +248,8 @@ TEST(ActionsExtended, SoSearchActionFindALLNodesOfType)
     sa.apply(root);
 
     SoPathList & paths = sa.getPaths();
-    bool pass = (paths.getLength() == 3);
+    EXPECT_TRUE((paths.getLength() == 3)) << "SoSearchAction ALL paths count wrong";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction ALL paths count wrong";
 }
 
 TEST(ActionsExtended, SoSearchActionFindNodeByName)
@@ -276,9 +265,8 @@ TEST(ActionsExtended, SoSearchActionFindNodeByName)
     sa.apply(root);
 
     SoPath * path = sa.getPath();
-    bool pass = (path != nullptr) && (path->getTail() == sphere);
+    EXPECT_TRUE((path != nullptr) && (path->getTail() == sphere)) << "SoSearchAction find by name failed";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction find by name failed";
 }
 
 TEST(ActionsExtended, SoSearchActionSetFindGetterRoundTrip)
@@ -286,24 +274,21 @@ TEST(ActionsExtended, SoSearchActionSetFindGetterRoundTrip)
     SoSearchAction sa;
     sa.setFind(SoSearchAction::TYPE | SoSearchAction::NAME);
     int find = sa.getFind();
-    bool pass = (find == (SoSearchAction::TYPE | SoSearchAction::NAME));
-    EXPECT_TRUE(pass) << "SoSearchAction setFind/getFind failed";
+    EXPECT_TRUE((find == (SoSearchAction::TYPE | SoSearchAction::NAME))) << "SoSearchAction setFind/getFind failed";
 }
 
 TEST(ActionsExtended, SoSearchActionSetInterestGetterRoundTrip)
 {
     SoSearchAction sa;
     sa.setInterest(SoSearchAction::LAST);
-    bool pass = (sa.getInterest() == SoSearchAction::LAST);
-    EXPECT_TRUE(pass) << "SoSearchAction setInterest/getInterest failed";
+    EXPECT_TRUE((sa.getInterest() == SoSearchAction::LAST)) << "SoSearchAction setInterest/getInterest failed";
 }
 
 TEST(ActionsExtended, SoSearchActionSetSearchingAllRoundTrip)
 {
     SoSearchAction sa;
     sa.setSearchingAll(TRUE);
-    bool pass = (sa.isSearchingAll() == TRUE);
-    EXPECT_TRUE(pass) << "setSearchingAll/isSearchingAll failed";
+    EXPECT_TRUE((sa.isSearchingAll() == TRUE)) << "setSearchingAll/isSearchingAll failed";
 }
 
 TEST(ActionsExtended, SoSearchActionResetClearsPreviousResult)
@@ -321,9 +306,8 @@ TEST(ActionsExtended, SoSearchActionResetClearsPreviousResult)
     sa.reset();
     bool foundAfter = (sa.getPath() != nullptr);
 
-    bool pass = foundBefore && !foundAfter;
+    EXPECT_TRUE(foundBefore && !foundAfter) << "SoSearchAction::reset() did not clear path";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction::reset() did not clear path";
 }
 
 TEST(ActionsExtended, SoSearchActionIsFoundAfterApply)
@@ -336,9 +320,8 @@ TEST(ActionsExtended, SoSearchActionIsFoundAfterApply)
     sa.setType(SoCube::getClassTypeId());
     sa.apply(root);
 
-    bool pass = (sa.isFound() == TRUE);
+    EXPECT_TRUE((sa.isFound() == TRUE)) << "SoSearchAction::isFound() returned FALSE after successful search";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction::isFound() returned FALSE after successful search";
 }
 
 TEST(ActionsExtended, SoSearchActionReturnsNullPathWhenNotFound)
@@ -351,9 +334,8 @@ TEST(ActionsExtended, SoSearchActionReturnsNullPathWhenNotFound)
     sa.setType(SoCube::getClassTypeId()); // search for cube, none present
     sa.apply(root);
 
-    bool pass = (sa.getPath() == nullptr);
+    EXPECT_TRUE((sa.getPath() == nullptr)) << "SoSearchAction getPath should be null when not found";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction getPath should be null when not found";
 }
 
 // =======================================================================
@@ -378,11 +360,10 @@ TEST(ActionsExtended, SoGetMatrixActionTranslationMatrixCorrect)
     SbVec3f pt(0, 0, 0);
     SbVec3f result;
     mat.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 1.0f) &&
+    EXPECT_TRUE(floatNear(result[0], 1.0f) &&
                 floatNear(result[1], 2.0f) &&
-                floatNear(result[2], 3.0f);
+                floatNear(result[2], 3.0f)) << "SoGetMatrixAction translation matrix incorrect";
     root->unref();
-    EXPECT_TRUE(pass) << "SoGetMatrixAction translation matrix incorrect";
 }
 
 // =======================================================================
@@ -402,12 +383,11 @@ TEST(ActionsExtended, SoGetBoundingBoxActionUnitCubeBboxApprox2x2x2)
 
     SbVec3f bmin, bmax;
     bbox.getBounds(bmin, bmax);
-    bool pass = floatNear(bmin[0], -1.0f) &&
+    EXPECT_TRUE(floatNear(bmin[0], -1.0f) &&
                 floatNear(bmin[1], -1.0f) &&
                 floatNear(bmin[2], -1.0f) &&
                 floatNear(bmax[0],  1.0f) &&
                 floatNear(bmax[1],  1.0f) &&
-                floatNear(bmax[2],  1.0f);
+                floatNear(bmax[2],  1.0f)) << "Unit cube bbox not ±1 in all axes";
     root->unref();
-    EXPECT_TRUE(pass) << "Unit cube bbox not ±1 in all axes";
 }

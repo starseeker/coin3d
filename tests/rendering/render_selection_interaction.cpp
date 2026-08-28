@@ -394,47 +394,13 @@ static bool test7_locateHighlight(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_selection_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createSelectionInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoSelection interaction tests ===\n");
-
-    if (!test1_singlePolicy(basepath))  ++failures;
-    if (!test2_shiftPolicy(basepath))   ++failures;
-    if (!test3_togglePolicy(basepath))  ++failures;
-    if (!test4_callbacks(basepath))     ++failures;
-    if (!test5_deselectAll(basepath))   ++failures;
-    if (!test6_numSelected())           ++failures;
-    if (!test7_locateHighlight(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_selection_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_selection_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, SinglePolicy, "selection_single", test1_singlePolicy(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, ShiftPolicy, "selection_shift", test2_shiftPolicy(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, TogglePolicy, "selection_toggle", test3_togglePolicy(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, Callbacks, "selection_callbacks", test4_callbacks(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, DeselectAll, "selection_deselect", test5_deselectAll(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, SelectedCount, "selection_count", test6_numSelected())
+OBOL_RENDER_TEST_CASE(SelectionInteractionRenderTest, LocateHighlight, "selection_highlight", test7_locateHighlight(outputStem.c_str()))

@@ -30,25 +30,6 @@ set(OBOL_SHAPENODES_FILES
 	soshape_trianglesort.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_SHAPENODES_INTERNAL_FILES
-	soshape_bigtexture.h
-	soshape_bigtexture.cpp
-	soshape_bumprender.h
-	soshape_bumprender.cpp
-	soshape_primdata.h
-	soshape_primdata.cpp
-	soshape_trianglesort.h
-	soshape_trianglesort.cpp
-)
 
 # build module object library
 obol_add_source_module(shapenodes ${OBOL_SHAPENODES_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_SHAPENODES_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_SHAPENODES_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

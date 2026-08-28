@@ -94,9 +94,6 @@
 /* Define for Mac OS X builds */
 #cmakedefine OBOL_MACOS_10
 
-/* Define when building Mac OS X framework */
-#cmakedefine OBOL_MACOSX_FRAMEWORK
-
 /* Define to 1 if you have the <direct.h> header file. */
 #cmakedefine HAVE_DIRECT_H 1
 
@@ -187,9 +184,6 @@
 /* Define if compiler has __builtin_expect() macro */
 #cmakedefine HAVE___BUILTIN_EXPECT
 
-/* Define to make Obol use/catch exceptions at some particular places. */
-#cmakedefine USE_EXCEPTIONS 1
-
 /* define Obol DATADIR for resource access */
 #define OBOL_DATADIR    "@CMAKE_INSTALL_DATADIR@"
 
@@ -244,6 +238,7 @@
 
 #if OBOL_DEBUG
 
+#include <atomic>
 #include <Inventor/errors/SoDebugError.h>
 
 #define OBOL_STUB() \
@@ -259,8 +254,8 @@
 
 #define OBOL_STUB_ONCE() \
   do { \
-    static int first = 1; \
-    if (first) { \
+    static std::atomic_flag first = ATOMIC_FLAG_INIT; \
+    if (!first.test_and_set(std::memory_order_relaxed)) { \
       SbString s; \
       s.sprintf("%s:%u:%s", \
                 OBOL_STUB_FILE ? OBOL_STUB_FILE : "<>", \
@@ -268,7 +263,6 @@
                 OBOL_STUB_FUNC_STRING); \
       SoDebugError::postWarning(s.getString(), \
                                 "STUB: functionality not yet completed"); \
-      first = 0; \
     } \
   } while (0)
 

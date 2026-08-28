@@ -51,6 +51,7 @@
 #include <Inventor/lock/SoLockMgr.h>
 
 #include <cstring>
+#include <mutex>
 
 #include <Inventor/SbString.h>
 
@@ -65,6 +66,8 @@ public:
 };
 
 static SoLockManager_pimpl * solockmanager_pimpl = NULL;
+static std::mutex solockmanager_mutex;
+static thread_local SbString solockmanager_snapshot;
 
 static void solockmanager_cleanup(void)
 {
@@ -82,13 +85,15 @@ static void solockmanager_cleanup(void)
 void
 SoLockManager::SetUnlockString(char * unlockstr)
 {
+  const std::lock_guard<std::mutex> guard(solockmanager_mutex);
   if (!solockmanager_pimpl) {
     solockmanager_pimpl = new SoLockManager_pimpl;
     coin_atexit((coin_atexit_f*)solockmanager_cleanup, CC_ATEXIT_NORMAL);
   }
   delete[] solockmanager_pimpl->unlockstr;
-  solockmanager_pimpl->unlockstr = new char[strlen(unlockstr) + 1];
-  (void)strcpy(solockmanager_pimpl->unlockstr, unlockstr);
+  const char * value = unlockstr ? unlockstr : "";
+  solockmanager_pimpl->unlockstr = new char[strlen(value) + 1];
+  (void)strcpy(solockmanager_pimpl->unlockstr, value);
 }
 
 /*!
@@ -100,5 +105,8 @@ SoLockManager::SetUnlockString(char * unlockstr)
 char *
 SoLockManager::GetUnlockString(void)
 {
-  return solockmanager_pimpl ? solockmanager_pimpl->unlockstr : NULL;
+  const std::lock_guard<std::mutex> guard(solockmanager_mutex);
+  if (!solockmanager_pimpl) return NULL;
+  solockmanager_snapshot = solockmanager_pimpl->unlockstr;
+  return const_cast<char *>(solockmanager_snapshot.getString());
 }

@@ -66,9 +66,8 @@ TEST(ActionsGlrenderAction, SoGLRenderActionGetViewportRegionMatchesConstructorA
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     const SbViewportRegion & got = action.getViewportRegion();
-    bool pass = (got.getWindowSize()[0] == 512) &&
-                (got.getWindowSize()[1] == 384);
-    EXPECT_TRUE(pass) << "SoGLRenderAction viewport region mismatch";
+    EXPECT_TRUE((got.getWindowSize()[0] == 512) &&
+                (got.getWindowSize()[1] == 384)) << "SoGLRenderAction viewport region mismatch";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetViewportRegionRoundTrip)
@@ -78,9 +77,8 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetViewportRegionRoundTrip)
     SbViewportRegion vp2(128, 64);
     action.setViewportRegion(vp2);
     const SbViewportRegion & got = action.getViewportRegion();
-    bool pass = (got.getWindowSize()[0] == 128) &&
-                (got.getWindowSize()[1] == 64);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setViewportRegion round-trip failed";
+    EXPECT_TRUE((got.getWindowSize()[0] == 128) &&
+                (got.getWindowSize()[1] == 64)) << "SoGLRenderAction setViewportRegion round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -91,9 +89,8 @@ TEST(ActionsGlrenderAction, SoGLRenderActionDefaultTransparencyTypeIsBLEND)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.getTransparencyType() ==
-                 SoGLRenderAction::BLEND);
-    EXPECT_TRUE(pass) << "SoGLRenderAction default transparency should be BLEND";
+    EXPECT_TRUE((action.getTransparencyType() ==
+                 SoGLRenderAction::BLEND)) << "SoGLRenderAction default transparency should be BLEND";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeBLENDRoundTrip)
@@ -101,8 +98,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeBLENDRoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setTransparencyType(SoGLRenderAction::BLEND);
-    bool pass = (action.getTransparencyType() == SoGLRenderAction::BLEND);
-    EXPECT_TRUE(pass) << "SoGLRenderAction transparency BLEND round-trip failed";
+    EXPECT_TRUE((action.getTransparencyType() == SoGLRenderAction::BLEND)) << "SoGLRenderAction transparency BLEND round-trip failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeDELAYEDBLENDRoundTrip)
@@ -110,9 +106,8 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeDELAYEDBLENDRound
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setTransparencyType(SoGLRenderAction::DELAYED_BLEND);
-    bool pass = (action.getTransparencyType() ==
-                 SoGLRenderAction::DELAYED_BLEND);
-    EXPECT_TRUE(pass) << "SoGLRenderAction transparency DELAYED_BLEND round-trip failed";
+    EXPECT_TRUE((action.getTransparencyType() ==
+                 SoGLRenderAction::DELAYED_BLEND)) << "SoGLRenderAction transparency DELAYED_BLEND round-trip failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeSORTEDOBJECTBLENDRoundTrip)
@@ -120,9 +115,8 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeSORTEDOBJECTBLEND
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
-    bool pass = (action.getTransparencyType() ==
-                 SoGLRenderAction::SORTED_OBJECT_BLEND);
-    EXPECT_TRUE(pass) << "SoGLRenderAction transparency SORTED_OBJECT_BLEND round-trip failed";
+    EXPECT_TRUE((action.getTransparencyType() ==
+                 SoGLRenderAction::SORTED_OBJECT_BLEND)) << "SoGLRenderAction transparency SORTED_OBJECT_BLEND round-trip failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeADDRoundTrip)
@@ -130,8 +124,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeADDRoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setTransparencyType(SoGLRenderAction::ADD);
-    bool pass = (action.getTransparencyType() == SoGLRenderAction::ADD);
-    EXPECT_TRUE(pass) << "SoGLRenderAction transparency ADD round-trip failed";
+    EXPECT_TRUE((action.getTransparencyType() == SoGLRenderAction::ADD)) << "SoGLRenderAction transparency ADD round-trip failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeNONERoundTrip)
@@ -139,8 +132,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetTransparencyTypeNONERoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setTransparencyType(SoGLRenderAction::NONE);
-    bool pass = (action.getTransparencyType() == SoGLRenderAction::NONE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction transparency NONE round-trip failed";
+    EXPECT_TRUE((action.getTransparencyType() == SoGLRenderAction::NONE)) << "SoGLRenderAction transparency NONE round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -151,8 +143,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionIsSmoothingDefaultsToFALSE)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.isSmoothing() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction isSmoothing should default to FALSE";
+    EXPECT_TRUE((action.isSmoothing() == FALSE)) << "SoGLRenderAction isSmoothing should default to FALSE";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetSmoothingTRUERoundTrip)
@@ -160,8 +151,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetSmoothingTRUERoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setSmoothing(TRUE);
-    bool pass = (action.isSmoothing() == TRUE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setSmoothing(TRUE) failed";
+    EXPECT_TRUE((action.isSmoothing() == TRUE)) << "SoGLRenderAction setSmoothing(TRUE) failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetSmoothingFALSERoundTrip)
@@ -170,8 +160,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetSmoothingFALSERoundTrip)
     SoGLRenderAction action(vp);
     action.setSmoothing(TRUE);
     action.setSmoothing(FALSE);
-    bool pass = (action.isSmoothing() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setSmoothing(FALSE) failed";
+    EXPECT_TRUE((action.isSmoothing() == FALSE)) << "SoGLRenderAction setSmoothing(FALSE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -182,8 +171,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionGetNumPassesDefaultsTo1)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.getNumPasses() == 1);
-    EXPECT_TRUE(pass) << "SoGLRenderAction getNumPasses should default to 1";
+    EXPECT_TRUE((action.getNumPasses() == 1)) << "SoGLRenderAction getNumPasses should default to 1";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetNumPasses4RoundTrip)
@@ -191,8 +179,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetNumPasses4RoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setNumPasses(4);
-    bool pass = (action.getNumPasses() == 4);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setNumPasses(4) round-trip failed";
+    EXPECT_TRUE((action.getNumPasses() == 4)) << "SoGLRenderAction setNumPasses(4) round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -204,8 +191,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetCacheContextGetCacheContextRoundT
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setCacheContext(42u);
-    bool pass = (action.getCacheContext() == 42u);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setCacheContext round-trip failed";
+    EXPECT_TRUE((action.getCacheContext() == 42u)) << "SoGLRenderAction setCacheContext round-trip failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionContextManagerRoundTrip)
@@ -214,10 +200,10 @@ TEST(ActionsGlrenderAction, SoGLRenderActionContextManagerRoundTrip)
     SoGLRenderAction action(vp);
     SoDB::ContextManager * manager = SoDB::getContextManager();
     action.setContextManager(manager);
-    bool pass = manager && action.getContextManager() == manager;
+    EXPECT_NE(manager, nullptr);
+    EXPECT_EQ(action.getContextManager(), manager);
     action.setContextManager(NULL);
-    pass = pass && action.getContextManager() == NULL;
-    EXPECT_TRUE(pass) << "SoGLRenderAction context manager round-trip failed";
+    EXPECT_EQ(action.getContextManager(), nullptr);
 }
 
 // -----------------------------------------------------------------------
@@ -228,8 +214,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionIsPassUpdateDefaultsToFALSE)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.isPassUpdate() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction isPassUpdate should default to FALSE";
+    EXPECT_TRUE((action.isPassUpdate() == FALSE)) << "SoGLRenderAction isPassUpdate should default to FALSE";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetPassUpdateTRUERoundTrip)
@@ -237,8 +222,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetPassUpdateTRUERoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setPassUpdate(TRUE);
-    bool pass = (action.isPassUpdate() == TRUE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setPassUpdate(TRUE) failed";
+    EXPECT_TRUE((action.isPassUpdate() == TRUE)) << "SoGLRenderAction setPassUpdate(TRUE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -249,8 +233,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionGetRenderingIsRemoteDefaultsToFALSE)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.getRenderingIsRemote() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction getRenderingIsRemote should default to FALSE";
+    EXPECT_TRUE((action.getRenderingIsRemote() == FALSE)) << "SoGLRenderAction getRenderingIsRemote should default to FALSE";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetRenderingIsRemoteTRUERoundTrip)
@@ -258,8 +241,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetRenderingIsRemoteTRUERoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setRenderingIsRemote(TRUE);
-    bool pass = (action.getRenderingIsRemote() == TRUE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setRenderingIsRemote(TRUE) failed";
+    EXPECT_TRUE((action.getRenderingIsRemote() == TRUE)) << "SoGLRenderAction setRenderingIsRemote(TRUE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -271,8 +253,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetSortedLayersNumPassesRoundTrip)
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setSortedLayersNumPasses(8);
-    bool pass = (action.getSortedLayersNumPasses() == 8);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setSortedLayersNumPasses round-trip failed";
+    EXPECT_TRUE((action.getSortedLayersNumPasses() == 8)) << "SoGLRenderAction setSortedLayersNumPasses round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -283,8 +264,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionIsRenderingDelayedPathsDefaultsToFAL
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.isRenderingDelayedPaths() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction isRenderingDelayedPaths should default to FALSE";
+    EXPECT_TRUE((action.isRenderingDelayedPaths() == FALSE)) << "SoGLRenderAction isRenderingDelayedPaths should default to FALSE";
 }
 
 // -----------------------------------------------------------------------
@@ -296,8 +276,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetDelayedObjDepthWriteFALSERoundTri
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setDelayedObjDepthWrite(FALSE);
-    bool pass = (action.getDelayedObjDepthWrite() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setDelayedObjDepthWrite(FALSE) failed";
+    EXPECT_TRUE((action.getDelayedObjDepthWrite() == FALSE)) << "SoGLRenderAction setDelayedObjDepthWrite(FALSE) failed";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionSetDelayedObjDepthWriteTRUERoundTrip)
@@ -305,8 +284,7 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetDelayedObjDepthWriteTRUERoundTrip
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
     action.setDelayedObjDepthWrite(TRUE);
-    bool pass = (action.getDelayedObjDepthWrite() == TRUE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setDelayedObjDepthWrite(TRUE) failed";
+    EXPECT_TRUE((action.getDelayedObjDepthWrite() == TRUE)) << "SoGLRenderAction setDelayedObjDepthWrite(TRUE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -317,16 +295,14 @@ TEST(ActionsGlrenderAction, SoGLRenderActionIsRenderingTranspPathsDefaultsToFALS
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.isRenderingTranspPaths() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction isRenderingTranspPaths should default to FALSE";
+    EXPECT_TRUE((action.isRenderingTranspPaths() == FALSE)) << "SoGLRenderAction isRenderingTranspPaths should default to FALSE";
 }
 
 TEST(ActionsGlrenderAction, SoGLRenderActionIsRenderingTranspBackfacesDefaultsToFALSE)
 {
     const SbViewportRegion vp(512, 384);
     SoGLRenderAction action(vp);
-    bool pass = (action.isRenderingTranspBackfaces() == FALSE);
-    EXPECT_TRUE(pass) << "SoGLRenderAction isRenderingTranspBackfaces should default to FALSE";
+    EXPECT_TRUE((action.isRenderingTranspBackfaces() == FALSE)) << "SoGLRenderAction isRenderingTranspBackfaces should default to FALSE";
 }
 
 // -----------------------------------------------------------------------
@@ -342,11 +318,10 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetUpdateAreaGetUpdateAreaRoundTrip)
     action.setUpdateArea(origin, size);
     SbVec2f gotOrigin, gotSize;
     action.getUpdateArea(gotOrigin, gotSize);
-    bool pass = (std::fabs(gotOrigin[0] - 0.1f) < 1e-5f) &&
+    EXPECT_TRUE((std::fabs(gotOrigin[0] - 0.1f) < 1e-5f) &&
                 (std::fabs(gotOrigin[1] - 0.2f) < 1e-5f) &&
                 (std::fabs(gotSize[0]   - 0.5f) < 1e-5f) &&
-                (std::fabs(gotSize[1]   - 0.6f) < 1e-5f);
-    EXPECT_TRUE(pass) << "SoGLRenderAction setUpdateArea/getUpdateArea round-trip failed";
+                (std::fabs(gotSize[1]   - 0.6f) < 1e-5f)) << "SoGLRenderAction setUpdateArea/getUpdateArea round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -356,6 +331,5 @@ TEST(ActionsGlrenderAction, SoGLRenderActionSetUpdateAreaGetUpdateAreaRoundTrip)
 TEST(ActionsGlrenderAction, SoGLRenderActionGetClassTypeIdIsNotBadType)
 {
     const SbViewportRegion vp(512, 384);
-    bool pass = (SoGLRenderAction::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoGLRenderAction class type should be registered";
+    EXPECT_TRUE((SoGLRenderAction::getClassTypeId() != SoType::badType())) << "SoGLRenderAction class type should be registered";
 }

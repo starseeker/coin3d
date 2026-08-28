@@ -8,7 +8,7 @@
 #include <Inventor/SbViewportRegion.h>
 #include <cstdio>
 
-static int runScenario(const char *outputStem) {
+static int renderDirectShadowContract(const char *outputStem) {
     (void)outputStem;
     initCoinHeadless();
     printf("Init OK\n");
@@ -55,7 +55,7 @@ static int runScenario(const char *outputStem) {
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, test_shadow_direct) {
+TEST(DirectShadowRenderTest, SceneRenders) {
     const std::string outputStem = ObolTest::renderingOutputStem("test_shadow_direct");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+    EXPECT_EQ(renderDirectShadowContract(outputStem.c_str()), 0);
 }

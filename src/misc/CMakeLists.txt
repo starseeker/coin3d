@@ -36,26 +36,6 @@ set(OBOL_MISC_FILES
 	SoSceneCollector.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_MISC_INTERNAL_FILES
-	SbHash.h
-	SoBaseP.h
-	SoBaseP.cpp
-	SoCompactPathList.h
-	SoCompactPathList.cpp
-	SoConfigSettings.h
-	SoConfigSettings.cpp
-	SoDBP.h
-	SoDBP.cpp
-	SoGenerate.h
-	SoGenerate.cpp
-	SoPick.h
-	SoPick.cpp
-	SoSceneManagerP.h
-	SoSceneManagerP.cpp
-	SoShaderGenerator.h
-	SoShaderGenerator.cpp
-)
 
 set(_obol_misc_sources ${OBOL_MISC_FILES})
 if(OBOL_USE_SWRAST)
@@ -70,11 +50,3 @@ if(OBOL_USE_SWRAST)
 endif()
 list(APPEND _obol_misc_sources CoinTidbits.cpp)
 obol_add_source_module(misc ${_obol_misc_sources})
-
-# define documentation
-foreach(SRCFILE ${OBOL_MISC_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/misc/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_MISC_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/misc/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

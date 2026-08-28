@@ -67,12 +67,17 @@
 // FIXME: change standard markers to use GL_UNPACK_ALIGNMENT 1, instead of 4, as it is now... skei 200009005
 
 #include <Inventor/nodes/SoMarkerSet.h>
+
+#include <mutex>
+#include <shared_mutex>
+#include <vector>
 #include "glue/glp.h"
 
 #include <cmath>
 #include <cstring>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SoPrimitiveVertex.h>
@@ -145,11 +150,13 @@ typedef struct {
 
 static SbList <so_marker> * markerlist;
 static GLubyte * markerimages;
+static std::shared_mutex markerlist_mutex;
 static void convert_bitmaps(void);
 // -----------------------------------------------------------------------
 static void
 free_marker_images(void)
 {
+  const std::unique_lock<std::shared_mutex> lock(markerlist_mutex);
   delete[] markerimages;
   if (markerlist->getLength() > SoMarkerSet::NUM_MARKERS) {
     // markers have been added.. free marker->data
@@ -1134,6 +1141,7 @@ convert_bitmaps(void)
 void
 SoMarkerSet::GLRender(SoGLRenderAction * action)
 {
+  const std::shared_lock<std::shared_mutex> markerlock(markerlist_mutex);
   // FIXME: the marker bitmaps are toggled off when the leftmost pixel
   // is outside the left border, and ditto for the bottommost pixel
   // versus the bottom border. They should be drawn partially until they
@@ -1210,12 +1218,11 @@ SoMarkerSet::GLRender(SoGLRenderAction * action)
     int midx = SbMin(i, this->markerIndex.getNum() - 1);
 #if OBOL_DEBUG
       if (midx < 0 || (this->markerIndex[midx] >= markerlist->getLength())) {
-        static SbBool firsterror = TRUE;
-        if (firsterror) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoMarkerSet::GLRender",
                                     "markerIndex %d out of bound",
                                     markerIndex[i]);
-          firsterror = FALSE;
         }
         // Don't render, jump back to top of for-loop and continue with
         // next index.
@@ -1316,6 +1323,7 @@ SoMarkerSet::getPrimitiveCount(SoGetPrimitiveCountAction * action)
 int
 SoMarkerSet::getNumDefinedMarkers(void)
 {
+  const std::shared_lock<std::shared_mutex> lock(markerlist_mutex);
   return markerlist->getLength();
 }
 
@@ -1428,6 +1436,8 @@ SoMarkerSet::addMarker(int idx, const SbVec2s & size,
 {
   if (idx == NONE) return;
 
+  const std::unique_lock<std::shared_mutex> lock(markerlist_mutex);
+
   SbBool appendnew = idx >= markerlist->getLength() ? TRUE : FALSE;
   so_marker tempmarker;
   so_marker * temp = &tempmarker;
@@ -1468,13 +1478,24 @@ SbBool
 SoMarkerSet::getMarker(int idx, SbVec2s & size,
                        const unsigned char *& bytes, SbBool & isLSBFirst)
 {
+  static thread_local std::vector<unsigned char> snapshot;
+  const std::shared_lock<std::shared_mutex> lock(markerlist_mutex);
   // FIXME: handle isLSBFirst. skei 20000905
   if (idx == NONE ||
       idx >= markerlist->getLength()) return FALSE;
   so_marker * temp = &(*markerlist)[idx];
   size[0] = temp->width;
   size[1] = temp->height;
-  bytes = temp->data;
+  const size_t datasize = static_cast<size_t>((temp->width + 7) / 8) *
+    static_cast<size_t>(temp->height);
+  if (datasize == 0 || temp->data == nullptr) {
+    snapshot.clear();
+    bytes = nullptr;
+  }
+  else {
+    snapshot.assign(temp->data, temp->data + datasize);
+    bytes = snapshot.data();
+  }
   isLSBFirst = FALSE;
   return TRUE;
 }
@@ -1489,6 +1510,7 @@ SoMarkerSet::getMarker(int idx, SbVec2s & size,
 SbBool
 SoMarkerSet::removeMarker(int idx)
 {
+  const std::unique_lock<std::shared_mutex> lock(markerlist_mutex);
   if (idx == NONE ||
       idx >= markerlist->getLength()) return FALSE;
   so_marker * tmp = &(*markerlist)[idx];
@@ -1496,5 +1518,3 @@ SoMarkerSet::removeMarker(int idx)
   markerlist->remove(idx);
   return TRUE;
 }
-
-

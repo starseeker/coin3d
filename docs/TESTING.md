@@ -21,10 +21,19 @@ ctest --test-dir .build -L integration --output-on-failure
 ctest --test-dir .build -L render --output-on-failure
 ```
 
-The modern suite uses GTest's CTest discovery.  A test process receives an
-explicit `SoDB::ContextManager`; non-rendering tests use a no-op manager and
-render fixtures select either OSMesa or native GLX through their CTest lane.
+The modern suite registers one shuffled CTest invocation per GTest executable.
+Ordinary cases share a process, exposing order dependencies while avoiding
+thousands of process startups. The shuffle seed is fixed locally for
+reproducibility; CI repeats the unit executable with time-derived seeds.
+Lifecycle and irreversible type-capacity contracts remain in dedicated
+executables. A test process receives an explicit `SoDB::ContextManager`;
+non-rendering tests use a no-op manager and render fixtures select either
+OSMesa or native GLX through their CTest lane.
 Tests must not change the global rendering backend as part of ordinary setup.
+Test configuration prefers an installed GoogleTest 1.10 or newer and falls
+back to the pinned `external/googletest` submodule. Recursive repository
+checkouts already populate it; otherwise run
+`git submodule update --init external/googletest`.
 
 Stress and sanitizer-oriented checks are built explicitly, so a normal CTest
 run stays fast and repeatable:
@@ -38,10 +47,10 @@ ctest --test-dir .build-stress -L stress --output-on-failure
 
 ## Adding a test
 
-Put a new test in the smallest appropriate layer and add its source to
-`tests/framework/CMakeLists.txt`.  Use standard GTest `TEST` or `TEST_F`
-cases.  Do not add new `REGISTER_TEST` entries, standalone `main()` functions,
-or CMake-generated main wrappers.
+Put a new test in the smallest appropriate layer and add its source to the
+matching manifest under `tests/framework/cmake/`. Use standard GTest `TEST`
+or `TEST_F` cases. Do not add new `REGISTER_TEST` entries, standalone `main()`
+functions, or CMake-generated main wrappers.
 
 Rendering tests first assert a semantic contract: render succeeded,
 the image has expected dimensions, known pixels/regions are present, or a
@@ -70,8 +79,8 @@ materials, transforms, and offscreen-rendering wrappers are now fixture-backed
 OSMesa feature contracts; their viewer scenes live only in
 `examples/demo_scenes`.
 
-The former standalone rendering sources now register one independently
-discoverable GTest scenario per source in each enabled backend target. Their
+The former standalone rendering sources now register ordinary filterable GTest
+scenarios in each enabled backend target. Their
 scene construction, rendering, picking, interaction, and pixel contracts
 remain covered. They call scenario code directly and use build-local output
 stems only for optional diagnostic images; there is no command-line or

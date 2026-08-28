@@ -108,7 +108,7 @@ private:
   };
 
 public:
-  SoProfilerStatsP(void) : master(NULL) {
+  SoProfilerStatsP(void) : master(NULL), clear_state(FALSE) {
   }
   ~SoProfilerStatsP(void) { }
 
@@ -126,6 +126,7 @@ public:
   SoProfilerStats * master;
 
   SbHash<int16_t, SbTime> action_timings;
+  SbBool clear_state;
 }; // SoProfilerStatsP
 
 void
@@ -134,10 +135,9 @@ SoProfilerStatsP::doAction(SoAction * action)
   // every SoGLRenderAction traversal will set a flag that causes
   // the profiling data to be cleared at the next traversal, regardless of
   // type
-  static SbBool clear_state = FALSE;
-  if (clear_state) {
+  if (this->clear_state) {
     this->clearProfilingData();
-    clear_state = FALSE;
+    this->clear_state = FALSE;
   }
 
   this->action_timings.put(SoGLRenderAction::getClassTypeId().getKey(),
@@ -170,7 +170,7 @@ SoProfilerStatsP::doAction(SoAction * action)
     updateActionTimingFields(e);
     PUBLIC(this)->profilingUpdate.touch();
 
-    clear_state = TRUE;
+    this->clear_state = TRUE;
   }
 } // doAction
 

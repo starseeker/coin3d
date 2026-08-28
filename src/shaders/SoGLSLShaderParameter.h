@@ -86,7 +86,7 @@ private:
   GLsizei cacheSize;
   GLenum cacheType;
   SbBool isActive;
-  int32_t programid;
+  uint64_t programid;
 
   SbBool isEqual(GLenum type1, GLenum type2);
   SbBool isValid(const SoGLShaderObject * shader, const char * name,

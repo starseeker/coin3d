@@ -50,6 +50,7 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include "elements/SoVertexAttributeData.h"
 #include "shaders/SoGLShaderProgram.h"
 #include "misc/SbHash.h"
@@ -119,11 +120,10 @@ static void send_attribs(const Key & OBOL_UNUSED_ARG(key),
 
 #if OBOL_DEBUG
   if (dataindex >= data->data->getNum()) {
-    static SbBool first = TRUE;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::post("SoGLVertexAttributeElement::send",
                          "attribute index out of bounds.");
-      first = FALSE;
     }
   }
 #endif

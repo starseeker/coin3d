@@ -99,6 +99,7 @@
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoVBO.h"
 #include "rendering/SoGL.h"
+#include "misc/SoOnce.h"
 
 // *************************************************************************
 
@@ -326,8 +327,8 @@ namespace { namespace SoGL { namespace FaceSet {
       n = *ptr++;
 
       if (n < 3 || idx + n > numcoords) {
-        static uint32_t current_errors = 0;
-        if (current_errors < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("[nonindexedfaceset]::GLRender", "Erroneous "
                                     "number of coordinates specified: %d. Must "
                                     "be >= 3 and less than or equal to the number of "
@@ -335,8 +336,6 @@ namespace { namespace SoGL { namespace FaceSet {
                                     "rendering. This message will be shown only once, "
                                     "but more errors might be present", n, numcoords - idx);
         }
-
-        current_errors++;
         break;
       }
 
@@ -539,15 +538,13 @@ SoFaceSet::GLRender(SoGLRenderAction * action)
     // Robustness test to see if the startindex is valid.  If it is
     // not, print error message and exit.
     if (idx < 0) {
-      static uint32_t current_errors = 0;
-      if (current_errors < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoFaceSet::GLRender", "startIndex == %d "
                                   "< 0, which is erroneous. This message will only "
                                   "be printed once, but more errors might be present",
                                   idx);
       }
-      current_errors++;
-
       // Unlock resource if needed
       if (nc) {
         this->readUnlockNormalCache();
@@ -672,15 +669,13 @@ SoFaceSet::generateDefaultNormals(SoState * state, SoNormalCache * nc)
   // Robustness test to see if the startindex is valid.  If it is
   // not, print error message and return FALSE.
   if (idx < 0) {
-    static uint32_t current_errors = 0;
-    if (current_errors < 1) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoFaceSet::generateDefaultNormals", "startIndex == %d "
                                 "< 0, which is erroneous. This message will only "
                                 "be printed once, but more errors might be present",
                                 idx);
     }
-    current_errors++;
-
     // Unable to generate normals for illegal faceset
     return FALSE;
   }
@@ -1025,8 +1020,7 @@ SoFaceSet::useConvexCache(SoAction * action)
     nbind = SoConvexDataCache::NONE;
   }
   if (nbind == SoConvexDataCache::NONE && normals == NULL) {
-    static SbVec3f dummynormal;
-    dummynormal.setValue(0.0f, 0.0f, 1.0f);
+    static const SbVec3f dummynormal(0.0f, 0.0f, 1.0f);
     normals = &dummynormal;
   }
 

@@ -81,22 +81,6 @@ set(OBOL_ELEMENTS_FILES
 	SoVertexAttributeElement.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_ELEMENTS_INTERNAL_FILES
-	SoTextureScalePolicyElement.h
-	SoTextureScalePolicyElement.cpp
-	SoTextureScaleQualityElement.h
-	SoTextureScaleQualityElement.cpp
-	SoVertexAttributeData.h
-)
 
 # build module object library
 obol_add_source_module(elements ${OBOL_ELEMENTS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_ELEMENTS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/elements/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_ELEMENTS_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/elements/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

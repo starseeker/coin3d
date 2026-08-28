@@ -91,7 +91,7 @@ bool runArbShaderParameterScenario()
 
 } // namespace
 
-TEST(RenderingScenarios, arb_shader_parameter_ranges)
+TEST(ArbShaderParameters, parameter_ranges)
 {
     EXPECT_TRUE(runArbShaderParameterScenario());
 }

@@ -81,7 +81,7 @@ static void reportShadowContrast(const unsigned char *buf)
                "(GLSL shadow maps may not be active on this driver)\n");
 }
 
-static int runScenario(const char *outputStem)
+static int renderAdvancedShadowContract(const char *outputStem)
 {
     initCoinHeadless();
 
@@ -122,7 +122,7 @@ static int runScenario(const char *outputStem)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_shadow_advanced) {
+TEST(AdvancedShadowRenderTest, SceneRenders) {
     const std::string outputStem = ObolTest::renderingOutputStem("render_shadow_advanced");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+    EXPECT_EQ(renderAdvancedShadowContract(outputStem.c_str()), 0);
 }

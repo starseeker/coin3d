@@ -237,32 +237,13 @@ static bool test8_stringToFloat()
 /* -------------------------------------------------------------------------
  * main
  * ----------------------------------------------------------------------- */
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath =
-        (outputStem != nullptr) ? outputStem : "render_field_connections";
-
-    printf("\n=== SoField multi-connection API tests ===\n");
-
-    int failures = 0;
-    if (!test1_getConnectedEngine())        { printf("FAIL test1\n"); ++failures; }
-    if (!test2_getConnections())            { printf("FAIL test2\n"); ++failures; }
-    if (!test3_forwardConnections())        { printf("FAIL test3\n"); ++failures; }
-    if (!test4_fanOut())                    { printf("FAIL test4\n"); ++failures; }
-    if (!test5_disconnectField())           { printf("FAIL test5\n"); ++failures; }
-    if (!test6_disconnectEngine())          { printf("FAIL test6\n"); ++failures; }
-    if (!test7_renderEngineScene(basepath)) { printf("FAIL test7\n"); ++failures; }
-    if (!test8_stringToFloat())             { printf("FAIL test8\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_field_connections) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_field_connections");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, ConnectedEngine, "field_connected_engine", test1_getConnectedEngine())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, Connections, "field_connections", test2_getConnections())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, ForwardConnections, "field_forward", test3_forwardConnections())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, Fanout, "field_fanout", test4_fanOut())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, DisconnectField, "field_disconnect_field", test5_disconnectField())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, DisconnectEngine, "field_disconnect_engine", test6_disconnectEngine())
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, EngineSceneRenders, "field_render", test7_renderEngineScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(FieldConnectionRenderTest, StringToFloat, "field_string_float", test8_stringToFloat())

@@ -54,9 +54,8 @@ using namespace ObolTest;
 TEST(CachesSuite, SoBoundingBoxCacheConstructWithNullState)
 {
     SoBoundingBoxCache * cache = new SoBoundingBoxCache(nullptr);
-    bool pass = (cache != nullptr);
+    EXPECT_TRUE((cache != nullptr));
     delete cache;
-    EXPECT_TRUE(pass);
 }
 
 TEST(CachesSuite, SoBoundingBoxCacheSetAndGetBoxIsNonEmpty)
@@ -67,9 +66,8 @@ TEST(CachesSuite, SoBoundingBoxCacheSetAndGetBoxIsNonEmpty)
     SbXfBox3f xb(inner);
     cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
 
-    bool pass = !cache->getBox().isEmpty();
+    EXPECT_TRUE(!cache->getBox().isEmpty()) << "SoBoundingBoxCache: getBox should not be empty after set()";
     delete cache;
-    EXPECT_TRUE(pass) << "SoBoundingBoxCache: getBox should not be empty after set()";
 }
 
 TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsFALSEWhenNotSet)
@@ -80,9 +78,8 @@ TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsFALSEWhenNotSet)
     SbXfBox3f xb(inner);
     cache->set(xb, FALSE, SbVec3f(0.0f, 0.0f, 0.0f));
 
-    bool pass = (cache->isCenterSet() == FALSE);
+    EXPECT_TRUE((cache->isCenterSet() == FALSE)) << "SoBoundingBoxCache: isCenterSet should be FALSE";
     delete cache;
-    EXPECT_TRUE(pass) << "SoBoundingBoxCache: isCenterSet should be FALSE";
 }
 
 TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsTRUEWhenSet)
@@ -93,9 +90,8 @@ TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsTRUEWhenSet)
     SbXfBox3f xb(inner);
     cache->set(xb, TRUE, SbVec3f(0.5f, 0.5f, 0.5f));
 
-    bool pass = (cache->isCenterSet() == TRUE);
+    EXPECT_TRUE((cache->isCenterSet() == TRUE)) << "SoBoundingBoxCache: isCenterSet should be TRUE when center was set";
     delete cache;
-    EXPECT_TRUE(pass) << "SoBoundingBoxCache: isCenterSet should be TRUE when center was set";
 }
 
 // -----------------------------------------------------------------------
@@ -105,9 +101,8 @@ TEST(CachesSuite, SoBoundingBoxCacheIsCenterSetReturnsTRUEWhenSet)
 TEST(CachesSuite, SoNormalCacheConstructWithNullState)
 {
     SoNormalCache * cache = new SoNormalCache(nullptr);
-    bool pass = (cache != nullptr);
+    EXPECT_TRUE((cache != nullptr));
     delete cache;
-    EXPECT_TRUE(pass);
 }
 
 TEST(CachesSuite, SoNormalCacheSet3NormalsGetNum3)
@@ -120,9 +115,8 @@ TEST(CachesSuite, SoNormalCacheSet3NormalsGetNum3)
     };
     cache->set(3, normals);
 
-    bool pass = (cache->getNum() == 3);
+    EXPECT_TRUE((cache->getNum() == 3)) << "SoNormalCache: getNum() should be 3 after set(3, ...)";
     delete cache;
-    EXPECT_TRUE(pass) << "SoNormalCache: getNum() should be 3 after set(3, ...)";
 }
 
 TEST(CachesSuite, SoNormalCacheGetNormals0MatchesWhatWasSet)
@@ -136,10 +130,9 @@ TEST(CachesSuite, SoNormalCacheGetNormals0MatchesWhatWasSet)
     cache->set(3, normals);
 
     const SbVec3f * got = cache->getNormals();
-    bool pass = (got != nullptr) &&
-                (got[0] == SbVec3f(1.0f, 0.0f, 0.0f));
+    EXPECT_TRUE((got != nullptr) &&
+                (got[0] == SbVec3f(1.0f, 0.0f, 0.0f))) << "SoNormalCache: getNormals()[0] should match (1,0,0)";
     delete cache;
-    EXPECT_TRUE(pass) << "SoNormalCache: getNormals()[0] should match (1,0,0)";
 }
 
 // -----------------------------------------------------------------------
@@ -149,7 +142,6 @@ TEST(CachesSuite, SoNormalCacheGetNormals0MatchesWhatWasSet)
 TEST(CachesSuite, SoConvexDataCacheCanConstructWithNullState)
 {
     SoConvexDataCache * cache = new SoConvexDataCache(nullptr);
-    bool pass = (cache != nullptr);
+    EXPECT_TRUE((cache != nullptr)) << "SoConvexDataCache: failed to construct";
     delete cache;
-    EXPECT_TRUE(pass) << "SoConvexDataCache: failed to construct";
 }

@@ -355,45 +355,11 @@ static bool test5_fullPath()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_path_operations";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createPathOperations(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoPath operations in interaction context ===\n");
-
-    if (!test1_copyPickPath())  ++failures;
-    if (!test2_containsNode())  ++failures;
-    if (!test3_popOnCopy())     ++failures;
-    if (!test4_independentPaths()) ++failures;
-    if (!test5_fullPath())      ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_path_operations) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_path_operations");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(PathOperationRenderTest, CopyPickPath, "path_copy_pick", test1_copyPickPath())
+OBOL_RENDER_TEST_CASE(PathOperationRenderTest, ContainsNode, "path_contains", test2_containsNode())
+OBOL_RENDER_TEST_CASE(PathOperationRenderTest, PopOnCopy, "path_pop", test3_popOnCopy())
+OBOL_RENDER_TEST_CASE(PathOperationRenderTest, IndependentPaths, "path_independent", test4_independentPaths())
+OBOL_RENDER_TEST_CASE(PathOperationRenderTest, FullPath, "path_full", test5_fullPath())

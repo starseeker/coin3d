@@ -374,24 +374,10 @@ SoMField::set1(const int index, const char * const valuestring)
   return TRUE;
 }
 
-static void * mfield_buffer = NULL;
-static size_t mfield_buffer_size = 0;
-
-static void
-mfield_buffer_cleanup(void)
-{
-  free(mfield_buffer);
-  mfield_buffer = NULL;
-  mfield_buffer_size = 0;
-}
-
 static void *
-mfield_buffer_realloc(void * bufptr, size_t size)
+mfield_string_realloc(void * bufptr, size_t size)
 {
-  void * newbuf = realloc(bufptr, size);
-  mfield_buffer = newbuf;
-  mfield_buffer_size = size;
-  return newbuf;
+  return std::realloc(bufptr, size);
 }
 
 /*!
@@ -403,27 +389,22 @@ SoMField::get1(const int index, SbString & valuestring) const
   // Note: this code has an almost verbatim copy in SoField::get(), so
   // remember to update both places if any fixes are done.
 
-  // Initial buffer setup.
+  // Use call-local storage.  get1() may be called concurrently for independent
+  // fields after library initialization.
   SoOutput out;
   const size_t STARTSIZE = 32;
-  // if buffer grow bigger than 1024 bytes, free memory
-  // at end of method. Otherwise, just keep using the allocated
-  // memory the next time this method is called.
-  const size_t MAXSIZE = 1024;
-
-  if (mfield_buffer_size < STARTSIZE) {
-    mfield_buffer = malloc(STARTSIZE);
-    mfield_buffer_size = STARTSIZE;
-    coin_atexit(mfield_buffer_cleanup, CC_ATEXIT_NORMAL);
+  void * initialbuffer = std::malloc(STARTSIZE);
+  if (initialbuffer == NULL) {
+    valuestring = "";
+    SoDebugError::post("SoMField::get1", "Unable to allocate serialization buffer");
+    return;
   }
-
-  out.setBuffer(mfield_buffer, mfield_buffer_size,
-                mfield_buffer_realloc);
+  out.setBuffer(initialbuffer, STARTSIZE, mfield_string_realloc);
 
   // Record offset to skip header.
   out.write("");
   size_t offset;
-  void * buffer;
+  void * buffer = NULL;
   out.getBuffer(buffer, offset);
 
   // Write field..
@@ -437,11 +418,7 @@ SoMField::get1(const int index, SbString & valuestring) const
   out.getBuffer(buffer, size);
   valuestring = static_cast<char *>(buffer) + offset;
 
-  // check if buffer grew too big
-  if (mfield_buffer_size >= MAXSIZE) {
-    // go back to startsize
-    (void) mfield_buffer_realloc(mfield_buffer, STARTSIZE);
-  }
+  std::free(buffer);
 }
 
 /*!

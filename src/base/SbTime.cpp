@@ -64,6 +64,7 @@
 #endif // HAVE_WINDOWS_H
 
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include "CoinTidbits.h"
 #include "misc/CoinUtilities.h"
 #include <thread>
@@ -319,12 +320,11 @@ SbTime::getMsecValue(void) const
   // Check for overflow in the double->ulong cast at return.
   if (d > static_cast<double>(ULONG_MAX)) {
 #if OBOL_DEBUG
-    static SbBool first = TRUE;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SbTime::getMsecValue",
                                 "timer overflow -- consider using "
                                 "SbTime::getValue() instead");
-      first = FALSE;
     }
 #endif // OBOL_DEBUG
 

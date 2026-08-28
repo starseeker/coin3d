@@ -290,18 +290,25 @@ static bool test7_filetypeInfo(const char * /*basepath*/)
     int numTypes = ren.getNumWriteFiletypes();
     printf("  test7: numWriteFiletypes=%d\n", numTypes);
 
+    bool valid = numTypes > 0;
     for (int i = 0; i < numTypes; ++i) {
         SbPList exts;
         SbString fullname;
         SbString comment;
         ren.getWriteFiletypeInfo(i, exts, fullname, comment);
         printf("  test7: type[%d] '%s'\n", i, fullname.getString());
+        valid = valid && fullname.getLength() > 0 && exts.getLength() > 0;
+        for (int extension = 0; extension < exts.getLength(); ++extension) {
+            const char * value = static_cast<const char *>(exts[extension]);
+            valid = valid && value != nullptr && value[0] != '\0' &&
+                ren.isWriteSupported(SbName(value));
+        }
     }
 
-    // RGB format should always be supported
+    // SGI RGB is provided by writeToRGB(), not by the image-format registry.
     SbBool rgbOk = ren.isWriteSupported(SbName("rgb"));
     printf("  test7: isWriteSupported('rgb')=%d\n", (int)rgbOk);
-    return true;
+    return valid && rgbOk == FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -334,49 +341,29 @@ static bool test8_multipleRenders(const char *basepath)
     return ok;
 }
 
-// ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_offscreen_advanced";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createOffscreenAdvanced(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoOffscreenRenderer advanced tests ===\n");
-
-    if (!test1_components(basepath))      { printf("FAIL test1\n"); ++failures; }
-    if (!test2_backgroundColor(basepath)) { printf("FAIL test2\n"); ++failures; }
-    if (!test3_glRenderAction(basepath))  { printf("FAIL test3\n"); ++failures; }
-    if (!test4_renderPath(basepath))      { printf("FAIL test4\n"); ++failures; }
-    if (!test5_writeToRGB(basepath))      { printf("FAIL test5\n"); ++failures; }
-    if (!test6_instanceQueries(basepath))   { printf("FAIL test6\n"); ++failures; }
-    if (!test7_filetypeInfo(basepath))    { printf("FAIL test7\n"); ++failures; }
-    if (!test8_multipleRenders(basepath)) { printf("FAIL test8\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_offscreen_advanced) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_offscreen_advanced");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+class OffscreenAdvancedTest : public ::testing::Test {
+protected:
+    void SetUp() override { initCoinHeadless(); }
+    std::string output(const char * name) const {
+        return ObolTest::renderingOutputStem(name);
+    }
+};
+
+TEST_F(OffscreenAdvancedTest, ComponentModesRender)
+{ const auto stem = output("offscreen_components"); EXPECT_TRUE(test1_components(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, BackgroundColorIsApplied)
+{ const auto stem = output("offscreen_background"); EXPECT_TRUE(test2_backgroundColor(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, CustomRenderActionWorks)
+{ const auto stem = output("offscreen_action"); EXPECT_TRUE(test3_glRenderAction(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, PathRenderingWorks)
+{ const auto stem = output("offscreen_path"); EXPECT_TRUE(test4_renderPath(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, RgbFileWritingWorks)
+{ const auto stem = output("offscreen_write_rgb"); EXPECT_TRUE(test5_writeToRGB(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, ContextQueriesHaveValidContracts)
+{ const auto stem = output("offscreen_queries"); EXPECT_TRUE(test6_instanceQueries(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, FiletypeMetadataIsComplete)
+{ const auto stem = output("offscreen_filetypes"); EXPECT_TRUE(test7_filetypeInfo(stem.c_str())); }
+TEST_F(OffscreenAdvancedTest, SequentialViewportSizesRender)
+{ const auto stem = output("offscreen_sizes"); EXPECT_TRUE(test8_multipleRenders(stem.c_str())); }

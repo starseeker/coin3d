@@ -14,23 +14,6 @@ set(OBOL_THREADS_FILES
 	thread.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_THREADS_INTERNAL_FILES
-	storagep.h
-	storage_cxx17.h
-	recmutexp.h
-	recmutex_global_cxx17.h
-	mutexp.h
-	condvarp.h
-)
 
 # build module object library
 obol_add_source_module(threads ${OBOL_THREADS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_THREADS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/threads/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_THREADS_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/threads/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

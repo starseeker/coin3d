@@ -140,6 +140,7 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "caches/SoGlyphCache.h"
+#include "misc/SoOnce.h"
 
 // The "lean and mean" define is a workaround for a Cygwin bug: when
 // windows.h is included _after_ one of the X11 or GLX headers above
@@ -556,12 +557,11 @@ SoText2::GLRender(SoGLRenderAction * action)
                 }
               }
             } else {
-              static SbBool once = TRUE;
-              if (once) {
+              static SoOnceFlag warning;
+              if (warning.first()) {
                 SoDebugError::post("SoText2::GLRender",
                                    "Unable to copy glyph to memory buffer. Position [%d,%d], size [%d,%d], buffer size [%d,%d]",
                                    memx, memy, bitmapsize[0], bitmapsize[1], bbsize[0], bbsize[1]);
-                once = FALSE;
               }
             }
           }

@@ -312,50 +312,16 @@ static bool test10_stringToFloat()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_engine_converter";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createEngineConverter(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoConvertAll / field conversion engine tests ===\n");
-
-    if (!test1_floatToInt())               { printf("FAIL test1\n"); ++failures; }
-    if (!test2_colorToVec3f())             { printf("FAIL test2\n"); ++failures; }
-    if (!test3_floatToString())            { printf("FAIL test3\n"); ++failures; }
-    if (!test4_matrixToRotation())         { printf("FAIL test4\n"); ++failures; }
-    if (!test5_rotationToMatrix())         { printf("FAIL test5\n"); ++failures; }
-    if (!test6_mfFloatToSfFloat())         { printf("FAIL test6\n"); ++failures; }
-    if (!test7_sfFloatToMfFloat())         { printf("FAIL test7\n"); ++failures; }
-    if (!test8_timeToFloat())              { printf("FAIL test8\n"); ++failures; }
-    if (!test9_renderConversion(basepath)) { printf("FAIL test9\n"); ++failures; }
-    if (!test10_stringToFloat())           { printf("FAIL test10\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_engine_converter) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_engine_converter");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, FloatToInt, "converter_float_int", test1_floatToInt())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, ColorToVector, "converter_color_vec", test2_colorToVec3f())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, FloatToString, "converter_float_string", test3_floatToString())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, MatrixToRotation, "converter_matrix_rotation", test4_matrixToRotation())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, RotationToMatrix, "converter_rotation_matrix", test5_rotationToMatrix())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, MultiFloatToFloat, "converter_mf_sf", test6_mfFloatToSfFloat())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, FloatToMultiFloat, "converter_sf_mf", test7_sfFloatToMfFloat())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, TimeToFloat, "converter_time_float", test8_timeToFloat())
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, ConvertedValueRenders, "converter_render", test9_renderConversion(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EngineConverterRenderTest, StringToFloat, "converter_string_float", test10_stringToFloat())

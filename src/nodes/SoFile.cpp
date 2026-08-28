@@ -58,6 +58,8 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoFile.h>
+
+#include <atomic>
 #include "config.h"
 
 #include <cstring>
@@ -90,11 +92,11 @@
 class SoFileP {
 public:
   static const char UNDEFINED_FILE[];
-  static SbBool searchok;
+  static std::atomic<SbBool> searchok;
 };
 
 const char SoFileP::UNDEFINED_FILE[] = "<Undefined file>";
-SbBool SoFileP::searchok = FALSE;
+std::atomic<SbBool> SoFileP::searchok{FALSE};
 
 // *************************************************************************
 
@@ -239,11 +241,10 @@ SoFile::readNamedFile(SoInput * in)
 
   this->fullname = in->getCurFileName();
 
-  static int debugreading = -1;
-  if (debugreading == -1) {
+  static const bool debugreading = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOFILE_READ");
-    debugreading = env && (atoi(env) > 0);
-  }
+    return env && (std::atoi(env) > 0);
+  }();
 
   if (debugreading) {
     SoDebugError::postInfo("SoFile::readNamedFile", "(full) name=='%s'",
@@ -285,15 +286,15 @@ SoFile::readNamedFile(SoInput * in)
       // found, so we have to read until the current file on the stack
       // is at the end.  All non-whitespace characters from now on are
       // erroneous.
-      static uint32_t fileerrors_termination = 0;
+      bool reportedterminationerror = false;
       SbString dummy;
       while (!in->eof() && in->read(dummy)) {
-        if (fileerrors_termination < 1) {
+        if (!reportedterminationerror) {
           SoReadError::post(in, "Erroneous character(s) after end of scene graph: \"%s\". "
                             "This message will only be shown once for this file, "
                             "but more errors might be present", dummy.getString());
+          reportedterminationerror = true;
         }
-        fileerrors_termination++;
       }
       assert(in->eof());
     }
@@ -425,7 +426,8 @@ SoFile::search(SoSearchAction * action)
   SoNode::search(action); // always include this node in the search
 
   // only search children if the user has requested it
-  if (SoFileP::searchok) SoFile::doAction((SoAction *)action);
+  if (SoFileP::searchok.load(std::memory_order_acquire))
+    SoFile::doAction((SoAction *)action);
 }
 
 // Doc from superclass.
@@ -453,7 +455,7 @@ SoFile::copyContents(const SoFieldContainer * from, SbBool copyconnections)
 void
 SoFile::setSearchOK(SbBool dosearch)
 {
-  SoFileP::searchok = dosearch;
+  SoFileP::searchok.store(dosearch, std::memory_order_release);
 }
 
 /*!
@@ -462,5 +464,5 @@ SoFile::setSearchOK(SbBool dosearch)
 SbBool
 SoFile::getSearchOK()
 {
-  return SoFileP::searchok;
+  return SoFileP::searchok.load(std::memory_order_acquire);
 }

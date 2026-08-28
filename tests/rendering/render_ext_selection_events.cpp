@@ -497,48 +497,14 @@ static bool test8_lassoFull(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_ext_selection_events";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createExtSelectionEvents(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoExtSelection event-driven tests ===\n");
-
-    if (!test1_rectangleEvents(basepath))  { printf("FAIL: test1\n"); ++failures; }
-    if (!test2_lassoEvents(basepath))      { printf("FAIL: test2\n"); ++failures; }
-    if (!test3_lassoDoubleClick(basepath)) { printf("FAIL: test3\n"); ++failures; }
-    if (!test4_escapeAbort(basepath))      { printf("FAIL: test4\n"); ++failures; }
-    if (!test5_noLasso(basepath))          { printf("FAIL: test5\n"); ++failures; }
-    if (!test6_shiftAndCoords(basepath))   { printf("FAIL: test6\n"); ++failures; }
-    if (!test7_visibleShapes(basepath))    { printf("FAIL: test7\n"); ++failures; }
-    if (!test8_lassoFull(basepath))        { printf("FAIL: test8\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_ext_selection_events) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_ext_selection_events");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, RectangleEvents, "extsel_event_rect", test1_rectangleEvents(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, LassoEvents, "extsel_event_lasso", test2_lassoEvents(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, LassoDoubleClick, "extsel_event_double", test3_lassoDoubleClick(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, EscapeAborts, "extsel_event_escape", test4_escapeAbort(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, DisabledLasso, "extsel_event_disabled", test5_noLasso(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, ShiftCoordinates, "extsel_event_shift", test6_shiftAndCoords(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, VisibleShapes, "extsel_event_visible", test7_visibleShapes(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ExtendedSelectionEventTest, FullLasso, "extsel_event_full", test8_lassoFull(outputStem.c_str()))

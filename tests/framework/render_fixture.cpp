@@ -13,7 +13,8 @@
 #include <cstdio>
 #include <string>
 
-#if defined(OBOL_TEST_HAVE_SYSTEM_GL) && defined(__unix__)
+#if defined(OBOL_TEST_HAVE_SYSTEM_GL) && \
+    (defined(__unix__) || (defined(_WIN32) && defined(OBOL_TEST_WGL)))
 #include "headless_utils.h"
 #endif
 
@@ -43,6 +44,9 @@ RenderFixture::RenderFixture(const int width, const int height,
         });
         manager_ = std::make_unique<GLXContextManager>();
         backend_name_ = "system-gl";
+#elif defined(OBOL_TEST_HAVE_SYSTEM_GL) && defined(_WIN32) && defined(OBOL_TEST_WGL)
+        manager_ = std::make_unique<FLTKContextManager>();
+        backend_name_ = "system-gl";
 #endif
     }
     else {
@@ -51,6 +55,9 @@ RenderFixture::RenderFixture(const int width, const int height,
         backend_name_ = "swrast";
 #elif defined(OBOL_TEST_HAVE_SYSTEM_GL) && defined(__unix__)
         manager_ = std::make_unique<GLXContextManager>();
+        backend_name_ = "system-gl";
+#elif defined(OBOL_TEST_HAVE_SYSTEM_GL) && defined(_WIN32) && defined(OBOL_TEST_WGL)
+        manager_ = std::make_unique<FLTKContextManager>();
         backend_name_ = "system-gl";
 #endif
     }

@@ -284,45 +284,11 @@ static bool test5_pickShapeKit(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_nodekit_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createNodeKitInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== Node-kit interaction tests ===\n");
-
-    if (!test1_shapeKit(basepath))         ++failures;
-    if (!test2_separatorKit(basepath))     ++failures;
-    if (!test3_shapeKitWithManip(basepath)) ++failures;
-    if (!test4_wrapperKit(basepath))       ++failures;
-    if (!test5_pickShapeKit(basepath))     ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_nodekit_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_nodekit_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(NodekitInteractionRenderTest, ShapeKit, "nodekit_shape", test1_shapeKit(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(NodekitInteractionRenderTest, SeparatorKit, "nodekit_separator", test2_separatorKit(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(NodekitInteractionRenderTest, ShapeKitManipulator, "nodekit_manip", test3_shapeKitWithManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(NodekitInteractionRenderTest, WrapperKit, "nodekit_wrapper", test4_wrapperKit(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(NodekitInteractionRenderTest, PickShapeKit, "nodekit_pick", test5_pickShapeKit(outputStem.c_str()))

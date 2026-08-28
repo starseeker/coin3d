@@ -124,32 +124,25 @@ static int dominantChannel(const unsigned char * buf, int npix)
     return dom;
 }
 
-// ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
+static bool renderFactoryScene(const char * basepath)
 {
-    initCoinHeadless();
-
-    const char * basepath = (outputStem != nullptr) ? outputStem : "render_quad_viewport_lod";
     char outpath[1024];
     snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
+    SoSeparator * root = ObolTest::Scenes::createQuadViewportLOD(256, 256);
+    SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool ok = renderer.render(root) &&
+        validateNonBlank(renderer.getBuffer(), 256 * 256, "factory") &&
+        renderer.writeToRGB(outpath);
+    root->unref();
+    return ok;
+}
 
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createQuadViewportLOD(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            fRen.writeToRGB(outpath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-    printf("\n=== SoQuadViewport LOD composite test ===\n");
+static bool renderLodComposite(const char * basepath)
+{
+    char outpath[1024];
+    snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
 
     SoSeparator * geom = buildLODScene();
 
@@ -242,13 +235,8 @@ static int runScenario(const char *outputStem)
            dominants[0], dominants[1], dominants[2], dominants[3]);
 
     // TOP_LEFT (q0) should be green-dominant; BOTTOM_LEFT (q2) red-dominant.
-    if (dominants[0] == 1)
-        printf("  TOP_LEFT: green sphere (high LOD) — PASS\n");
-    else { printf("  TOP_LEFT dominant not green — FAIL\n"); ++failures; }
-
-    if (dominants[2] == 0)
-        printf("  BOTTOM_LEFT: red cone (low LOD) — PASS\n");
-    else { printf("  BOTTOM_LEFT dominant not red — FAIL\n"); ++failures; }
+    ok = ok && dominants[SoQuadViewport::TOP_LEFT] == 1;
+    ok = ok && dominants[SoQuadViewport::BOTTOM_LEFT] == 0;
 
     // ---------------------------------------------------------------------------
     // Write composite (all 4 quads + white border) to SGI RGB file
@@ -256,10 +244,8 @@ static int runScenario(const char *outputStem)
     SbBool written = qv.writeCompositeToRGB(outpath, renderer);
     printf("  writeCompositeToRGB: %s  path=%s\n",
            written ? "OK" : "FAILED", outpath);
-    if (!written) {
-        printf("FAIL writeCompositeToRGB\n");
-        ++failures;
-    } else {
+    ok = ok && written;
+    if (written) {
         // Read back the SGI RGB file and verify border pixels are white.
         // SGI RGB: 512-byte header, planar R/G/B planes, rows bottom-to-top.
         const int planeSz = W * H;
@@ -269,6 +255,7 @@ static int runScenario(const char *outputStem)
             unsigned char * planes = new unsigned char[planeSz * 3];
             bool readOk = (fread(planes, 1, planeSz * 3, fp) == (size_t)(planeSz * 3));
             fclose(fp);
+            ok = ok && readOk;
 
             if (readOk) {
                 // Check horizontal border: row y=H/2, column x=W/4
@@ -290,23 +277,24 @@ static int runScenario(const char *outputStem)
                 printf("  V-border (x=%d,y=%d) RGB=(%d,%d,%d) white=%d\n",
                        vCol, vRow, vR, vG, vB, (int)vWhite);
 
-                if (!hWhite) { printf("FAIL H-border not white\n"); ++failures; }
-                if (!vWhite) { printf("FAIL V-border not white\n"); ++failures; }
+                ok = ok && hWhite && vWhite;
             }
             delete[] planes;
+        }
+        else {
+            ok = false;
         }
     }
 
     delete renderer;
     geom->unref();
 
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
+    return ok;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_quad_viewport_lod) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_quad_viewport_lod");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(QuadViewportLodRenderTest, FactorySceneRenders,
+    "quad_viewport_lod_factory", renderFactoryScene(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadViewportLodRenderTest, CompositeShowsExpectedLevels,
+    "quad_viewport_lod_composite", renderLodComposite(outputStem.c_str()))

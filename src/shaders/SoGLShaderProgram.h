@@ -73,7 +73,7 @@ public:
   void updateCoinParameter(SoState * state, const SbName & name, const int value);
   void addProgramParameter(int name, int value);
 
-  void getShaderObjectIds(SbList <uint32_t> & ids) const;
+  void getShaderObjectIds(SbList <uint64_t> & ids) const;
   uint32_t getGLSLShaderProgramHandle(SoState * state) const;
   SbBool glslShaderProgramLinked(SoState * state) const;
 private:
@@ -85,7 +85,7 @@ private:
   SbHash<uint32_t, SbBool> isenabledHandles;
   SoShaderProgramEnableCB * enablecb;
   void * enablecbclosure;
-  SbList <uint32_t> objectids;
+  SbList <uint64_t> objectids;
 };
 
 #endif /* ! OBOL_SOGLSHADERPROGRAM_H */

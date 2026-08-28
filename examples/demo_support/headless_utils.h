@@ -611,6 +611,22 @@ public:
         delete ctx;
     }
 
+    virtual void getActualSurfaceSize(void* context,
+                                      unsigned int& width,
+                                      unsigned int& height) const override {
+        const GLXOffscreenCtx *ctx = static_cast<const GLXOffscreenCtx*>(context);
+        if (!ctx) {
+            width = height = 0;
+            return;
+        }
+        if (ctx->use_window) {
+            width = height = 1;
+        } else {
+            width = ctx->width;
+            height = ctx->height;
+        }
+    }
+
     virtual void * getProcAddress(const char * funcName) override {
         return reinterpret_cast<void*>(
             glXGetProcAddress(reinterpret_cast<const GLubyte*>(funcName)));

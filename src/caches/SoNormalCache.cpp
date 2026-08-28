@@ -57,6 +57,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "CoinTidbits.h"
+#include "misc/SoOnce.h"
 
 // *************************************************************************
 
@@ -220,15 +221,14 @@ calc_normal_vec(const SbVec3f * facenormals, const int facenum,
         }
       }
       else {
-        static int calc_norm_error = 0;
-        if (calc_norm_error < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoNormalCache::calc_normal_vec", "Normals "
                                     "have not been specified for all faces. "
                                     "this warning will only be shown once, "
                                     "but there might be more errors");
         }
 
-        calc_norm_error++;
       }
     }
   }
@@ -383,12 +383,11 @@ SoNormalCache::generatePerVertex(const SbVec3f * const coords,
       // Be robust when it comes to erroneously specified triangles.
       if ((tmpvec.normalize() == 0.0f) && coin_debug_extra()) {
 #if OBOL_DEBUG
-        static uint32_t normgenerrors_vertex = 0;
-        if (normgenerrors_vertex < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoNormalCache::generatePerVertex","Unable to "
                                     "generate valid normal for face %d", facenum);
         }
-        normgenerrors_vertex++;
 #endif // OBOL_DEBUG
       }
       // it's really ok to have a null vector for a face/vertex, and we
@@ -520,8 +519,8 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
 
       // Be robust when it comes to erroneously specified triangles.
       if ((tmpvec.normalize() == 0.0f) && coin_debug_extra()) {
-        static uint32_t normgenerrors_face = 0;
-        if (normgenerrors_face < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoNormalCache::generatePerFace",
                                     "Erroneous triangle specification in model "
                                     "(indices= [%d, %d, %d], "
@@ -533,7 +532,6 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
                                     coords[v1][0], coords[v1][1], coords[v1][2],
                                     coords[v2][0], coords[v2][1], coords[v2][2]);
         }
-        normgenerrors_face++;
       }
       
       PRIVATE(this)->normalArray.append(tmpvec);
@@ -565,15 +563,14 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
 
       // Be robust when it comes to erroneously specified polygons.
       if ((tmpvec.normalize() == 0.0f) && coin_debug_extra()) {
-        static uint32_t normgenerrors_face = 0;
-        if (normgenerrors_face < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoNormalCache::generatePerFace",
                                     "Erroneous polygon specification in model. "
                                     "Unable to generate normal; using dummy normal. "
                                     "(this warning will be printed only once, "
                                     "but there might be more errors).");
         }
-        normgenerrors_face++;
       }
 
       PRIVATE(this)->normalArray.append(ccw ? tmpvec : -tmpvec);
@@ -678,9 +675,9 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
     else
       n = (*c2 - *c1).cross(*c0 - *c1);
 
-    static uint32_t normgenerrors_facestrip = 0;
+    static SoOnceFlag degeneratewarning;
     if ((n.normalize() == 0.0f) && coin_debug_extra()) {
-      if (normgenerrors_facestrip < 1) {
+      if (degeneratewarning.first()) {
         SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip",
                                   "Erroneous triangle specification in model "
                                   "(coords=<%f, %f, %f>, <%f, %f, %f>, <%f, %f, %f>) "
@@ -693,7 +690,6 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
 
 
       }
-      normgenerrors_facestrip++;
     }
     
     PRIVATE(this)->normalArray.append(n);
@@ -710,7 +706,7 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
         n = (*c2 - *c1).cross(*c0 - *c1);
 
       if ((n.normalize() == 0.0f) && coin_debug_extra()) {
-        if (normgenerrors_facestrip < 1) {
+        if (degeneratewarning.first()) {
           SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip",
                                     "Erroneous triangle specification in model "
                                     "(coords=<%f, %f, %f>, <%f, %f, %f>, <%f, %f, %f>) "
@@ -720,7 +716,6 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
                                     c1[0][0], c1[0][1], c1[0][2],
                                     c2[0][0], c2[0][1], c2[0][2]);
         }
-        normgenerrors_facestrip++;
       }
 
       PRIVATE(this)->normalArray.append(n);
@@ -728,8 +723,8 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
     }
 #if OBOL_DEBUG
     if (idx > maxcoordidx) {
-      static uint32_t normgenerrors_facestrip_oob = 0;
-      if (normgenerrors_facestrip_oob < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip",
                                   "Erroneous polygon specification in model. "
                                   "Index out of bounds: %d. Max index: %d. "
@@ -737,7 +732,6 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
                                   "but there might be more errors).", 
                                   idx, maxcoordidx);
       }
-      normgenerrors_facestrip_oob++;
     }
 #endif // OBOL_DEBUG
   }
@@ -854,8 +848,8 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
 
 #if OBOL_DEBUG
     if (idx > maxcoordidx) {
-      static uint32_t normgenerrors_strip = 0;
-      if (normgenerrors_strip < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoNormalCache::generatePerStrip",
                                   "Erroneous polygon specification in model. "
                                   "Index out of bounds: %d. Max index: %d. "
@@ -863,13 +857,12 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
                                   "but there might be more errors).", 
                                   idx, maxcoordidx);
       }
-      normgenerrors_strip++;
     }
 #endif // OBOL_DEBUG
 
     if ((n.normalize() == 0.0f) && coin_debug_extra()) {
-      static uint32_t normgenerrors_strip = 0;
-      if (normgenerrors_strip < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoNormalCache::generatePerStrip",
                                   "Erroneous polygon specification in model.  "
                                   "Unable to generate non-zero normal. Using "
@@ -877,7 +870,6 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
                                   "(this warning will be printed only once, "
                                   "but there might be more errors).");
       }
-      normgenerrors_strip++;
     }
     
     PRIVATE(this)->normalArray.append(n);
@@ -947,15 +939,14 @@ SoNormalCache::generatePerVertexQuad(const SbVec3f * const coords,
       if (j > 0 && i < vPerColumn-1 && idx4 < numfacenormals) n += facenormals[idx4];
 
       if ((n.normalize() == 0.0f) && coin_debug_extra()) {
-        static uint32_t normgenerrors_vertexquad = 0;
-        if (normgenerrors_vertexquad < 1) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoNormalCache::generatePerVertexQuad",
                                     "Erroneous polygon specification in model. "
                                     "Unable to generate valid normal, adding dummy. "
                                     "(this warning will be printed only once, "
                                     "but there might be more errors).");
         }
-        normgenerrors_vertexquad++;
       }        
       PRIVATE(this)->normalArray.append(ccw ? -n : n);
     }
@@ -1018,8 +1009,8 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
 
         // Be robust when it comes to erroneously specified polygons.
         if ((n.normalize() == 0.0f) && coin_debug_extra())  {
-          static uint32_t normgenerrors_facequad = 0;
-          if (normgenerrors_facequad < 1) {
+          static SoOnceFlag warning;
+          if (warning.first()) {
             SoDebugError::postWarning("SoNormalCache::generatePerFaceQuad",
                                       "Erroneous triangle specification in model "
                                       "(indices= [%d, %d, %d], "
@@ -1031,7 +1022,6 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
                                       coords[idx2][0], coords[idx2][1], coords[idx2][2],
                                       coords[idx3][0], coords[idx3][1], coords[idx3][2]);
           }
-          normgenerrors_facequad++;
         }
         
         PRIVATE(this)->normalArray.append(ccw ? -n : n);
@@ -1105,15 +1095,14 @@ SoNormalCache::generatePerRowQuad(const SbVec3f * const coords,
 
     // Be robust when it comes to erroneously specified polygons.
     if ((n.normalize() == 0.0f) && coin_debug_extra()) {
-      static uint32_t normgenerrors_rowquad = 0;
-      if (normgenerrors_rowquad < 1) {
+      static SoOnceFlag warning;
+      if (warning.first()) {
         SoDebugError::postWarning("SoNormalCache::generatePerRowQuad",
                                   "Erroneous polygon specification in model. "
                                   "Unable to generate valid normal, adding null vector. "
                                   "(this warning will be printed only once, "
                                   "but there might be more errors).");
       }
-      normgenerrors_rowquad++;
     }    
     PRIVATE(this)->normalArray.append(ccw ? -n : n);
   }

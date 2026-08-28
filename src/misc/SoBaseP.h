@@ -35,6 +35,7 @@
 
 #include "misc/SbHash.h"
 
+#include <atomic>
 #include <shared_mutex>
 
 class SoBase;
@@ -79,8 +80,8 @@ public:
   static std::shared_mutex base_dict_mutex;
 
   static SbString * refwriteprefix;
-  static SbBool tracerefs;
-  static uint32_t writecounter;
+  static std::atomic<SbBool> tracerefs;
+  static thread_local uint32_t writecounter;
 
   static void cleanup_auditordict(void);
 

@@ -191,6 +191,7 @@
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"
 #include "misc/SoEnvironment.h"
+#include "misc/SoOnce.h"
 
 /*!
   \var SoSFInt32 SoQuadMesh::verticesPerColumn
@@ -901,20 +902,19 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
 
   // Robustness test to make sure the start index is positive
   if (start < 0) {
-    static uint32_t current_errors = 0;
-    if (current_errors < 1) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoQuadMesh::GLRender", "Erroneous "
                                 "startIndex: %d. Should be >= 0. This message will only "
                                 "be shown once, but there might be more errors", start);
     }
-    current_errors++;
     goto glrender_done;
   }
 
   // Robustness test to make sure rowsize and colsize are valid
   if (rowsize < 2 || colsize  < 2) {
-    static uint32_t current_errors = 0;
-    if (current_errors < 1) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoQuadMesh::GLRender", "Erroneous quadmesh "
                                 "dimension [%d %d] with %d coordinates available. "
                                 "Must specify >= 2 rows and columns. "
@@ -922,22 +922,20 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
                                 "once, but there might be more errors.",
                                 rowsize, colsize, coords->getNum() - start);
     }
-    current_errors++;
     goto glrender_done;
   }
 
   // Robustness test to make sure rowsize and colsize specify
   // coordinates that really exist.
   if (coords->getNum() - start < rowsize * colsize) {
-    static uint32_t current_errors = 0;
-    if (current_errors < 1) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoQuadMesh::GLRender", "Erroneous quadmesh "
                                 "dimension [%d %d] with %d coordinates available. "
                                 "Ignoring. This message will only be shown once, but "
                                 "there might be more errors.",
                                 rowsize, colsize, coords->getNum() - start);
     }
-    current_errors++;
     goto glrender_done;
   }
 

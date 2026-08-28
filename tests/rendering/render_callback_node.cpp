@@ -340,46 +340,12 @@ static bool test6_callbackAcrossFrames(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_callback_node";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createCallbackNode(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoCallback node tests ===\n");
-
-    if (!test1_callbackFires(basepath))       ++failures;
-    if (!test2_callbackActionType(basepath))  ++failures;
-    if (!test3_multipleCallbackOrder(basepath)) ++failures;
-    if (!test4_callbackInSubtree(basepath))   ++failures;
-    if (!test5_unregisterCallback(basepath))  ++failures;
-    if (!test6_callbackAcrossFrames(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_callback_node) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_callback_node");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, CallbackFires, "callback_node_fires", test1_callbackFires(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, ActionType, "callback_node_action", test2_callbackActionType(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, CallbackOrder, "callback_node_order", test3_multipleCallbackOrder(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, SubtreeCallback, "callback_node_subtree", test4_callbackInSubtree(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, UnregisterCallback, "callback_node_unregister", test5_unregisterCallback(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(CallbackNodeRenderTest, MultipleFrames, "callback_node_frames", test6_callbackAcrossFrames(outputStem.c_str()))

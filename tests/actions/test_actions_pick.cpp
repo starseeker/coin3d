@@ -85,8 +85,7 @@ static SoSeparator * buildPickScene()
 
 TEST(ActionsPick, SoRayPickActionClassTypeRegistered)
 {
-    bool pass = (SoRayPickAction::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoRayPickAction bad class type";
+    EXPECT_TRUE((SoRayPickAction::getClassTypeId() != SoType::badType())) << "SoRayPickAction bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -98,8 +97,7 @@ TEST(ActionsPick, SoRayPickActionSetRadiusGetRadiusRoundTrip)
     SbViewportRegion vp(512, 512);
     SoRayPickAction ra(vp);
     ra.setRadius(5.0f);
-    bool pass = floatNear(ra.getRadius(), 5.0f);
-    EXPECT_TRUE(pass) << "setRadius/getRadius round-trip failed";
+    EXPECT_TRUE(floatNear(ra.getRadius(), 5.0f)) << "setRadius/getRadius round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -111,8 +109,7 @@ TEST(ActionsPick, SoRayPickActionSetPickAllTRUEIsPickAllRoundTrip)
     SbViewportRegion vp(512, 512);
     SoRayPickAction ra(vp);
     ra.setPickAll(TRUE);
-    bool pass = (ra.isPickAll() == TRUE);
-    EXPECT_TRUE(pass) << "setPickAll(TRUE)/isPickAll failed";
+    EXPECT_TRUE((ra.isPickAll() == TRUE)) << "setPickAll(TRUE)/isPickAll failed";
 }
 
 TEST(ActionsPick, SoRayPickActionSetPickAllFALSEIsPickAllRoundTrip)
@@ -120,8 +117,7 @@ TEST(ActionsPick, SoRayPickActionSetPickAllFALSEIsPickAllRoundTrip)
     SbViewportRegion vp(512, 512);
     SoRayPickAction ra(vp);
     ra.setPickAll(FALSE);
-    bool pass = (ra.isPickAll() == FALSE);
-    EXPECT_TRUE(pass) << "setPickAll(FALSE)/isPickAll failed";
+    EXPECT_TRUE((ra.isPickAll() == FALSE)) << "setPickAll(FALSE)/isPickAll failed";
 }
 
 // -----------------------------------------------------------------------
@@ -152,8 +148,7 @@ TEST(ActionsPick, SoRayPickActionHasWorldSpaceRayIsFALSEBeforeSetting)
 {
     SbViewportRegion vp(512, 512);
     SoRayPickAction ra(vp);
-    bool pass = (ra.hasWorldSpaceRay() == FALSE);
-    EXPECT_TRUE(pass) << "hasWorldSpaceRay should be FALSE before setRay";
+    EXPECT_TRUE((ra.hasWorldSpaceRay() == FALSE)) << "hasWorldSpaceRay should be FALSE before setRay";
 }
 
 TEST(ActionsPick, SoRayPickActionSetRayThenHasWorldSpaceRayIsTRUE)
@@ -161,8 +156,7 @@ TEST(ActionsPick, SoRayPickActionSetRayThenHasWorldSpaceRayIsTRUE)
     SbViewportRegion vp(512, 512);
     SoRayPickAction ra(vp);
     ra.setRay(SbVec3f(0, 0, 5), SbVec3f(0, 0, -1));
-    bool pass = (ra.hasWorldSpaceRay() == TRUE);
-    EXPECT_TRUE(pass) << "hasWorldSpaceRay should be TRUE after setRay";
+    EXPECT_TRUE((ra.hasWorldSpaceRay() == TRUE)) << "hasWorldSpaceRay should be TRUE after setRay";
 }
 
 // -----------------------------------------------------------------------
@@ -181,9 +175,8 @@ TEST(ActionsPick, SoRayPickActionCentreRayHitsSphereAtOrigin)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = (pp != nullptr);
+    EXPECT_TRUE((pp != nullptr)) << "Centre ray should hit sphere at origin";
     root->unref();
-    EXPECT_TRUE(pass) << "Centre ray should hit sphere at origin";
 }
 
 TEST(ActionsPick, SoRayPickActionPickedPointIsOnGeometry)
@@ -197,9 +190,8 @@ TEST(ActionsPick, SoRayPickActionPickedPointIsOnGeometry)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = (pp != nullptr) && pp->isOnGeometry();
+    EXPECT_TRUE((pp != nullptr) && pp->isOnGeometry()) << "Picked point should be on geometry";
     root->unref();
-    EXPECT_TRUE(pass) << "Picked point should be on geometry";
 }
 
 TEST(ActionsPick, SoRayPickActionPickedPointHasValidPosition)
@@ -213,14 +205,13 @@ TEST(ActionsPick, SoRayPickActionPickedPointHasValidPosition)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp) {
         SbVec3f pt = pp->getPoint();
         // Sphere has radius 1, centre at origin; hit should be at z≈+1
-        pass = floatNear(pt[2], 1.0f, 0.1f);
+        EXPECT_NEAR(pt[2], 1.0f, 0.1f);
     }
     root->unref();
-    EXPECT_TRUE(pass) << "Picked point z-position should be near +1";
 }
 
 TEST(ActionsPick, SoRayPickActionMissReturnsNull)
@@ -235,9 +226,8 @@ TEST(ActionsPick, SoRayPickActionMissReturnsNull)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = (pp == nullptr);
+    EXPECT_TRUE((pp == nullptr)) << "Off-centre ray should miss the sphere (should return null)";
     root->unref();
-    EXPECT_TRUE(pass) << "Off-centre ray should miss the sphere (should return null)";
 }
 
 TEST(ActionsPick, SoRayPickActionGetPickedPointListIsEmptyForMiss)
@@ -251,9 +241,8 @@ TEST(ActionsPick, SoRayPickActionGetPickedPointListIsEmptyForMiss)
     ra.apply(root);
 
     const SoPickedPointList & list = ra.getPickedPointList();
-    bool pass = (list.getLength() == 0);
+    EXPECT_TRUE((list.getLength() == 0)) << "Missed ray getPickedPointList should be empty";
     root->unref();
-    EXPECT_TRUE(pass) << "Missed ray getPickedPointList should be empty";
 }
 
 TEST(ActionsPick, SoRayPickActionSetPickAllCollectsMultipleIntersections)
@@ -269,9 +258,8 @@ TEST(ActionsPick, SoRayPickActionSetPickAllCollectsMultipleIntersections)
 
     // With pickAll=TRUE, should get both front and back surface intersections
     const SoPickedPointList & list = ra.getPickedPointList();
-    bool pass = (list.getLength() >= 1);
+    EXPECT_TRUE((list.getLength() >= 1)) << "setPickAll should collect at least 1 intersection";
     root->unref();
-    EXPECT_TRUE(pass) << "setPickAll should collect at least 1 intersection";
 }
 
 TEST(ActionsPick, SoRayPickActionPickedPathContainsSphereNode)
@@ -285,15 +273,16 @@ TEST(ActionsPick, SoRayPickActionPickedPathContainsSphereNode)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp) {
         SoPath * path = pp->getPath();
         // Path should contain the sphere
-        pass = (path != nullptr) &&
-               path->containsNode(root->getChild(1)); // sphere is child 1
+        EXPECT_NE(path, nullptr);
+        if (path) {
+            EXPECT_TRUE(path->containsNode(root->getChild(1))); // sphere is child 1
+        }
     }
     root->unref();
-    EXPECT_TRUE(pass) << "Picked path should contain the sphere node";
 }
 
 // -----------------------------------------------------------------------
@@ -318,7 +307,6 @@ TEST(ActionsPick, SoRayPickActionRayHitsCubeAtOrigin)
     ra.apply(root);
 
     SoPickedPoint * pp = ra.getPickedPoint(0);
-    bool pass = (pp != nullptr);
+    EXPECT_TRUE((pp != nullptr)) << "Ray through cube at origin should hit";
     root->unref();
-    EXPECT_TRUE(pass) << "Ray through cube at origin should hit";
 }

@@ -52,6 +52,12 @@ class SbTime;
   at appropriate times, typically driven by SoDB::doSelect() or the
   window-system timer in a viewer.
 
+  Queue insertion, removal, pending-state queries, timeout configuration, and
+  callback publication are synchronized. Queue-processing calls are serialized
+  with one another, including reentrant processing from a sensor callback.
+  Individual SoSensor objects are still mutable objects: do not concurrently
+  reconfigure or destroy the same sensor while another thread can trigger it.
+
   \sa SoSensor, SoDB
 */
 class OBOL_DLL_API SoSensorManager {

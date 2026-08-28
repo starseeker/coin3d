@@ -81,10 +81,14 @@
 
 #include "CoinTidbits.h"
 
+#include <mutex>
+
 static SbBool interaction_isinitialized = FALSE;
+static std::mutex interaction_init_mutex;
 
 static void interaction_cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(interaction_init_mutex);
   interaction_isinitialized = FALSE;
 }
 
@@ -124,6 +128,7 @@ static void interaction_cleanup(void)
 void
 SoInteraction::init(void)
 {
+  const std::lock_guard<std::mutex> lock(interaction_init_mutex);
   if (interaction_isinitialized) return;
 
   if (!SoDB::isInitialized()) {

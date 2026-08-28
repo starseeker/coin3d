@@ -59,6 +59,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 
 #include "nodekits/SoSubKitP.h"
+#include "misc/SoOnce.h"
 
 namespace {
   // anonymous namespace for trigger functions, to change how
@@ -99,12 +100,11 @@ namespace {
         kit->statsTrigger.connectFrom(&statsnode->profilingUpdate);
       } else {
 #if OBOL_DEBUG
-        static SbBool first = TRUE;
-        if (first) {
+        static SoOnceFlag warning;
+        if (warning.first()) {
           SoDebugError::postWarning("SoProfilerVisualizeKit.cpp rootChangedCB",
                                     "The node in SoProfilerVisualizeKit::stats "
                                     "must be of type SoProfilerStats.");
-          first = FALSE;
         }
 #endif // OBOL_DEBUG
       }

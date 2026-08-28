@@ -6,25 +6,22 @@ set(OBOL_VERSION @OBOL_MAJOR_VERSION@.@OBOL_MINOR_VERSION@.@OBOL_MICRO_VERSION@)
 @PACKAGE_INIT@
 
 set(OBOL_BUILD_SHARED_LIBS @OBOL_BUILD_SHARED_LIBS@)
-set(OBOL_BUILD_MAC_FRAMEWORK @OBOL_BUILD_MAC_FRAMEWORK@)
 
-if(NOT OBOL_BUILD_MAC_FRAMEWORK)
-  set_and_check(OBOLDIR "@PACKAGE_OBOLDIR@")
-  set_and_check(Obol_INCLUDE_DIR "@PACKAGE_OBOL_INCLUDE_DIR@")
-  set_and_check(Obol_LIB_DIR "@PACKAGE_OBOL_LIB_DIR@")
+set_and_check(OBOLDIR "@PACKAGE_OBOLDIR@")
+set_and_check(Obol_INCLUDE_DIR "@PACKAGE_OBOL_INCLUDE_DIR@")
+set_and_check(Obol_LIB_DIR "@PACKAGE_OBOL_LIB_DIR@")
 
-  # optional documentation directory
-  if(EXISTS "@PACKAGE_OBOL_DOC_DIR@")
-    set(Obol_DOC_DIR "@PACKAGE_OBOL_DOC_DIR@")
-  endif()
+# optional documentation directory
+if(EXISTS "@PACKAGE_OBOL_DOC_DIR@")
+  set(Obol_DOC_DIR "@PACKAGE_OBOL_DOC_DIR@")
+endif()
 
-  # Windows DLL visibility flag for consumers that link manually
-  if(WIN32)
-    if(OBOL_BUILD_SHARED_LIBS)
-      set(Obol_DEFINES -DOBOL_DLL)
-    else()
-      set(Obol_DEFINES -DOBOL_NOT_DLL)
-    endif()
+# Windows DLL visibility flag for consumers that link manually
+if(WIN32)
+  if(OBOL_BUILD_SHARED_LIBS)
+    set(Obol_DEFINES -DOBOL_DLL)
+  else()
+    set(Obol_DEFINES -DOBOL_NOT_DLL)
   endif()
 endif()
 
@@ -50,17 +47,14 @@ include("${CMAKE_CURRENT_LIST_DIR}/@OBOL_CONFIG_PACKAGE_BASENAME@-export.cmake")
 # Modern imported-target alias and convenience variables
 set(Obol_LIBRARIES Obol::Obol)
 set(Obol_LIBRARY   Obol::Obol)
-if(NOT OBOL_BUILD_MAC_FRAMEWORK)
-  set(Obol_INCLUDE_DIRS ${Obol_INCLUDE_DIR})
-  set(Obol_NanoRTContextManager_INCLUDE_DIR
-      "${Obol_INCLUDE_DIR}/Obol/render")
-  if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/SoNanoRTContextManager.h" AND
-     EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort.h")
-    set(Obol_NanoRTContextManager_FOUND TRUE)
-  else()
-    unset(Obol_NanoRTContextManager_INCLUDE_DIR)
-    set(Obol_NanoRTContextManager_FOUND FALSE)
-  endif()
+set(Obol_INCLUDE_DIRS ${Obol_INCLUDE_DIR})
+set(Obol_NanoRTContextManager_INCLUDE_DIR
+    "${Obol_INCLUDE_DIR}/Obol/render")
+if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/SoNanoRTContextManager.h")
+  set(Obol_NanoRTContextManager_FOUND TRUE)
+else()
+  unset(Obol_NanoRTContextManager_INCLUDE_DIR)
+  set(Obol_NanoRTContextManager_FOUND FALSE)
 endif()
 
 # Feature flags recorded at build time

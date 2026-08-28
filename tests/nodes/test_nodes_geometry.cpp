@@ -78,8 +78,7 @@ static bool floatNear(float a, float b, float eps = 0.01f)
 
 TEST(NodesGeometry, SoFaceSetClassTypeRegistered)
 {
-    bool pass = (SoFaceSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoFaceSet bad class type";
+    EXPECT_TRUE((SoFaceSet::getClassTypeId() != SoType::badType())) << "SoFaceSet bad class type";
 }
 
 TEST(NodesGeometry, SoFaceSetNumVerticesFieldSetGetRoundTrip)
@@ -88,11 +87,10 @@ TEST(NodesGeometry, SoFaceSetNumVerticesFieldSetGetRoundTrip)
     node->ref();
     node->numVertices.set1Value(0, 3); // one triangle
     node->numVertices.set1Value(1, 4); // one quad
-    bool pass = (node->numVertices.getNum() == 2) &&
+    EXPECT_TRUE((node->numVertices.getNum() == 2) &&
                 (node->numVertices[0] == 3) &&
-                (node->numVertices[1] == 4);
+                (node->numVertices[1] == 4)) << "SoFaceSet numVertices field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoFaceSet numVertices field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -101,8 +99,7 @@ TEST(NodesGeometry, SoFaceSetNumVerticesFieldSetGetRoundTrip)
 
 TEST(NodesGeometry, SoIndexedFaceSetClassTypeRegistered)
 {
-    bool pass = (SoIndexedFaceSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoIndexedFaceSet bad class type";
+    EXPECT_TRUE((SoIndexedFaceSet::getClassTypeId() != SoType::badType())) << "SoIndexedFaceSet bad class type";
 }
 
 TEST(NodesGeometry, SoIndexedFaceSetCoordIndexFieldSetGetRoundTrip)
@@ -114,10 +111,9 @@ TEST(NodesGeometry, SoIndexedFaceSetCoordIndexFieldSetGetRoundTrip)
     node->coordIndex.set1Value(1, 1);
     node->coordIndex.set1Value(2, 2);
     node->coordIndex.set1Value(3, SO_END_FACE_INDEX);
-    bool pass = (node->coordIndex.getNum() == 4) &&
-                (node->coordIndex[3] == SO_END_FACE_INDEX);
+    EXPECT_TRUE((node->coordIndex.getNum() == 4) &&
+                (node->coordIndex[3] == SO_END_FACE_INDEX)) << "SoIndexedFaceSet coordIndex failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedFaceSet coordIndex failed";
 }
 
 TEST(NodesGeometry, SoIndexedFaceSetTexCoordIndexFieldSetGet)
@@ -127,9 +123,8 @@ TEST(NodesGeometry, SoIndexedFaceSetTexCoordIndexFieldSetGet)
     node->textureCoordIndex.set1Value(0, 0);
     node->textureCoordIndex.set1Value(1, 1);
     node->textureCoordIndex.set1Value(2, -1);
-    bool pass = (node->textureCoordIndex.getNum() == 3);
+    EXPECT_TRUE((node->textureCoordIndex.getNum() == 3)) << "SoIndexedFaceSet textureCoordIndex failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedFaceSet textureCoordIndex failed";
 }
 
 // -----------------------------------------------------------------------
@@ -138,8 +133,7 @@ TEST(NodesGeometry, SoIndexedFaceSetTexCoordIndexFieldSetGet)
 
 TEST(NodesGeometry, SoLineSetClassTypeRegistered)
 {
-    bool pass = (SoLineSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoLineSet bad class type";
+    EXPECT_TRUE((SoLineSet::getClassTypeId() != SoType::badType())) << "SoLineSet bad class type";
 }
 
 TEST(NodesGeometry, SoLineSetNumVerticesFieldSetGetRoundTrip)
@@ -147,9 +141,8 @@ TEST(NodesGeometry, SoLineSetNumVerticesFieldSetGetRoundTrip)
     SoLineSet * node = new SoLineSet;
     node->ref();
     node->numVertices.set1Value(0, 3); // one polyline with 3 vertices
-    bool pass = (node->numVertices.getNum() == 1) && (node->numVertices[0] == 3);
+    EXPECT_TRUE((node->numVertices.getNum() == 1) && (node->numVertices[0] == 3)) << "SoLineSet numVertices field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoLineSet numVertices field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -158,8 +151,7 @@ TEST(NodesGeometry, SoLineSetNumVerticesFieldSetGetRoundTrip)
 
 TEST(NodesGeometry, SoIndexedLineSetClassTypeRegistered)
 {
-    bool pass = (SoIndexedLineSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoIndexedLineSet bad class type";
+    EXPECT_TRUE((SoIndexedLineSet::getClassTypeId() != SoType::badType())) << "SoIndexedLineSet bad class type";
 }
 
 TEST(NodesGeometry, SoIndexedLineSetCoordIndexFieldSetGet)
@@ -170,10 +162,9 @@ TEST(NodesGeometry, SoIndexedLineSetCoordIndexFieldSetGet)
     node->coordIndex.set1Value(1, 1);
     node->coordIndex.set1Value(2, 2);
     node->coordIndex.set1Value(3, -1);
-    bool pass = (node->coordIndex.getNum() == 4) &&
-                (node->coordIndex[3] == -1);
+    EXPECT_TRUE((node->coordIndex.getNum() == 4) &&
+                (node->coordIndex[3] == -1)) << "SoIndexedLineSet coordIndex failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedLineSet coordIndex failed";
 }
 
 // -----------------------------------------------------------------------
@@ -182,8 +173,7 @@ TEST(NodesGeometry, SoIndexedLineSetCoordIndexFieldSetGet)
 
 TEST(NodesGeometry, SoPointSetClassTypeRegistered)
 {
-    bool pass = (SoPointSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPointSet bad class type";
+    EXPECT_TRUE((SoPointSet::getClassTypeId() != SoType::badType())) << "SoPointSet bad class type";
 }
 
 TEST(NodesGeometry, SoPointSetNumPointsDefaultIsSOPOINTSETUSERESTCOUNT)
@@ -191,9 +181,8 @@ TEST(NodesGeometry, SoPointSetNumPointsDefaultIsSOPOINTSETUSERESTCOUNT)
     SoPointSet * node = new SoPointSet;
     node->ref();
     // default is -1 (use all remaining points)
-    bool pass = (node->numPoints.getValue() <= 0);
+    EXPECT_TRUE((node->numPoints.getValue() <= 0)) << "SoPointSet numPoints default unexpected";
     node->unref();
-    EXPECT_TRUE(pass) << "SoPointSet numPoints default unexpected";
 }
 
 // -----------------------------------------------------------------------
@@ -202,8 +191,7 @@ TEST(NodesGeometry, SoPointSetNumPointsDefaultIsSOPOINTSETUSERESTCOUNT)
 
 TEST(NodesGeometry, SoIndexedPointSetClassTypeRegistered)
 {
-    bool pass = (SoIndexedPointSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoIndexedPointSet bad class type";
+    EXPECT_TRUE((SoIndexedPointSet::getClassTypeId() != SoType::badType())) << "SoIndexedPointSet bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -212,8 +200,7 @@ TEST(NodesGeometry, SoIndexedPointSetClassTypeRegistered)
 
 TEST(NodesGeometry, SoTriangleStripSetClassTypeRegistered)
 {
-    bool pass = (SoTriangleStripSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTriangleStripSet bad class type";
+    EXPECT_TRUE((SoTriangleStripSet::getClassTypeId() != SoType::badType())) << "SoTriangleStripSet bad class type";
 }
 
 TEST(NodesGeometry, SoTriangleStripSetNumVerticesFieldSetGet)
@@ -221,9 +208,8 @@ TEST(NodesGeometry, SoTriangleStripSetNumVerticesFieldSetGet)
     SoTriangleStripSet * node = new SoTriangleStripSet;
     node->ref();
     node->numVertices.set1Value(0, 5); // strip with 5 vertices
-    bool pass = (node->numVertices.getNum() == 1) && (node->numVertices[0] == 5);
+    EXPECT_TRUE((node->numVertices.getNum() == 1) && (node->numVertices[0] == 5)) << "SoTriangleStripSet numVertices field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTriangleStripSet numVertices field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -232,8 +218,7 @@ TEST(NodesGeometry, SoTriangleStripSetNumVerticesFieldSetGet)
 
 TEST(NodesGeometry, SoIndexedTriangleStripSetClassTypeRegistered)
 {
-    bool pass = (SoIndexedTriangleStripSet::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoIndexedTriangleStripSet bad class type";
+    EXPECT_TRUE((SoIndexedTriangleStripSet::getClassTypeId() != SoType::badType())) << "SoIndexedTriangleStripSet bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -242,8 +227,7 @@ TEST(NodesGeometry, SoIndexedTriangleStripSetClassTypeRegistered)
 
 TEST(NodesGeometry, SoCoordinate3ClassTypeRegistered)
 {
-    bool pass = (SoCoordinate3::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoCoordinate3 bad class type";
+    EXPECT_TRUE((SoCoordinate3::getClassTypeId() != SoType::badType())) << "SoCoordinate3 bad class type";
 }
 
 TEST(NodesGeometry, SoCoordinate3PointFieldSetGetRoundTrip)
@@ -252,11 +236,10 @@ TEST(NodesGeometry, SoCoordinate3PointFieldSetGetRoundTrip)
     node->ref();
     SbVec3f pts[3] = { SbVec3f(0,0,0), SbVec3f(1,0,0), SbVec3f(0,1,0) };
     node->point.setValues(0, 3, pts);
-    bool pass = (node->point.getNum() == 3) &&
+    EXPECT_TRUE((node->point.getNum() == 3) &&
                 (node->point[0] == SbVec3f(0,0,0)) &&
-                (node->point[2] == SbVec3f(0,1,0));
+                (node->point[2] == SbVec3f(0,1,0))) << "SoCoordinate3 point field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoCoordinate3 point field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -265,8 +248,7 @@ TEST(NodesGeometry, SoCoordinate3PointFieldSetGetRoundTrip)
 
 TEST(NodesGeometry, SoNormalClassTypeRegistered)
 {
-    bool pass = (SoNormal::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoNormal bad class type";
+    EXPECT_TRUE((SoNormal::getClassTypeId() != SoType::badType())) << "SoNormal bad class type";
 }
 
 TEST(NodesGeometry, SoNormalVectorFieldSetGetRoundTrip)
@@ -275,9 +257,8 @@ TEST(NodesGeometry, SoNormalVectorFieldSetGetRoundTrip)
     node->ref();
     SbVec3f nrm(0, 1, 0);
     node->vector.set1Value(0, nrm);
-    bool pass = (node->vector.getNum() == 1) && (node->vector[0] == nrm);
+    EXPECT_TRUE((node->vector.getNum() == 1) && (node->vector[0] == nrm)) << "SoNormal vector field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoNormal vector field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -303,11 +284,10 @@ TEST(NodesGeometry, SoGetBoundingBoxActionOnSoFaceSetTriangle)
     bba.apply(root);
     SbBox3f box = bba.getBoundingBox();
 
-    bool pass = !box.isEmpty() &&
+    EXPECT_TRUE(!box.isEmpty() &&
                 floatNear(box.getMin()[0], -1.0f) &&
-                floatNear(box.getMax()[0], 1.0f);
+                floatNear(box.getMax()[0], 1.0f)) << "BoundingBox on SoFaceSet triangle failed";
     root->unref();
-    EXPECT_TRUE(pass) << "BoundingBox on SoFaceSet triangle failed";
 }
 
 TEST(NodesGeometry, SoGetBoundingBoxActionOnSoIndexedFaceSetTriangle)
@@ -330,7 +310,6 @@ TEST(NodesGeometry, SoGetBoundingBoxActionOnSoIndexedFaceSetTriangle)
     bba.apply(root);
     SbBox3f box = bba.getBoundingBox();
 
-    bool pass = !box.isEmpty() && floatNear(box.getMax()[0], 2.0f);
+    EXPECT_TRUE(!box.isEmpty() && floatNear(box.getMax()[0], 2.0f)) << "BoundingBox on SoIndexedFaceSet triangle failed";
     root->unref();
-    EXPECT_TRUE(pass) << "BoundingBox on SoIndexedFaceSet triangle failed";
 }

@@ -46,7 +46,9 @@
 #include <cstring>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
+#include <limits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -56,7 +58,7 @@
 // Adapted from resize.c (original simage implementation)
 
 typedef struct {
-  int pixel;
+  size_t pixel;
   float weight;
 } CONTRIB;
 
@@ -70,7 +72,7 @@ typedef struct {
   int ysize;            /* vertical size of the image in Pixels */  
   int bpp;              /* bytes per pixel */
   unsigned char* data;  /* pointer to first scanline of image */
-  int span;             /* byte offset between two scanlines */
+  size_t span;          /* byte offset between two scanlines */
 } Image;
 
 // High-quality filter functions
@@ -192,7 +194,7 @@ static void get_column(unsigned char* column, const Image* image, int x)
   
   int bpp = image->bpp;
   int ysize = image->ysize;
-  int span = image->span;
+  size_t span = image->span;
   unsigned char* p = image->data + x * bpp;
   
   for (int i = 0; i < ysize; i++, p += span) {
@@ -213,7 +215,7 @@ static void put_pixel(const Image* image, int x, int y, float* data)
     float val = data[i];
     if (val < 0.0f) val = 0.0f;
     else if (val > 255.0f) val = 255.0f;
-    *p++ = (unsigned char)val;
+    *p++ = static_cast<unsigned char>(std::lround(val));
   }
 }
 
@@ -223,7 +225,7 @@ static Image* new_image(int xsize, int ysize, int bpp, unsigned char* data)
   img->xsize = xsize;
   img->ysize = ysize;
   img->bpp = bpp;
-  img->span = xsize * bpp;
+  img->span = static_cast<size_t>(xsize) * static_cast<size_t>(bpp);
   img->data = data;
   if (data == nullptr) {
     img->data = new unsigned char[img->span * img->ysize];
@@ -235,6 +237,40 @@ static void free_image(Image* img)
 {
   if (img) {
     delete img;
+  }
+}
+
+// Preserve the historical reflected-edge behavior without allowing the
+// filter support to produce an out-of-range source index for very small
+// images (for example, a two-pixel image with a Lanczos3 kernel).
+static int reflected_index(int index, const int size)
+{
+  if (size == 1) return 0;
+
+  // The historical loop reflects the right edge with its final pixel
+  // repeated.  Express the same sequence as a modulus so a very wide
+  // downsampling kernel cannot require billions of loop iterations.
+  const std::int64_t period = 2 * static_cast<std::int64_t>(size) - 1;
+  std::int64_t reflected = static_cast<std::int64_t>(index);
+  if (reflected < 0) reflected = -reflected;
+  reflected %= period;
+  if (reflected >= size) reflected = period - reflected;
+  return static_cast<int>(reflected);
+}
+
+// Every reconstruction kernel must have unit DC gain.  Floating-point
+// sampling and edge reflection otherwise make even a constant image darker
+// or lighter, most visibly with negative-lobed Lanczos weights.
+static void normalize_contributions(CLIST & contributions)
+{
+  double total = 0.0;
+  for (int i = 0; i < contributions.n; ++i) {
+    total += contributions.p[i].weight;
+  }
+  if (std::abs(total) <= std::numeric_limits<double>::epsilon()) return;
+  const float inverse = static_cast<float>(1.0 / total);
+  for (int i = 0; i < contributions.n; ++i) {
+    contributions.p[i].weight *= inverse;
   }
 }
 
@@ -277,17 +313,12 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
       for (j = left; j <= right; j++) {
         weight = center - (float)j;
         weight = (*filterf)(weight / fscale) / fscale;
-        if (j < 0) {
-          n = -j;
-        } else if (j >= src->xsize) {
-          n = (src->xsize - j) + src->xsize - 1;
-        } else {
-          n = j;
-        }
+        n = reflected_index(j, src->xsize);
         k = contrib[i].n++;
-        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].pixel = static_cast<size_t>(n) * bpp;
         contrib[i].p[k].weight = weight;
       }
+      normalize_contributions(contrib[i]);
     }
   } else {
     for (i = 0; i < dstxsize; i++) {
@@ -299,17 +330,12 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
       for (j = left; j <= right; j++) {
         weight = center - (float)j;
         weight = (*filterf)(weight);
-        if (j < 0) {
-          n = -j;
-        } else if (j >= src->xsize) {
-          n = (src->xsize - j) + src->xsize - 1;
-        } else {
-          n = j;
-        }
+        n = reflected_index(j, src->xsize);
         k = contrib[i].n++;
-        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].pixel = static_cast<size_t>(n) * bpp;
         contrib[i].p[k].weight = weight;
       }
+      normalize_contributions(contrib[i]);
     }
   }
 
@@ -350,17 +376,12 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
       for (j = left; j <= right; j++) {
         weight = center - (float)j;
         weight = (*filterf)(weight / fscale) / fscale;
-        if (j < 0) {
-          n = -j;
-        } else if (j >= tmp->ysize) {
-          n = (tmp->ysize - j) + tmp->ysize - 1;
-        } else {
-          n = j;
-        }
+        n = reflected_index(j, tmp->ysize);
         k = contrib[i].n++;
-        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].pixel = static_cast<size_t>(n) * bpp;
         contrib[i].p[k].weight = weight;
       }
+      normalize_contributions(contrib[i]);
     }
   } else {
     for (i = 0; i < dstysize; i++) {
@@ -372,17 +393,12 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
       for (j = left; j <= right; j++) {
         weight = center - (float)j;
         weight = (*filterf)(weight);
-        if (j < 0) {
-          n = -j;
-        } else if (j >= tmp->ysize) {
-          n = (tmp->ysize - j) + tmp->ysize - 1;
-        } else {
-          n = j;
-        }
+        n = reflected_index(j, tmp->ysize);
         k = contrib[i].n++;
-        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].pixel = static_cast<size_t>(n) * bpp;
         contrib[i].p[k].weight = weight;
       }
+      normalize_contributions(contrib[i]);
     }
   }
 
@@ -434,8 +450,10 @@ static void fast_resize_2d(const unsigned char* src, unsigned char* dest,
       int src_x = (int)(x * x_ratio);
       if (src_x >= width) src_x = width - 1;
       
-      int src_idx = (src_y * width + src_x) * components;
-      int dest_idx = (y * newwidth + x) * components;
+      const size_t src_idx =
+        (static_cast<size_t>(src_y) * width + src_x) * components;
+      const size_t dest_idx =
+        (static_cast<size_t>(y) * newwidth + x) * components;
       
       for (int c = 0; c < components; c++) {
         dest[dest_idx + c] = src[src_idx + c];
@@ -465,17 +483,23 @@ static void bilinear_resize_2d(const unsigned char* src, unsigned char* dest,
       int y1 = std::min(y + 1, src_height - 1);
       
       for (int c = 0; c < components; c++) {
-        int index = (y * src_width + x) * components + c;
-        int index_x = (y * src_width + x1) * components + c;
-        int index_y = (y1 * src_width + x) * components + c;
-        int index_xy = (y1 * src_width + x1) * components + c;
+        const size_t index =
+          (static_cast<size_t>(y) * src_width + x) * components + c;
+        const size_t index_x =
+          (static_cast<size_t>(y) * src_width + x1) * components + c;
+        const size_t index_y =
+          (static_cast<size_t>(y1) * src_width + x) * components + c;
+        const size_t index_xy =
+          (static_cast<size_t>(y1) * src_width + x1) * components + c;
         
         float A = src[index] * (1 - x_diff) * (1 - y_diff);
         float B = src[index_x] * x_diff * (1 - y_diff);
         float C = src[index_y] * (1 - x_diff) * y_diff;
         float D = src[index_xy] * x_diff * y_diff;
         
-        dest[(i * dest_width + j) * components + c] = (unsigned char)(A + B + C + D);
+        const size_t destination =
+          (static_cast<size_t>(i) * dest_width + j) * components + c;
+        dest[destination] = static_cast<unsigned char>(A + B + C + D);
       }
     }
   }
@@ -503,8 +527,12 @@ static void fast_resize_3d(const unsigned char* src, unsigned char* dest,
         int src_x = (int)(x * x_ratio);
         if (src_x >= width) src_x = width - 1;
         
-        int src_idx = ((src_z * height + src_y) * width + src_x) * components;
-        int dest_idx = ((z * newheight + y) * newwidth + x) * components;
+        const size_t src_idx =
+          ((static_cast<size_t>(src_z) * height + src_y) * width + src_x) *
+          components;
+        const size_t dest_idx =
+          ((static_cast<size_t>(z) * newheight + y) * newwidth + x) *
+          components;
         
         for (int c = 0; c < components; c++) {
           dest[dest_idx + c] = src[src_idx + c];
@@ -547,17 +575,56 @@ static void high_quality_resize_3d(const unsigned char* src, unsigned char* dest
 
 // Public API implementations
 
+static bool checked_resize_size(const int width, const int height,
+                                const int depth, const int components,
+                                size_t & size)
+{
+  // The public formats are luminance, luminance-alpha, RGB and RGBA.  The
+  // high-quality path intentionally keeps one fixed four-channel accumulator.
+  if (width <= 0 || height <= 0 || depth <= 0 ||
+      components <= 0 || components > 4) return false;
+  const size_t values[] = {
+    static_cast<size_t>(width), static_cast<size_t>(height),
+    static_cast<size_t>(depth), static_cast<size_t>(components)
+  };
+  size = 1;
+  for (const size_t value : values) {
+    if (size > std::numeric_limits<size_t>::max() / value) return false;
+    size *= value;
+  }
+  return true;
+}
+
+static bool filter_axis_supported(const int source_size,
+                                  const int destination_size,
+                                  const float support)
+{
+  const double scale = static_cast<double>(destination_size) / source_size;
+  const double width = scale < 1.0 ? support / scale : support;
+  const double last_center =
+    static_cast<double>(destination_size - 1) / scale;
+
+  // zoom() uses signed-int contribution counts and source coordinates. Reject
+  // dimensions whose kernel cannot be represented instead of overflowing a
+  // bound or wrapping the contribution allocation.
+  return std::isfinite(width) && std::isfinite(last_center) &&
+    width <= (static_cast<double>(std::numeric_limits<int>::max()) - 1.0) /
+               2.0 &&
+    last_center + width <= std::numeric_limits<int>::max();
+}
+
 unsigned char* SbImageResize_resize2D(const unsigned char* src,
                                      int width, int height, int components,
                                      int newwidth, int newheight,
                                      SbImageResizeFilter filter)
 {
-  if (!src || width <= 0 || height <= 0 || components <= 0 || 
-      newwidth <= 0 || newheight <= 0) {
+  size_t source_size = 0;
+  size_t dest_size = 0;
+  if (!src || !checked_resize_size(width, height, 1, components, source_size) ||
+      !checked_resize_size(newwidth, newheight, 1, components, dest_size)) {
     return nullptr;
   }
-  
-  size_t dest_size = (size_t)newwidth * newheight * components;
+
   unsigned char* dest = new unsigned char[dest_size];
   
   if (!SbImageResize_resize2D_inplace(src, dest, width, height, components, 
@@ -574,12 +641,15 @@ unsigned char* SbImageResize_resize3D(const unsigned char* src,
                                      int newwidth, int newheight, int newdepth,
                                      SbImageResizeFilter filter)
 {
-  if (!src || width <= 0 || height <= 0 || depth <= 0 || components <= 0 || 
-      newwidth <= 0 || newheight <= 0 || newdepth <= 0) {
+  size_t source_size = 0;
+  size_t dest_size = 0;
+  if (!src ||
+      !checked_resize_size(width, height, depth, components, source_size) ||
+      !checked_resize_size(newwidth, newheight, newdepth, components,
+                           dest_size)) {
     return nullptr;
   }
-  
-  size_t dest_size = (size_t)newwidth * newheight * newdepth * components;
+
   unsigned char* dest = new unsigned char[dest_size];
   
   switch (filter) {
@@ -595,6 +665,9 @@ unsigned char* SbImageResize_resize3D(const unsigned char* src,
       high_quality_resize_3d(src, dest, width, height, depth, components, 
                             newwidth, newheight, newdepth);
       break;
+    default:
+      delete[] dest;
+      return nullptr;
   }
   
   return dest;
@@ -605,8 +678,12 @@ bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* des
                                    int newwidth, int newheight,
                                    SbImageResizeFilter filter)
 {
-  if (!src || !dest || width <= 0 || height <= 0 || components <= 0 || 
-      newwidth <= 0 || newheight <= 0) {
+  size_t source_size = 0;
+  size_t destination_size = 0;
+  if (!src || !dest ||
+      !checked_resize_size(width, height, 1, components, source_size) ||
+      !checked_resize_size(newwidth, newheight, 1, components,
+                           destination_size)) {
     return false;
   }
   
@@ -621,8 +698,22 @@ bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* des
     case SB_IMAGE_RESIZE_FILTER_B_SPLINE:
     case SB_IMAGE_RESIZE_FILTER_LANCZOS3:
     case SB_IMAGE_RESIZE_FILTER_MITCHELL:
+      // The separable filter allocates an intermediate image with the
+      // destination width and source height.
+      if (!checked_resize_size(newwidth, height, 1, components,
+                               destination_size)) return false;
+      {
+        float (*filter_func)(float) = nullptr;
+        float support = 0.0f;
+        get_filter_function(filter, &filter_func, &support);
+        if (!filter_func ||
+            !filter_axis_supported(width, newwidth, support) ||
+            !filter_axis_supported(height, newheight, support)) return false;
+      }
       filter_resize_2d(src, dest, width, height, components, newwidth, newheight, filter);
       break;
+    default:
+      return false;
   }
   
   return true;

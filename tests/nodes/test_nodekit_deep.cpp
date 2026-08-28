@@ -95,10 +95,9 @@ TEST(NodesNodekitDeep, SoCameraKitTypeCheck)
 {
     SoCameraKit * kit = new SoCameraKit;
     kit->ref();
-    bool pass = (kit->getTypeId() != SoType::badType()) &&
-                kit->isOfType(SoBaseKit::getClassTypeId());
+    EXPECT_TRUE((kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId())) << "SoCameraKit bad type or not SoBaseKit subtype";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoCameraKit bad type or not SoBaseKit subtype";
 }
 
 TEST(NodesNodekitDeep, SoCameraKitGetPartCameraTRUEReturnsNonNullCamera)
@@ -106,10 +105,9 @@ TEST(NodesNodekitDeep, SoCameraKitGetPartCameraTRUEReturnsNonNullCamera)
     SoCameraKit * kit = new SoCameraKit;
     kit->ref();
     SoNode * cam = kit->getPart("camera", TRUE);
-    bool pass = (cam != nullptr) &&
-                cam->isOfType(SoCamera::getClassTypeId());
+    EXPECT_TRUE((cam != nullptr) &&
+                cam->isOfType(SoCamera::getClassTypeId())) << "SoCameraKit: getPart('camera') should return a camera node";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoCameraKit: getPart('camera') should return a camera node";
 }
 
 // -----------------------------------------------------------------------
@@ -121,10 +119,9 @@ TEST(NodesNodekitDeep, SoLightKitGetPartLightTRUEReturnsNonNullLight)
     SoLightKit * kit = new SoLightKit;
     kit->ref();
     SoNode * light = kit->getPart("light", TRUE);
-    bool pass = (light != nullptr) &&
-                light->isOfType(SoLight::getClassTypeId());
+    EXPECT_TRUE((light != nullptr) &&
+                light->isOfType(SoLight::getClassTypeId())) << "SoLightKit: getPart('light') should return a light node";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoLightKit: getPart('light') should return a light node";
 }
 
 // -----------------------------------------------------------------------
@@ -138,9 +135,8 @@ TEST(NodesNodekitDeep, SoShapeKitSetPartAndGetPartRoundTrip)
     SoCube * cube = new SoCube;
     kit->setPart("shape", cube);
     SoNode * got = kit->getPart("shape", FALSE);
-    bool pass = (got == cube);
+    EXPECT_TRUE((got == cube)) << "SoShapeKit: getPart should return the cube that was set";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit: getPart should return the cube that was set";
 }
 
 // -----------------------------------------------------------------------
@@ -151,10 +147,9 @@ TEST(NodesNodekitDeep, SoSeparatorKitTypeCheck)
 {
     SoSeparatorKit * kit = new SoSeparatorKit;
     kit->ref();
-    bool pass = (kit->getTypeId() != SoType::badType()) &&
-                kit->isOfType(SoBaseKit::getClassTypeId());
+    EXPECT_TRUE((kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId())) << "SoSeparatorKit bad type or not SoBaseKit subtype";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoSeparatorKit bad type or not SoBaseKit subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -168,9 +163,8 @@ TEST(NodesNodekitDeep, SoWrapperKitSetPartContentsAndGetPartRoundTrip)
     SoSeparator * sep = new SoSeparator;
     kit->setPart("contents", sep);
     SoNode * got = kit->getPart("contents", FALSE);
-    bool pass = (got != nullptr);
+    EXPECT_TRUE((got != nullptr)) << "SoWrapperKit: getPart('contents') should return non-null after setPart";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoWrapperKit: getPart('contents') should return non-null after setPart";
 }
 
 // -----------------------------------------------------------------------
@@ -190,16 +184,15 @@ TEST(NodesNodekitDeep, SoShapeKitWriteReadRoundTripReturnsNonNullRoot)
     writeNode(scene, &buf, &sz);
     scene->unref();
 
-    bool pass = false;
+    SoSeparator * readRoot = nullptr;
     if (buf != nullptr && sz > 0) {
         SoInput in;
         in.setBuffer(buf, std::strlen(buf));
-        SoSeparator * r = SoDB::readAll(&in);
-        pass = (r != nullptr);
-        if (r) {
-            r->ref();
-            r->unref();
+        readRoot = SoDB::readAll(&in);
+        if (readRoot) {
+            readRoot->ref();
+            readRoot->unref();
         }
     }
-    EXPECT_TRUE(pass) << "SoShapeKit write/read round-trip: SoDB::readAll returned null";
+    EXPECT_NE(readRoot, nullptr);
 }

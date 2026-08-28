@@ -81,8 +81,7 @@ static void countApplyData(uintptr_t /*key*/, void * /*val*/, void * data)
 TEST(BaseSbtimeSbdict, SbTimeZeroHasValue00)
 {
     SbTime t = SbTime::zero();
-    bool pass = floatNear(t.getValue(), 0.0);
-    EXPECT_TRUE(pass) << "SbTime::zero() != 0.0";
+    EXPECT_TRUE(floatNear(t.getValue(), 0.0)) << "SbTime::zero() != 0.0";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeDefaultConstructorIsZero)
@@ -97,174 +96,152 @@ TEST(BaseSbtimeSbdict, SbTimeDefaultConstructorIsZero)
 TEST(BaseSbtimeSbdict, SbTimeDoubleSetValueGetValueRoundTrip)
 {
     SbTime t(3.75);
-    bool pass = floatNear(t.getValue(), 3.75);
-    EXPECT_TRUE(pass) << "SbTime(double) getValue mismatch";
+    EXPECT_TRUE(floatNear(t.getValue(), 3.75)) << "SbTime(double) getValue mismatch";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeSetValueDoubleRoundTrip)
 {
     SbTime t;
     t.setValue(1.5);
-    bool pass = floatNear(t.getValue(), 1.5);
-    EXPECT_TRUE(pass) << "setValue/getValue round-trip failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 1.5)) << "setValue/getValue round-trip failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeSetValueSecUsecRoundTrip)
 {
     SbTime t;
     t.setValue((int32_t)2, (long)500000); // 2.5 s
-    bool pass = floatNear(t.getValue(), 2.5);
-    EXPECT_TRUE(pass) << "setValue(sec,usec) round-trip failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 2.5)) << "setValue(sec,usec) round-trip failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeSetMsecValueRoundTrip)
 {
     SbTime t;
     t.setMsecValue(1500); // 1.5 s
-    bool pass = floatNear(t.getValue(), 1.5, 1e-3);
-    EXPECT_TRUE(pass) << "setMsecValue round-trip failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 1.5, 1e-3)) << "setMsecValue round-trip failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperator301545)
 {
     SbTime a(3.0), b(1.5);
     SbTime c = a + b;
-    bool pass = floatNear(c.getValue(), 4.5);
-    EXPECT_TRUE(pass) << "operator+ failed";
+    EXPECT_TRUE(floatNear(c.getValue(), 4.5)) << "operator+ failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperator301515)
 {
     SbTime a(3.0), b(1.5);
     SbTime c = a - b;
-    bool pass = floatNear(c.getValue(), 1.5);
-    EXPECT_TRUE(pass) << "operator- failed";
+    EXPECT_TRUE(floatNear(c.getValue(), 1.5)) << "operator- failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeUnaryMinusNegatesValue)
 {
     SbTime a(2.0);
     SbTime b = -a;
-    bool pass = floatNear(b.getValue(), -2.0);
-    EXPECT_TRUE(pass) << "unary minus failed";
+    EXPECT_TRUE(floatNear(b.getValue(), -2.0)) << "unary minus failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorSbTimeDouble)
 {
     SbTime a(2.0);
     SbTime b = a * 3.0;
-    bool pass = floatNear(b.getValue(), 6.0);
-    EXPECT_TRUE(pass) << "SbTime * double failed";
+    EXPECT_TRUE(floatNear(b.getValue(), 6.0)) << "SbTime * double failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorDoubleSbTime)
 {
     SbTime a(2.0);
     SbTime b = 4.0 * a;
-    bool pass = floatNear(b.getValue(), 8.0);
-    EXPECT_TRUE(pass) << "double * SbTime failed";
+    EXPECT_TRUE(floatNear(b.getValue(), 8.0)) << "double * SbTime failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorSbTimeDouble2)
 {
     SbTime a(6.0);
     SbTime b = a / 2.0;
-    bool pass = floatNear(b.getValue(), 3.0);
-    EXPECT_TRUE(pass) << "SbTime / double failed";
+    EXPECT_TRUE(floatNear(b.getValue(), 3.0)) << "SbTime / double failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorRatioSbTimeSbTime)
 {
     SbTime a(6.0), b(2.0);
     double ratio = a / b;
-    bool pass = floatNear(ratio, 3.0);
-    EXPECT_TRUE(pass) << "SbTime / SbTime ratio failed";
+    EXPECT_TRUE(floatNear(ratio, 3.0)) << "SbTime / SbTime ratio failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorAccumulates)
 {
     SbTime t(1.0);
     t += SbTime(0.5);
-    bool pass = floatNear(t.getValue(), 1.5);
-    EXPECT_TRUE(pass) << "operator+= failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 1.5)) << "operator+= failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorSubtracts)
 {
     SbTime t(2.0);
     t -= SbTime(0.5);
-    bool pass = floatNear(t.getValue(), 1.5);
-    EXPECT_TRUE(pass) << "operator-= failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 1.5)) << "operator-= failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorScales)
 {
     SbTime t(2.0);
     t *= 3.0;
-    bool pass = floatNear(t.getValue(), 6.0);
-    EXPECT_TRUE(pass) << "operator*= failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 6.0)) << "operator*= failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorDivides)
 {
     SbTime t(6.0);
     t /= 2.0;
-    bool pass = floatNear(t.getValue(), 3.0);
-    EXPECT_TRUE(pass) << "operator/= failed";
+    EXPECT_TRUE(floatNear(t.getValue(), 3.0)) << "operator/= failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorEqualTimes)
 {
     SbTime a(1.5), b(1.5);
-    bool pass = (a == b);
-    EXPECT_TRUE(pass) << "operator== failed for equal times";
+    EXPECT_TRUE((a == b)) << "operator== failed for equal times";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeOperatorDifferentTimes)
 {
     SbTime a(1.0), b(2.0);
-    bool pass = (a != b);
-    EXPECT_TRUE(pass) << "operator!= failed for different times";
+    EXPECT_TRUE((a != b)) << "operator!= failed for different times";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeComparisonOperators)
 {
     SbTime a(1.0), b(2.0);
-    bool pass = (a < b) && (a <= b) && (b > a) && (b >= a) &&
-                !(b < a) && !(a > b);
-    EXPECT_TRUE(pass) << "comparison operators failed";
+    EXPECT_TRUE((a < b) && (a <= b) && (b > a) && (b >= a) &&
+                !(b < a) && !(a > b)) << "comparison operators failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeModulo)
 {
     SbTime a(5.0), b(3.0);
     SbTime r = a % b;
-    bool pass = floatNear(r.getValue(), 2.0, 1e-6);
-    EXPECT_TRUE(pass) << "SbTime % modulo failed";
+    EXPECT_TRUE(floatNear(r.getValue(), 2.0, 1e-6)) << "SbTime % modulo failed";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeFormatReturnsNonEmptyString)
 {
     SbTime t(12.345);
     SbString s = t.format();
-    bool pass = (s.getLength() > 0);
-    EXPECT_TRUE(pass) << "format() returned empty string";
+    EXPECT_TRUE((s.getLength() > 0)) << "format() returned empty string";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeMaxSbTimeZero)
 {
     SbTime mx = SbTime::max();
     SbTime z  = SbTime::zero();
-    bool pass = (mx >= z);
-    EXPECT_TRUE(pass) << "SbTime::max() < zero";
+    EXPECT_TRUE((mx >= z)) << "SbTime::max() < zero";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeMaxTimeEqualsSbTimeMax)
 {
     SbTime mx1 = SbTime::max();
     SbTime mx2 = SbTime::maxTime();
-    bool pass = floatNear(mx1.getValue(), mx2.getValue());
-    EXPECT_TRUE(pass) << "max() and maxTime() differ";
+    EXPECT_TRUE(floatNear(mx1.getValue(), mx2.getValue())) << "max() and maxTime() differ";
 }
 
 TEST(BaseSbtimeSbdict, SbTimeGetValueSecUsecDecomposesCorrectly)
@@ -274,8 +251,7 @@ TEST(BaseSbtimeSbdict, SbTimeGetValueSecUsecDecomposesCorrectly)
     time_t sec;
     long usec;
     t.getValue(sec, usec);
-    bool pass = (sec == 3) && (usec == 750000);
-    EXPECT_TRUE(pass) << "getValue(sec,usec) decomposition failed";
+    EXPECT_TRUE((sec == 3) && (usec == 750000)) << "getValue(sec,usec) decomposition failed";
 }
 
 // =======================================================================
@@ -289,8 +265,7 @@ TEST(BaseSbtimeSbdict, SbDictEnterAndFind)
     SbBool entered = dict.enter((uintptr_t)1, &dummy);
     void * found = nullptr;
     SbBool ok = dict.find((uintptr_t)1, found);
-    bool pass = entered && ok && (found == &dummy);
-    EXPECT_TRUE(pass) << "SbDict enter/find failed";
+    EXPECT_TRUE(entered && ok && (found == &dummy)) << "SbDict enter/find failed";
 }
 
 TEST(BaseSbtimeSbdict, SbDictFindReturnsFALSEForMissingKey)
@@ -298,8 +273,7 @@ TEST(BaseSbtimeSbdict, SbDictFindReturnsFALSEForMissingKey)
     SbDict dict;
     void * found = nullptr;
     SbBool ok = dict.find((uintptr_t)9999, found);
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "SbDict::find should return FALSE for missing key";
+    EXPECT_TRUE((ok == FALSE)) << "SbDict::find should return FALSE for missing key";
 }
 
 TEST(BaseSbtimeSbdict, SbDictRemoveDecreasesEntryCount)
@@ -311,8 +285,7 @@ TEST(BaseSbtimeSbdict, SbDictRemoveDecreasesEntryCount)
     dict.remove((uintptr_t)10);
     void * found = nullptr;
     SbBool ok = dict.find((uintptr_t)10, found);
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "SbDict remove: key still found after removal";
+    EXPECT_TRUE((ok == FALSE)) << "SbDict remove: key still found after removal";
 }
 
 TEST(BaseSbtimeSbdict, SbDictClearEmptiesTheDictionary)
@@ -325,8 +298,7 @@ TEST(BaseSbtimeSbdict, SbDictClearEmptiesTheDictionary)
     void * found = nullptr;
     SbBool ok1 = dict.find((uintptr_t)1, found);
     SbBool ok2 = dict.find((uintptr_t)2, found);
-    bool pass = (ok1 == FALSE) && (ok2 == FALSE);
-    EXPECT_TRUE(pass) << "SbDict::clear did not empty dictionary";
+    EXPECT_TRUE((ok1 == FALSE) && (ok2 == FALSE)) << "SbDict::clear did not empty dictionary";
 }
 
 TEST(BaseSbtimeSbdict, SbDictApplyToAllVisitsAllEntries)
@@ -338,8 +310,7 @@ TEST(BaseSbtimeSbdict, SbDictApplyToAllVisitsAllEntries)
     dict.enter((uintptr_t)3, &v);
     g_applyCount = 0;
     dict.applyToAll(countApply);
-    bool pass = (g_applyCount == 3);
-    EXPECT_TRUE(pass) << "applyToAll did not visit all entries";
+    EXPECT_TRUE((g_applyCount == 3)) << "applyToAll did not visit all entries";
 }
 
 TEST(BaseSbtimeSbdict, SbDictApplyToAllWithDataVisitsAllEntries)
@@ -351,8 +322,7 @@ TEST(BaseSbtimeSbdict, SbDictApplyToAllWithDataVisitsAllEntries)
     ApplyDataCtx ctx;
     ctx.count = 0;
     dict.applyToAll(countApplyData, &ctx);
-    bool pass = (ctx.count == 2);
-    EXPECT_TRUE(pass) << "applyToAll(data) did not visit all entries";
+    EXPECT_TRUE((ctx.count == 2)) << "applyToAll(data) did not visit all entries";
 }
 
 TEST(BaseSbtimeSbdict, SbDictMakePListProducesMatchingKeyValueLists)
@@ -363,8 +333,7 @@ TEST(BaseSbtimeSbdict, SbDictMakePListProducesMatchingKeyValueLists)
     dict.enter((uintptr_t)200, &v2);
     SbPList keys, values;
     dict.makePList(keys, values);
-    bool pass = (keys.getLength() == 2) && (values.getLength() == 2);
-    EXPECT_TRUE(pass) << "makePList produced wrong list lengths";
+    EXPECT_TRUE((keys.getLength() == 2) && (values.getLength() == 2)) << "makePList produced wrong list lengths";
 }
 
 TEST(BaseSbtimeSbdict, SbDictCopyConstructorReplicatesEntries)
@@ -375,8 +344,7 @@ TEST(BaseSbtimeSbdict, SbDictCopyConstructorReplicatesEntries)
     SbDict copy(orig);
     void * found = nullptr;
     SbBool ok = copy.find((uintptr_t)77, found);
-    bool pass = ok && (found == &v);
-    EXPECT_TRUE(pass) << "SbDict copy constructor failed";
+    EXPECT_TRUE(ok && (found == &v)) << "SbDict copy constructor failed";
 }
 
 TEST(BaseSbtimeSbdict, SbDictOperatorCopiesEntries)
@@ -388,8 +356,7 @@ TEST(BaseSbtimeSbdict, SbDictOperatorCopiesEntries)
     copy = orig;
     void * found = nullptr;
     SbBool ok = copy.find((uintptr_t)44, found);
-    bool pass = ok && (found == &v);
-    EXPECT_TRUE(pass) << "SbDict operator= failed";
+    EXPECT_TRUE(ok && (found == &v)) << "SbDict operator= failed";
 }
 
 TEST(BaseSbtimeSbdict, SbDictEnterReturnsFALSEForDuplicateKey)
@@ -398,6 +365,5 @@ TEST(BaseSbtimeSbdict, SbDictEnterReturnsFALSEForDuplicateKey)
     int v1 = 1, v2 = 2;
     SbBool first  = dict.enter((uintptr_t)50, &v1);
     SbBool second = dict.enter((uintptr_t)50, &v2); // duplicate
-    bool pass = (first == TRUE) && (second == FALSE);
-    EXPECT_TRUE(pass) << "SbDict enter should return FALSE for duplicate key";
+    EXPECT_TRUE((first == TRUE) && (second == FALSE)) << "SbDict enter should return FALSE for duplicate key";
 }

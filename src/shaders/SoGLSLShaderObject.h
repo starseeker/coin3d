@@ -76,7 +76,7 @@ private:
   OBOL_GLhandle programHandle;
   OBOL_GLhandle shaderHandle;
   SbBool isattached;
-  int32_t programid;
+  uint64_t programid;
 };
 
 #endif /* ! OBOL_SOGLSLSHADEROBJECT_H */

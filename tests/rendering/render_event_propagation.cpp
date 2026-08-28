@@ -352,45 +352,11 @@ static bool test5_keySequenceVisibility(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_event_propagation";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createEventPropagation(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== Complex event propagation tests ===\n");
-
-    if (!test1_handledStopsPropagation())          ++failures;
-    if (!test2_multipleEventTypes())               ++failures;
-    if (!test3_eventDrivenMaterialChange(basepath)) ++failures;
-    if (!test4_pressMoveDragRelease(basepath))     ++failures;
-    if (!test5_keySequenceVisibility(basepath))    ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_event_propagation) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_event_propagation");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(EventPropagationRenderTest, HandledStopsPropagation, "propagation_handled", test1_handledStopsPropagation())
+OBOL_RENDER_TEST_CASE(EventPropagationRenderTest, MultipleEventTypes, "propagation_types", test2_multipleEventTypes())
+OBOL_RENDER_TEST_CASE(EventPropagationRenderTest, MaterialChange, "propagation_material", test3_eventDrivenMaterialChange(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EventPropagationRenderTest, DragSequence, "propagation_drag", test4_pressMoveDragRelease(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EventPropagationRenderTest, KeyboardVisibility, "propagation_keyboard", test5_keySequenceVisibility(outputStem.c_str()))

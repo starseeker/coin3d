@@ -77,9 +77,8 @@ TEST(EventsSuite, SoKeyboardEventSetGetKeyAndState)
     SoKeyboardEvent evt;
     evt.setKey(SoKeyboardEvent::A);
     evt.setState(SoButtonEvent::DOWN);
-    bool pass = (evt.getKey() == SoKeyboardEvent::A) &&
-                (evt.getState() == SoButtonEvent::DOWN);
-    EXPECT_TRUE(pass) << "SoKeyboardEvent key or state mismatch";
+    EXPECT_TRUE((evt.getKey() == SoKeyboardEvent::A) &&
+                (evt.getState() == SoButtonEvent::DOWN)) << "SoKeyboardEvent key or state mismatch";
 }
 
 TEST(EventsSuite, SoKeyboardEventSetPositionGetPosition)
@@ -87,16 +86,14 @@ TEST(EventsSuite, SoKeyboardEventSetPositionGetPosition)
     SoKeyboardEvent evt;
     evt.setPosition(SbVec2s(100, 200));
     const SbVec2s & pos = evt.getPosition();
-    bool pass = (pos[0] == 100) && (pos[1] == 200);
-    EXPECT_TRUE(pass) << "SoKeyboardEvent position mismatch";
+    EXPECT_TRUE((pos[0] == 100) && (pos[1] == 200)) << "SoKeyboardEvent position mismatch";
 }
 
 TEST(EventsSuite, SoKeyboardEventWasShiftDownDefaultFalse)
 {
     SoKeyboardEvent evt;
     // No shift modifier set — should be false
-    bool pass = (evt.wasShiftDown() == FALSE);
-    EXPECT_TRUE(pass) << "SoKeyboardEvent wasShiftDown should default to false";
+    EXPECT_TRUE((evt.wasShiftDown() == FALSE)) << "SoKeyboardEvent wasShiftDown should default to false";
 }
 
 // -----------------------------------------------------------------------
@@ -108,9 +105,8 @@ TEST(EventsSuite, SoMouseButtonEventSetGetButtonAndState)
     SoMouseButtonEvent evt;
     evt.setButton(SoMouseButtonEvent::BUTTON1);
     evt.setState(SoButtonEvent::DOWN);
-    bool pass = (evt.getButton() == SoMouseButtonEvent::BUTTON1) &&
-                (evt.getState() == SoButtonEvent::DOWN);
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent button or state mismatch";
+    EXPECT_TRUE((evt.getButton() == SoMouseButtonEvent::BUTTON1) &&
+                (evt.getState() == SoButtonEvent::DOWN)) << "SoMouseButtonEvent button or state mismatch";
 }
 
 TEST(EventsSuite, SoMouseButtonEventIsButtonPressEvent)
@@ -118,9 +114,8 @@ TEST(EventsSuite, SoMouseButtonEventIsButtonPressEvent)
     SoMouseButtonEvent evt;
     evt.setButton(SoMouseButtonEvent::BUTTON1);
     evt.setState(SoButtonEvent::DOWN);
-    bool pass = SoMouseButtonEvent::isButtonPressEvent(
-                    &evt, SoMouseButtonEvent::BUTTON1) == TRUE;
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent::isButtonPressEvent failed";
+    EXPECT_TRUE(SoMouseButtonEvent::isButtonPressEvent(
+                    &evt, SoMouseButtonEvent::BUTTON1) == TRUE) << "SoMouseButtonEvent::isButtonPressEvent failed";
 }
 
 // -----------------------------------------------------------------------
@@ -132,8 +127,7 @@ TEST(EventsSuite, SoLocation2EventSetPositionGetPosition)
     SoLocation2Event evt;
     evt.setPosition(SbVec2s(42, 17));
     const SbVec2s & pos = evt.getPosition();
-    bool pass = (pos[0] == 42) && (pos[1] == 17);
-    EXPECT_TRUE(pass) << "SoLocation2Event position mismatch";
+    EXPECT_TRUE((pos[0] == 42) && (pos[1] == 17)) << "SoLocation2Event position mismatch";
 }
 
 // -----------------------------------------------------------------------
@@ -143,8 +137,7 @@ TEST(EventsSuite, SoLocation2EventSetPositionGetPosition)
 TEST(EventsSuite, SoMotion3EventClassInitialized)
 {
     SoMotion3Event evt;
-    bool pass = (evt.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoMotion3Event has bad type";
+    EXPECT_TRUE((evt.getTypeId() != SoType::badType())) << "SoMotion3Event has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -154,8 +147,7 @@ TEST(EventsSuite, SoMotion3EventClassInitialized)
 TEST(EventsSuite, SoSpaceballButtonEventClassInitialized)
 {
     SoSpaceballButtonEvent evt;
-    bool pass = (evt.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoSpaceballButtonEvent has bad type";
+    EXPECT_TRUE((evt.getTypeId() != SoType::badType())) << "SoSpaceballButtonEvent has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -178,9 +170,8 @@ TEST(EventsSuite, SoHandleEventActionEventNotHandledWithoutCallback)
     action.setEvent(&evt);
     action.apply(root);
 
-    bool pass = (action.isHandled() == FALSE);
+    EXPECT_TRUE((action.isHandled() == FALSE)) << "Event should not be handled when no callback is registered";
     root->unref();
-    EXPECT_TRUE(pass) << "Event should not be handled when no callback is registered";
 }
 
 // -----------------------------------------------------------------------
@@ -207,9 +198,8 @@ TEST(EventsSuite, SoEventCallbackAddEventCallbackFiresOnMatchingEvent)
     action.setEvent(&evt);
     action.apply(root);
 
-    bool pass = cap.fired;
+    EXPECT_TRUE(cap.fired) << "SoEventCallback did not fire for matching event type";
     root->unref();
-    EXPECT_TRUE(pass) << "SoEventCallback did not fire for matching event type";
 }
 
 // -----------------------------------------------------------------------
@@ -238,7 +228,6 @@ TEST(EventsSuite, SoEventCallbackDoesNotFireForMismatchedEventType)
     action.setEvent(&evt);
     action.apply(root);
 
-    bool pass = !cap.fired;
+    EXPECT_TRUE(!cap.fired) << "SoEventCallback fired for wrong event type";
     root->unref();
-    EXPECT_TRUE(pass) << "SoEventCallback fired for wrong event type";
 }

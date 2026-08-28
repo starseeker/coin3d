@@ -50,6 +50,7 @@
 #include "hardcopy/VectorizeActionP.h"
 #include "CoinTidbits.h"
 #include "actions/SoSubActionP.h"
+#include "misc/SoOnce.h"
 
 
 // *************************************************************************
@@ -483,13 +484,12 @@ SoVectorizePSActionP::printSetdash(uint16_t pattern) const
     dashcnt++;
   }
   if (dashcnt == DASH_LIMIT && pos >= 0) {
-    static int didwarn = 0;
-    if (!didwarn) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoVectorizeActionP::printSetdash",
                                 "linePattern mask is too complex. "
                                 "Dash is truncated to %d items.",
                                 DASH_LIMIT);
-      didwarn = 1;
     }
   }
   if (!onoff) { // need pairs of values

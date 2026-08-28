@@ -57,7 +57,7 @@ thread_local std::unordered_map<const SbImageFormatRegistry *, std::string>
 
 bool SbImageFormatHandler::canHandleExtension(const std::string& extension) const
 {
-  auto exts = getExtensions();
+  const auto & exts = getExtensions();
   std::string lowerExt = extension;
   std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(),
                  [](const unsigned char value) {
@@ -283,7 +283,7 @@ std::vector<std::string> SbImageFormatRegistry::getSupportedExtensions() const
 {
   std::vector<std::string> allExtensions;
   for (SbImageFormatHandler * handler : this->getHandlersSnapshot()) {
-    auto handlerExts = handler->getExtensions();
+    const auto & handlerExts = handler->getExtensions();
     allExtensions.insert(allExtensions.end(), handlerExts.begin(), handlerExts.end());
   }
   

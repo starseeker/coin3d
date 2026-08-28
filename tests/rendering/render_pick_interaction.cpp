@@ -479,49 +479,14 @@ static bool test8_successivePicks(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_pick_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createPickInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoRayPickAction interaction tests ===\n");
-
-    if (!test1_pickSphereCenter())    ++failures;
-    if (!test2_missCorner())          ++failures;
-    if (!test3_pickCubeSurface())     ++failures;
-    if (!test4_frontPickFirst())      ++failures;
-    if (!test5_pickAll())             ++failures;
-    if (!test6_pickRadius())          ++failures;
-    if (!test7_highlightOnPick(basepath)) ++failures;
-    if (!test8_successivePicks(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_pick_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_pick_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, SphereCenter, "pick_sphere", test1_pickSphereCenter())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, CornerMiss, "pick_miss", test2_missCorner())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, CubeSurface, "pick_cube", test3_pickCubeSurface())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, FrontPickFirst, "pick_front", test4_frontPickFirst())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, PickAll, "pick_all", test5_pickAll())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, Radius, "pick_radius", test6_pickRadius())
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, Highlight, "pick_highlight", test7_highlightOnPick(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(PickInteractionRenderTest, SuccessivePicks, "pick_successive", test8_successivePicks(outputStem.c_str()))

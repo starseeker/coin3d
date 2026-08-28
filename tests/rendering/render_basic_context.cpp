@@ -138,7 +138,7 @@ static SoSeparator* buildTexturedGeometry()
 
 /* Scenario 3: SoSceneTexture2 applied to a flat quad.
  * The inner scene renders an orange cone into a 128×128 texture. */
-static SoSeparator* buildSceneTextureScene()
+static SoSeparator* buildSceneTextureScene(const SbVec2s &textureSize = SbVec2s(128, 128))
 {
     /* Inner scene -------------------------------------------------------- */
     SoSeparator* innerScene = new SoSeparator;
@@ -178,7 +178,7 @@ static SoSeparator* buildSceneTextureScene()
     root->addChild(light);
 
     SoSceneTexture2* stex = new SoSceneTexture2;
-    stex->size.setValue(SbVec2s(128, 128));
+    stex->size.setValue(textureSize);
     stex->backgroundColor.setValue(0.0f, 0.0f, 0.2f, 1.0f);
     stex->type.setValue(SoSceneTexture2::RGBA8);
     stex->wrapS.setValue(SoSceneTexture2::CLAMP);
@@ -226,130 +226,105 @@ static int countNonBlackPixels(const unsigned char* buf, int w, int h, int nc)
     return count;
 }
 
-/* ----------------------------------------------------------------------- */
-/* Scenario implementation                                                   */
-/* ----------------------------------------------------------------------- */
-
-static int runScenario(const char *outputStem)
+static void initializeBasicContext()
 {
-    /* ------------------------------------------------------------------ */
-    /* Initialise with BasicFLTKContextManager (FLTK-window-only context). */
-    /* ------------------------------------------------------------------ */
 #ifdef OBOL_VIEWER_FLTK_GL
-    /* FLTK_GL build: use BasicFLTKContextManager directly. */
-    BasicFLTKContextManager basicMgr;
-    SoDB::init(&basicMgr);
+    static BasicFLTKContextManager basicManager;
+    SoDB::init(&basicManager);
     SoNodeKit::init();
     SoInteraction::init();
-    printf("render_basic_context: using BasicFLTKContextManager "
-           "(FLTK 1×1 window, no Pbuffers)\n");
 #else
-    /* Headless (OSMesa) build: still exercises the hardened code paths,
-     * though OSMesa itself provides a full-featured context.  The test
-     * remains valuable for the GL wrapper / SoGLDisplayList hardening. */
     initCoinHeadless();
-    printf("render_basic_context: using headless OSMesa context manager\n");
 #endif
-
     SoGLDriverDatabase::init();
+}
 
+static bool renderPlainGeometry(const char * outputStem)
+{
     char outbase[4096];
-    if (outputStem != nullptr)
-        snprintf(outbase, sizeof(outbase), "%s", outputStem);
-    else
-        snprintf(outbase, sizeof(outbase), "render_basic_context");
+    snprintf(outbase, sizeof(outbase), "%s.rgb", outputStem);
+    SoSeparator * root = buildPlainGeometry();
+    root->ref();
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool rendered = renderer.render(root);
+    const unsigned char * buffer = rendered ? renderer.getBuffer() : nullptr;
+    const bool ok = buffer != nullptr &&
+        countNonBlackPixels(buffer, W, H, 3) >= (W * H / 8) &&
+        renderer.writeToRGB(outbase);
+    root->unref();
+    return ok;
+}
 
-    bool all_ok = true;
+static bool staticTextureDegradesSafely()
+{
+    SoSeparator * root = buildTexturedGeometry();
+    root->ref();
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.05f, 0.05f, 0.05f));
+    const bool rendered = renderer.render(root);
+    const bool valid = !rendered || renderer.getBuffer() != nullptr;
+    root->unref();
+    return valid;
+}
 
-    /* ------------------------------------------------------------------ */
-    /* Scenario 1: plain geometry — must always produce non-blank output.  */
-    /* ------------------------------------------------------------------ */
-    printf("render_basic_context: [1] plain geometry ... ");
-    {
-        SoSeparator* root = buildPlainGeometry();
-        root->ref();
+static bool sceneTextureDegradesSafely()
+{
+    SoSeparator * root = buildSceneTextureScene();
+    root->ref();
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool rendered = renderer.render(root);
+    const bool valid = !rendered || renderer.getBuffer() != nullptr;
+    root->unref();
+    return valid;
+}
 
-        SbViewportRegion vp(W, H);
-        SoOffscreenRenderer renderer(vp);
-        renderer.setComponents(SoOffscreenRenderer::RGB);
-        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
-        bool rendered = renderer.render(root) == TRUE;
-        int nonBlack = 0;
-        if (rendered) {
-            const unsigned char* buf = renderer.getBuffer();
-            if (buf) nonBlack = countNonBlackPixels(buf, W, H, 3);
-        }
-
-        if (!rendered || nonBlack < (W * H / 8)) {
-            printf("FAIL (rendered=%d nonBlack=%d)\n", (int)rendered, nonBlack);
-            all_ok = false;
-        } else {
-            /* Write output image. */
-            char path[sizeof(outbase) + 4];
-            snprintf(path, sizeof(path), "%s.rgb", outbase);
-            renderer.writeToRGB(path);
-            printf("PASS (nonBlack=%d)\n", nonBlack);
-        }
-        root->unref();
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Scenario 2: static texture — must not crash; pixel check lenient.   */
-    /* ------------------------------------------------------------------ */
-    printf("render_basic_context: [2] static SoTexture2 ... ");
-    {
-        SoSeparator* root = buildTexturedGeometry();
-        root->ref();
-
-        SbViewportRegion vp(W, H);
-        SoOffscreenRenderer renderer(vp);
-        renderer.setComponents(SoOffscreenRenderer::RGB);
-        renderer.setBackgroundColor(SbColor(0.05f, 0.05f, 0.05f));
-
-        bool rendered = renderer.render(root) == TRUE;
-        /* As long as it didn't crash, the test passes — a basic context
-         * without texture objects will fall back to flat shading. */
-        printf("%s\n", rendered ? "PASS (no crash)" : "PASS (render failed gracefully)");
-        root->unref();
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Scenario 3: SoSceneTexture2 — the original crash scenario.          */
-    /* Must NOT crash regardless of context capability.                    */
-    /* ------------------------------------------------------------------ */
-    printf("render_basic_context: [3] SoSceneTexture2 ... ");
-    {
-        SoSeparator* root = buildSceneTextureScene();
-        root->ref();
-
-        SbViewportRegion vp(W, H);
-        SoOffscreenRenderer renderer(vp);
-        renderer.setComponents(SoOffscreenRenderer::RGB);
-        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
-        /* render() is allowed to fail (e.g. SoSceneTexture2 skips the
-         * inner render because it detected the surface is too small).
-         * What is NOT allowed is a crash or memory corruption. */
-        bool rendered = renderer.render(root) == TRUE;
-        /* If it rendered, check that we got some pixels. */
-        int nonBlack = 0;
-        if (rendered) {
-            const unsigned char* buf = renderer.getBuffer();
-            if (buf) nonBlack = countNonBlackPixels(buf, W, H, 3);
-        }
-        printf("PASS (rendered=%d nonBlack=%d — no crash)\n",
-               (int)rendered, nonBlack);
-        root->unref();
-    }
-
-    printf("render_basic_context: overall %s\n", all_ok ? "PASS" : "FAIL");
-    return all_ok ? 0 : 1;
+static bool sceneTextureInvalidSizeDegradesSafely(const SbVec2s &size)
+{
+    SoSeparator *root = buildSceneTextureScene(size);
+    root->ref();
+    SoOffscreenRenderer renderer(SbViewportRegion(W, H));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    const bool rendered = renderer.render(root);
+    const bool valid = !rendered || renderer.getBuffer() != nullptr;
+    root->unref();
+    return valid;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_basic_context) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_basic_context");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+class BasicContextRenderTest : public ::testing::Test {
+protected:
+    void SetUp() override { initializeBasicContext(); }
+};
+
+TEST_F(BasicContextRenderTest, PlainGeometryRenders)
+{
+    const std::string output =
+        ObolTest::renderingOutputStem("basic_context_plain_geometry");
+    EXPECT_TRUE(renderPlainGeometry(output.c_str()));
+}
+
+TEST_F(BasicContextRenderTest, StaticTextureDegradesSafely)
+{
+    EXPECT_TRUE(staticTextureDegradesSafely());
+}
+
+TEST_F(BasicContextRenderTest, SceneTextureDegradesSafely)
+{
+    EXPECT_TRUE(sceneTextureDegradesSafely());
+}
+
+TEST_F(BasicContextRenderTest, NegativeSceneTextureSizeIsRejectedSafely)
+{
+    EXPECT_TRUE(sceneTextureInvalidSizeDegradesSafely(SbVec2s(-1, 64)));
+}
+
+TEST_F(BasicContextRenderTest, RoundedSceneTextureOverflowIsRejectedSafely)
+{
+    EXPECT_TRUE(sceneTextureInvalidSizeDegradesSafely(SbVec2s(32767, 64)));
 }

@@ -51,10 +51,8 @@ public:
   
   static void setInstancePrefix(const SbString & s);
   
-  static void create(SoOutput * out, SoOutput * copyfrom);
-  static void destruct(SoOutput * out);
-
   static SoWriterefCounter * instance(SoOutput * out);
+  static void setCurrent(SoWriterefCounter * counter);
 
   SbBool shouldWrite(const SoBase * base) const;
   SbName getWriteName(const SoBase * base) const;
@@ -87,6 +85,7 @@ protected:
   ~SoWriterefCounter();
 
 private:
+  friend class SoOutput;
   void cleanup(void);
 
   SoWriterefCounterP * pimpl;

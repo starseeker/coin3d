@@ -43,11 +43,17 @@
  */
 
 #include <cstdlib>
+#include <mutex>
 #include <string>
 #include <optional>
 
 // Internal namespace for Coin3D implementation details
 namespace CoinInternal {
+
+inline std::mutex& environmentMutex() {
+    static std::mutex mutex;
+    return mutex;
+}
 
 /*!
  * \brief Get environment variable value using modern C++17
@@ -59,6 +65,7 @@ namespace CoinInternal {
  * \return Optional string containing the value, or nullopt if not set
  */
 inline std::optional<std::string> getEnvironmentVariable(const std::string& name) {
+    const std::lock_guard<std::mutex> guard(environmentMutex());
     const char* value = std::getenv(name.c_str());
     if (value != nullptr) {
         return std::string(value);
@@ -90,7 +97,9 @@ inline std::string getEnvironmentVariable(const std::string& name, const std::st
  * \return Raw pointer to environment variable value, or nullptr if not set
  */
 inline const char* getEnvironmentVariableRaw(const std::string& name) {
-    return std::getenv(name.c_str());
+    static thread_local std::optional<std::string> snapshot;
+    snapshot = getEnvironmentVariable(name);
+    return snapshot ? snapshot->c_str() : nullptr;
 }
 
 /*!
@@ -105,6 +114,7 @@ inline const char* getEnvironmentVariableRaw(const std::string& name) {
  * \return true if successful, false otherwise
  */
 inline bool setEnvironmentVariable(const std::string& name, const std::string& value, bool overwrite = true) {
+    const std::lock_guard<std::mutex> guard(environmentMutex());
 #ifdef _WIN32
     if (!overwrite && std::getenv(name.c_str()) != nullptr) {
         return true; // Variable exists and we don't want to overwrite
@@ -112,6 +122,15 @@ inline bool setEnvironmentVariable(const std::string& name, const std::string& v
     return _putenv_s(name.c_str(), value.c_str()) == 0;
 #else
     return setenv(name.c_str(), value.c_str(), overwrite ? 1 : 0) == 0;
+#endif
+}
+
+inline void unsetEnvironmentVariable(const std::string& name) {
+    const std::lock_guard<std::mutex> guard(environmentMutex());
+#ifdef _WIN32
+    (void)_putenv_s(name.c_str(), "");
+#else
+    (void)unsetenv(name.c_str());
 #endif
 }
 

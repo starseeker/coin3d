@@ -13,25 +13,6 @@ set(OBOL_PROFILER_FILES
 	SbProfilingData.cpp
 )
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_PROFILER_INTERNAL_FILES
-	SoNodeProfiling.h
-)
 
 # build module object library
 obol_add_source_module(profiler ${OBOL_PROFILER_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_PROFILER_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/profiler/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_PROFILER_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/profiler/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-
-# SoProfilerP is not quite private, it is included from VRML nodes. The symbol is excluded from public API in doc/CMakeList.txt.
-set(OBOL_DOCUMENTATION_FILES
-	${OBOL_DOCUMENTATION_FILES}
-	${PROJECT_SOURCE_DIR}/src/profiler/SoProfilerP.h
-	CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
-)

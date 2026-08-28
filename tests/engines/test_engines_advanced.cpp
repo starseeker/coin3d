@@ -95,9 +95,8 @@ TEST(EnginesAdvanced, SoInterpolateFloatAlpha05GivesMidpoint)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) && floatNear(result[0], 5.0f);
+    EXPECT_TRUE((result.getNum() > 0) && floatNear(result[0], 5.0f)) << "SoInterpolateFloat alpha=0.5 should yield 5.0";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateFloat alpha=0.5 should yield 5.0";
 }
 
 TEST(EnginesAdvanced, SoInterpolateFloatAlpha0GivesInput0)
@@ -112,9 +111,8 @@ TEST(EnginesAdvanced, SoInterpolateFloatAlpha0GivesInput0)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) && floatNear(result[0], 3.0f);
+    EXPECT_TRUE((result.getNum() > 0) && floatNear(result[0], 3.0f)) << "SoInterpolateFloat alpha=0 should yield input0 (3.0)";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateFloat alpha=0 should yield input0 (3.0)";
 }
 
 TEST(EnginesAdvanced, SoInterpolateFloatAlpha1GivesInput1)
@@ -129,9 +127,8 @@ TEST(EnginesAdvanced, SoInterpolateFloatAlpha1GivesInput1)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) && floatNear(result[0], 7.0f);
+    EXPECT_TRUE((result.getNum() > 0) && floatNear(result[0], 7.0f)) << "SoInterpolateFloat alpha=1 should yield input1 (7.0)";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateFloat alpha=1 should yield input1 (7.0)";
 }
 
 // -----------------------------------------------------------------------
@@ -150,15 +147,14 @@ TEST(EnginesAdvanced, SoInterpolateVec3fAlpha05MidpointsEachComponent)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         const SbVec3f & v = result[0];
-        pass = floatNear(v[0], 1.0f) &&
-               floatNear(v[1], 2.0f) &&
-               floatNear(v[2], 3.0f);
+        EXPECT_NEAR(v[0], 1.0f, 1e-5f);
+        EXPECT_NEAR(v[1], 2.0f, 1e-5f);
+        EXPECT_NEAR(v[2], 3.0f, 1e-5f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateVec3f alpha=0.5 should yield (1,2,3)";
 }
 
 // -----------------------------------------------------------------------
@@ -181,12 +177,11 @@ TEST(EnginesAdvanced, SoDecomposeVec4fDecomposesToXYZW)
     outZ.evaluate();
     outW.evaluate();
 
-    bool pass = (outX.getNum() > 0) && floatNear(outX[0], 1.0f) &&
+    EXPECT_TRUE((outX.getNum() > 0) && floatNear(outX[0], 1.0f) &&
                 (outY.getNum() > 0) && floatNear(outY[0], 2.0f) &&
                 (outZ.getNum() > 0) && floatNear(outZ[0], 3.0f) &&
-                (outW.getNum() > 0) && floatNear(outW[0], 4.0f);
+                (outW.getNum() > 0) && floatNear(outW[0], 4.0f)) << "SoDecomposeVec4f decomposition of (1,2,3,4) failed";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeVec4f decomposition of (1,2,3,4) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -204,14 +199,13 @@ TEST(EnginesAdvanced, SoComposeRotationProducesNonIdentityRotation)
     result.connectFrom(&eng->rotation);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         SbVec3f axis; float angle;
         result[0].getValue(axis, angle);
-        pass = (std::fabs(angle) > 1e-3f);
+        EXPECT_GT(std::fabs(angle), 1e-3f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeRotation should produce a non-identity rotation";
 }
 
 TEST(EnginesAdvanced, SoComposeRotationAxis001AnglePi2GivesCorrectAngle)
@@ -226,14 +220,13 @@ TEST(EnginesAdvanced, SoComposeRotationAxis001AnglePi2GivesCorrectAngle)
     result.connectFrom(&eng->rotation);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         SbVec3f axis; float angle;
         result[0].getValue(axis, angle);
-        pass = floatNear(std::fabs(angle), target, 0.01f);
+        EXPECT_NEAR(std::fabs(angle), target, 0.01f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeRotation angle should be ~pi/2";
 }
 
 // -----------------------------------------------------------------------
@@ -251,14 +244,13 @@ TEST(EnginesAdvanced, SoDecomposeRotationNonIdentityAxisIs001)
     resultAxis.connectFrom(&eng->axis);
     resultAxis.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(resultAxis.getNum(), 0);
     if (resultAxis.getNum() > 0) {
         const SbVec3f & ax = resultAxis[0];
         // axis should point along +Z or -Z (SbRotation may normalise sign)
-        pass = (std::fabs(std::fabs(ax[2]) - 1.0f) < 0.01f);
+        EXPECT_NEAR(std::fabs(ax[2]), 1.0f, 0.01f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeRotation Z-axis rotation should yield axis ~(0,0,±1)";
 }
 
 TEST(EnginesAdvanced, SoDecomposeRotationNonIdentityAngleIsPi2)
@@ -272,10 +264,9 @@ TEST(EnginesAdvanced, SoDecomposeRotationNonIdentityAngleIsPi2)
     resultAngle.connectFrom(&eng->angle);
     resultAngle.evaluate();
 
-    bool pass = (resultAngle.getNum() > 0) &&
-                floatNear(std::fabs(resultAngle[0]), target, 0.01f);
+    EXPECT_TRUE((resultAngle.getNum() > 0) &&
+                floatNear(std::fabs(resultAngle[0]), target, 0.01f)) << "SoDecomposeRotation Z-axis rotation angle should be ~pi/2";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeRotation Z-axis rotation angle should be ~pi/2";
 }
 
 // -----------------------------------------------------------------------
@@ -286,9 +277,8 @@ TEST(EnginesAdvanced, SoEngineOutputIsEnabledReturnsTRUEByDefault)
 {
     SoCalculator * calc = new SoCalculator;
     calc->ref();
-    bool pass = (calc->oa.isEnabled() == TRUE);
+    EXPECT_TRUE((calc->oa.isEnabled() == TRUE)) << "SoEngineOutput should be enabled by default";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoEngineOutput should be enabled by default";
 }
 
 TEST(EnginesAdvanced, SoEngineOutputGetConnectionTypeMatchesSoMFFloat)
@@ -296,18 +286,16 @@ TEST(EnginesAdvanced, SoEngineOutputGetConnectionTypeMatchesSoMFFloat)
     SoCalculator * calc = new SoCalculator;
     calc->ref();
     SoType connType = calc->oa.getConnectionType();
-    bool pass = (connType == SoMFFloat::getClassTypeId());
+    EXPECT_TRUE((connType == SoMFFloat::getClassTypeId())) << "SoCalculator::oa connection type should be SoMFFloat";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoCalculator::oa connection type should be SoMFFloat";
 }
 
 TEST(EnginesAdvanced, SoEngineOutputGetNumConnectionsIs0BeforeConnecting)
 {
     SoCalculator * calc = new SoCalculator;
     calc->ref();
-    bool pass = (calc->oa.getNumConnections() == 0);
+    EXPECT_TRUE((calc->oa.getNumConnections() == 0)) << "SoEngineOutput should have 0 connections before any connect";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoEngineOutput should have 0 connections before any connect";
 }
 
 TEST(EnginesAdvanced, SoEngineOutputGetNumConnectionsIs1AfterConnecting)
@@ -319,10 +307,9 @@ TEST(EnginesAdvanced, SoEngineOutputGetNumConnectionsIs1AfterConnecting)
     SoMFFloat listener;
     listener.connectFrom(&calc->oa);
 
-    bool pass = (calc->oa.getNumConnections() == 1);
+    EXPECT_TRUE((calc->oa.getNumConnections() == 1)) << "SoEngineOutput should have 1 connection after connecting a field";
     listener.disconnect();
     calc->unref();
-    EXPECT_TRUE(pass) << "SoEngineOutput should have 1 connection after connecting a field";
 }
 
 // -----------------------------------------------------------------------
@@ -340,9 +327,8 @@ TEST(EnginesAdvanced, SoBoolOperationAEQUALSBTRUETRUEGivesTRUE)
     SoMFBool out;
     out.connectFrom(&eng->output);
     out.evaluate();
-    bool pass = (out.getNum() > 0) && (out[0] == TRUE);
+    EXPECT_TRUE((out.getNum() > 0) && (out[0] == TRUE)) << "SoBoolOperation::A_EQUALS_B TRUE==TRUE should be TRUE";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation::A_EQUALS_B TRUE==TRUE should be TRUE";
 }
 
 TEST(EnginesAdvanced, SoBoolOperationAEQUALSBTRUEFALSEGivesFALSE)
@@ -356,9 +342,8 @@ TEST(EnginesAdvanced, SoBoolOperationAEQUALSBTRUEFALSEGivesFALSE)
     SoMFBool out;
     out.connectFrom(&eng->output);
     out.evaluate();
-    bool pass = (out.getNum() > 0) && (out[0] == FALSE);
+    EXPECT_TRUE((out.getNum() > 0) && (out[0] == FALSE)) << "SoBoolOperation::A_EQUALS_B TRUE==FALSE should be FALSE";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation::A_EQUALS_B TRUE==FALSE should be FALSE";
 }
 
 TEST(EnginesAdvanced, SoBoolOperationNOTAANDBNOTTRUEANDTRUEFALSE)
@@ -372,9 +357,8 @@ TEST(EnginesAdvanced, SoBoolOperationNOTAANDBNOTTRUEANDTRUEFALSE)
     SoMFBool out;
     out.connectFrom(&eng->output);
     out.evaluate();
-    bool pass = (out.getNum() > 0) && (out[0] == FALSE);
+    EXPECT_TRUE((out.getNum() > 0) && (out[0] == FALSE)) << "SoBoolOperation::NOT_A_AND_B (TRUE,TRUE) should be FALSE";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation::NOT_A_AND_B (TRUE,TRUE) should be FALSE";
 }
 
 TEST(EnginesAdvanced, SoBoolOperationNOTAANDBNOTFALSEANDTRUETRUE)
@@ -388,9 +372,8 @@ TEST(EnginesAdvanced, SoBoolOperationNOTAANDBNOTFALSEANDTRUETRUE)
     SoMFBool out;
     out.connectFrom(&eng->output);
     out.evaluate();
-    bool pass = (out.getNum() > 0) && (out[0] == TRUE);
+    EXPECT_TRUE((out.getNum() > 0) && (out[0] == TRUE)) << "SoBoolOperation::NOT_A_AND_B (FALSE,TRUE) should be TRUE";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation::NOT_A_AND_B (FALSE,TRUE) should be TRUE";
 }
 
 TEST(EnginesAdvanced, SoBoolOperationInverseOutputIsComplementOfOutput)
@@ -408,10 +391,9 @@ TEST(EnginesAdvanced, SoBoolOperationInverseOutputIsComplementOfOutput)
     outInv.evaluate();
 
     // output should be TRUE, inverse should be FALSE
-    bool pass = (outFwd.getNum() > 0) && (outInv.getNum() > 0) &&
-                (outFwd[0] == TRUE) && (outInv[0] == FALSE);
+    EXPECT_TRUE((outFwd.getNum() > 0) && (outInv.getNum() > 0) &&
+                (outFwd[0] == TRUE) && (outInv[0] == FALSE)) << "SoBoolOperation inverse should be complement of output";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation inverse should be complement of output";
 }
 
 // -----------------------------------------------------------------------
@@ -422,9 +404,8 @@ TEST(EnginesAdvanced, SoOneShotClassTypeRegistered)
 {
     SoOneShot * eng = new SoOneShot;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoOneShot has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoOneShot has bad type";
 }
 
 TEST(EnginesAdvanced, SoOneShotIsActiveInitiallyFALSE)
@@ -436,9 +417,8 @@ TEST(EnginesAdvanced, SoOneShotIsActiveInitiallyFALSE)
     result.connectFrom(&eng->isActive);
     result.evaluate();
 
-    bool pass = (result.getValue() == FALSE);
+    EXPECT_TRUE((result.getValue() == FALSE)) << "SoOneShot isActive should be FALSE before trigger";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoOneShot isActive should be FALSE before trigger";
 }
 
 // -----------------------------------------------------------------------
@@ -449,9 +429,8 @@ TEST(EnginesAdvanced, SoEngineRefIncrementsRefcount)
 {
     SoCalculator * calc = new SoCalculator;
     calc->ref();
-    bool pass = (calc->getRefCount() == 1);
+    EXPECT_TRUE((calc->getRefCount() == 1)) << "SoEngine refcount should be 1 after one ref()";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoEngine refcount should be 1 after one ref()";
 }
 
 TEST(EnginesAdvanced, SoEngineDoubleRefGivesRefcount2)
@@ -459,10 +438,9 @@ TEST(EnginesAdvanced, SoEngineDoubleRefGivesRefcount2)
     SoCalculator * calc = new SoCalculator;
     calc->ref();
     calc->ref();
-    bool pass = (calc->getRefCount() == 2);
+    EXPECT_TRUE((calc->getRefCount() == 2)) << "SoEngine refcount should be 2 after two ref() calls";
     calc->unref();
     calc->unref();
-    EXPECT_TRUE(pass) << "SoEngine refcount should be 2 after two ref() calls";
 }
 
 // -----------------------------------------------------------------------
@@ -489,9 +467,8 @@ TEST(EnginesAdvanced, SoCounterResetReturnsOutputToMin)
     out.connectFrom(&eng->output);
     out.evaluate();
 
-    bool pass = (out.getValue() == 5);
+    EXPECT_TRUE((out.getValue() == 5)) << "SoCounter reset should return output to min (5)";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoCounter reset should return output to min (5)";
 }
 
 // -----------------------------------------------------------------------
@@ -513,10 +490,9 @@ TEST(EnginesAdvanced, SoConcatenateMFVec3fCombinesTwoVec3fInputs)
     out.connectFrom(eng->output);
     out.evaluate();
 
-    bool pass = (out.getNum() == 3) &&
+    EXPECT_TRUE((out.getNum() == 3) &&
                 floatNear(out[0][0], 1.0f) &&
                 floatNear(out[1][1], 1.0f) &&
-                floatNear(out[2][2], 1.0f);
+                floatNear(out[2][2], 1.0f)) << "SoConcatenate MFVec3f combination failed";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoConcatenate MFVec3f combination failed";
 }

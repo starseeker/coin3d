@@ -79,10 +79,9 @@ TEST(ProjectorsSuite, SbLineProjectorSetLineGetLineRoundTrip)
     const SbLine & got = proj.getLine();
     // Compare direction vectors
     SbVec3f dir = got.getDirection();
-    bool pass = (std::fabs(dir[0] - 1.0f) < 1e-5f) &&
+    EXPECT_TRUE((std::fabs(dir[0] - 1.0f) < 1e-5f) &&
                 (std::fabs(dir[1]) < 1e-5f) &&
-                (std::fabs(dir[2]) < 1e-5f);
-    EXPECT_TRUE(pass) << "SbLineProjector getLine direction mismatch";
+                (std::fabs(dir[2]) < 1e-5f)) << "SbLineProjector getLine direction mismatch";
 }
 
 TEST(ProjectorsSuite, SbLineProjectorProjectReturnsFinitePoint)
@@ -120,8 +119,7 @@ TEST(ProjectorsSuite, SbPlaneProjectorProjectReturnsFinitePoint)
     // XY plane (z=0)
     proj.setPlane(SbPlane(SbVec3f(0.0f, 0.0f, 1.0f), 0.0f));
     SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "SbPlaneProjector project returned non-finite point";
+    EXPECT_TRUE(isFiniteVec(result)) << "SbPlaneProjector project returned non-finite point";
 }
 
 // -----------------------------------------------------------------------
@@ -143,8 +141,7 @@ TEST(ProjectorsSuite, SbSphereSectionProjectorProjectReturnsFinitePoint)
     SbSphereSectionProjector proj(1.0f);
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "SbSphereSectionProjector project returned non-finite point";
+    EXPECT_TRUE(isFiniteVec(result)) << "SbSphereSectionProjector project returned non-finite point";
 }
 
 // -----------------------------------------------------------------------
@@ -166,6 +163,5 @@ TEST(ProjectorsSuite, SbCylinderSectionProjectorProjectReturnsFinitePoint)
     SbCylinderSectionProjector proj;
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.0f, 0.0f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "SbCylinderSectionProjector project returned non-finite point";
+    EXPECT_TRUE(isFiniteVec(result)) << "SbCylinderSectionProjector project returned non-finite point";
 }

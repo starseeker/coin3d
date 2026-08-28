@@ -76,6 +76,8 @@
 
 #include <Inventor/nodes/SoWWWAnchor.h>
 
+#include <mutex>
+
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/SoPickedPoint.h>
@@ -136,8 +138,10 @@ class SoWWWAnchorP {
   static void * fetchdata;
   static SoWWWAnchorCB * highlightfunc;
   static void * highlightdata;
+  static std::mutex callbackmutex;
 
   static void atexit_cleanup() {
+    const std::lock_guard<std::mutex> lock(SoWWWAnchorP::callbackmutex);
     SoWWWAnchorP::fetchfunc = NULL;
     SoWWWAnchorP::fetchdata = NULL;
     SoWWWAnchorP::highlightfunc = NULL;
@@ -150,6 +154,7 @@ SoWWWAnchorCB * SoWWWAnchorP::fetchfunc = NULL;
 void * SoWWWAnchorP::fetchdata = NULL;
 SoWWWAnchorCB * SoWWWAnchorP::highlightfunc = NULL;
 void * SoWWWAnchorP::highlightdata = NULL;
+std::mutex SoWWWAnchorP::callbackmutex;
 
 #endif // DOXYGEN_SKIP_THIS
 
@@ -229,8 +234,15 @@ void
 SoWWWAnchor::handleEvent(SoHandleEventAction * action)
 {
   const SoEvent * event = action->getEvent();
+  SoWWWAnchorCB * fetchfunc = NULL;
+  void * fetchdata = NULL;
+  {
+    const std::lock_guard<std::mutex> lock(SoWWWAnchorP::callbackmutex);
+    fetchfunc = SoWWWAnchorP::fetchfunc;
+    fetchdata = SoWWWAnchorP::fetchdata;
+  }
   if (event->isOfType(SoMouseButtonEvent::getClassTypeId()) &&
-      SoWWWAnchorP::fetchfunc) {
+      fetchfunc) {
     const SoMouseButtonEvent * mbevent = const_cast<SoMouseButtonEvent*>(static_cast<const SoMouseButtonEvent*>(event));
     if (SoMouseButtonEvent::isButtonPressEvent(mbevent,
                                                SoMouseButtonEvent::BUTTON1)) {
@@ -243,7 +255,7 @@ SoWWWAnchor::handleEvent(SoHandleEventAction * action)
         s.operator+=(temp);
       }
 
-      SoWWWAnchorP::fetchfunc(s, SoWWWAnchorP::fetchdata, this);
+      fetchfunc(s, fetchdata, this);
     }
   }
   inherited::handleEvent(action);
@@ -260,6 +272,7 @@ SoWWWAnchor::handleEvent(SoHandleEventAction * action)
 void
 SoWWWAnchor::setFetchURLCallBack(SoWWWAnchorCB * f, void * userData)
 {
+  const std::lock_guard<std::mutex> lock(SoWWWAnchorP::callbackmutex);
   SoWWWAnchorP::fetchfunc = f;
   SoWWWAnchorP::fetchdata = userData;
 }
@@ -276,6 +289,7 @@ SoWWWAnchor::setFetchURLCallBack(SoWWWAnchorCB * f, void * userData)
 void
 SoWWWAnchor::setHighlightURLCallBack(SoWWWAnchorCB * f, void * userData)
 {
+  const std::lock_guard<std::mutex> lock(SoWWWAnchorP::callbackmutex);
   SoWWWAnchorP::highlightfunc = f;
   SoWWWAnchorP::highlightdata = userData;
 }
@@ -289,9 +303,16 @@ SoWWWAnchor::redrawHighlighted(SoAction * act, SbBool isNowHighlighting)
 {
   inherited::redrawHighlighted(act, isNowHighlighting);
 
-  if (SoWWWAnchorP::highlightfunc) {
+  SoWWWAnchorCB * highlightfunc = NULL;
+  void * highlightdata = NULL;
+  {
+    const std::lock_guard<std::mutex> lock(SoWWWAnchorP::callbackmutex);
+    highlightfunc = SoWWWAnchorP::highlightfunc;
+    highlightdata = SoWWWAnchorP::highlightdata;
+  }
+  if (highlightfunc) {
     SbString s = this->getFullURLName();
-    SoWWWAnchorP::highlightfunc(s, SoWWWAnchorP::highlightdata, this);
+    highlightfunc(s, highlightdata, this);
   }
 }
 

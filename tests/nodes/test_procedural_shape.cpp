@@ -70,6 +70,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <atomic>
 #include <string>
 
 using namespace ObolTest;
@@ -81,6 +82,13 @@ using namespace ObolTest;
 static bool floatNear(float a, float b, float eps = 1e-4f)
 {
     return std::fabs(a - b) < eps;
+}
+
+static std::string uniqueShapeTypeName(const char* prefix)
+{
+    static std::atomic<unsigned long> sequence{0};
+    return std::string(prefix) +
+        std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
 }
 
 // ============================================================================
@@ -153,6 +161,14 @@ static void dummy_bbox(const float*, int, SbVec3f& mn, SbVec3f& mx, void*)
 { mn.setValue(-1,-1,-1); mx.setValue(1,1,1); }
 static void dummy_geom(const float*, int, SoProceduralTriangles*, SoProceduralWireframe*, void*) {}
 
+static const char* kMiniSchema = R"({
+  "type": "Mini_test",
+  "params": [
+    {"name":"width",  "type":"float","default":2.0},
+    {"name":"height", "type":"float","default":3.0}
+  ]
+})";
+
 // ============================================================================
 // GTest cases// ============================================================================
 
@@ -162,6 +178,8 @@ protected:
     {
         (void)SoProceduralShape::registerShapeType(
             "UnitBox_test", kBoxSchema, unitBox_bbox, unitBox_geom);
+        (void)SoProceduralShape::registerShapeType(
+            "Mini_test", kMiniSchema, dummy_bbox, dummy_geom);
     // ------------------------------------------------------------------
     // Handle/dragger API tests
     // ------------------------------------------------------------------
@@ -256,8 +274,10 @@ TEST_F(ProceduralShapeTest, RegisterShapeTypeSucceedsForNewType)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
+        const std::string typeName =
+            uniqueShapeTypeName("RegistrationSuccess_test_");
         SbBool ok = SoProceduralShape::registerShapeType(
-                        "RegistrationSuccess_test", kBoxSchema,
+                        typeName.c_str(), kBoxSchema,
                         unitBox_bbox, unitBox_geom);
         EXPECT_TRUE((ok == TRUE)) << (ok ? "" : "Expected TRUE for first registration");
 
@@ -295,9 +315,8 @@ TEST_F(ProceduralShapeTest, IsRegisteredReturnsCorrectResults)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
-        bool pass = (SoProceduralShape::isRegistered("UnitBox_test") == TRUE)
-                 && (SoProceduralShape::isRegistered("NoSuchShape")  == FALSE);
-        EXPECT_TRUE(pass) << "isRegistered returned wrong value";
+        EXPECT_TRUE((SoProceduralShape::isRegistered("UnitBox_test") == TRUE)
+                 && (SoProceduralShape::isRegistered("NoSuchShape")  == FALSE)) << "isRegistered returned wrong value";
 
 }
 
@@ -313,11 +332,10 @@ TEST_F(ProceduralShapeTest, GetSchemaJSONReturnsRegisteredSchema)
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
         const char* schema = SoProceduralShape::getSchemaJSON("UnitBox_test");
-        bool pass = (schema != nullptr)
+        EXPECT_TRUE((schema != nullptr)
                  && (strstr(schema, "UnitBox") != nullptr)
                  && (strstr(schema, "halfSize") != nullptr)
-                 && (SoProceduralShape::getSchemaJSON("NoSuchShape") == nullptr);
-        EXPECT_TRUE(pass) << "getSchemaJSON returned unexpected value";
+                 && (SoProceduralShape::getSchemaJSON("NoSuchShape") == nullptr)) << "getSchemaJSON returned unexpected value";
 
 }
 
@@ -337,14 +355,13 @@ TEST_F(ProceduralShapeTest, SetShapeTypePopulatesShapeTypeSchemaJSONAndParams)
 
         shape->setShapeType("UnitBox_test");
 
-        bool pass = (strcmp(shape->shapeType.getValue().getString(),
+        EXPECT_TRUE((strcmp(shape->shapeType.getValue().getString(),
                             "UnitBox_test") == 0)
                  && (shape->schemaJSON.getValue().getLength() > 0)
                  && (shape->params.getNum() == 1)
-                 && floatNear(shape->params[0], 1.0f);
+                 && floatNear(shape->params[0], 1.0f)) << "setShapeType field population failed";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "setShapeType field population failed";
 
 }
 
@@ -365,13 +382,12 @@ TEST_F(ProceduralShapeTest, ParamsFieldSetGetRoundTrip)
         float vals[] = { 0.5f, 2.0f, 3.14f };
         shape->params.setValues(0, 3, vals);
 
-        bool pass = (shape->params.getNum() == 3)
+        EXPECT_TRUE((shape->params.getNum() == 3)
                  && floatNear(shape->params[0], 0.5f)
                  && floatNear(shape->params[1], 2.0f)
-                 && floatNear(shape->params[2], 3.14f, 1e-3f);
+                 && floatNear(shape->params[2], 3.14f, 1e-3f)) << "params field round-trip failed";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "params field round-trip failed";
 
 }
 
@@ -401,14 +417,13 @@ TEST_F(ProceduralShapeTest, SoGetBoundingBoxActionCallsBboxCallback)
         SbVec3f mn  = box.getMin();
         SbVec3f mx  = box.getMax();
 
-        bool pass = !box.isEmpty()
+        EXPECT_TRUE(!box.isEmpty()
                  && floatNear(mn[0], -1.0f) && floatNear(mn[1], -1.0f)
                  && floatNear(mn[2], -1.0f)
                  && floatNear(mx[0],  1.0f) && floatNear(mx[1],  1.0f)
-                 && floatNear(mx[2],  1.0f);
+                 && floatNear(mx[2],  1.0f)) << "Bounding box values incorrect";
 
         root->unref();
-        EXPECT_TRUE(pass) << "Bounding box values incorrect";
 
 }
 
@@ -440,9 +455,8 @@ TEST_F(ProceduralShapeTest, BboxScalesCorrectlyWhenParamsChange)
         SbVec3f mn  = box.getMin();
         SbVec3f mx  = box.getMax();
 
-        bool pass = floatNear(mn[0], -3.0f) && floatNear(mx[0], 3.0f);
+        EXPECT_TRUE(floatNear(mn[0], -3.0f) && floatNear(mx[0], 3.0f)) << "Bbox did not scale with params";
         root->unref();
-        EXPECT_TRUE(pass) << "Bbox did not scale with params";
 
 }
 
@@ -467,9 +481,8 @@ TEST_F(ProceduralShapeTest, SoGetPrimitiveCountActionReportsCorrectTriangleCount
         SoGetPrimitiveCountAction pca;
         pca.apply(root);
 
-        bool pass = (pca.getTriangleCount() == 12);
+        EXPECT_TRUE((pca.getTriangleCount() == 12)) << "Triangle count did not match expected 12";
         root->unref();
-        EXPECT_TRUE(pass) << "Triangle count did not match expected 12";
 
 }
 
@@ -495,9 +508,8 @@ TEST_F(ProceduralShapeTest, UnregisteredShapeTypeDoesNotCrashReturnsFallbackBbox
         SoGetBoundingBoxAction bba(vp);
         bba.apply(root); // must not crash
 
-        bool pass = !bba.getBoundingBox().isEmpty();
+        EXPECT_TRUE(!bba.getBoundingBox().isEmpty()) << "Fallback bbox should not be empty";
         root->unref();
-        EXPECT_TRUE(pass) << "Fallback bbox should not be empty";
 
 }
 
@@ -519,11 +531,10 @@ TEST_F(ProceduralShapeTest, SceneGraphRefUnrefLifecycleIsCorrect)
         shape->setShapeType("UnitBox_test");
         root->addChild(shape);
 
-        bool pass = (root->getNumChildren() == 1)
-                 && (root->getChild(0) == shape);
+        EXPECT_TRUE((root->getNumChildren() == 1)
+                 && (root->getChild(0) == shape)) << "Scene-graph child check failed";
 
         root->unref(); // should cleanly destroy everything
-        EXPECT_TRUE(pass) << "Scene-graph child check failed";
 
 }
 
@@ -541,12 +552,11 @@ TEST_F(ProceduralShapeTest, SoProceduralShapeTypeIdChecks)
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
 
-        bool pass = (shape->getTypeId() != SoType::badType())
+        EXPECT_TRUE((shape->getTypeId() != SoType::badType())
                  && shape->isOfType(SoShape::getClassTypeId())
-                 && shape->isOfType(SoNode::getClassTypeId());
+                 && shape->isOfType(SoNode::getClassTypeId())) << "Type-id check failed";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "Type-id check failed";
 
 }
 
@@ -561,8 +571,7 @@ TEST_F(ProceduralShapeTest, RegisterShapeTypeWithHandleCallbacks)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
-        bool pass = (SoProceduralShape::isRegistered("TwoParam_test") == TRUE);
-        EXPECT_TRUE(pass) << "TwoParam_test should be registered";
+        EXPECT_TRUE((SoProceduralShape::isRegistered("TwoParam_test") == TRUE)) << "TwoParam_test should be registered";
 
 }
 
@@ -584,12 +593,11 @@ TEST_F(ProceduralShapeTest, BuildHandleDraggersReturnsNonNullForRegisteredHandle
         shape->params.setValues(0, 2, pv);
 
         SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = (handles != nullptr);
+        EXPECT_TRUE((handles != nullptr)) << "buildHandleDraggers returned nullptr";
         if (handles) handles->ref(); // adopt ownership
 
         if (handles) handles->unref();
         shape->unref();
-        EXPECT_TRUE(pass) << "buildHandleDraggers returned nullptr";
 
 }
 
@@ -609,10 +617,9 @@ TEST_F(ProceduralShapeTest, BuildHandleDraggersReturnsNullptrWhenNoHandleCallbac
         shape->setShapeType("UnitBox_test"); // registered WITHOUT handle callbacks
 
         SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = (handles == nullptr);
+        EXPECT_TRUE((handles == nullptr)) << "Expected nullptr for type without handles";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected nullptr for type without handles";
 
 }
 
@@ -634,11 +641,11 @@ TEST_F(ProceduralShapeTest, BuildHandleDraggersProducesOneSubSeparatorPerHandle)
         shape->params.setValues(0, 2, pv);
 
         SoSeparator* handles = shape->buildHandleDraggers();
-        bool pass = handles && (handles->getNumChildren() == 1); // 1 handle
+        EXPECT_TRUE(handles && (handles->getNumChildren() == 1))
+            << "Expected 1 child separator for 1 handle"; // 1 handle
 
         if (handles) { handles->ref(); handles->unref(); }
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected 1 child separator for 1 handle";
 
 }
 
@@ -656,9 +663,8 @@ TEST_F(ProceduralShapeTest, JSONTopologySetShapeTypeExtracts12DefaultsForTetraTe
         SoProceduralShape* shape = new SoProceduralShape;
         shape->ref();
         shape->setShapeType("Tetra_test");
-        bool pass = (shape->params.getNum() == 12);
+        EXPECT_TRUE((shape->params.getNum() == 12)) << "Expected 12 params from JSON topology";
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected 12 params from JSON topology";
 
 }
 
@@ -679,10 +685,9 @@ TEST_F(ProceduralShapeTest, BuildHandleDraggersFromTopologyCorrectChildCount)
 
         SoSeparator* handles = shape->buildHandleDraggers();
         // Schema defines 3 handles
-        bool pass = handles && (handles->getNumChildren() == 3);
+        EXPECT_TRUE(handles && (handles->getNumChildren() == 3)) << "Expected 3 children from topology handles";
         if (handles) { handles->ref(); handles->unref(); }
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected 3 children from topology handles";
 
 }
 
@@ -697,10 +702,9 @@ TEST_F(ProceduralShapeTest, DRAGNOINTERSECTIsADistinctDragTypeValue)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
-        bool pass = (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_POINT)
+        EXPECT_TRUE((SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_POINT)
                  && (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_ALONG_AXIS)
-                 && (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_ON_PLANE);
-        EXPECT_TRUE(pass) << "DRAG_NO_INTERSECT not distinct";
+                 && (SoProceduralHandle::DRAG_NO_INTERSECT != SoProceduralHandle::DRAG_ON_PLANE)) << "DRAG_NO_INTERSECT not distinct";
 
 }
 
@@ -720,15 +724,18 @@ TEST_F(ProceduralShapeTest, RegisterShapeTypeWithHandleValidateCB)
                                     void*) -> SbBool {
             accepted = proposed; return TRUE;
         };
+        const std::string typeName =
+            uniqueShapeTypeName("HandleValidateTest_");
         SbBool ok = SoProceduralShape::registerShapeType(
-            "HandleValidateTest", "",
+            typeName.c_str(), "",
             dummy_bbox,
             dummy_geom,
             nullptr, nullptr,
             static_cast<SoProceduralHandleValidateCB>(hvCB),
             nullptr);
-        bool pass = (ok == TRUE) && SoProceduralShape::isRegistered("HandleValidateTest");
-        EXPECT_TRUE(pass) << "handleValidateCB registration failed";
+        EXPECT_TRUE((ok == TRUE) &&
+                    SoProceduralShape::isRegistered(typeName.c_str()))
+            << "handleValidateCB registration failed";
 
 }
 
@@ -756,8 +763,7 @@ TEST_F(ProceduralShapeTest, SetObjectValidateCallbackAfterRegistration)
         SbBool setOk = SoProceduralShape::setObjectValidateCallback(
             "ObjValidateTest",
             static_cast<SoProceduralObjectValidateCB>(objCB));
-        bool pass = (setOk == TRUE);
-        EXPECT_TRUE(pass) << "setObjectValidateCallback failed";
+        EXPECT_TRUE((setOk == TRUE)) << "setObjectValidateCallback failed";
 
 }
 
@@ -775,8 +781,7 @@ TEST_F(ProceduralShapeTest, SetObjectValidateCallbackReturnsFALSEForUnknownType)
         SbBool r = SoProceduralShape::setObjectValidateCallback(
             "NoSuchType_xyz",
             nullptr);
-        bool pass = (r == FALSE);
-        EXPECT_TRUE(pass) << "Expected FALSE for unregistered type";
+        EXPECT_TRUE((r == FALSE)) << "Expected FALSE for unregistered type";
 
 }
 
@@ -793,13 +798,6 @@ TEST_F(ProceduralShapeTest, ObjectValidateCBReceivesJSONWithNamedParamKeys)
     // ------------------------------------------------------------------
     // Test 1: First registration succeeds
     // ------------------------------------------------------------------
-        static const char* kMiniSchema = R"({
-            "type": "Mini_test",
-            "params": [
-                {"name":"width",  "type":"float","default":2.0},
-                {"name":"height", "type":"float","default":3.0}
-            ]
-        })";
         static std::string sLastJSON;
         static const auto miniBbox = [](const float*, int, SbVec3f& mn, SbVec3f& mx, void*){
             mn.setValue(-2,-2,-2); mx.setValue(2,2,2);
@@ -837,8 +835,7 @@ TEST_F(ProceduralShapeTest, ObjectValidateCBReceivesJSONWithNamedParamKeys)
         bool defaultsOK = (fabsf(w - 2.f) < kDefaultTol) && (fabsf(h - 3.f) < kDefaultTol);
         shape->unref();
 
-        bool pass = paramCountOK && defaultsOK;
-        EXPECT_TRUE(pass) << "Mini_test params or defaults wrong after JSON topology parse";
+        EXPECT_TRUE(paramCountOK && defaultsOK) << "Mini_test params or defaults wrong after JSON topology parse";
 
 }
 
@@ -860,14 +857,13 @@ TEST_F(ProceduralShapeTest, GetCurrentParamsJSONReturnsJSONWithExpectedFormat)
         SbString json = shape->getCurrentParamsJSON();
         const char* js = json.getString();
 
-        bool pass = (js != nullptr)
+        EXPECT_TRUE((js != nullptr)
                  && (strstr(js, "Mini_test") != nullptr)
                  && (strstr(js, "\"width\"")  != nullptr)
                  && (strstr(js, "\"height\"") != nullptr)
-                 && (strstr(js, "params")    != nullptr);
+                 && (strstr(js, "params")    != nullptr)) << "getCurrentParamsJSON missing expected keys";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "getCurrentParamsJSON missing expected keys";
 
 }
 
@@ -894,12 +890,11 @@ TEST_F(ProceduralShapeTest, GetCurrentParamsJSONUpdatesAfterParamsChange)
         const char* js = json.getString();
 
         // JSON must contain 7.5 (or its %.9g representation) and 9.25
-        bool pass = (js != nullptr)
+        EXPECT_TRUE((js != nullptr)
                  && (strstr(js, "7.5") != nullptr)
-                 && (strstr(js, "9.25") != nullptr);
+                 && (strstr(js, "9.25") != nullptr)) << "getCurrentParamsJSON did not reflect updated param values";
 
         shape->unref();
-        EXPECT_TRUE(pass) << "getCurrentParamsJSON did not reflect updated param values";
 
 }
 
@@ -918,9 +913,8 @@ TEST_F(ProceduralShapeTest, GetCurrentParamsJSONReturnsEmptyStringForUnsetType)
         shape->ref();
         // shapeType is empty — no registered type
         SbString json = shape->getCurrentParamsJSON();
-        bool pass = (json.getLength() == 0);
+        EXPECT_TRUE((json.getLength() == 0)) << "Expected empty string for shape with no type set";
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected empty string for shape with no type set";
 
 }
 
@@ -940,11 +934,10 @@ TEST_F(ProceduralShapeTest, BuildSelectionDisplayReturnsNonNullForTopologyType)
         shape->setShapeType("Tetra_test"); // has 3 handles in topology
 
         SoSeparator* selDisp = shape->buildSelectionDisplay();
-        bool pass = (selDisp != nullptr);
+        EXPECT_TRUE((selDisp != nullptr)) << "buildSelectionDisplay returned nullptr";
         if (selDisp) selDisp->ref();
         if (selDisp) selDisp->unref();
         shape->unref();
-        EXPECT_TRUE(pass) << "buildSelectionDisplay returned nullptr";
 
 }
 
@@ -981,8 +974,7 @@ TEST_F(ProceduralShapeTest, BuildSelectionDisplayChildCountMatchesHandleCount)
         }
         if (selDisp) { selDisp->ref(); selDisp->unref(); }
         shape->unref();
-        bool pass = topOK && childOK;
-        EXPECT_TRUE(pass) << "buildSelectionDisplay child structure incorrect";
+        EXPECT_TRUE(topOK && childOK) << "buildSelectionDisplay child structure incorrect";
 
 }
 
@@ -1002,9 +994,8 @@ TEST_F(ProceduralShapeTest, BuildSelectionDisplayReturnsNullptrForTypeWithoutHan
         shape->setShapeType("UnitBox_test"); // no handles
 
         SoSeparator* selDisp = shape->buildSelectionDisplay();
-        bool pass = (selDisp == nullptr);
+        EXPECT_TRUE((selDisp == nullptr)) << "Expected nullptr for type without handles";
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected nullptr for type without handles";
 
 }
 
@@ -1031,9 +1022,8 @@ TEST_F(ProceduralShapeTest, PickHandleBuiltInProximityTestHitsExpectedHandle)
         SbVec3f dir(0.f, 0.f, -1.f);
         // Use a generous threshold of 0.05^2 = 0.0025
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
-        bool pass = (hitIdx == 0);
+        EXPECT_TRUE((hitIdx == 0)) << "Expected handle 0 (v0_h) to be hit by ray through (-1,-1,-1)";
         shape->unref();
-        EXPECT_TRUE(pass) << "Expected handle 0 (v0_h) to be hit by ray through (-1,-1,-1)";
 
 }
 
@@ -1064,9 +1054,8 @@ TEST_F(ProceduralShapeTest, SetSelectCallbackUseCustomCBTRUEBypassesBuiltInTest)
         SbVec3f origin(-1.f, -1.f, 5.f);
         SbVec3f dir(0.f, 0.f, -1.f);
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
-        bool pass = (hitIdx == 2);
+        EXPECT_TRUE((hitIdx == 2)) << "Custom selectCB should override built-in; expected 2";
         shape->unref();
-        EXPECT_TRUE(pass) << "Custom selectCB should override built-in; expected 2";
 
 }
 
@@ -1097,9 +1086,8 @@ TEST_F(ProceduralShapeTest, SetSelectCallbackUseCustomCBFALSECallbackUsedAsFallb
         SbVec3f origin(100.f, 100.f, 100.f);
         SbVec3f dir(0.f, 0.f, -1.f);
         int hitIdx = shape->pickHandle(origin, dir, 0.0025f);
-        bool pass = (hitIdx == 1);
+        EXPECT_TRUE((hitIdx == 1)) << "Fallback selectCB should return 1 when built-in misses";
         shape->unref();
-        EXPECT_TRUE(pass) << "Fallback selectCB should return 1 when built-in misses";
 
 }
 
@@ -1243,11 +1231,11 @@ TEST_F(ProceduralShapeTest, FullEditCycleLoadJSONEditParamsValidateExtractJSON)
 
         shape->unref();
 
-        bool pass = step2OK && step3OK && step5OK && (setOK == TRUE);
         std::string failMsg;
         if (!step2OK) failMsg += "step2 (24 params) FAILED; ";
         if (!step3OK) failMsg += "step3 (selDisp children) FAILED; ";
         if (!step5OK) failMsg += "step5 (JSON content) FAILED; ";
-        EXPECT_TRUE(pass) << failMsg;
+        if (setOK != TRUE) failMsg += "step6 (validation callback) FAILED; ";
+        EXPECT_TRUE(step2OK && step3OK && step5OK && (setOK == TRUE)) << failMsg;
 
 }

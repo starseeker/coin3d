@@ -99,8 +99,7 @@ TEST(ProjectorsDeep, SbSphereSheetProjectorProjectReturnsFiniteVector)
     SbSphereSheetProjector proj(SbSphere(SbVec3f(0, 0, 0), 1.0f));
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.5f, 0.5f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "project() returned non-finite vector";
+    EXPECT_TRUE(isFiniteVec(result)) << "project() returned non-finite vector";
 }
 
 TEST(ProjectorsDeep, SbSphereSheetProjectorGetRotationReturnsValidRotation)
@@ -111,14 +110,12 @@ TEST(ProjectorsDeep, SbSphereSheetProjectorGetRotationReturnsValidRotation)
     SbVec3f p1 = proj.project(SbVec2f(0.3f, 0.3f));
     SbVec3f p2 = proj.project(SbVec2f(0.7f, 0.3f));
     // getRotation only valid when both projections succeed; skip if NaN
-    bool pass = true;
     if (isFiniteVec(p1) && isFiniteVec(p2)) {
         SbRotation rot = proj.getRotation(p1, p2);
         SbVec3f ax; float ang;
         rot.getValue(ax, ang);
-        pass = std::isfinite(ang);
+        EXPECT_TRUE(std::isfinite(ang));
     }
-    EXPECT_TRUE(pass) << "getRotation returned non-finite angle";
 }
 
 TEST(ProjectorsDeep, SbSphereSheetProjectorCopyReturnsNonNull)
@@ -126,9 +123,8 @@ TEST(ProjectorsDeep, SbSphereSheetProjectorCopyReturnsNonNull)
     SbViewVolume vv = makeViewVolume();
     SbSphereSheetProjector proj(SbSphere(SbVec3f(0, 0, 0), 1.0f));
     SbProjector * copy = proj.copy();
-    bool pass = (copy != nullptr);
+    EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
     (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
-    EXPECT_TRUE(pass) << "copy() returned null";
 }
 
 // -----------------------------------------------------------------------
@@ -148,8 +144,7 @@ TEST(ProjectorsDeep, SbSpherePlaneProjectorProjectReturnsFiniteVector)
     SbSpherePlaneProjector proj(SbSphere(SbVec3f(0, 0, 0), 1.0f), 0.9f);
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.5f, 0.5f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "project() returned non-finite vector";
+    EXPECT_TRUE(isFiniteVec(result)) << "project() returned non-finite vector";
 }
 
 TEST(ProjectorsDeep, SbSpherePlaneProjectorCopyReturnsNonNull)
@@ -157,9 +152,8 @@ TEST(ProjectorsDeep, SbSpherePlaneProjectorCopyReturnsNonNull)
     SbViewVolume vv = makeViewVolume();
     SbSpherePlaneProjector proj;
     SbProjector * copy = proj.copy();
-    bool pass = (copy != nullptr);
+    EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
     (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
-    EXPECT_TRUE(pass) << "copy() returned null";
 }
 
 // -----------------------------------------------------------------------
@@ -188,8 +182,7 @@ TEST(ProjectorsDeep, SbCylinderSheetProjectorProjectReturnsFiniteVector)
     SbCylinderSheetProjector proj;
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.5f, 0.5f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "project() returned non-finite vector";
+    EXPECT_TRUE(isFiniteVec(result)) << "project() returned non-finite vector";
 }
 
 TEST(ProjectorsDeep, SbCylinderSheetProjectorGetRotationReturnsValidRotation)
@@ -199,14 +192,12 @@ TEST(ProjectorsDeep, SbCylinderSheetProjectorGetRotationReturnsValidRotation)
     proj.setViewVolume(vv);
     SbVec3f p1 = proj.project(SbVec2f(0.3f, 0.5f));
     SbVec3f p2 = proj.project(SbVec2f(0.7f, 0.5f));
-    bool pass = true;
     if (isFiniteVec(p1) && isFiniteVec(p2)) {
         SbRotation rot = proj.getRotation(p1, p2);
         SbVec3f ax; float ang;
         rot.getValue(ax, ang);
-        pass = std::isfinite(ang);
+        EXPECT_TRUE(std::isfinite(ang));
     }
-    EXPECT_TRUE(pass) << "getRotation returned non-finite angle";
 }
 
 TEST(ProjectorsDeep, SbCylinderSheetProjectorCopyReturnsNonNull)
@@ -214,9 +205,8 @@ TEST(ProjectorsDeep, SbCylinderSheetProjectorCopyReturnsNonNull)
     SbViewVolume vv = makeViewVolume();
     SbCylinderSheetProjector proj;
     SbProjector * copy = proj.copy();
-    bool pass = (copy != nullptr);
+    EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
     (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
-    EXPECT_TRUE(pass) << "copy() returned null";
 }
 
 // -----------------------------------------------------------------------
@@ -236,8 +226,7 @@ TEST(ProjectorsDeep, SbCylinderPlaneProjectorProjectReturnsFiniteVector)
     SbCylinderPlaneProjector proj;
     proj.setViewVolume(vv);
     SbVec3f result = proj.project(SbVec2f(0.5f, 0.5f));
-    bool pass = isFiniteVec(result);
-    EXPECT_TRUE(pass) << "project() returned non-finite vector";
+    EXPECT_TRUE(isFiniteVec(result)) << "project() returned non-finite vector";
 }
 
 TEST(ProjectorsDeep, SbCylinderPlaneProjectorCopyReturnsNonNull)
@@ -245,7 +234,6 @@ TEST(ProjectorsDeep, SbCylinderPlaneProjectorCopyReturnsNonNull)
     SbViewVolume vv = makeViewVolume();
     SbCylinderPlaneProjector proj;
     SbProjector * copy = proj.copy();
-    bool pass = (copy != nullptr);
+    EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
     (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
-    EXPECT_TRUE(pass) << "copy() returned null";
 }

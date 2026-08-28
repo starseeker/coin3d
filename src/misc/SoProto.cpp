@@ -74,6 +74,8 @@
 #include "io/SoWriterefCounter.h"
 #include "misc/SbHash.h"
 
+#include <mutex>
+
 
 // *************************************************************************
 
@@ -82,11 +84,13 @@ static SoType soproto_type;
 static SbList <SoProto*> * protolist;
 static SoFetchExternProtoCB * soproto_fetchextern_cb = NULL;
 static void * soproto_fetchextern_closure = NULL;
+static std::mutex soproto_mutex;
 
 // atexit callback
 static void
 soproto_cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(soproto_mutex);
   delete protolist;
   protolist = NULL;
 }
@@ -242,6 +246,7 @@ SoProto::SoProto(const SbBool externproto)
   PRIVATE(this)->defroot->ref();
   PRIVATE(this)->extprotonode = NULL;
 
+  const std::lock_guard<std::mutex> lock(soproto_mutex);
   protolist->insert(this, 0);
 }
 
@@ -268,6 +273,7 @@ void
 SoProto::setFetchExternProtoCallback(SoFetchExternProtoCB * cb,
                                      void * closure)
 {
+  const std::lock_guard<std::mutex> lock(soproto_mutex);
   if (cb == NULL) {
     soproto_fetchextern_cb = soproto_fetchextern_default_cb;
     soproto_fetchextern_closure = NULL;
@@ -284,6 +290,7 @@ SoProto::setFetchExternProtoCallback(SoFetchExternProtoCB * cb,
 SoProto *
 SoProto::findProto(const SbName & name)
 {
+  const std::lock_guard<std::mutex> lock(soproto_mutex);
   SoProto * ret = NULL;
   if (protolist) {
     const int n = protolist->getLength();
@@ -341,10 +348,16 @@ SoProto::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
   else {
     ok = PRIVATE(this)->externurl->read(in, SbName("EXTERNPROTO URL"));
     if (ok) {
-      SoProto * proto = soproto_fetchextern_cb(in,
-                                               PRIVATE(this)->externurl->getValues(0),
-                                               PRIVATE(this)->externurl->getNum(),
-                                               soproto_fetchextern_closure);
+      SoFetchExternProtoCB * fetchcb = NULL;
+      void * fetchclosure = NULL;
+      {
+        const std::lock_guard<std::mutex> lock(soproto_mutex);
+        fetchcb = soproto_fetchextern_cb;
+        fetchclosure = soproto_fetchextern_closure;
+      }
+      SoProto * proto = fetchcb(in, PRIVATE(this)->externurl->getValues(0),
+                                PRIVATE(this)->externurl->getNum(),
+                                fetchclosure);
       if (proto == NULL) {
         SoReadError::post(in, "Error reading EXTERNPROTO definition.");
         ok = FALSE;
@@ -361,9 +374,12 @@ SoProto::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 void
 SoProto::destroy(void)
 {
-  int idx = protolist->find(this);
-  assert(idx >= 0);
-  protolist->remove(idx);
+  {
+    const std::lock_guard<std::mutex> lock(soproto_mutex);
+    int idx = protolist->find(this);
+    assert(idx >= 0);
+    protolist->remove(idx);
+  }
   SoBase::destroy();
 }
 

@@ -63,6 +63,7 @@
 
 #include <Inventor/elements/SoGLLineWidthElement.h>
 #include "glue/glp.h"
+#include "misc/SoOnce.h"
 #include "config.h"
 
 #include <cfloat>
@@ -183,12 +184,12 @@ SoGLLineWidthElement::updategl(void)
     // by SoDrawStyle::lineWidth, so ignore that case.)
     if ((useval != this->data) && (this->data != 0.0f)) {
       // Only warn once for each case.
-      static SbBool warn_below = TRUE;
-      static SbBool warn_above = TRUE;
-      if ((warn_below && (useval > this->data)) ||
-          (warn_above && (useval < this->data))) {
-        if (useval > this->data) { warn_below = FALSE; }
-        if (useval < this->data) { warn_above = FALSE; }
+      static SoOnceFlag warning_below;
+      static SoOnceFlag warning_above;
+      const bool shouldwarn =
+        (useval > this->data && warning_below.first()) ||
+        (useval < this->data && warning_above.first());
+      if (shouldwarn) {
         SoDebugError::postWarning("SoGLLineWidthElement::updategl",
                                   "%f is outside the legal range of [%f, %f] "
                                   "for this OpenGL implementation's "

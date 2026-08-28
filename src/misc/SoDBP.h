@@ -44,6 +44,8 @@
 
 #include "misc/SbHash.h"
 #include <atomic>
+#include <mutex>
+#include <shared_mutex>
 
 class SoSensor;
 class SbRWMutex;
@@ -86,15 +88,17 @@ public:
   static SoSensorManager * sensormanager;
   static SoTimerSensor * globaltimersensor;
   static UInt32ToInt16Map * converters;
+  static std::shared_mutex registrymutex;
+  static std::mutex progressmutex;
   static std::atomic<int> notificationcounter;
   static std::atomic<SbBool> isinitialized;
 
   static SbBool is3dsFile(SoInput * in);
   static SoSeparator * read3DSFile(SoInput * in);
 
-  static void progress(const SbName & itemid,
-                       float fraction,
-                       SbBool interruptible);
+  static SbBool progress(const SbName & itemid,
+                         float fraction,
+                         SbBool interruptible);
 
   struct ProgressCallbackInfo {
     SoDB::ProgressCallbackType * func;

@@ -15,11 +15,22 @@
 #include <Inventor/sensors/SoSensorManager.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 
+#include <atomic>
+#include <memory>
+#include <thread>
+#include <vector>
+
 namespace {
 
 void increment(void * user_data, SoSensor *)
 {
     ++*static_cast<int *>(user_data);
+}
+
+void incrementAtomic(void * user_data, SoSensor *)
+{
+    static_cast<std::atomic<int> *>(user_data)->fetch_add(
+        1, std::memory_order_relaxed);
 }
 
 void processPendingSensors()
@@ -117,6 +128,51 @@ TEST(Sensors, ManagerProcessesOneShotAndIdleSensors)
     idle.schedule();
     processPendingSensors();
     EXPECT_GT(idle_fired, 0);
+}
+
+TEST(Sensors, ConcurrentQueueProcessorsDeliverEachSensorOnce)
+{
+    constexpr int sensorCount = 64;
+    std::atomic<int> fired{0};
+    std::vector<std::unique_ptr<SoOneShotSensor>> sensors;
+    sensors.reserve(sensorCount);
+    for (int i = 0; i < sensorCount; ++i) {
+        auto sensor = std::make_unique<SoOneShotSensor>(incrementAtomic, &fired);
+        sensor->schedule();
+        sensors.push_back(std::move(sensor));
+    }
+
+    std::vector<std::thread> processors;
+    for (int thread = 0; thread < 8; ++thread) {
+        processors.emplace_back([] {
+            SoDB::getSensorManager()->processDelayQueue(TRUE);
+        });
+    }
+    for (std::thread & processor : processors) processor.join();
+
+    EXPECT_EQ(fired.load(std::memory_order_relaxed), sensorCount);
+    for (const auto & sensor : sensors) EXPECT_FALSE(sensor->isScheduled());
+}
+
+TEST(Sensors, DelayTimeoutConfigurationSupportsConcurrentSnapshots)
+{
+    SoSensorManager * manager = SoDB::getSensorManager();
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> threads;
+    for (int thread = 0; thread < 8; ++thread) {
+        threads.emplace_back([&, thread] {
+            for (int iteration = 0; iteration < 250; ++iteration) {
+                manager->setDelaySensorTimeout(SbTime(0.01 * (thread + 1)));
+                const double value = manager->getDelaySensorTimeout().getValue();
+                if (!(value >= 0.01 && value <= 0.08)) {
+                    failed.store(true, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    for (std::thread & thread : threads) thread.join();
+    EXPECT_FALSE(failed.load(std::memory_order_relaxed));
+    manager->setDelaySensorTimeout(SbTime(1.0 / 12.0));
 }
 
 } // namespace

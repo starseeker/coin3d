@@ -60,8 +60,68 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <atomic>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 using namespace ObolTest;
+
+namespace {
+
+struct ProgressEvent {
+    std::string item;
+    float fraction;
+    bool interruptible;
+};
+
+struct ProgressState {
+    std::mutex mutex;
+    std::vector<ProgressEvent> events;
+    bool abortAtIntermediate = false;
+};
+
+SbBool recordProgress(const SbName & item, float fraction,
+                      SbBool interruptible, void * userdata)
+{
+    ProgressState * state = static_cast<ProgressState *>(userdata);
+    {
+        const std::lock_guard<std::mutex> lock(state->mutex);
+        state->events.push_back(
+            {item.getString(), fraction, interruptible != FALSE});
+    }
+    return state->abortAtIntermediate && interruptible &&
+           fraction > 0.0f && fraction < 1.0f;
+}
+
+SbBool removeSelfProgress(const SbName &, float, SbBool, void * userdata)
+{
+    std::atomic<int> * calls = static_cast<std::atomic<int> *>(userdata);
+    calls->fetch_add(1, std::memory_order_relaxed);
+    SoDB::removeProgressCallback(removeSelfProgress, userdata);
+    return FALSE;
+}
+
+SbBool noOpProgress(const SbName &, float, SbBool, void *)
+{
+    return FALSE;
+}
+
+const char progressScene[] =
+    "#Inventor V2.1 ascii\n"
+    "Cube {}\n"
+    "Sphere {}\n";
+
+SoSeparator * readProgressScene()
+{
+    SoInput input;
+    input.setBuffer(const_cast<char *>(progressScene),
+                    std::strlen(progressScene));
+    return SoDB::readAll(&input);
+}
+
+} // namespace
 
 // ---------------------------------------------------------------------------
 // Growable write buffer helper
@@ -115,15 +175,14 @@ TEST(IoSodb, SoDBRealTimeGlobalFieldInitialised)
     SoDB::getSensorManager()->processTimerQueue();
     SoSFTime* realtime = static_cast<SoSFTime*>(
         SoDB::getGlobalField("realTime"));
-    bool pass = (realtime != nullptr) &&
-                (realtime->getContainer() != nullptr);
-    if (pass) {
+    EXPECT_NE(realtime, nullptr);
+    if (realtime != nullptr) {
+        EXPECT_NE(realtime->getContainer(), nullptr);
         double diff = std::fabs(
             SbTime::getTimeOfDay().getValue() -
             realtime->getValue().getValue());
-        pass = (diff < 5.0);
+        EXPECT_LT(diff, 5.0);
     }
-    EXPECT_TRUE(pass) << "SoDB realTime global field missing or not close to wall-clock";
 }
 
 // -----------------------------------------------------------------------
@@ -143,13 +202,12 @@ TEST(IoSodb, SoDBReadAllValidIV21Scene)
     SoInput in;
     in.setBuffer(const_cast<char*>(scene), std::strlen(scene));
     SoSeparator* root = SoDB::readAll(&in);
-    bool pass = (root != nullptr);
-    if (pass) {
+    EXPECT_NE(root, nullptr);
+    if (root != nullptr) {
         root->ref();
-        pass = (root->getNumChildren() == 2);
+        EXPECT_EQ(root->getNumChildren(), 2);
         root->unref();
     }
-    EXPECT_TRUE(pass) << "SoDB::readAll failed to read valid IV 2.1 scene";
 }
 
 // -----------------------------------------------------------------------
@@ -169,15 +227,16 @@ TEST(IoSodb, SoDBReadAllDEFUSERoundTrip)
     SoInput in;
     in.setBuffer(const_cast<char*>(scene), std::strlen(scene));
     SoSeparator* root = SoDB::readAll(&in);
-    bool pass = (root != nullptr);
-    if (pass) {
+    EXPECT_NE(root, nullptr);
+    if (root != nullptr) {
         root->ref();
         // Two child references, both pointing at the same SoCube
-        pass = (root->getNumChildren() == 2) &&
-               (root->getChild(0) == root->getChild(1));
+        EXPECT_EQ(root->getNumChildren(), 2);
+        if (root->getNumChildren() == 2) {
+            EXPECT_EQ(root->getChild(0), root->getChild(1));
+        }
         root->unref();
     }
-    EXPECT_TRUE(pass) << "DEF/USE round-trip: expected 2 children pointing to same node";
 }
 
 // Note: SoDB::readAll with invalid/garbage input can trigger SoReadError::post()
@@ -205,18 +264,18 @@ TEST(IoSodb, SoDBWriteReadRoundTripPreservesStructure)
     writeNode(root, &buf, &bsz);
     root->unref();
 
-    bool pass = (buf != nullptr && bsz > 0);
-
-    if (pass) {
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(bsz, 0u);
+    if (buf != nullptr && bsz > 0) {
         // Read back
         SoInput in;
         in.setBuffer(buf, std::strlen(buf));
         SoSeparator* r2 = SoDB::readAll(&in);
-        pass = (r2 != nullptr);
-        if (pass) {
+        EXPECT_NE(r2, nullptr);
+        if (r2 != nullptr) {
             r2->ref();
             // Verify at least the child count is preserved
-            pass = (r2->getNumChildren() == 2);
+            EXPECT_EQ(r2->getNumChildren(), 2);
             // Note: checking individual field values (e.g. cube->width)
             // after round-trip is deferred; field serialization may differ
             // in limited-mode vs full context.
@@ -225,7 +284,6 @@ TEST(IoSodb, SoDBWriteReadRoundTripPreservesStructure)
     }
 
     std::free(buf);
-    EXPECT_TRUE(pass) << "Write/read round-trip did not preserve scene structure";
 }
 
 // -----------------------------------------------------------------------
@@ -234,9 +292,139 @@ TEST(IoSodb, SoDBWriteReadRoundTripPreservesStructure)
 
 TEST(IoSodb, SoDBHeaderRecognition)
 {
-    bool pass = SoDB::isValidHeader("#Inventor V2.1 ascii") &&
-                !SoDB::isValidHeader("not an inventor file");
-    EXPECT_TRUE(pass) << "SoDB::isValidHeader returned unexpected results";
+    EXPECT_TRUE(SoDB::isValidHeader("#Inventor V2.1 ascii") &&
+                !SoDB::isValidHeader("not an inventor file")) << "SoDB::isValidHeader returned unexpected results";
+}
+
+TEST(IoSodb, ReadAllReportsMonotonicProgressAndExactCompletion)
+{
+    ProgressState state;
+    SoDB::addProgressCallback(recordProgress, &state);
+    SoSeparator * root = readProgressScene();
+    SoDB::removeProgressCallback(recordProgress, &state);
+
+    ASSERT_NE(root, nullptr);
+    root->ref();
+    EXPECT_EQ(root->getNumChildren(), 2);
+    root->unref();
+
+    const std::lock_guard<std::mutex> lock(state.mutex);
+    ASSERT_GE(state.events.size(), 4u);
+    EXPECT_EQ(state.events.front().item, "File import");
+    EXPECT_FLOAT_EQ(state.events.front().fraction, 0.0f);
+    EXPECT_TRUE(state.events.front().interruptible);
+    EXPECT_FLOAT_EQ(state.events.back().fraction, 1.0f);
+    EXPECT_FALSE(state.events.back().interruptible);
+    for (size_t i = 1; i < state.events.size(); ++i) {
+        EXPECT_GE(state.events[i].fraction, state.events[i - 1].fraction);
+    }
+}
+
+TEST(IoSodb, ReadAllHonorsProgressCancellationAndReportsAbort)
+{
+    ProgressState state;
+    state.abortAtIntermediate = true;
+    SoDB::addProgressCallback(recordProgress, &state);
+    SoSeparator * root = readProgressScene();
+    SoDB::removeProgressCallback(recordProgress, &state);
+
+    EXPECT_EQ(root, nullptr);
+    const std::lock_guard<std::mutex> lock(state.mutex);
+    ASSERT_GE(state.events.size(), 3u);
+    EXPECT_FLOAT_EQ(state.events.front().fraction, 0.0f);
+    EXPECT_FLOAT_EQ(state.events.back().fraction, -1.0f);
+    EXPECT_FALSE(state.events.back().interruptible);
+}
+
+TEST(IoSodb, ProgressCallbackMayRemoveItself)
+{
+    std::atomic<int> calls{0};
+    SoDB::addProgressCallback(removeSelfProgress, &calls);
+    SoSeparator * first = readProgressScene();
+    SoSeparator * second = readProgressScene();
+    SoDB::removeProgressCallback(removeSelfProgress, &calls);
+
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+    first->ref();
+    second->ref();
+    first->unref();
+    second->unref();
+    EXPECT_EQ(calls.load(std::memory_order_relaxed), 1);
+}
+
+TEST(IoSodb, ProgressRegistrySupportsConcurrentMutationAndDelivery)
+{
+    ProgressState stableState;
+    SoDB::addProgressCallback(recordProgress, &stableState);
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> readers;
+    for (int thread = 0; thread < 4; ++thread) {
+        readers.emplace_back([&] {
+            for (int i = 0; i < 100; ++i) {
+                SoSeparator * root = readProgressScene();
+                if (root == nullptr) {
+                    failed.store(true, std::memory_order_relaxed);
+                }
+                else {
+                    root->ref();
+                    root->unref();
+                }
+            }
+        });
+    }
+    std::thread mutator([] {
+        for (int i = 0; i < 2000; ++i) {
+            SoDB::addProgressCallback(noOpProgress, nullptr);
+            SoDB::removeProgressCallback(noOpProgress, nullptr);
+        }
+    });
+
+    for (std::thread & reader : readers) reader.join();
+    mutator.join();
+    SoDB::removeProgressCallback(recordProgress, &stableState);
+
+    EXPECT_FALSE(failed.load(std::memory_order_relaxed));
+    const std::lock_guard<std::mutex> lock(stableState.mutex);
+    EXPECT_GE(stableState.events.size(), 4u * 100u * 4u);
+}
+
+TEST(IoSodb, HeaderRegistrySupportsConcurrentRegistrationAndQueries)
+{
+    constexpr int threadCount = 6;
+    constexpr int headersPerThread = 40;
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+
+    for (int thread = 0; thread < threadCount; ++thread) {
+        threads.emplace_back([&, thread] {
+            for (int header = 0; header < headersPerThread; ++header) {
+                const std::string text = "#Obol Concurrent " +
+                    std::to_string(thread) + " " + std::to_string(header);
+                if (!SoDB::registerHeader(SbString(text.c_str()), FALSE, 9.5f,
+                                          nullptr, nullptr, nullptr)) {
+                    failed.store(true, std::memory_order_relaxed);
+                    continue;
+                }
+                SbBool binary = TRUE;
+                float version = 0.0f;
+                SoDBHeaderCB * pre = nullptr;
+                SoDBHeaderCB * post = nullptr;
+                void * userdata = nullptr;
+                if (!SoDB::getHeaderData(SbString(text.c_str()), binary,
+                                         version, pre, post, userdata) ||
+                    binary || version != 9.5f || pre != nullptr ||
+                    post != nullptr || userdata != nullptr) {
+                    failed.store(true, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    for (std::thread & thread : threads) thread.join();
+
+    EXPECT_FALSE(failed.load(std::memory_order_relaxed));
+    EXPECT_GE(SoDB::getNumHeaders(), threadCount * headersPerThread);
 }
 
 // -----------------------------------------------------------------------
@@ -266,8 +454,7 @@ TEST(IoSodb, SoBaseWriteUnnamedMultiRefNodeUsesDEFUSE)
     bool hasUse = buf && std::strstr(buf, "USE") != nullptr;
 
     std::free(buf);
-    bool pass = hasDef && hasUse;
-    EXPECT_TRUE(pass) << "Unnamed multi-ref node should produce DEF/USE in output";
+    EXPECT_TRUE(hasDef && hasUse) << "Unnamed multi-ref node should produce DEF/USE in output";
 }
 
 TEST(IoSodb, SoBaseWriteSameNamedMultiRefNodesDisambiguatesNames)
@@ -301,8 +488,7 @@ TEST(IoSodb, SoBaseWriteSameNamedMultiRefNodesDisambiguatesNames)
     bool hasUse     = buf && std::strstr(buf, "USE") != nullptr;
 
     std::free(buf);
-    bool pass = hasMyNode && hasPlus && hasDef && hasUse;
-    EXPECT_TRUE(pass) << "Same-named multi-ref nodes should produce disambiguation ('+N') in output";
+    EXPECT_TRUE(hasMyNode && hasPlus && hasDef && hasUse) << "Same-named multi-ref nodes should produce disambiguation ('+N') in output";
 }
 
 // -----------------------------------------------------------------------
@@ -325,8 +511,7 @@ TEST(IoSodb, BinaryFormatWriteProducesNonASCIIOutput)
     bool hasHeader = hasData && bsz >= 21 &&
         std::memcmp(buf, "#Inventor V2.1 binary", 21) == 0;
     std::free(buf);
-    bool pass = hasData && hasHeader;
-    EXPECT_TRUE(pass) << "Binary write produced empty or header-less output";
+    EXPECT_TRUE(hasData && hasHeader) << "Binary write produced empty or header-less output";
 }
 
 TEST(IoSodb, BinaryFormatWriteReadRoundTripPreservesStructure)
@@ -363,6 +548,5 @@ TEST(IoSodb, BinaryFormatWriteReadRoundTripPreservesStructure)
     }
 
     std::free(buf);
-    bool pass = hasHeader && hasSufficientData && readOk;
-    EXPECT_TRUE(pass) << "Binary write/read round-trip failed: header, data, or child count mismatch";
+    EXPECT_TRUE(hasHeader && hasSufficientData && readOk) << "Binary write/read round-trip failed: header, data, or child count mismatch";
 }

@@ -81,7 +81,7 @@ static const TextRow k_rows[] = {
     {  0.0f, NULL,             0,   0,   0,   0,   0 }
 };
 
-static int runScenario(const char *outputStem)
+static int renderIosevkaTextContract(const char *outputStem)
 {
     const char *outpath = (outputStem != nullptr) ? outputStem : "/tmp/stt_iosevka.png";
 
@@ -153,7 +153,7 @@ static int runScenario(const char *outputStem)
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, stt_iosevka) {
+TEST(SdfTextRenderTest, IosevkaFont) {
     const std::string outputStem = ObolTest::renderingOutputStem("stt_iosevka");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
+    EXPECT_EQ(renderIosevkaTextContract(outputStem.c_str()), 0);
 }

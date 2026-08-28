@@ -39,6 +39,8 @@
 
 #include <Inventor/fields/SoFieldContainer.h>
 
+#include <mutex>
+
 class SoGlobalField : public SoFieldContainer {
   typedef SoFieldContainer inherited;
 
@@ -60,7 +62,6 @@ public:
   static SoGlobalField * getGlobalFieldContainer(const SbName & name);
   static void addGlobalFieldContainer(SoGlobalField * fieldcontainer);
   static void removeGlobalFieldContainer(SoGlobalField * fieldcontainer);
-  static SoBaseList * getGlobalFieldContainers(void);
 
 protected:
   ~SoGlobalField();
@@ -75,6 +76,9 @@ private:
   static SoType classTypeId;
   SoFieldData * classfielddata;
   static SoBaseList * allcontainers;
+  static std::recursive_mutex registrymutex;
+
+  friend class SoDB;
 };
 
 #endif // !OBOL_SOGLOBALFIELD_H

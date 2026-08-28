@@ -307,46 +307,11 @@ static bool test5_transparencyTypeNode(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_glrender_action_modes";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createGLRenderActionModes(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-    int failures = 0;
-
-    printf("\n=== SoGLRenderAction modes and settings tests ===\n");
-
-    if (!test1_transparencyTypes())         ++failures;
-    if (!test2_smoothingAndPasses())        ++failures;
-    if (!test3_cacheContextAndVP())         ++failures;
-    if (!test4_abortCallback())             ++failures;
-    if (!test5_transparencyTypeNode(basepath)) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_glrender_action_modes) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_glrender_action_modes");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(GLRenderActionModeTest, TransparencyTypes, "glmode_transparency", test1_transparencyTypes())
+OBOL_RENDER_TEST_CASE(GLRenderActionModeTest, SmoothingAndPasses, "glmode_smoothing", test2_smoothingAndPasses())
+OBOL_RENDER_TEST_CASE(GLRenderActionModeTest, CacheContextAndViewport, "glmode_context", test3_cacheContextAndVP())
+OBOL_RENDER_TEST_CASE(GLRenderActionModeTest, AbortCallback, "glmode_abort", test4_abortCallback())
+OBOL_RENDER_TEST_CASE(GLRenderActionModeTest, TransparencyNodeRenders, "glmode_node", test5_transparencyTypeNode(outputStem.c_str()))

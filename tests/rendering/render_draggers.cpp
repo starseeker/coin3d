@@ -192,7 +192,7 @@ static bool testManipInteraction(SoTransformManip *manip,
     // Render post-drag
     char postname[256];
     snprintf(postname, sizeof(postname), "%s_post_drag", name);
-    renderScene(root, basepath, postname); // non-fatal if render fails
+    const bool postrendered = renderScene(root, basepath, postname);
 
     // Detach the manip
     SoSearchAction sa2;
@@ -208,13 +208,15 @@ static bool testManipInteraction(SoTransformManip *manip,
     // Render after detaching manip
     char detachname[256];
     snprintf(detachname, sizeof(detachname), "%s_detached", name);
-    renderScene(root, basepath, detachname); // non-fatal
+    const bool detachrendered = renderScene(root, basepath, detachname);
 
     root->unref();
     manip->unref();
 
-    if (!detached) {
-        fprintf(stderr, "  FAIL: replaceManip failed for %s\n", name);
+    if (!detached || !postrendered || !detachrendered) {
+        fprintf(stderr,
+                "  FAIL: %s detached=%d post-render=%d detach-render=%d\n",
+                name, (int)detached, (int)postrendered, (int)detachrendered);
         return false;
     }
 
@@ -223,96 +225,16 @@ static bool testManipInteraction(SoTransformManip *manip,
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_draggers";
-
-    int failures = 0;
-
-    printf("\n=== Dragger interaction tests ===\n");
-
-    // --- SoHandleBoxDragger ---
-    {
-        SoHandleBoxDragger *d = new SoHandleBoxDragger;
-        if (!testDraggerInteraction(d, basepath, "handlebox_dragger"))
-            ++failures;
-    }
-
-    // --- SoTabBoxDragger ---
-    {
-        SoTabBoxDragger *d = new SoTabBoxDragger;
-        if (!testDraggerInteraction(d, basepath, "tabbox_dragger"))
-            ++failures;
-    }
-
-    // --- SoTransformBoxDragger ---
-    {
-        SoTransformBoxDragger *d = new SoTransformBoxDragger;
-        if (!testDraggerInteraction(d, basepath, "transformbox_dragger"))
-            ++failures;
-    }
-
-    // --- SoTransformerDragger ---
-    {
-        SoTransformerDragger *d = new SoTransformerDragger;
-        if (!testDraggerInteraction(d, basepath, "transformer_dragger"))
-            ++failures;
-    }
-
-    // --- SoCenterballDragger ---
-    {
-        SoCenterballDragger *d = new SoCenterballDragger;
-        if (!testDraggerInteraction(d, basepath, "centerball_dragger"))
-            ++failures;
-    }
-
-    printf("\n=== Manip lifecycle + interaction tests ===\n");
-
-    // --- SoHandleBoxManip ---
-    {
-        SoHandleBoxManip *m = new SoHandleBoxManip;
-        if (!testManipInteraction(m, basepath, "handlebox_manip"))
-            ++failures;
-    }
-
-    // --- SoTabBoxManip ---
-    {
-        SoTabBoxManip *m = new SoTabBoxManip;
-        if (!testManipInteraction(m, basepath, "tabbox_manip"))
-            ++failures;
-    }
-
-    // --- SoTransformBoxManip ---
-    {
-        SoTransformBoxManip *m = new SoTransformBoxManip;
-        if (!testManipInteraction(m, basepath, "transformbox_manip"))
-            ++failures;
-    }
-
-    // --- SoTransformerManip ---
-    {
-        SoTransformerManip *m = new SoTransformerManip;
-        if (!testManipInteraction(m, basepath, "transformer_manip"))
-            ++failures;
-    }
-
-    // --- SoCenterballManip ---
-    {
-        SoCenterballManip *m = new SoCenterballManip;
-        if (!testManipInteraction(m, basepath, "centerball_manip"))
-            ++failures;
-    }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_draggers) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_draggers");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, HandleBoxDragger, "dragger_handlebox", testDraggerInteraction(new SoHandleBoxDragger, outputStem.c_str(), "handlebox_dragger"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TabBoxDragger, "dragger_tabbox", testDraggerInteraction(new SoTabBoxDragger, outputStem.c_str(), "tabbox_dragger"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TransformBoxDragger, "dragger_transformbox", testDraggerInteraction(new SoTransformBoxDragger, outputStem.c_str(), "transformbox_dragger"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TransformerDragger, "dragger_transformer", testDraggerInteraction(new SoTransformerDragger, outputStem.c_str(), "transformer_dragger"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, CenterballDragger, "dragger_centerball", testDraggerInteraction(new SoCenterballDragger, outputStem.c_str(), "centerball_dragger"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, HandleBoxManip, "manip_handlebox", testManipInteraction(new SoHandleBoxManip, outputStem.c_str(), "handlebox_manip"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TabBoxManip, "manip_tabbox", testManipInteraction(new SoTabBoxManip, outputStem.c_str(), "tabbox_manip"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TransformBoxManip, "manip_transformbox", testManipInteraction(new SoTransformBoxManip, outputStem.c_str(), "transformbox_manip"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, TransformerManip, "manip_transformer", testManipInteraction(new SoTransformerManip, outputStem.c_str(), "transformer_manip"))
+OBOL_RENDER_TEST_CASE(DraggerInteractionRenderTest, CenterballManip, "manip_centerball", testManipInteraction(new SoCenterballManip, outputStem.c_str(), "centerball_manip"))

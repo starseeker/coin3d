@@ -157,7 +157,7 @@ static int dominantChannel(const unsigned char *buf, int cx, int cy, int radius)
     return 2;
 }
 
-static int runScenario(const char *outputStem)
+static bool runHudInteractionSequence(const char * outputStem)
 {
     initCoinHeadless();
 
@@ -280,7 +280,7 @@ static int runScenario(const char *outputStem)
     if (!renderer.render(root)) {
         fprintf(stderr, "render_hud_interaction: FAIL - initial render failed\n");
         root->unref();
-        return 1;
+        return false;
     }
 
     // Record pixel statistics BEFORE interactions (copy counts from the buffer).
@@ -304,7 +304,7 @@ static int runScenario(const char *outputStem)
     if (fabsf(actualR1 - expectedR1) > 0.001f) {
         fprintf(stderr, "render_hud_interaction: FAIL - 'Larger' did not update radius\n");
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: 'Larger' updated sphere radius correctly\n");
 
@@ -319,7 +319,7 @@ static int runScenario(const char *outputStem)
     if (fabsf(actualR2 - expectedR2) > 0.001f) {
         fprintf(stderr, "render_hud_interaction: FAIL - 'Smaller' did not update radius\n");
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: 'Smaller' updated sphere radius correctly\n");
 
@@ -333,7 +333,7 @@ static int runScenario(const char *outputStem)
     if (matColor[0] < 0.5f) {
         fprintf(stderr, "render_hud_interaction: FAIL - 'Red' did not set red color\n");
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: 'Red' updated material color correctly\n");
 
@@ -347,7 +347,7 @@ static int runScenario(const char *outputStem)
     if (blueColor[2] < 0.5f) {
         fprintf(stderr, "render_hud_interaction: FAIL - 'Blue' did not set blue color\n");
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: 'Blue' updated material color correctly\n");
 
@@ -361,7 +361,7 @@ static int runScenario(const char *outputStem)
     if (greenColor[1] < 0.5f) {
         fprintf(stderr, "render_hud_interaction: FAIL - 'Green' did not set green color\n");
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: 'Green' updated material color correctly\n");
 
@@ -380,7 +380,7 @@ static int runScenario(const char *outputStem)
     if (!renderer.render(root)) {
         fprintf(stderr, "render_hud_interaction: FAIL - post-interaction render failed\n");
         root->unref();
-        return 1;
+        return false;
     }
 
     const unsigned char *buf1 = renderer.getBuffer();
@@ -397,7 +397,7 @@ static int runScenario(const char *outputStem)
                 "(pixels %d vs initial %d)\n",
                 afterBrightCount, initBrightCount);
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: sphere coverage grew (%d -> %d pixels)\n",
            initBrightCount, afterBrightCount);
@@ -408,7 +408,7 @@ static int runScenario(const char *outputStem)
                 "render_hud_interaction: FAIL - expected dominant R channel, "
                 "got channel %d\n", afterDominantChan);
         root->unref();
-        return 1;
+        return false;
     }
     printf("  PASS: dominant colour channel is Red (channel 0)\n");
 
@@ -429,12 +429,10 @@ static int runScenario(const char *outputStem)
     printf("  Final sphere radius: %.2f\n", sphere->radius.getValue());
 
     root->unref();
-    return 0;
+    return true;
 }
 
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_hud_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_hud_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(HudInteractionRenderTest, ButtonSequenceMutatesSceneAndPixels,
+    "hud_interaction", runHudInteractionSequence(outputStem.c_str()))

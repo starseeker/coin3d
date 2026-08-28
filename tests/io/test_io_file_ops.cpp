@@ -84,15 +84,14 @@ static std::string writeTempIV(const char * suffix)
 TEST(IoFileOps, SoInputOpenFileReturnsTRUEForValidIVFile)
 {
     std::string path = writeTempIV("open_valid");
-    bool pass = false;
+    EXPECT_FALSE(path.empty());
     if (!path.empty()) {
         SoInput in;
         SbBool ok = in.openFile(path.c_str());
-        pass = (ok == TRUE);
+        EXPECT_TRUE(ok);
         if (ok) in.closeFile();
         remove(path.c_str());
     }
-    EXPECT_TRUE(pass) << "SoInput::openFile failed for a valid IV file";
 }
 
 TEST(IoFileOps, SoInputOpenFileReturnsFALSEForNonExistentFile)
@@ -106,45 +105,47 @@ TEST(IoFileOps, SoInputOpenFileReturnsFALSEForNonExistentFile)
 
     SoError::setHandlerCallback(old, nullptr);
 
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "SoInput::openFile should return FALSE for non-existent file";
+    EXPECT_TRUE((ok == FALSE)) << "SoInput::openFile should return FALSE for non-existent file";
 }
 
 TEST(IoFileOps, SoInputGetCurFileNameReturnsPathAfterOpenFile)
 {
     std::string path = writeTempIV("getcurfilename");
-    bool pass = false;
+    EXPECT_FALSE(path.empty());
     if (!path.empty()) {
         SoInput in;
-        if (in.openFile(path.c_str())) {
+        const SbBool opened = in.openFile(path.c_str());
+        EXPECT_TRUE(opened);
+        if (opened) {
             SbString name = in.getCurFileName();
             // The returned name should end with our file path
-            pass = (strstr(name.getString(), "test_io_file_ops_") != nullptr);
+            EXPECT_NE(strstr(name.getString(), "test_io_file_ops_"), nullptr);
             in.closeFile();
         }
         remove(path.c_str());
     }
-    EXPECT_TRUE(pass) << "SoInput::getCurFileName did not return the opened file path";
 }
 
 TEST(IoFileOps, SoDBReadAllFromOpenFileLoadsScene)
 {
     std::string path = writeTempIV("readall_file");
-    bool pass = false;
+    EXPECT_FALSE(path.empty());
     if (!path.empty()) {
         SoInput in;
-        if (in.openFile(path.c_str())) {
+        const SbBool opened = in.openFile(path.c_str());
+        EXPECT_TRUE(opened);
+        if (opened) {
             SoSeparator * root = SoDB::readAll(&in);
+            EXPECT_NE(root, nullptr);
             if (root) {
                 root->ref();
-                pass = (root->getNumChildren() > 0);
+                EXPECT_GT(root->getNumChildren(), 0);
                 root->unref();
             }
             in.closeFile();
         }
         remove(path.c_str());
     }
-    EXPECT_TRUE(pass) << "SoDB::readAll from openFile did not load any children";
 }
 
 // -----------------------------------------------------------------------
@@ -167,19 +168,17 @@ TEST(IoFileOps, SoOutputSetBinaryIsBinaryRoundTrip)
 {
     SoOutput out;
     out.setBinary(TRUE);
-    bool pass = (out.isBinary() == TRUE);
+    EXPECT_TRUE(out.isBinary());
     out.setBinary(FALSE);
-    pass = pass && (out.isBinary() == FALSE);
-    EXPECT_TRUE(pass) << "SoOutput setBinary/isBinary round-trip failed";
+    EXPECT_FALSE(out.isBinary());
 }
 
 TEST(IoFileOps, SoOutputSetHeaderStringGetDefaultASCIIHeader)
 {
     // getDefaultASCIIHeader returns the standard Inventor header string
     SbString hdr = SoOutput::getDefaultASCIIHeader();
-    bool pass = (strncmp(hdr.getString(), "#Inventor V2.1 ascii",
-                         strlen("#Inventor V2.1 ascii")) == 0);
-    EXPECT_TRUE(pass) << "SoOutput::getDefaultASCIIHeader did not return expected header";
+    EXPECT_TRUE((strncmp(hdr.getString(), "#Inventor V2.1 ascii",
+                         strlen("#Inventor V2.1 ascii")) == 0)) << "SoOutput::getDefaultASCIIHeader did not return expected header";
 }
 
 // -----------------------------------------------------------------------
@@ -196,7 +195,8 @@ TEST(IoFileOps, SoWriteActionWritesToFileSuccessfully)
 
     SoOutput out;
     bool opened = out.openFile(outPath);
-    bool pass = false;
+    EXPECT_TRUE(opened);
+    long fileSize = -1;
     if (opened) {
         SoWriteAction wa(&out);
         wa.apply(root);
@@ -206,14 +206,13 @@ TEST(IoFileOps, SoWriteActionWritesToFileSuccessfully)
         FILE * f = fopen(outPath, "r");
         if (f) {
             fseek(f, 0, SEEK_END);
-            long sz = ftell(f);
+            fileSize = ftell(f);
             fclose(f);
-            pass = (sz > 0);
         }
         remove(outPath);
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoWriteAction did not write a non-empty file";
+    EXPECT_GT(fileSize, 0);
 }
 
 // -----------------------------------------------------------------------
@@ -224,16 +223,19 @@ TEST(IoFileOps, SoInputMultipleOpenFileCallsStackAndCloseFile)
 {
     std::string path1 = writeTempIV("stack1");
     std::string path2 = writeTempIV("stack2");
-    bool pass = false;
+    EXPECT_FALSE(path1.empty());
+    EXPECT_FALSE(path2.empty());
     if (!path1.empty() && !path2.empty()) {
         SoInput in;
         SbBool ok1 = in.openFile(path1.c_str());
+        EXPECT_TRUE(ok1);
         if (ok1) {
             SbBool ok2 = in.openFile(path2.c_str());
+            EXPECT_TRUE(ok2);
             if (ok2) {
                 // Top of stack should be path2
                 SbString top = in.getCurFileName();
-                pass = (strstr(top.getString(), "stack2") != nullptr);
+                EXPECT_NE(strstr(top.getString(), "stack2"), nullptr);
                 in.closeFile();  // pop path2
             }
             in.closeFile();     // pop path1
@@ -241,5 +243,4 @@ TEST(IoFileOps, SoInputMultipleOpenFileCallsStackAndCloseFile)
         remove(path1.c_str());
         remove(path2.c_str());
     }
-    EXPECT_TRUE(pass) << "SoInput stack getCurFileName did not return top-of-stack file";
 }

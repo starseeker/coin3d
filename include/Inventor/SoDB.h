@@ -175,6 +175,17 @@ public:
   static SbBool isNotifying(void);
   static void endNotify(void);
 
+  /**
+   * Progress callback used by long-running operations. File import reports
+   * exact 0 and 1 endpoints, monotonically increasing intermediate fractions,
+   * and a final -1 when an interruptible import is successfully cancelled.
+   * Returning TRUE requests cancellation only when interruptible is TRUE.
+   *
+   * Callbacks are invoked from a registry snapshot without an internal lock,
+   * so they may add or remove callbacks. Removal affects future snapshots but
+   * does not wait for an invocation already in progress; callback userdata
+   * must remain alive until those operations have completed.
+   */
   typedef SbBool ProgressCallbackType(const SbName & itemid, float fraction,
                                       SbBool interruptible, void * userdata);
   static void addProgressCallback(ProgressCallbackType * func, void * userdata);
@@ -289,12 +300,10 @@ public:
      * application must provide for the feature to work — preventing the
      * memory corruption that results from reading beyond a tiny framebuffer.
      *
-     * The default returns (0, 0), which means "unknown".  Obol treats an
-     * unknown size as "assume it is large enough" and relies on FBO
-     * creation success/failure as the fallback guard.  Implementing this
-     * method in your ContextManager is strongly recommended for any
-     * context whose backing surface might be smaller than the largest
-     * texture the application requests.
+     * The default returns (0, 0), which means "unknown".  If framebuffer
+     * objects are unavailable, Obol will skip raw readback from a surface of
+     * unknown size rather than risk reading beyond it.  Context managers that
+     * support direct framebuffer readback must override this method.
      */
     virtual void getActualSurfaceSize(void * /*context*/,
                                       unsigned int & width,

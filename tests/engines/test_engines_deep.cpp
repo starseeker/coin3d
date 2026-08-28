@@ -76,15 +76,14 @@ TEST(EnginesDeep, SoDecomposeMatrixIdentityTranslationIsZero)
     result.connectFrom(&eng->translation);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         const SbVec3f & t = result[0];
-        pass = (std::fabs(t[0]) < 1e-5f) &&
-               (std::fabs(t[1]) < 1e-5f) &&
-               (std::fabs(t[2]) < 1e-5f);
+        EXPECT_NEAR(t[0], 0.0f, 1e-5f);
+        EXPECT_NEAR(t[1], 0.0f, 1e-5f);
+        EXPECT_NEAR(t[2], 0.0f, 1e-5f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeMatrix identity translation should be (0,0,0)";
 }
 
 TEST(EnginesDeep, SoDecomposeMatrixIdentityScaleFactorIsOne)
@@ -98,15 +97,14 @@ TEST(EnginesDeep, SoDecomposeMatrixIdentityScaleFactorIsOne)
     result.connectFrom(&eng->scaleFactor);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         const SbVec3f & s = result[0];
-        pass = (std::fabs(s[0] - 1.0f) < 1e-4f) &&
-               (std::fabs(s[1] - 1.0f) < 1e-4f) &&
-               (std::fabs(s[2] - 1.0f) < 1e-4f);
+        EXPECT_NEAR(s[0], 1.0f, 1e-4f);
+        EXPECT_NEAR(s[1], 1.0f, 1e-4f);
+        EXPECT_NEAR(s[2], 1.0f, 1e-4f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeMatrix identity scaleFactor should be (1,1,1)";
 }
 
 // -----------------------------------------------------------------------
@@ -123,10 +121,9 @@ TEST(EnginesDeep, SoDecomposeRotationIdentityRotationAngleIsZero)
     result.connectFrom(&eng->angle);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) &&
-                (std::fabs(result[0]) < 1e-5f);
+    EXPECT_TRUE((result.getNum() > 0) &&
+                (std::fabs(result[0]) < 1e-5f)) << "SoDecomposeRotation identity angle should be ~0";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeRotation identity angle should be ~0";
 }
 
 // -----------------------------------------------------------------------
@@ -144,14 +141,13 @@ TEST(EnginesDeep, SoComposeRotationFromToProducesNonIdentityRotation)
     result.connectFrom(&eng->rotation);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         SbVec3f axis; float angle;
         result[0].getValue(axis, angle);
-        pass = (std::fabs(angle) > 1e-3f);
+        EXPECT_GT(std::fabs(angle), 1e-3f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeRotationFromTo should produce non-identity rotation";
 }
 
 // -----------------------------------------------------------------------
@@ -169,15 +165,14 @@ TEST(EnginesDeep, SoTransformVec3fIdentityTransformPreservesVector)
     result.connectFrom(&eng->point);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         const SbVec3f & p = result[0];
-        pass = (std::fabs(p[0] - 1.0f) < 1e-5f) &&
-               (std::fabs(p[1])         < 1e-5f) &&
-               (std::fabs(p[2])         < 1e-5f);
+        EXPECT_NEAR(p[0], 1.0f, 1e-5f);
+        EXPECT_NEAR(p[1], 0.0f, 1e-5f);
+        EXPECT_NEAR(p[2], 0.0f, 1e-5f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoTransformVec3f identity should return ~(1,0,0)";
 }
 
 // -----------------------------------------------------------------------
@@ -197,14 +192,13 @@ TEST(EnginesDeep, SoInterpolateRotationAlpha0ReturnsFirstInput)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         SbVec3f axis; float angle;
         result[0].getValue(axis, angle);
-        pass = (std::fabs(angle) < 1e-3f);
+        EXPECT_NEAR(angle, 0.0f, 1e-3f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateRotation alpha=0 should return identity rotation";
 }
 
 TEST(EnginesDeep, SoInterpolateRotationAlpha1ReturnsSecondInput)
@@ -220,14 +214,13 @@ TEST(EnginesDeep, SoInterpolateRotationAlpha1ReturnsSecondInput)
     result.connectFrom(&eng->output);
     result.evaluate();
 
-    bool pass = false;
+    EXPECT_GT(result.getNum(), 0);
     if (result.getNum() > 0) {
         SbVec3f axis; float angle;
         result[0].getValue(axis, angle);
-        pass = (std::fabs(std::fabs(angle) - target) < 0.01f);
+        EXPECT_NEAR(std::fabs(angle), target, 0.01f);
     }
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateRotation alpha=1 should return ~90-degree rotation";
 }
 
 // -----------------------------------------------------------------------
@@ -244,9 +237,8 @@ TEST(EnginesDeep, SoOnOffTriggerOnSetsIsOnToTRUE)
     result.connectFrom(&eng->isOn);
     result.evaluate();
 
-    bool pass = (result.getValue() == TRUE);
+    EXPECT_TRUE((result.getValue() == TRUE)) << "SoOnOff: isOn should be TRUE after on trigger";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoOnOff: isOn should be TRUE after on trigger";
 }
 
 TEST(EnginesDeep, SoOnOffTriggerOffSetsIsOnToFALSE)
@@ -260,9 +252,8 @@ TEST(EnginesDeep, SoOnOffTriggerOffSetsIsOnToFALSE)
     result.connectFrom(&eng->isOn);
     result.evaluate();
 
-    bool pass = (result.getValue() == FALSE);
+    EXPECT_TRUE((result.getValue() == FALSE)) << "SoOnOff: isOn should be FALSE after off trigger";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoOnOff: isOn should be FALSE after off trigger";
 }
 
 TEST(EnginesDeep, SoOnOffToggleFlipsState)
@@ -282,9 +273,8 @@ TEST(EnginesDeep, SoOnOffToggleFlipsState)
     result.evaluate();
     bool afterToggle = (result.getValue() == TRUE);
 
-    bool pass = initial && afterToggle;
+    EXPECT_TRUE(initial && afterToggle) << "SoOnOff: toggle should flip state from FALSE to TRUE";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoOnOff: toggle should flip state from FALSE to TRUE";
 }
 
 // -----------------------------------------------------------------------
@@ -295,7 +285,6 @@ TEST(EnginesDeep, SoTriggerAnyClassInitialized)
 {
     SoTriggerAny * eng = new SoTriggerAny;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoTriggerAny has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoTriggerAny has bad type";
 }

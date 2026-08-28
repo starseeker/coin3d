@@ -277,46 +277,12 @@ static bool test6_recountAfterModification()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_callback_action";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createCallbackAction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoCallbackAction traversal tests ===\n");
-
-    if (!test1_preShapeCallback())        ++failures;
-    if (!test2_triangleCallback())        ++failures;
-    if (!test3_sphereNormals())           ++failures;
-    if (!test4_nodeCallbackCounting())    ++failures;
-    if (!test5_geometryMeasurement())     ++failures;
-    if (!test6_recountAfterModification()) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_callback_action) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_callback_action");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, PreShapeCallback, "callback_pre_shape", test1_preShapeCallback())
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, TriangleCallback, "callback_triangle", test2_triangleCallback())
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, SphereNormals, "callback_normals", test3_sphereNormals())
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, NodeCounting, "callback_count", test4_nodeCallbackCounting())
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, GeometryMeasurement, "callback_measure", test5_geometryMeasurement())
+OBOL_RENDER_TEST_CASE(CallbackActionRenderTest, RecountAfterModification, "callback_recount", test6_recountAfterModification())

@@ -75,8 +75,7 @@ TEST(BaseAdvanced, SbVec2fSetValueGetValueRoundTrip)
     v.setValue(3.0f, 4.0f);
     float x, y;
     v.getValue(x, y);
-    bool pass = floatNear(x, 3.0f) && floatNear(y, 4.0f);
-    EXPECT_TRUE(pass) << "SbVec2f setValue/getValue round-trip failed";
+    EXPECT_TRUE(floatNear(x, 3.0f) && floatNear(y, 4.0f)) << "SbVec2f setValue/getValue round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -86,15 +85,13 @@ TEST(BaseAdvanced, SbVec2fSetValueGetValueRoundTrip)
 TEST(BaseAdvanced, SbVec2fDot10010)
 {
     SbVec2f a(1.0f, 0.0f), b(0.0f, 1.0f);
-    bool pass = floatNear(a.dot(b), 0.0f);
-    EXPECT_TRUE(pass) << "SbVec2f orthogonal dot product should be 0";
+    EXPECT_TRUE(floatNear(a.dot(b), 0.0f)) << "SbVec2f orthogonal dot product should be 0";
 }
 
 TEST(BaseAdvanced, SbVec2fDot10101)
 {
     SbVec2f a(1.0f, 0.0f);
-    bool pass = floatNear(a.dot(a), 1.0f);
-    EXPECT_TRUE(pass) << "SbVec2f unit self-dot should be 1";
+    EXPECT_TRUE(floatNear(a.dot(a), 1.0f)) << "SbVec2f unit self-dot should be 1";
 }
 
 // -----------------------------------------------------------------------
@@ -104,8 +101,7 @@ TEST(BaseAdvanced, SbVec2fDot10101)
 TEST(BaseAdvanced, SbVec2fLengthVec34Length5)
 {
     SbVec2f v(3.0f, 4.0f);
-    bool pass = floatNear(v.length(), 5.0f);
-    EXPECT_TRUE(pass) << "SbVec2f length(3,4) should be 5";
+    EXPECT_TRUE(floatNear(v.length(), 5.0f)) << "SbVec2f length(3,4) should be 5";
 }
 
 // -----------------------------------------------------------------------
@@ -116,8 +112,7 @@ TEST(BaseAdvanced, SbVec2fNormalizeLengthBecomes1)
 {
     SbVec2f v(3.0f, 4.0f);
     v.normalize();
-    bool pass = floatNear(v.length(), 1.0f);
-    EXPECT_TRUE(pass) << "SbVec2f normalize should produce unit length";
+    EXPECT_TRUE(floatNear(v.length(), 1.0f)) << "SbVec2f normalize should produce unit length";
 }
 
 // -----------------------------------------------------------------------
@@ -128,32 +123,28 @@ TEST(BaseAdvanced, SbVec2fOperator)
 {
     SbVec2f a(1.0f, 2.0f), b(3.0f, 4.0f);
     SbVec2f c = a + b;
-    bool pass = floatNear(c[0], 4.0f) && floatNear(c[1], 6.0f);
-    EXPECT_TRUE(pass) << "SbVec2f operator+ failed";
+    EXPECT_TRUE(floatNear(c[0], 4.0f) && floatNear(c[1], 6.0f)) << "SbVec2f operator+ failed";
 }
 
 TEST(BaseAdvanced, SbVec2fOperator2)
 {
     SbVec2f a(5.0f, 7.0f), b(2.0f, 3.0f);
     SbVec2f c = a - b;
-    bool pass = floatNear(c[0], 3.0f) && floatNear(c[1], 4.0f);
-    EXPECT_TRUE(pass) << "SbVec2f operator- failed";
+    EXPECT_TRUE(floatNear(c[0], 3.0f) && floatNear(c[1], 4.0f)) << "SbVec2f operator- failed";
 }
 
 TEST(BaseAdvanced, SbVec2fOperatorScalar)
 {
     SbVec2f a(1.0f, 2.0f);
     SbVec2f c = a * 3.0f;
-    bool pass = floatNear(c[0], 3.0f) && floatNear(c[1], 6.0f);
-    EXPECT_TRUE(pass) << "SbVec2f operator* scalar failed";
+    EXPECT_TRUE(floatNear(c[0], 3.0f) && floatNear(c[1], 6.0f)) << "SbVec2f operator* scalar failed";
 }
 
 TEST(BaseAdvanced, SbVec2fOperatorScalar2)
 {
     SbVec2f a(4.0f, 6.0f);
     SbVec2f c = a / 2.0f;
-    bool pass = floatNear(c[0], 2.0f) && floatNear(c[1], 3.0f);
-    EXPECT_TRUE(pass) << "SbVec2f operator/ scalar failed";
+    EXPECT_TRUE(floatNear(c[0], 2.0f) && floatNear(c[1], 3.0f)) << "SbVec2f operator/ scalar failed";
 }
 
 // -----------------------------------------------------------------------
@@ -163,15 +154,13 @@ TEST(BaseAdvanced, SbVec2fOperatorScalar2)
 TEST(BaseAdvanced, SbVec2fOperator3)
 {
     SbVec2f a(1.0f, 2.0f), b(1.0f, 2.0f);
-    bool pass = (a == b);
-    EXPECT_TRUE(pass) << "SbVec2f operator== failed for equal vectors";
+    EXPECT_TRUE((a == b)) << "SbVec2f operator== failed for equal vectors";
 }
 
 TEST(BaseAdvanced, SbVec2fOperator4)
 {
     SbVec2f a(1.0f, 2.0f), b(3.0f, 4.0f);
-    bool pass = (a != b);
-    EXPECT_TRUE(pass) << "SbVec2f operator!= failed for different vectors";
+    EXPECT_TRUE((a != b)) << "SbVec2f operator!= failed for different vectors";
 }
 
 // -----------------------------------------------------------------------
@@ -184,8 +173,7 @@ TEST(BaseAdvanced, SbVec2dSetValueGetValueRoundTrip)
     v.setValue(1.5, 2.5);
     double x, y;
     v.getValue(x, y);
-    bool pass = doubleNear(x, 1.5) && doubleNear(y, 2.5);
-    EXPECT_TRUE(pass) << "SbVec2d setValue/getValue round-trip failed";
+    EXPECT_TRUE(doubleNear(x, 1.5) && doubleNear(y, 2.5)) << "SbVec2d setValue/getValue round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -195,8 +183,7 @@ TEST(BaseAdvanced, SbVec2dSetValueGetValueRoundTrip)
 TEST(BaseAdvanced, SbVec2dDot10010)
 {
     SbVec2d a(1.0, 0.0), b(0.0, 1.0);
-    bool pass = doubleNear(a.dot(b), 0.0);
-    EXPECT_TRUE(pass) << "SbVec2d orthogonal dot product should be 0";
+    EXPECT_TRUE(doubleNear(a.dot(b), 0.0)) << "SbVec2d orthogonal dot product should be 0";
 }
 
 // -----------------------------------------------------------------------
@@ -206,8 +193,7 @@ TEST(BaseAdvanced, SbVec2dDot10010)
 TEST(BaseAdvanced, SbVec2dLengthVec34Length5)
 {
     SbVec2d v(3.0, 4.0);
-    bool pass = doubleNear(v.length(), 5.0);
-    EXPECT_TRUE(pass) << "SbVec2d length(3,4) should be 5";
+    EXPECT_TRUE(doubleNear(v.length(), 5.0)) << "SbVec2d length(3,4) should be 5";
 }
 
 // -----------------------------------------------------------------------
@@ -220,9 +206,8 @@ TEST(BaseAdvanced, SbVec4dSetValueGetValueRoundTrip)
     v.setValue(1.0, 2.0, 3.0, 4.0);
     double x, y, z, w;
     v.getValue(x, y, z, w);
-    bool pass = doubleNear(x, 1.0) && doubleNear(y, 2.0) &&
-                doubleNear(z, 3.0) && doubleNear(w, 4.0);
-    EXPECT_TRUE(pass) << "SbVec4d setValue/getValue round-trip failed";
+    EXPECT_TRUE(doubleNear(x, 1.0) && doubleNear(y, 2.0) &&
+                doubleNear(z, 3.0) && doubleNear(w, 4.0)) << "SbVec4d setValue/getValue round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -233,8 +218,7 @@ TEST(BaseAdvanced, SbVec4dDotSelfDotEqualsSquaredLength)
 {
     SbVec4d v(1.0, 2.0, 3.0, 4.0);
     double expected = 1.0 + 4.0 + 9.0 + 16.0; // 30
-    bool pass = doubleNear(v.dot(v), expected);
-    EXPECT_TRUE(pass) << "SbVec4d self-dot should equal sum of squares";
+    EXPECT_TRUE(doubleNear(v.dot(v), expected)) << "SbVec4d self-dot should equal sum of squares";
 }
 
 // -----------------------------------------------------------------------
@@ -246,8 +230,7 @@ TEST(BaseAdvanced, SbMatrixDet4OfIdentityIs1)
     SbMatrix m;
     m.makeIdentity();
     float d = m.det4();
-    bool pass = floatNear(d, 1.0f);
-    EXPECT_TRUE(pass) << "SbMatrix identity det4() should be 1";
+    EXPECT_TRUE(floatNear(d, 1.0f)) << "SbMatrix identity det4() should be 1";
 }
 
 // -----------------------------------------------------------------------
@@ -263,9 +246,8 @@ TEST(BaseAdvanced, SbRotationSlerpAtT0ReturnsFirstRotation)
     float q0, q1, q2, q3, e0, e1, e2, e3;
     result.getValue(q0, q1, q2, q3);
     r0.getValue(e0, e1, e2, e3);
-    bool pass = floatNear(q0, e0) && floatNear(q1, e1) &&
-                floatNear(q2, e2) && floatNear(q3, e3);
-    EXPECT_TRUE(pass) << "SbRotation slerp(r0,r1,0) should equal r0";
+    EXPECT_TRUE(floatNear(q0, e0) && floatNear(q1, e1) &&
+                floatNear(q2, e2) && floatNear(q3, e3)) << "SbRotation slerp(r0,r1,0) should equal r0";
 }
 
 TEST(BaseAdvanced, SbRotationSlerpAtT1ReturnsSecondRotation)
@@ -277,8 +259,7 @@ TEST(BaseAdvanced, SbRotationSlerpAtT1ReturnsSecondRotation)
     result.getValue(axis, angle);
     SbVec3f eAxis; float eAngle;
     r1.getValue(eAxis, eAngle);
-    bool pass = floatNear(angle, eAngle, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation slerp(r0,r1,1) should equal r1";
+    EXPECT_TRUE(floatNear(angle, eAngle, 1e-4f)) << "SbRotation slerp(r0,r1,1) should equal r1";
 }
 
 // -----------------------------------------------------------------------
@@ -288,8 +269,7 @@ TEST(BaseAdvanced, SbRotationSlerpAtT1ReturnsSecondRotation)
 TEST(BaseAdvanced, SbTimeGetTimeOfDayReturnsPositiveValue)
 {
     SbTime t = SbTime::getTimeOfDay();
-    bool pass = (t.getValue() > 0.0);
-    EXPECT_TRUE(pass) << "SbTime::getTimeOfDay() should return positive time";
+    EXPECT_TRUE((t.getValue() > 0.0)) << "SbTime::getTimeOfDay() should return positive time";
 }
 
 // -----------------------------------------------------------------------
@@ -300,8 +280,7 @@ TEST(BaseAdvanced, SbTimeSetToTimeOfDaySetsPositiveValue)
 {
     SbTime t;
     t.setToTimeOfDay();
-    bool pass = (t.getValue() > 0.0);
-    EXPECT_TRUE(pass) << "SbTime::setToTimeOfDay() should set a positive time";
+    EXPECT_TRUE((t.getValue() > 0.0)) << "SbTime::setToTimeOfDay() should set a positive time";
 }
 
 // -----------------------------------------------------------------------
@@ -311,8 +290,7 @@ TEST(BaseAdvanced, SbTimeSetToTimeOfDaySetsPositiveValue)
 TEST(BaseAdvanced, SbNameGetStringReturnsOriginalString)
 {
     SbName n("hello");
-    bool pass = (strcmp(n.getString(), "hello") == 0);
-    EXPECT_TRUE(pass) << "SbName getString() did not return original string";
+    EXPECT_TRUE((strcmp(n.getString(), "hello") == 0)) << "SbName getString() did not return original string";
 }
 
 // -----------------------------------------------------------------------
@@ -322,8 +300,7 @@ TEST(BaseAdvanced, SbNameGetStringReturnsOriginalString)
 TEST(BaseAdvanced, SbNameGetLengthMatchesStrlen)
 {
     SbName n("world");
-    bool pass = (n.getLength() == static_cast<int>(strlen("world")));
-    EXPECT_TRUE(pass) << "SbName getLength() should equal strlen of string";
+    EXPECT_TRUE((n.getLength() == static_cast<int>(strlen("world")))) << "SbName getLength() should equal strlen of string";
 }
 
 // -----------------------------------------------------------------------
@@ -333,8 +310,7 @@ TEST(BaseAdvanced, SbNameGetLengthMatchesStrlen)
 TEST(BaseAdvanced, SbNameOperatorSameName)
 {
     SbName a("foo"), b("foo");
-    bool pass = (a == b);
-    EXPECT_TRUE(pass) << "SbName operator== should be true for same string";
+    EXPECT_TRUE((a == b)) << "SbName operator== should be true for same string";
 }
 
 // -----------------------------------------------------------------------
@@ -344,8 +320,7 @@ TEST(BaseAdvanced, SbNameOperatorSameName)
 TEST(BaseAdvanced, SbNameOperatorDifferentNames)
 {
     SbName a("foo"), b("bar");
-    bool pass = (a != b);
-    EXPECT_TRUE(pass) << "SbName operator!= should be true for different strings";
+    EXPECT_TRUE((a != b)) << "SbName operator!= should be true for different strings";
 }
 
 // -----------------------------------------------------------------------
@@ -355,8 +330,7 @@ TEST(BaseAdvanced, SbNameOperatorDifferentNames)
 TEST(BaseAdvanced, SbNameOperatorWithChar)
 {
     SbName n("baz");
-    bool pass = (n == "baz");
-    EXPECT_TRUE(pass) << "SbName operator==(char*) should match";
+    EXPECT_TRUE((n == "baz")) << "SbName operator==(char*) should match";
 }
 
 // -----------------------------------------------------------------------
@@ -366,6 +340,5 @@ TEST(BaseAdvanced, SbNameOperatorWithChar)
 TEST(BaseAdvanced, SbNameEmptyHasZeroLength)
 {
     const SbName & e = SbName::empty();
-    bool pass = (e.getLength() == 0);
-    EXPECT_TRUE(pass) << "SbName::empty() should have length 0";
+    EXPECT_TRUE((e.getLength() == 0)) << "SbName::empty() should have length 0";
 }

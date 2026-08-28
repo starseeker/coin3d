@@ -53,6 +53,7 @@
 
 #include "glue/glp.h"
 #include "rendering/SoGL.h"
+#include "misc/SoOnce.h"
 
 // *************************************************************************
 
@@ -132,10 +133,9 @@ SoGLLightIdElement::increment(SoState * const state,
     if (element->data >= maxl) {
       element->data--;
 #if OBOL_DEBUG
-      static SbBool warn = TRUE;
+      static SoOnceFlag warning;
 
-      if (warn) { // warn only once
-        warn = FALSE;
+      if (warning.first()) { // warn only once
         SoDebugError::postWarning("SoGLLightIdElement::increment",
                                   "Number of concurrent light sources in "
                                   "scene exceeds %d, which is the maximum "

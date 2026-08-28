@@ -41,6 +41,7 @@
 
 #include <Inventor/elements/SoGLPolygonOffsetElement.h>
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -139,12 +140,11 @@ SoGLPolygonOffsetElement::updategl(void)
 {
   const SoGLContext * w = sogl_glue_instance(this->state);
   if (!SoGLDriverDatabase::isSupported(w, SO_GL_POLYGON_OFFSET)) {
-    static SbBool first = TRUE;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoGLPolygonOffsetElement::updategl",
                                 "OpenGL driver doesn't support z-buffer "
                                 "offsetting");
-      first = FALSE;
     }
     return;
   }

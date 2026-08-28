@@ -65,6 +65,12 @@ SbBool SoCacheElement::invalidated = FALSE;
 static SbTypedStorage <SbBool*> * invalidated_storage = NULL;
 
 static void
+cacheelement_invalidated_construct(void * data)
+{
+  *static_cast<SbBool *>(data) = FALSE;
+}
+
+static void
 cacheelement_cleanup(void)
 {
   delete invalidated_storage;
@@ -87,8 +93,8 @@ SoCacheElement::initClass(void)
   SO_ELEMENT_INIT_CLASS(SoCacheElement, inherited);
   SoCacheElement::invalidated = FALSE;
 
-  invalidated_storage = new SbTypedStorage <SbBool*> (sizeof(SbBool));
-  *(invalidated_storage->get()) = FALSE;
+  invalidated_storage = new SbTypedStorage <SbBool*> (
+    sizeof(SbBool), cacheelement_invalidated_construct, NULL);
   coin_atexit((coin_atexit_f*) cacheelement_cleanup, CC_ATEXIT_NORMAL);
 }
 

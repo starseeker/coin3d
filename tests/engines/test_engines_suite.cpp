@@ -77,9 +77,8 @@ TEST(EnginesSuite, SoCalculatorClassInitialized)
 {
     SoCalculator* calc = new SoCalculator;
     calc->ref();
-    bool pass = (calc->getTypeId() != SoType::badType());
+    EXPECT_TRUE((calc->getTypeId() != SoType::badType())) << "SoCalculator has bad type";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoCalculator has bad type";
 }
 
 TEST(EnginesSuite, SoCalculatorConstantExpression)
@@ -93,9 +92,8 @@ TEST(EnginesSuite, SoCalculatorConstantExpression)
     result.connectFrom(&calc->oa);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) && (result[0] == 42.0f);
+    EXPECT_TRUE((result.getNum() > 0) && (result[0] == 42.0f)) << "SoCalculator 6*7 should equal 42";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoCalculator 6*7 should equal 42";
 }
 
 TEST(EnginesSuite, SoCalculatorUsingInputFieldA)
@@ -109,9 +107,8 @@ TEST(EnginesSuite, SoCalculatorUsingInputFieldA)
     result.connectFrom(&calc->oa);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) && (result[0] == 30.0f);
+    EXPECT_TRUE((result.getNum() > 0) && (result[0] == 30.0f)) << "SoCalculator a*3 should equal 30";
     calc->unref();
-    EXPECT_TRUE(pass) << "SoCalculator a*3 should equal 30";
 }
 
 // -----------------------------------------------------------------------
@@ -122,9 +119,8 @@ TEST(EnginesSuite, SoComposeVec3fClassInitialized)
 {
     SoComposeVec3f* eng = new SoComposeVec3f;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComposeVec3f has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeVec3f has bad type";
 }
 
 TEST(EnginesSuite, SoComposeVec3fCompose)
@@ -139,12 +135,11 @@ TEST(EnginesSuite, SoComposeVec3fCompose)
     result.connectFrom(&eng->vector);
     result.evaluate();
 
-    bool pass = (result.getNum() > 0) &&
+    EXPECT_TRUE((result.getNum() > 0) &&
                 (result[0][0] == 1.0f) &&
                 (result[0][1] == 2.0f) &&
-                (result[0][2] == 3.0f);
+                (result[0][2] == 3.0f)) << "SoComposeVec3f did not compose (1,2,3) correctly";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeVec3f did not compose (1,2,3) correctly";
 }
 
 // -----------------------------------------------------------------------
@@ -163,10 +158,9 @@ TEST(EnginesSuite, SoDecomposeVec3fDecompose)
     rz.connectFrom(&eng->z);
     rx.evaluate(); ry.evaluate(); rz.evaluate();
 
-    bool pass = (rx.getNum() > 0) && (ry.getNum() > 0) && (rz.getNum() > 0) &&
-                (rx[0] == 4.0f) && (ry[0] == 5.0f) && (rz[0] == 6.0f);
+    EXPECT_TRUE((rx.getNum() > 0) && (ry.getNum() > 0) && (rz.getNum() > 0) &&
+                (rx[0] == 4.0f) && (ry[0] == 5.0f) && (rz[0] == 6.0f)) << "SoDecomposeVec3f did not decompose (4,5,6) correctly";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoDecomposeVec3f did not decompose (4,5,6) correctly";
 }
 
 // -----------------------------------------------------------------------
@@ -177,9 +171,8 @@ TEST(EnginesSuite, SoBoolOperationClassInitialized)
 {
     SoBoolOperation* eng = new SoBoolOperation;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoBoolOperation has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoBoolOperation has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -190,9 +183,8 @@ TEST(EnginesSuite, SoElapsedTimeClassInitialized)
 {
     SoElapsedTime* eng = new SoElapsedTime;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoElapsedTime has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoElapsedTime has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -203,9 +195,8 @@ TEST(EnginesSuite, SoConcatenateClassInitialized)
 {
     SoConcatenate* eng = new SoConcatenate(SoMFFloat::getClassTypeId());
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoConcatenate has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoConcatenate has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -216,9 +207,8 @@ TEST(EnginesSuite, SoComposeMatrixClassInitialized)
 {
     SoComposeMatrix* eng = new SoComposeMatrix;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComposeMatrix has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeMatrix has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -229,9 +219,8 @@ TEST(EnginesSuite, SoComposeRotationClassInitialized)
 {
     SoComposeRotation* eng = new SoComposeRotation;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComposeRotation has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeRotation has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -242,9 +231,8 @@ TEST(EnginesSuite, SoComposeVec2fClassInitialized)
 {
     SoComposeVec2f* eng = new SoComposeVec2f;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComposeVec2f has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeVec2f has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -255,9 +243,8 @@ TEST(EnginesSuite, SoComposeVec4fClassInitialized)
 {
     SoComposeVec4f* eng = new SoComposeVec4f;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComposeVec4f has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComposeVec4f has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -268,9 +255,8 @@ TEST(EnginesSuite, SoGateClassInitialized)
 {
     SoGate* eng = new SoGate(SoMFFloat::getClassTypeId());
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoGate has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoGate has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -281,9 +267,8 @@ TEST(EnginesSuite, SoInterpolateFloatClassInitialized)
 {
     SoInterpolateFloat* eng = new SoInterpolateFloat;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoInterpolateFloat has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoInterpolateFloat has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -294,9 +279,8 @@ TEST(EnginesSuite, SoSelectOneClassInitialized)
 {
     SoSelectOne* eng = new SoSelectOne(SoMFFloat::getClassTypeId());
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoSelectOne has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoSelectOne has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -307,9 +291,8 @@ TEST(EnginesSuite, SoCounterClassInitialized)
 {
     SoCounter* eng = new SoCounter;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoCounter has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoCounter has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -320,9 +303,8 @@ TEST(EnginesSuite, SoTimeCounterClassInitialized)
 {
     SoTimeCounter* eng = new SoTimeCounter;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoTimeCounter has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoTimeCounter has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -333,7 +315,6 @@ TEST(EnginesSuite, SoComputeBoundingBoxClassInitialized)
 {
     SoComputeBoundingBox* eng = new SoComputeBoundingBox;
     eng->ref();
-    bool pass = (eng->getTypeId() != SoType::badType());
+    EXPECT_TRUE((eng->getTypeId() != SoType::badType())) << "SoComputeBoundingBox has bad type";
     eng->unref();
-    EXPECT_TRUE(pass) << "SoComputeBoundingBox has bad type";
 }

@@ -72,6 +72,7 @@
 SoType SoGlobalField::classTypeId STATIC_SOTYPE_INIT;
 
 SoBaseList * SoGlobalField::allcontainers = NULL;
+std::recursive_mutex SoGlobalField::registrymutex;
 
 // *************************************************************************
 
@@ -79,6 +80,8 @@ SoBaseList * SoGlobalField::allcontainers = NULL;
 // SoGlobalField instance.
 SoGlobalField::SoGlobalField(const SbName & name, SoField * field)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
 #if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGlobalField::SoGlobalField",
                          "name=='%s', field==%p(%s)",
@@ -106,6 +109,8 @@ SoGlobalField::SoGlobalField(const SbName & name, SoField * field)
 // Destructor.
 SoGlobalField::~SoGlobalField()
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   SoGlobalField::allcontainers->removeItem(this);
 #if OBOL_DEBUG && 0 // debug
   SoField * field = this->classfielddata->getField(this, 0);
@@ -152,6 +157,8 @@ SoGlobalField::initClass(void)
 void
 SoGlobalField::clean(void)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
 #if OBOL_DEBUG
 
   // Warn about all global fields still alive, as they have the
@@ -182,6 +189,8 @@ SoGlobalField::clean(void)
 int
 SoGlobalField::getGlobalFieldIndex(const SbName & name)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   int idx = SoGlobalField::allcontainers->getLength() - 1;
   while (idx >= 0 && (*SoGlobalField::allcontainers)[idx]->getName() != name)
     idx--;
@@ -193,6 +202,8 @@ SoGlobalField::getGlobalFieldIndex(const SbName & name)
 void
 SoGlobalField::addGlobalFieldContainer(SoGlobalField * fieldcontainer)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   SoGlobalField::allcontainers->append(fieldcontainer);
 }
 
@@ -204,6 +215,8 @@ SoGlobalField::addGlobalFieldContainer(SoGlobalField * fieldcontainer)
 void
 SoGlobalField::removeGlobalFieldContainer(SoGlobalField * fieldcontainer)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   SoGlobalField::allcontainers->removeItem(fieldcontainer);
 }
 
@@ -211,16 +224,11 @@ SoGlobalField::removeGlobalFieldContainer(SoGlobalField * fieldcontainer)
 SoGlobalField *
 SoGlobalField::getGlobalFieldContainer(const SbName & name)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   int idx = SoGlobalField::getGlobalFieldIndex(name);
   return
     (idx == -1) ? NULL : coin_assert_cast<SoGlobalField *>((*SoGlobalField::allcontainers)[idx]);
-}
-
-// Returns the complete set of SoGlobalField instances.
-SoBaseList *
-SoGlobalField::getGlobalFieldContainers(void)
-{
-  return SoGlobalField::allcontainers;
 }
 
 // Return id of SoGlobalField class instances.

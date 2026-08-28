@@ -82,25 +82,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	)
 endif()
 
-# Files excluded from public API documentation, included in complete documentation.
-set(OBOL_BASE_INTERNAL_FILES
-	coinString.h
-	dict.h
-	dict.cpp
-	dictp.h
-	heapp.h
-	namemap.h
-	namemap.cpp
-	SbVecI32Conversion.h
-)
 
 # build module object library
 obol_add_source_module(base ${OBOL_BASE_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_BASE_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/base/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
-foreach(SRCFILE ${OBOL_BASE_INTERNAL_FILES})
-	set(OBOL_INTERNAL_DOCUMENTATION_FILES ${OBOL_INTERNAL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/base/${SRCFILE} CACHE INTERNAL "OBOL_INTERNAL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)

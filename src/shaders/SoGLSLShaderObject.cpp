@@ -33,6 +33,7 @@
 #include "shaders/SoGLSLShaderObject.h"
 #include "config.h"
 
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <Inventor/errors/SoDebugError.h>
@@ -42,7 +43,7 @@
 #include "rendering/SoGL.h"
 #include "shaders/SoGLSLShaderParameter.h"
 
-static int32_t soglshaderobject_idcounter = 1;
+static std::atomic<uint64_t> nextglslprogramid{1};
 
 // *************************************************************************
 
@@ -111,7 +112,10 @@ SoGLSLShaderObject::load(const char* srcStr)
   this->programid = 0;
 
   if (this->shaderHandle == 0) return;
-  this->programid = soglshaderobject_idcounter++;
+  do {
+    this->programid =
+      nextglslprogramid.fetch_add(1, std::memory_order_relaxed);
+  } while (this->programid == 0);
 
   this->glctx->glShaderSourceARB(this->shaderHandle, 1, (const OBOL_GLchar **)&srcStr, NULL);
   this->glctx->glCompileShaderARB(this->shaderHandle);

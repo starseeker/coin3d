@@ -71,17 +71,15 @@ using namespace ObolTest;
 
 TEST(ManipsDeep, SoPointLightManipClassTypeIdValid)
 {
-    bool pass = (SoPointLightManip::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPointLightManip has bad class type";
+    EXPECT_TRUE((SoPointLightManip::getClassTypeId() != SoType::badType())) << "SoPointLightManip has bad class type";
 }
 
 TEST(ManipsDeep, SoPointLightManipIsOfTypeSoPointLight)
 {
     SoPointLightManip * m = new SoPointLightManip;
     m->ref();
-    bool pass = m->isOfType(SoPointLight::getClassTypeId());
+    EXPECT_TRUE(m->isOfType(SoPointLight::getClassTypeId())) << "SoPointLightManip not a SoPointLight subtype";
     m->unref();
-    EXPECT_TRUE(pass) << "SoPointLightManip not a SoPointLight subtype";
 }
 
 TEST(ManipsDeep, SoPointLightManipGetDraggerReturnsNonNull)
@@ -89,9 +87,8 @@ TEST(ManipsDeep, SoPointLightManipGetDraggerReturnsNonNull)
     SoPointLightManip * m = new SoPointLightManip;
     m->ref();
     SoDragger * d = m->getDragger();
-    bool pass = (d != nullptr);
+    EXPECT_TRUE((d != nullptr)) << "SoPointLightManip getDragger returned null";
     m->unref();
-    EXPECT_TRUE(pass) << "SoPointLightManip getDragger returned null";
 }
 
 TEST(ManipsDeep, SoPointLightManipDefaultLocationIs001)
@@ -99,11 +96,10 @@ TEST(ManipsDeep, SoPointLightManipDefaultLocationIs001)
     SoPointLightManip * m = new SoPointLightManip;
     m->ref();
     SbVec3f loc = m->location.getValue();
-    bool pass = (std::fabs(loc[0]) < 1e-4f) &&
+    EXPECT_TRUE((std::fabs(loc[0]) < 1e-4f) &&
                 (std::fabs(loc[1]) < 1e-4f) &&
-                (std::fabs(loc[2] - 1.0f) < 1e-4f);
+                (std::fabs(loc[2] - 1.0f) < 1e-4f)) << "SoPointLightManip default location is not (0,0,1)";
     m->unref();
-    EXPECT_TRUE(pass) << "SoPointLightManip default location is not (0,0,1)";
 }
 
 TEST(ManipsDeep, SoPointLightManipSoGetBoundingBoxActionDoesNotCrash)
@@ -135,15 +131,16 @@ TEST(ManipsDeep, SoPointLightManipReplaceNodeReplaceManipLifecycle)
     sa.apply(root);
     SoPath * path = sa.getPath();
 
-    bool pass = false;
+    EXPECT_NE(path, nullptr);
     if (path) {
         SoPointLightManip * manip = new SoPointLightManip;
         manip->ref();
         SbBool ok = manip->replaceNode(path);
+        EXPECT_TRUE(ok);
         if (ok) {
             // Verify location was copied
             SbVec3f loc = manip->location.getValue();
-            pass = (std::fabs(loc[0] - 1.0f) < 1e-4f);
+            EXPECT_NEAR(loc[0], 1.0f, 1e-4f);
 
             // Now replace back
             SoSearchAction sa2;
@@ -151,15 +148,15 @@ TEST(ManipsDeep, SoPointLightManipReplaceNodeReplaceManipLifecycle)
             sa2.setInterest(SoSearchAction::FIRST);
             sa2.apply(root);
             SoPath * mpath = sa2.getPath();
+            EXPECT_NE(mpath, nullptr);
             if (mpath) {
                 SbBool detached = manip->replaceManip(mpath, nullptr);
-                pass = pass && detached;
+                EXPECT_TRUE(detached);
             }
         }
         manip->unref();
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoPointLightManip replaceNode/replaceManip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -168,17 +165,15 @@ TEST(ManipsDeep, SoPointLightManipReplaceNodeReplaceManipLifecycle)
 
 TEST(ManipsDeep, SoDirectionalLightManipClassTypeIdValid)
 {
-    bool pass = (SoDirectionalLightManip::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoDirectionalLightManip has bad class type";
+    EXPECT_TRUE((SoDirectionalLightManip::getClassTypeId() != SoType::badType())) << "SoDirectionalLightManip has bad class type";
 }
 
 TEST(ManipsDeep, SoDirectionalLightManipIsOfTypeSoDirectionalLight)
 {
     SoDirectionalLightManip * m = new SoDirectionalLightManip;
     m->ref();
-    bool pass = m->isOfType(SoDirectionalLight::getClassTypeId());
+    EXPECT_TRUE(m->isOfType(SoDirectionalLight::getClassTypeId())) << "SoDirectionalLightManip not a SoDirectionalLight subtype";
     m->unref();
-    EXPECT_TRUE(pass) << "SoDirectionalLightManip not a SoDirectionalLight subtype";
 }
 
 TEST(ManipsDeep, SoDirectionalLightManipGetDraggerReturnsNonNull)
@@ -186,9 +181,8 @@ TEST(ManipsDeep, SoDirectionalLightManipGetDraggerReturnsNonNull)
     SoDirectionalLightManip * m = new SoDirectionalLightManip;
     m->ref();
     SoDragger * d = m->getDragger();
-    bool pass = (d != nullptr);
+    EXPECT_TRUE((d != nullptr)) << "SoDirectionalLightManip getDragger returned null";
     m->unref();
-    EXPECT_TRUE(pass) << "SoDirectionalLightManip getDragger returned null";
 }
 
 TEST(ManipsDeep, SoDirectionalLightManipSoGetBoundingBoxActionDoesNotCrash)
@@ -210,17 +204,15 @@ TEST(ManipsDeep, SoDirectionalLightManipSoGetBoundingBoxActionDoesNotCrash)
 
 TEST(ManipsDeep, SoSpotLightManipClassTypeIdValid)
 {
-    bool pass = (SoSpotLightManip::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoSpotLightManip has bad class type";
+    EXPECT_TRUE((SoSpotLightManip::getClassTypeId() != SoType::badType())) << "SoSpotLightManip has bad class type";
 }
 
 TEST(ManipsDeep, SoSpotLightManipIsOfTypeSoSpotLight)
 {
     SoSpotLightManip * m = new SoSpotLightManip;
     m->ref();
-    bool pass = m->isOfType(SoSpotLight::getClassTypeId());
+    EXPECT_TRUE(m->isOfType(SoSpotLight::getClassTypeId())) << "SoSpotLightManip not a SoSpotLight subtype";
     m->unref();
-    EXPECT_TRUE(pass) << "SoSpotLightManip not a SoSpotLight subtype";
 }
 
 TEST(ManipsDeep, SoSpotLightManipGetDraggerReturnsNonNull)
@@ -228,9 +220,8 @@ TEST(ManipsDeep, SoSpotLightManipGetDraggerReturnsNonNull)
     SoSpotLightManip * m = new SoSpotLightManip;
     m->ref();
     SoDragger * d = m->getDragger();
-    bool pass = (d != nullptr);
+    EXPECT_TRUE((d != nullptr)) << "SoSpotLightManip getDragger returned null";
     m->unref();
-    EXPECT_TRUE(pass) << "SoSpotLightManip getDragger returned null";
 }
 
 // -----------------------------------------------------------------------
@@ -239,17 +230,15 @@ TEST(ManipsDeep, SoSpotLightManipGetDraggerReturnsNonNull)
 
 TEST(ManipsDeep, SoClipPlaneManipClassTypeIdValid)
 {
-    bool pass = (SoClipPlaneManip::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoClipPlaneManip has bad class type";
+    EXPECT_TRUE((SoClipPlaneManip::getClassTypeId() != SoType::badType())) << "SoClipPlaneManip has bad class type";
 }
 
 TEST(ManipsDeep, SoClipPlaneManipIsOfTypeSoClipPlane)
 {
     SoClipPlaneManip * m = new SoClipPlaneManip;
     m->ref();
-    bool pass = m->isOfType(SoClipPlane::getClassTypeId());
+    EXPECT_TRUE(m->isOfType(SoClipPlane::getClassTypeId())) << "SoClipPlaneManip not a SoClipPlane subtype";
     m->unref();
-    EXPECT_TRUE(pass) << "SoClipPlaneManip not a SoClipPlane subtype";
 }
 
 TEST(ManipsDeep, SoClipPlaneManipGetDraggerReturnsNonNull)
@@ -257,9 +246,8 @@ TEST(ManipsDeep, SoClipPlaneManipGetDraggerReturnsNonNull)
     SoClipPlaneManip * m = new SoClipPlaneManip;
     m->ref();
     SoDragger * d = m->getDragger();
-    bool pass = (d != nullptr);
+    EXPECT_TRUE((d != nullptr)) << "SoClipPlaneManip getDragger returned null";
     m->unref();
-    EXPECT_TRUE(pass) << "SoClipPlaneManip getDragger returned null";
 }
 
 TEST(ManipsDeep, SoClipPlaneManipSetValueSetsPlaneFromBoxNormal)
@@ -302,26 +290,26 @@ TEST(ManipsDeep, SoClipPlaneManipReplaceNodeReplaceManipLifecycle)
     sa.apply(root);
     SoPath * path = sa.getPath();
 
-    bool pass = false;
+    EXPECT_NE(path, nullptr);
     if (path) {
         SoClipPlaneManip * manip = new SoClipPlaneManip;
         manip->ref();
         SbBool ok = manip->replaceNode(path);
+        EXPECT_TRUE(ok);
         if (ok) {
-            pass = true;
             // Detach
             SoSearchAction sa2;
             sa2.setType(SoClipPlaneManip::getClassTypeId());
             sa2.setInterest(SoSearchAction::FIRST);
             sa2.apply(root);
             SoPath * mpath = sa2.getPath();
+            EXPECT_NE(mpath, nullptr);
             if (mpath) {
                 SbBool detached = manip->replaceManip(mpath, nullptr);
-                pass = pass && detached;
+                EXPECT_TRUE(detached);
             }
         }
         manip->unref();
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoClipPlaneManip replaceNode/replaceManip failed";
 }

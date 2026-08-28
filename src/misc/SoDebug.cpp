@@ -37,6 +37,8 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <mutex>
+#include <string>
 
 #include "CoinTidbits.h"
 #include <Inventor/nodes/SoNode.h>
@@ -72,6 +74,8 @@ struct SoDebug_internal {
 };
 
 SbHash<void *, char *> * SoDebug_internal::namedict = NULL;
+std::mutex namedict_mutex;
+thread_local std::string ptrname_snapshot;
 
 } // anonymous namespace
 
@@ -115,6 +119,7 @@ SoDebug::RTPrintf(const char * formatstr, ...)
 void
 SoDebug::NamePtr(const char * name, void * ptr)
 {
+  const std::lock_guard<std::mutex> guard(namedict_mutex);
   if ( SoDebug_internal::namedict == NULL ) {
     SoDebug_internal::namedict = new SbHash<void *, char *>;
     coin_atexit(SoDebug_internal::delete_namedict, CC_ATEXIT_NORMAL);
@@ -140,11 +145,13 @@ const char *
 SoDebug::PtrName(void * ptr)
 {
   static const char fallback[] = "<noName>";
+  const std::lock_guard<std::mutex> guard(namedict_mutex);
   if ( SoDebug_internal::namedict == NULL ) return fallback;
   char * data = NULL;
   if ( SoDebug_internal::namedict->get(ptr, data) ) {
     if ( data ) {
-      return data;
+      ptrname_snapshot = data;
+      return ptrname_snapshot.c_str();
     }
   }
   return fallback;
@@ -217,6 +224,8 @@ SoDebug::printName(SoBase * base)
 void
 SoDebug_internal::delete_namedict(void)
 {
+  const std::lock_guard<std::mutex> guard(namedict_mutex);
+  if (!namedict) return;
   for(
      SbHash<void *, char *>::const_iterator iter =
        namedict->const_begin();

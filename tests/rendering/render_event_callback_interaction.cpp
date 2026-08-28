@@ -483,46 +483,12 @@ static bool test6_removeCallback()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_event_callback_interaction";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createEventCallbackInteraction(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-    int failures = 0;
-
-    printf("\n=== SoEventCallback interaction tests ===\n");
-
-    if (!test1_mouseButtonToggle(basepath)) ++failures;
-    if (!test2_mouseMoveTracker(basepath))  ++failures;
-    if (!test3_keyboardScale(basepath))     ++failures;
-    if (!test4_multipleCallbacks())         ++failures;
-    if (!test5_setHandledBlocksPropagation()) ++failures;
-    if (!test6_removeCallback())            ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_event_callback_interaction) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_event_callback_interaction");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, MouseButtonToggle, "event_mouse_toggle", test1_mouseButtonToggle(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, MouseMoveTracking, "event_mouse_move", test2_mouseMoveTracker(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, KeyboardScale, "event_key_scale", test3_keyboardScale(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, MultipleCallbacks, "event_multiple", test4_multipleCallbacks())
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, HandledStopsPropagation, "event_handled", test5_setHandledBlocksPropagation())
+OBOL_RENDER_TEST_CASE(EventCallbackInteractionTest, RemoveCallback, "event_remove", test6_removeCallback())

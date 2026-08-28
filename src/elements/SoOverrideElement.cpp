@@ -161,24 +161,15 @@ else if (over_elem) \
 
 // *************************************************************************
 
-static int OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = -1;
-
-// *************************************************************************
-
 static SbBool
 use_separate_transp_diffuse(void)
 {
-  if (OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE < 0) {
-    OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = 0;
-
+  static const SbBool separate = [] {
     const char * env =
       CoinInternal::getEnvironmentVariableRaw("OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE");
-    if (env) {
-      OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = atoi(env);
-    }
-  }
-  return OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE ?
-    TRUE : FALSE;
+    return (env && atoi(env)) ? TRUE : FALSE;
+  }();
+  return separate;
 }
 
 // *************************************************************************

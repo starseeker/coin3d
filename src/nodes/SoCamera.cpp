@@ -138,17 +138,15 @@
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoGLRenderPassElement.h>
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
+#include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SbColor4f.h>
 #include "glue/glp.h"
 #include "CoinTidbits.h"
 
-#if OBOL_DEBUG
-#include <Inventor/errors/SoDebugError.h>
-#endif // OBOL_DEBUG
-
 #include "elements/GL/SoResetMatrixElement.h"
 #include "nodes/SoSubNodeP.h"
+#include "misc/SoOnce.h"
 
 /*!
   \enum SoCamera::ViewportMapping
@@ -284,7 +282,7 @@
     vv = camera->getViewVolume(0.0f);
     break;
   default:
-    assert(0 && "unknown viewport mapping");
+    vv = camera->getViewVolume(0.0f);
     break;
   }
 
@@ -445,7 +443,15 @@ SoCamera::getViewVolume(const SbViewportRegion & vp,
     resultvv = this->getViewVolume(0.0f);
     break;
   default:
-    assert(0 && "unknown viewport mapping");
+    {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoCamera::getViewVolume",
+                                  "Unknown viewport mapping %d; using LEAVE_ALONE.",
+                                  vpm);
+      }
+    }
+    resultvv = this->getViewVolume(0.0f);
     break;
   }
 

@@ -85,11 +85,10 @@ TEST(FieldsFieldAdvanced, SoSFRotationSetValueAxisAngleGetValueAxisAngleRoundTri
     SbVec3f normGot = gotAxis;
     normGot.normalize();
 
-    bool pass = (fabsf(normGot[0] - normAxis[0]) < 1e-4f) &&
+    EXPECT_TRUE((fabsf(normGot[0] - normAxis[0]) < 1e-4f) &&
                 (fabsf(normGot[1] - normAxis[1]) < 1e-4f) &&
                 (fabsf(normGot[2] - normAxis[2]) < 1e-4f) &&
-                (fabsf(gotAngle  - angle)         < 1e-4f);
-    EXPECT_TRUE(pass) << "SoSFRotation axis/angle round-trip failed";
+                (fabsf(gotAngle  - angle)         < 1e-4f)) << "SoSFRotation axis/angle round-trip failed";
 }
 
 TEST(FieldsFieldAdvanced, SoSFRotationComposeTwoRotationsVerifyResult)
@@ -112,8 +111,7 @@ TEST(FieldsFieldAdvanced, SoSFRotationComposeTwoRotationsVerifyResult)
                  (fabsf(gotAxis[0]) < 1e-4f) &&
                  (fabsf(gotAxis[1]) < 1e-4f);
     bool anglePi = fabsf(fabsf(gotAngle) - static_cast<float>(M_PI)) < 1e-4f;
-    bool pass = axisZ && anglePi;
-    EXPECT_TRUE(pass) << "SoSFRotation composed rotation incorrect";
+    EXPECT_TRUE(axisZ && anglePi) << "SoSFRotation composed rotation incorrect";
 }
 
 // -----------------------------------------------------------------------
@@ -136,12 +134,12 @@ TEST(FieldsFieldAdvanced, SoSFMatrixSetValueSbMatrixGetValueRoundTrip)
     SbMat gotMat;
     got.getValue(gotMat);
 
-    bool pass = true;
-    for (int r = 0; r < 4 && pass; ++r)
-        for (int c = 0; c < 4 && pass; ++c)
-            if (fabsf(gotMat[r][c] - mat[r][c]) > 1e-5f)
-                pass = false;
-    EXPECT_TRUE(pass) << "SoSFMatrix setValue/getValue round-trip failed";
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            EXPECT_NEAR(gotMat[r][c], mat[r][c], 1e-5f)
+                << "matrix element [" << r << "][" << c << "]";
+        }
+    }
 }
 
 TEST(FieldsFieldAdvanced, SoSFMatrixMakeIdentityOnContainedSbMatrixYieldsIdentity)
@@ -166,12 +164,12 @@ TEST(FieldsFieldAdvanced, SoSFMatrixMakeIdentityOnContainedSbMatrixYieldsIdentit
     identity.getValue(idMat);
     ref.getValue(refMat);
 
-    bool pass = true;
-    for (int r = 0; r < 4 && pass; ++r)
-        for (int c = 0; c < 4 && pass; ++c)
-            if (fabsf(idMat[r][c] - refMat[r][c]) > 1e-5f)
-                pass = false;
-    EXPECT_TRUE(pass) << "SoSFMatrix makeIdentity failed";
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            EXPECT_NEAR(idMat[r][c], refMat[r][c], 1e-5f)
+                << "identity element [" << r << "][" << c << "]";
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -183,12 +181,11 @@ TEST(FieldsFieldAdvanced, SoMFStringSetValuesPreservesOrderAndCount)
     SoMFString field;
     const char * strs[] = { "alpha", "beta", "gamma", "delta" };
     field.setValues(0, 4, strs);
-    bool pass = (field.getNum() == 4) &&
+    EXPECT_TRUE((field.getNum() == 4) &&
                 (strcmp(field[0].getString(), "alpha") == 0) &&
                 (strcmp(field[1].getString(), "beta")  == 0) &&
                 (strcmp(field[2].getString(), "gamma") == 0) &&
-                (strcmp(field[3].getString(), "delta") == 0);
-    EXPECT_TRUE(pass) << "SoMFString setValues order/count failed";
+                (strcmp(field[3].getString(), "delta") == 0)) << "SoMFString setValues order/count failed";
 }
 
 TEST(FieldsFieldAdvanced, SoMFStringDeleteValuesReducesCountCorrectly)
@@ -198,11 +195,10 @@ TEST(FieldsFieldAdvanced, SoMFStringDeleteValuesReducesCountCorrectly)
     field.setValues(0, 5, strs);
     // Delete 2 values starting at index 1: removes "two","three"
     field.deleteValues(1, 2);
-    bool pass = (field.getNum() == 3) &&
+    EXPECT_TRUE((field.getNum() == 3) &&
                 (strcmp(field[0].getString(), "one")  == 0) &&
                 (strcmp(field[1].getString(), "four") == 0) &&
-                (strcmp(field[2].getString(), "five") == 0);
-    EXPECT_TRUE(pass) << "SoMFString deleteValues failed";
+                (strcmp(field[2].getString(), "five") == 0)) << "SoMFString deleteValues failed";
 }
 
 TEST(FieldsFieldAdvanced, SoMFStringSet1ValueAtMultipleIndicesGetNumOperator)
@@ -211,11 +207,10 @@ TEST(FieldsFieldAdvanced, SoMFStringSet1ValueAtMultipleIndicesGetNumOperator)
     field.set1Value(0, SbString("x"));
     field.set1Value(1, SbString("y"));
     field.set1Value(2, SbString("z"));
-    bool pass = (field.getNum() == 3) &&
+    EXPECT_TRUE((field.getNum() == 3) &&
                 (strcmp(field[0].getString(), "x") == 0) &&
                 (strcmp(field[1].getString(), "y") == 0) &&
-                (strcmp(field[2].getString(), "z") == 0);
-    EXPECT_TRUE(pass) << "SoMFString set1Value multi-index failed";
+                (strcmp(field[2].getString(), "z") == 0)) << "SoMFString set1Value multi-index failed";
 }
 
 // -----------------------------------------------------------------------
@@ -229,8 +224,7 @@ TEST(FieldsFieldAdvanced, SoMFVec3fFindReturnsCorrectIndexWhenValuePresent)
     field.set1Value(1, SbVec3f(0.0f, 1.0f, 0.0f));
     field.set1Value(2, SbVec3f(0.0f, 0.0f, 1.0f));
     int idx = field.find(SbVec3f(0.0f, 1.0f, 0.0f));
-    bool pass = (idx == 1);
-    EXPECT_TRUE(pass) << "SoMFVec3f find() did not return index 1";
+    EXPECT_TRUE((idx == 1)) << "SoMFVec3f find() did not return index 1";
 }
 
 TEST(FieldsFieldAdvanced, SoMFVec3fFindReturns1WhenValueAbsent)
@@ -239,8 +233,7 @@ TEST(FieldsFieldAdvanced, SoMFVec3fFindReturns1WhenValueAbsent)
     field.set1Value(0, SbVec3f(1.0f, 0.0f, 0.0f));
     field.set1Value(1, SbVec3f(0.0f, 1.0f, 0.0f));
     int idx = field.find(SbVec3f(9.0f, 9.0f, 9.0f));
-    bool pass = (idx == -1);
-    EXPECT_TRUE(pass) << "SoMFVec3f find() should return -1 for absent value";
+    EXPECT_TRUE((idx == -1)) << "SoMFVec3f find() should return -1 for absent value";
 }
 
 // -----------------------------------------------------------------------
@@ -252,11 +245,10 @@ TEST(FieldsFieldAdvanced, SoMFInt32SetValuesFromCArrayPreservesCountAndValues)
     SoMFInt32 field;
     const int32_t arr[] = { 10, 20, 30, 40, 50 };
     field.setValues(0, 5, arr);
-    bool pass = (field.getNum() == 5) &&
+    EXPECT_TRUE((field.getNum() == 5) &&
                 (field[0] == 10) &&
                 (field[2] == 30) &&
-                (field[4] == 50);
-    EXPECT_TRUE(pass) << "SoMFInt32 setValues from array failed";
+                (field[4] == 50)) << "SoMFInt32 setValues from array failed";
 }
 
 TEST(FieldsFieldAdvanced, SoMFInt32FindReturnsCorrectIndex)
@@ -266,8 +258,7 @@ TEST(FieldsFieldAdvanced, SoMFInt32FindReturnsCorrectIndex)
     field.set1Value(1, 200);
     field.set1Value(2, 300);
     int idx = field.find(200);
-    bool pass = (idx == 1);
-    EXPECT_TRUE(pass) << "SoMFInt32 find() did not return index 1";
+    EXPECT_TRUE((idx == 1)) << "SoMFInt32 find() did not return index 1";
 }
 
 TEST(FieldsFieldAdvanced, SoMFInt32FindReturns1ForAbsentValue)
@@ -276,8 +267,7 @@ TEST(FieldsFieldAdvanced, SoMFInt32FindReturns1ForAbsentValue)
     field.set1Value(0, 1);
     field.set1Value(1, 2);
     int idx = field.find(999);
-    bool pass = (idx == -1);
-    EXPECT_TRUE(pass) << "SoMFInt32 find() should return -1 for absent value";
+    EXPECT_TRUE((idx == -1)) << "SoMFInt32 find() should return -1 for absent value";
 }
 
 // -----------------------------------------------------------------------
@@ -290,11 +280,10 @@ TEST(FieldsFieldAdvanced, SoMFBoolSet1ValueGetNumVerifyStoredValues)
     field.set1Value(0, TRUE);
     field.set1Value(1, FALSE);
     field.set1Value(2, TRUE);
-    bool pass = (field.getNum() == 3) &&
+    EXPECT_TRUE((field.getNum() == 3) &&
                 (field[0] == TRUE)    &&
                 (field[1] == FALSE)   &&
-                (field[2] == TRUE);
-    EXPECT_TRUE(pass) << "SoMFBool set1Value/getNum/values failed";
+                (field[2] == TRUE)) << "SoMFBool set1Value/getNum/values failed";
 }
 
 // -----------------------------------------------------------------------
@@ -306,9 +295,8 @@ TEST(FieldsFieldAdvanced, SoFieldIsReadOnlyReturnsFALSEForNormalField)
     SoCube * cube = new SoCube;
     cube->ref();
     SoField * w = cube->getField(SbName("width"));
-    bool pass = (w != NULL) && (w->isReadOnly() == FALSE);
+    EXPECT_TRUE((w != NULL) && (w->isReadOnly() == FALSE)) << "SoField::isReadOnly should be FALSE for normal field";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField::isReadOnly should be FALSE for normal field";
 }
 
 TEST(FieldsFieldAdvanced, SoFieldTouchPropagatesDirtyToConnectedSlave)
@@ -322,10 +310,9 @@ TEST(FieldsFieldAdvanced, SoFieldTouchPropagatesDirtyToConnectedSlave)
     slave.setDirty(FALSE);
     w->touch();
     // The slave should be marked dirty because the master was touched
-    bool pass = (slave.getDirty() == TRUE);
+    EXPECT_TRUE((slave.getDirty() == TRUE)) << "SoField::touch() did not dirty connected slave";
     slave.disconnect();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField::touch() did not dirty connected slave";
 }
 
 TEST(FieldsFieldAdvanced, SoFieldGetNameReturnsCorrectFieldName)
@@ -335,9 +322,8 @@ TEST(FieldsFieldAdvanced, SoFieldGetNameReturnsCorrectFieldName)
     SoField * h = cube->getField(SbName("height"));
     SbName name;
     SbBool ok = cube->getFieldName(h, name);
-    bool pass = ok && (strcmp(name.getString(), "height") == 0);
+    EXPECT_TRUE(ok && (strcmp(name.getString(), "height") == 0)) << "SoField getName via getFieldName failed";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField getName via getFieldName failed";
 }
 
 // -----------------------------------------------------------------------
@@ -350,9 +336,8 @@ TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldReturnsNonNullForValidSoSphere
     SoSphere * sphere = new SoSphere;
     sphere->ref();
     SoField * r = sphere->getField(SbName("radius"));
-    bool pass = (r != NULL);
+    EXPECT_TRUE((r != NULL)) << "SoSphere::getField('radius') returned NULL";
     sphere->unref();
-    EXPECT_TRUE(pass) << "SoSphere::getField('radius') returned NULL";
 }
 
 TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldReturnsNULLForNonexistentField)
@@ -360,9 +345,8 @@ TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldReturnsNULLForNonexistentField
     SoSphere * sphere = new SoSphere;
     sphere->ref();
     SoField * f = sphere->getField(SbName("__no_such_field__"));
-    bool pass = (f == NULL);
+    EXPECT_TRUE((f == NULL)) << "getField should return NULL for unknown name";
     sphere->unref();
-    EXPECT_TRUE(pass) << "getField should return NULL for unknown name";
 }
 
 TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldsReturnsCorrectCountForSoSphere)
@@ -372,9 +356,8 @@ TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldsReturnsCorrectCountForSoSpher
     SoFieldList fl;
     int n = sphere->getFields(fl);
     // SoSphere has at least the 'radius' field
-    bool pass = (n >= 1);
+    EXPECT_TRUE((n >= 1)) << "SoSphere::getFields returned 0 fields";
     sphere->unref();
-    EXPECT_TRUE(pass) << "SoSphere::getFields returned 0 fields";
 }
 
 TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldNameRoundTripOnSoSphere)
@@ -384,7 +367,6 @@ TEST(FieldsFieldAdvanced, SoFieldContainerGetFieldNameRoundTripOnSoSphere)
     SoField * r = sphere->getField(SbName("radius"));
     SbName name;
     SbBool ok = sphere->getFieldName(r, name);
-    bool pass = ok && (strcmp(name.getString(), "radius") == 0);
+    EXPECT_TRUE(ok && (strcmp(name.getString(), "radius") == 0)) << "SoSphere getFieldName round-trip failed";
     sphere->unref();
-    EXPECT_TRUE(pass) << "SoSphere getFieldName round-trip failed";
 }

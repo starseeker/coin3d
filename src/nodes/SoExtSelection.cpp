@@ -468,11 +468,10 @@ private:
 SbBool
 SoExtSelectionP::debug(void)
 {
-  static int dbg = -1;
-  if (dbg == -1) {
+  static const bool dbg = [] {
     auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_SOEXTSELECTION");
-    dbg = env.has_value() && (std::atoi(env->c_str()) > 0);
-  }
+    return env.has_value() && (std::atoi(env->c_str()) > 0);
+  }();
   return dbg ? TRUE : FALSE;
 }
 
@@ -1537,15 +1536,7 @@ SoExtSelectionP::testBBox(SoCallbackAction * action,
 {
   SbBox3f bbox;
   SbVec3f center;
-  const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
-  if (bboxcache && bboxcache->isValid(action->getState())) {
-    bbox = bboxcache->getProjectedBox();
-    if (bboxcache->isCenterSet()) center = bboxcache->getCenter();
-    else center = bbox.getCenter();
-  }
-  else {
-    const_cast<SoShape*>(shape)->computeBBox(action, bbox, center);
-  }
+  const_cast<SoShape*>(shape)->getBoundingBoxData(action, bbox, center);
   SbVec3f mincorner = bbox.getMin();
   SbVec3f maxcorner = bbox.getMax();
 
@@ -2677,12 +2668,8 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
 
       // Debugging: if the envvar is set, the contents of the
       // offscreen buffer are stored to disk for investigation.
-      static SbBool chkenv = FALSE;
-      static auto dumpfilename = std::optional<std::string>{};
-      if (chkenv == FALSE) {
-        dumpfilename = CoinInternal::getEnvironmentVariable("OBOL_EXTSELECTION_SAVE_OFFSCREENBUFFER");
-        chkenv = TRUE;
-      }
+      static const auto dumpfilename =
+        CoinInternal::getEnvironmentVariable("OBOL_EXTSELECTION_SAVE_OFFSCREENBUFFER");
       if (dumpfilename.has_value()) { this->renderer->writeToRGB(dumpfilename->c_str()); }
 
       // Scan buffer marking visible colors in the

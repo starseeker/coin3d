@@ -401,6 +401,7 @@
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/errors/SoDebugError.h>
+#include "misc/SoOnce.h"
 #include "glue/glp.h"
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
@@ -513,12 +514,11 @@ SoTextureCombine::GLRender(SoGLRenderAction * action)
     SoTextureCombine::doAction((SoAction*)action);
   }
   else {
-    static int didwarn = 0;
-    if (!didwarn) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       SoDebugError::postWarning("SoTextureCombine::GLRender",
                                 "Your OpenGL driver does not support the "
                                 "required extensions to do texture combine.");
-      didwarn = 1;
     }
 
   }

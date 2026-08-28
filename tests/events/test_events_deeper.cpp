@@ -68,8 +68,7 @@ TEST(EventsDeeper, SoEventSetTimeGetTimeRoundTrip)
     SoKeyboardEvent ev; // use concrete subclass to access SoEvent methods
     SbTime t(1.234);
     ev.setTime(t);
-    bool pass = (std::fabs(ev.getTime().getValue() - 1.234) < 1e-9);
-    EXPECT_TRUE(pass) << "SoEvent setTime/getTime failed";
+    EXPECT_TRUE((std::fabs(ev.getTime().getValue() - 1.234) < 1e-9)) << "SoEvent setTime/getTime failed";
 }
 
 TEST(EventsDeeper, SoEventSetPositionGetPositionRoundTrip)
@@ -77,59 +76,52 @@ TEST(EventsDeeper, SoEventSetPositionGetPositionRoundTrip)
     SoKeyboardEvent ev;
     SbVec2s pos(640, 480);
     ev.setPosition(pos);
-    bool pass = (ev.getPosition() == pos);
-    EXPECT_TRUE(pass) << "SoEvent setPosition/getPosition failed";
+    EXPECT_TRUE((ev.getPosition() == pos)) << "SoEvent setPosition/getPosition failed";
 }
 
 TEST(EventsDeeper, SoEventSetShiftDownWasShiftDownRoundTrip)
 {
     SoKeyboardEvent ev;
     ev.setShiftDown(TRUE);
-    bool pass = (ev.wasShiftDown() == TRUE);
+    EXPECT_TRUE(ev.wasShiftDown());
     ev.setShiftDown(FALSE);
-    bool pass2 = (ev.wasShiftDown() == FALSE);
-    EXPECT_TRUE((pass && pass2)) << ((pass && pass2) ? "" : "setShiftDown/wasShiftDown failed");
+    EXPECT_FALSE(ev.wasShiftDown());
 }
 
 TEST(EventsDeeper, SoEventSetCtrlDownWasCtrlDownRoundTrip)
 {
     SoKeyboardEvent ev;
     ev.setCtrlDown(TRUE);
-    bool pass = (ev.wasCtrlDown() == TRUE);
+    EXPECT_TRUE(ev.wasCtrlDown());
     ev.setCtrlDown(FALSE);
-    bool pass2 = (ev.wasCtrlDown() == FALSE);
-    EXPECT_TRUE((pass && pass2)) << ((pass && pass2) ? "" : "setCtrlDown/wasCtrlDown failed");
+    EXPECT_FALSE(ev.wasCtrlDown());
 }
 
 TEST(EventsDeeper, SoEventSetAltDownWasAltDownRoundTrip)
 {
     SoKeyboardEvent ev;
     ev.setAltDown(TRUE);
-    bool pass = (ev.wasAltDown() == TRUE);
+    EXPECT_TRUE(ev.wasAltDown());
     ev.setAltDown(FALSE);
-    bool pass2 = (ev.wasAltDown() == FALSE);
-    EXPECT_TRUE((pass && pass2)) << ((pass && pass2) ? "" : "setAltDown/wasAltDown failed");
+    EXPECT_FALSE(ev.wasAltDown());
 }
 
 TEST(EventsDeeper, SoEventGetTypeIdForSoKeyboardEventIsNotBadType)
 {
     SoKeyboardEvent ev;
-    bool pass = (ev.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoKeyboardEvent getTypeId returned badType";
+    EXPECT_NE(ev.getTypeId(), SoType::badType());
 }
 
 TEST(EventsDeeper, SoEventIsOfTypeSoKeyboardEventForKeyboardEvent)
 {
     SoKeyboardEvent ev;
-    bool pass = ev.isOfType(SoKeyboardEvent::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoKeyboardEvent isOfType(SoKeyboardEvent) failed";
+    EXPECT_TRUE(ev.isOfType(SoKeyboardEvent::getClassTypeId())) << "SoKeyboardEvent isOfType(SoKeyboardEvent) failed";
 }
 
 TEST(EventsDeeper, SoEventModifiersAllDefaultToFALSE)
 {
     SoKeyboardEvent ev;
-    bool pass = !ev.wasShiftDown() && !ev.wasCtrlDown() && !ev.wasAltDown();
-    EXPECT_TRUE(pass) << "SoEvent modifiers should default to FALSE";
+    EXPECT_TRUE(!ev.wasShiftDown() && !ev.wasCtrlDown() && !ev.wasAltDown()) << "SoEvent modifiers should default to FALSE";
 }
 
 // -----------------------------------------------------------------------
@@ -140,16 +132,14 @@ TEST(EventsDeeper, SoButtonEventSetStateUPGetStateRoundTrip)
 {
     SoKeyboardEvent ev;
     ev.setState(SoButtonEvent::UP);
-    bool pass = (ev.getState() == SoButtonEvent::UP);
-    EXPECT_TRUE(pass) << "SoButtonEvent setState/getState UP failed";
+    EXPECT_TRUE((ev.getState() == SoButtonEvent::UP)) << "SoButtonEvent setState/getState UP failed";
 }
 
 TEST(EventsDeeper, SoButtonEventSetStateDOWNGetStateRoundTrip)
 {
     SoKeyboardEvent ev;
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = (ev.getState() == SoButtonEvent::DOWN);
-    EXPECT_TRUE(pass) << "SoButtonEvent setState/getState DOWN failed";
+    EXPECT_TRUE((ev.getState() == SoButtonEvent::DOWN)) << "SoButtonEvent setState/getState DOWN failed";
 }
 
 // -----------------------------------------------------------------------
@@ -158,24 +148,21 @@ TEST(EventsDeeper, SoButtonEventSetStateDOWNGetStateRoundTrip)
 
 TEST(EventsDeeper, SoKeyboardEventClassTypeRegistered)
 {
-    bool pass = (SoKeyboardEvent::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoKeyboardEvent bad class type";
+    EXPECT_TRUE((SoKeyboardEvent::getClassTypeId() != SoType::badType())) << "SoKeyboardEvent bad class type";
 }
 
 TEST(EventsDeeper, SoKeyboardEventSetKeyGetKeyRoundTripLetterA)
 {
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::A);
-    bool pass = (ev.getKey() == SoKeyboardEvent::A);
-    EXPECT_TRUE(pass) << "SoKeyboardEvent setKey/getKey(A) failed";
+    EXPECT_TRUE((ev.getKey() == SoKeyboardEvent::A)) << "SoKeyboardEvent setKey/getKey(A) failed";
 }
 
 TEST(EventsDeeper, SoKeyboardEventSetKeyGetKeyRoundTripHOME)
 {
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::HOME);
-    bool pass = (ev.getKey() == SoKeyboardEvent::HOME);
-    EXPECT_TRUE(pass) << "SoKeyboardEvent setKey/getKey(HOME) failed";
+    EXPECT_TRUE((ev.getKey() == SoKeyboardEvent::HOME)) << "SoKeyboardEvent setKey/getKey(HOME) failed";
 }
 
 TEST(EventsDeeper, SoKeyboardEventGetPrintableCharacterForLetterA)
@@ -184,8 +171,7 @@ TEST(EventsDeeper, SoKeyboardEventGetPrintableCharacterForLetterA)
     ev.setKey(SoKeyboardEvent::A);
     char c = ev.getPrintableCharacter();
     // Should return 'a' or 'A'
-    bool pass = (c == 'a' || c == 'A' || c != '\0');
-    EXPECT_TRUE(pass) << "SoKeyboardEvent getPrintableCharacter('a') failed";
+    EXPECT_TRUE((c == 'a' || c == 'A' || c != '\0')) << "SoKeyboardEvent getPrintableCharacter('a') failed";
 }
 
 TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventDOWNStateMatchingKey)
@@ -193,8 +179,7 @@ TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventDOWNStateMatchingKey)
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::RETURN);
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::RETURN);
-    EXPECT_TRUE(pass) << "isKeyPressEvent should match DOWN + RETURN";
+    EXPECT_TRUE(SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::RETURN)) << "isKeyPressEvent should match DOWN + RETURN";
 }
 
 TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventUPStateShouldNOTMatch)
@@ -202,8 +187,7 @@ TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventUPStateShouldNOTMatch)
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::RETURN);
     ev.setState(SoButtonEvent::UP);
-    bool pass = !SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::RETURN);
-    EXPECT_TRUE(pass) << "isKeyPressEvent should NOT match UP state";
+    EXPECT_TRUE(!SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::RETURN)) << "isKeyPressEvent should NOT match UP state";
 }
 
 TEST(EventsDeeper, SoKeyboardEventIsKeyReleaseEventUPStateMatchingKey)
@@ -211,8 +195,7 @@ TEST(EventsDeeper, SoKeyboardEventIsKeyReleaseEventUPStateMatchingKey)
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::ESCAPE);
     ev.setState(SoButtonEvent::UP);
-    bool pass = SoKeyboardEvent::isKeyReleaseEvent(&ev, SoKeyboardEvent::ESCAPE);
-    EXPECT_TRUE(pass) << "isKeyReleaseEvent should match UP + ESCAPE";
+    EXPECT_TRUE(SoKeyboardEvent::isKeyReleaseEvent(&ev, SoKeyboardEvent::ESCAPE)) << "isKeyReleaseEvent should match UP + ESCAPE";
 }
 
 TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventWithANYMatchesAnyKeyPress)
@@ -220,8 +203,7 @@ TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventWithANYMatchesAnyKeyPress)
     SoKeyboardEvent ev;
     ev.setKey(SoKeyboardEvent::Z);
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::ANY);
-    EXPECT_TRUE(pass) << "isKeyPressEvent with ANY should match any key press";
+    EXPECT_TRUE(SoKeyboardEvent::isKeyPressEvent(&ev, SoKeyboardEvent::ANY)) << "isKeyPressEvent with ANY should match any key press";
 }
 
 // -----------------------------------------------------------------------
@@ -230,32 +212,28 @@ TEST(EventsDeeper, SoKeyboardEventIsKeyPressEventWithANYMatchesAnyKeyPress)
 
 TEST(EventsDeeper, SoMouseButtonEventClassTypeRegistered)
 {
-    bool pass = (SoMouseButtonEvent::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent bad class type";
+    EXPECT_TRUE((SoMouseButtonEvent::getClassTypeId() != SoType::badType())) << "SoMouseButtonEvent bad class type";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventSetButtonBUTTON1GetButtonRoundTrip)
 {
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON1);
-    bool pass = (ev.getButton() == SoMouseButtonEvent::BUTTON1);
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent setButton/getButton(BUTTON1) failed";
+    EXPECT_TRUE((ev.getButton() == SoMouseButtonEvent::BUTTON1)) << "SoMouseButtonEvent setButton/getButton(BUTTON1) failed";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventSetButtonBUTTON2GetButtonRoundTrip)
 {
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON2);
-    bool pass = (ev.getButton() == SoMouseButtonEvent::BUTTON2);
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent BUTTON2 round-trip failed";
+    EXPECT_TRUE((ev.getButton() == SoMouseButtonEvent::BUTTON2)) << "SoMouseButtonEvent BUTTON2 round-trip failed";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventSetButtonBUTTON3GetButtonRoundTrip)
 {
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON3);
-    bool pass = (ev.getButton() == SoMouseButtonEvent::BUTTON3);
-    EXPECT_TRUE(pass) << "SoMouseButtonEvent BUTTON3 round-trip failed";
+    EXPECT_TRUE((ev.getButton() == SoMouseButtonEvent::BUTTON3)) << "SoMouseButtonEvent BUTTON3 round-trip failed";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventIsButtonPressEventDOWNBUTTON1)
@@ -263,8 +241,7 @@ TEST(EventsDeeper, SoMouseButtonEventIsButtonPressEventDOWNBUTTON1)
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON1);
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::BUTTON1);
-    EXPECT_TRUE(pass) << "isButtonPressEvent(BUTTON1 DOWN) should be TRUE";
+    EXPECT_TRUE(SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::BUTTON1)) << "isButtonPressEvent(BUTTON1 DOWN) should be TRUE";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventIsButtonReleaseEventUPBUTTON2)
@@ -272,8 +249,7 @@ TEST(EventsDeeper, SoMouseButtonEventIsButtonReleaseEventUPBUTTON2)
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON2);
     ev.setState(SoButtonEvent::UP);
-    bool pass = SoMouseButtonEvent::isButtonReleaseEvent(&ev, SoMouseButtonEvent::BUTTON2);
-    EXPECT_TRUE(pass) << "isButtonReleaseEvent(BUTTON2 UP) should be TRUE";
+    EXPECT_TRUE(SoMouseButtonEvent::isButtonReleaseEvent(&ev, SoMouseButtonEvent::BUTTON2)) << "isButtonReleaseEvent(BUTTON2 UP) should be TRUE";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventIsButtonPressEventWithANYMatchesAnyButtonPress)
@@ -281,8 +257,7 @@ TEST(EventsDeeper, SoMouseButtonEventIsButtonPressEventWithANYMatchesAnyButtonPr
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON3);
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::ANY);
-    EXPECT_TRUE(pass) << "isButtonPressEvent(ANY, DOWN) should match any button";
+    EXPECT_TRUE(SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::ANY)) << "isButtonPressEvent(ANY, DOWN) should match any button";
 }
 
 TEST(EventsDeeper, SoMouseButtonEventWrongButtonDoesNOTMatch)
@@ -290,8 +265,7 @@ TEST(EventsDeeper, SoMouseButtonEventWrongButtonDoesNOTMatch)
     SoMouseButtonEvent ev;
     ev.setButton(SoMouseButtonEvent::BUTTON1);
     ev.setState(SoButtonEvent::DOWN);
-    bool pass = !SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::BUTTON3);
-    EXPECT_TRUE(pass) << "BUTTON1 press should NOT match BUTTON3 test";
+    EXPECT_TRUE(!SoMouseButtonEvent::isButtonPressEvent(&ev, SoMouseButtonEvent::BUTTON3)) << "BUTTON1 press should NOT match BUTTON3 test";
 }
 
 // -----------------------------------------------------------------------
@@ -300,14 +274,12 @@ TEST(EventsDeeper, SoMouseButtonEventWrongButtonDoesNOTMatch)
 
 TEST(EventsDeeper, SoLocation2EventClassTypeRegistered)
 {
-    bool pass = (SoLocation2Event::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoLocation2Event bad class type";
+    EXPECT_TRUE((SoLocation2Event::getClassTypeId() != SoType::badType())) << "SoLocation2Event bad class type";
 }
 
 TEST(EventsDeeper, SoLocation2EventSetPositionGetPositionRoundTrip)
 {
     SoLocation2Event ev;
     ev.setPosition(SbVec2s(320, 240));
-    bool pass = (ev.getPosition() == SbVec2s(320, 240));
-    EXPECT_TRUE(pass) << "SoLocation2Event position round-trip failed";
+    EXPECT_TRUE((ev.getPosition() == SbVec2s(320, 240))) << "SoLocation2Event position round-trip failed";
 }

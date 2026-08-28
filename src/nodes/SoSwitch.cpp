@@ -73,6 +73,7 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "config.h" // OBOL_OBSOLETED()
+#include "misc/SoOnce.h"
 #include "io/SoWriterefCounter.h"
 
 // *************************************************************************
@@ -291,9 +292,8 @@ SoSwitch::doAction(SoAction * action)
         // be robust for index out of range
         if (idx >= this->getNumChildren()) {
 #if OBOL_DEBUG
-          static SbBool first = TRUE;
-          if (first) {
-            first = FALSE;
+          static SoOnceFlag warning;
+          if (warning.first()) {
             SbString s("(warning will be printed once, but there might be more cases of this problem).");
             int lastidx = this->getNumChildren()-1;
             if (lastidx >= 0) {

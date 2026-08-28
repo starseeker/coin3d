@@ -258,7 +258,7 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
   assert(shader->shaderType() == SoShader::GLSL_SHADER);
 
   OBOL_GLhandle pHandle = const_cast<SoGLSLShaderObject*>(static_cast<const SoGLSLShaderObject*>(shader))->programHandle;
-  int32_t pId = const_cast<SoGLSLShaderObject*>(static_cast<const SoGLSLShaderObject*>(shader))->programid;
+  uint64_t pId = const_cast<SoGLSLShaderObject*>(static_cast<const SoGLSLShaderObject*>(shader))->programid;
 
   // return TRUE if uniform isn't active. We warned the user about
   // this when we found it to be inactive.

@@ -2,6 +2,11 @@
 
 #include "base/SbImageFormatHandler.h"
 
+#include <Inventor/SbPList.h>
+#include <Inventor/SbString.h>
+#include <Inventor/SbViewportRegion.h>
+#include <Inventor/SoOffscreenRenderer.h>
+
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -16,11 +21,14 @@ namespace {
 class ThreadTestImageHandler final : public SbImageFormatHandler {
 public:
     explicit ThreadTestImageHandler(std::string extension)
-        : extension_(std::move(extension)) {}
+        : extensions_{std::move(extension)} {}
 
     const char * getFormatName() const override { return "thread-test"; }
     const char * getDescription() const override { return "thread-safety test handler"; }
-    std::vector<std::string> getExtensions() const override { return {extension_}; }
+    const std::vector<std::string> & getExtensions() const override
+    {
+        return extensions_;
+    }
 
     unsigned char * readImage(const char * filename, int *, int *, int *) override
     {
@@ -35,17 +43,20 @@ public:
     }
 
 private:
-    std::string extension_;
+    std::vector<std::string> extensions_;
 };
 
 class MallocImageHandler final : public SbImageFormatHandler {
 public:
     explicit MallocImageHandler(std::string extension)
-        : extension_(std::move(extension)) {}
+        : extensions_{std::move(extension)} {}
 
     const char * getFormatName() const override { return "malloc-test"; }
     const char * getDescription() const override { return "allocator ownership test"; }
-    std::vector<std::string> getExtensions() const override { return {extension_}; }
+    const std::vector<std::string> & getExtensions() const override
+    {
+        return extensions_;
+    }
 
     unsigned char * readImage(const char *, int * width, int * height,
                               int * components) override
@@ -72,7 +83,7 @@ public:
     int freeCount() const { return frees_.load(std::memory_order_relaxed); }
 
 private:
-    std::string extension_;
+    std::vector<std::string> extensions_;
     std::atomic<int> frees_{0};
 };
 
@@ -231,4 +242,72 @@ TEST(ImageFormatRegistry, ConcurrentRegistrationQueriesAndErrorsAreIsolated)
     EXPECT_EQ(registry.getNumHandlers(),
               initial_count + thread_count +
                   thread_count * registrations_per_thread + 1);
+}
+
+TEST(ImageFormatRegistry, OffscreenCompatibilityExtensionsHaveStableLifetime)
+{
+    SoOffscreenRenderer renderer(SbViewportRegion(1, 1));
+    const int format_count = renderer.getNumWriteFiletypes();
+    ASSERT_GT(format_count, 0);
+
+    struct ExtensionPointer {
+        const char * pointer;
+        std::string value;
+    };
+    std::vector<ExtensionPointer> original_extensions;
+    for (int format = 0; format < format_count; ++format) {
+        SbPList extensions;
+        SbString name;
+        SbString description;
+        renderer.getWriteFiletypeInfo(format, extensions, name, description);
+        ASSERT_GT(extensions.getLength(), 0) << "format " << format;
+        for (int extension = 0; extension < extensions.getLength(); ++extension) {
+            const char * pointer = static_cast<const char *>(extensions[extension]);
+            ASSERT_NE(pointer, nullptr);
+            original_extensions.push_back({pointer, pointer});
+        }
+    }
+
+    for (int iteration = 0; iteration < 1000; ++iteration) {
+        for (int format = 0; format < format_count; ++format) {
+            SbPList extensions;
+            SbString name;
+            SbString description;
+            renderer.getWriteFiletypeInfo(format, extensions, name, description);
+        }
+    }
+
+    for (const ExtensionPointer & extension : original_extensions) {
+        EXPECT_STREQ(extension.pointer, extension.value.c_str());
+    }
+}
+
+TEST(ImageFormatRegistry, OffscreenCompatibilityEnumerationIsConcurrent)
+{
+    constexpr int thread_count = 8;
+    constexpr int iterations = 250;
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> threads;
+    threads.reserve(thread_count);
+
+    for (int thread_index = 0; thread_index < thread_count; ++thread_index) {
+        threads.emplace_back([&] {
+            SoOffscreenRenderer renderer(SbViewportRegion(1, 1));
+            for (int iteration = 0; iteration < iterations && !failed; ++iteration) {
+                const int format_count = renderer.getNumWriteFiletypes();
+                for (int format = 0; format < format_count; ++format) {
+                    SbPList extensions;
+                    SbString name;
+                    SbString description;
+                    renderer.getWriteFiletypeInfo(format, extensions, name, description);
+                    if (extensions.getLength() == 0 || name.getLength() == 0) {
+                        failed.store(true, std::memory_order_relaxed);
+                    }
+                }
+            }
+        });
+    }
+    for (std::thread & thread : threads) thread.join();
+
+    EXPECT_FALSE(failed.load());
 }

@@ -539,7 +539,10 @@ static bool test13_vertexProperty()
         SbVec3f(0,0,1),SbVec3f(0,0,1),SbVec3f(0,0,1),SbVec3f(0,0,1)
     };
     vp->normal.setValues(0,4,norms);
-    vp->normalBinding.setValue(SoVertexProperty::PER_VERTEX);
+    // The coordinate stream reuses vertices through coordIndex, so the four
+    // normals are indexed by vertex too. PER_VERTEX would require one normal
+    // for every index occurrence (six normals for these two triangles).
+    vp->normalBinding.setValue(SoVertexProperty::PER_VERTEX_INDEXED);
 
     static const int32_t idx[] = {0,1,2,-1,0,2,3,-1};
     ifs->coordIndex.setValues(0,8,idx);
@@ -563,37 +566,19 @@ static bool test13_vertexProperty()
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-    (void)outputStem;
-
-    int failures = 0;
-
-    printf("\n=== SoCallbackAction primitive callback tests ===\n");
-
-    if (!test1_sphere())          ++failures;
-    if (!test2_cone())            ++failures;
-    if (!test3_cylinder())        ++failures;
-    if (!test4_cube())            ++failures;
-    if (!test5_faceSet())         ++failures;
-    if (!test6_indexedFaceSet())  ++failures;
-    if (!test7_triangleStripSet()) ++failures;
-    if (!test8_quadMesh())        ++failures;
-    if (!test9_lineSet())         ++failures;
-    if (!test10_indexedLineSet()) ++failures;
-    if (!test11_pointSet())       ++failures;
-    if (!test12_prePostCB())      ++failures;
-    if (!test13_vertexProperty()) ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_callback_action_deep) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_callback_action_deep");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, Sphere, "callback_deep_sphere", test1_sphere())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, Cone, "callback_deep_cone", test2_cone())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, Cylinder, "callback_deep_cylinder", test3_cylinder())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, Cube, "callback_deep_cube", test4_cube())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, FaceSet, "callback_deep_faces", test5_faceSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, IndexedFaceSet, "callback_deep_ifaces", test6_indexedFaceSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, TriangleStripSet, "callback_deep_strips", test7_triangleStripSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, QuadMesh, "callback_deep_quads", test8_quadMesh())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, LineSet, "callback_deep_lines", test9_lineSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, IndexedLineSet, "callback_deep_ilines", test10_indexedLineSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, PointSet, "callback_deep_points", test11_pointSet())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, PreAndPostCallbacks, "callback_deep_prepost", test12_prePostCB())
+OBOL_RENDER_TEST_CASE(CallbackActionGeometryTest, VertexProperty, "callback_deep_vertex", test13_vertexProperty())

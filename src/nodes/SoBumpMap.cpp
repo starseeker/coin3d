@@ -88,6 +88,7 @@
 #include <cassert>
 
 #include "config.h"
+#include "misc/SoOnce.h"
 
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoCallbackAction.h>
@@ -318,13 +319,12 @@ SoBumpMap::GLRender(SoGLRenderAction * action)
     }
   }
   else {
-    static int didwarn = 0;
-    if (!didwarn) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       // FIXME: add link to bumpmapping doc on doc.coin3d.org. pederb, 2003-11-18
       SoDebugError::postWarning("SoBumpMap::GLRender",
                                 "Your OpenGL driver does not support the "
                                 "required extensions to do bumpmapping.");
-      didwarn = 1;
     }
   }
 }

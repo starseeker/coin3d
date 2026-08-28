@@ -255,28 +255,10 @@ static bool testClipPlaneManip(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_light_manips";
-    int failures = 0;
-
-    printf("\n=== Light manipulator interaction tests ===\n");
-
-    if (!testDirectionalLightManip(basepath)) ++failures;
-    if (!testPointLightManip(basepath))       ++failures;
-    if (!testSpotLightManip(basepath))        ++failures;
-    if (!testClipPlaneManip(basepath))        ++failures;
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_light_manips) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_light_manips");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(LightManipulatorRenderTest, DirectionalLight, "light_manip_directional", testDirectionalLightManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LightManipulatorRenderTest, PointLight, "light_manip_point", testPointLightManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LightManipulatorRenderTest, SpotLight, "light_manip_spot", testSpotLightManip(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(LightManipulatorRenderTest, ClipPlane, "light_manip_clip", testClipPlaneManip(outputStem.c_str()))

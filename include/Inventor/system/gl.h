@@ -178,6 +178,13 @@
 #ifndef GL_CLIENT_ACTIVE_TEXTURE
 #define GL_CLIENT_ACTIVE_TEXTURE          0x84E1
 #endif /* !GL_CLIENT_ACTIVE_TEXTURE */
+
+/* OpenGL 1.5 buffer-object enum.  Microsoft's system gl.h only exposes
+   OpenGL 1.1, even when buffer functions are resolved at runtime. */
+#ifndef GL_BUFFER_SIZE
+#define GL_BUFFER_SIZE                    0x8764
+#endif /* !GL_BUFFER_SIZE */
+
 /* A define from the old EXT_polygon_offset from SGI. This define at
    least missing from Microsoft's OpenGL 1.1 SDK. */
 #ifndef GL_POLYGON_OFFSET_EXT

@@ -22,11 +22,6 @@ foreach(_input_file ${OBOL_DRAGGER_IV_FILES})
   strfy(${_input_file} "_draggergeometry")
 endforeach()
 
-# Set common resources (for macOS framework builds)
-file(GLOB_RECURSE COMMON_DRAGGER_RESOURCES CONFIGURE_DEPENDS
-     ${CMAKE_CURRENT_SOURCE_DIR}/defaults/*.iv)
-set(COMMON_RESOURCES ${COMMON_DRAGGER_RESOURCES} PARENT_SCOPE)
-
 # source files
 set(OBOL_DRAGGERS_FILES
 	SoDragger.cpp
@@ -55,8 +50,5 @@ set(OBOL_DRAGGERS_FILES
 
 # build module object library
 obol_add_source_module(draggers ${OBOL_DRAGGERS_FILES})
-
-# define documentation
-foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
-	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/draggers/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
-endforeach(SRCFILE)
+target_include_directories(obol_draggers_objects PRIVATE
+  "${CMAKE_CURRENT_BINARY_DIR}")

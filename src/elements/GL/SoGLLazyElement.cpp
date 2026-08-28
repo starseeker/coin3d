@@ -70,6 +70,7 @@
 #include "misc/CoinUtilities.h"
 #include "rendering/SoVBO.h"
 #include "config.h" // OBOL_OBSOLETED
+#include "misc/SoOnce.h"
 
 #include "shaders/SoGLShaderProgram.h"
 
@@ -497,8 +498,8 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
   int safeindex = index;
 #if OBOL_DEBUG
   if (index < 0 || index >= this->coinstate.numdiffuse) {
-    static int first = 1;
-    if (first) {
+    static SoOnceFlag warning;
+    if (warning.first()) {
       const SoFullPath * path = static_cast<const SoFullPath*>(this->state->getAction()->getCurPath());
       SoNode * tail = path->getTail();
       SbName name = tail->getName();
@@ -510,7 +511,6 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
                                 this->coinstate.numdiffuse-1,
                                 static_cast<void *>(tail),
                                 name != SbName::empty() ? name.getString() : "<noname>");
-      first = 0;
     }
 
     safeindex = SbClamp((long) index, (long) 0, (long) (this->coinstate.numdiffuse-1));

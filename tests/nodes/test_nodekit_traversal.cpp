@@ -67,10 +67,9 @@ TEST(NodesNodekitTraversal, SoShapeKitInstantiationAndTypeCheck)
 {
     SoShapeKit *kit = new SoShapeKit;
     kit->ref();
-    bool pass = (kit->getTypeId() != SoType::badType()) &&
-                kit->isOfType(SoBaseKit::getClassTypeId());
+    EXPECT_TRUE((kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId())) << "SoShapeKit bad type or not SoBaseKit subtype";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit bad type or not SoBaseKit subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -82,9 +81,8 @@ TEST(NodesNodekitTraversal, SoShapeKitGetNodekitCatalogIsNonNull)
     SoShapeKit *kit = new SoShapeKit;
     kit->ref();
     const SoNodekitCatalog *cat = kit->getNodekitCatalog();
-    bool pass = (cat != nullptr) && (cat->getNumEntries() > 0);
+    EXPECT_TRUE((cat != nullptr) && (cat->getNumEntries() > 0)) << "SoShapeKit catalog is null or has no entries";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit catalog is null or has no entries";
 }
 
 // -----------------------------------------------------------------------
@@ -96,9 +94,8 @@ TEST(NodesNodekitTraversal, SoShapeKitGetPartShapeTRUEReturnsNonNull)
     SoShapeKit *kit = new SoShapeKit;
     kit->ref();
     SoNode *part = kit->getPart("shape", TRUE);
-    bool pass = (part != nullptr);
+    EXPECT_TRUE((part != nullptr)) << "SoShapeKit getPart(\"shape\", TRUE) returned null";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit getPart(\"shape\", TRUE) returned null";
 }
 
 // -----------------------------------------------------------------------
@@ -114,9 +111,8 @@ TEST(NodesNodekitTraversal, SoShapeKitSetPartReplacesShapePart)
     bool setOk = kit->setPart("shape", cube);
 
     SoNode *retrieved = kit->getPart("shape", FALSE);
-    bool pass = setOk && (retrieved == cube);
+    EXPECT_TRUE(setOk && (retrieved == cube)) << "SoShapeKit setPart or getPart(FALSE) failed";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit setPart or getPart(FALSE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -136,15 +132,15 @@ TEST(NodesNodekitTraversal, SoGetBoundingBoxActionOnSoShapeKitWithCubeShape)
     bba.apply(kit);
 
     SbBox3f bbox = bba.getBoundingBox();
-    bool pass = !bbox.isEmpty();
-    if (pass) {
+    EXPECT_FALSE(bbox.isEmpty());
+    if (!bbox.isEmpty()) {
         SbVec3f lo, hi;
         bbox.getBounds(lo, hi);
         // Default SoCube is 2×2×2 → bounds should be at least [-1,1]
-        pass = (lo[0] <= -0.9f) && (hi[0] >= 0.9f);
+        EXPECT_LE(lo[0], -0.9f);
+        EXPECT_GE(hi[0], 0.9f);
     }
     kit->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction on SoShapeKit returned empty/wrong bbox";
 }
 
 // -----------------------------------------------------------------------
@@ -155,10 +151,9 @@ TEST(NodesNodekitTraversal, SoAppearanceKitInstantiationAndTypeCheck)
 {
     SoAppearanceKit *kit = new SoAppearanceKit;
     kit->ref();
-    bool pass = (kit->getTypeId() != SoType::badType()) &&
-                kit->isOfType(SoBaseKit::getClassTypeId());
+    EXPECT_TRUE((kit->getTypeId() != SoType::badType()) &&
+                kit->isOfType(SoBaseKit::getClassTypeId())) << "SoAppearanceKit bad type";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoAppearanceKit bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -175,9 +170,8 @@ TEST(NodesNodekitTraversal, SoAppearanceKitSetPartMaterial)
     bool setOk = kit->setPart("material", mat);
 
     SoNode *retrieved = kit->getPart("material", FALSE);
-    bool pass = setOk && (retrieved == mat);
+    EXPECT_TRUE(setOk && (retrieved == mat)) << "SoAppearanceKit setPart(material) failed";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoAppearanceKit setPart(material) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -197,9 +191,8 @@ TEST(NodesNodekitTraversal, SoShapeKitInsideSeparatorBboxPropagates)
     bba.apply(root);
 
     SbBox3f bbox = bba.getBoundingBox();
-    bool pass = !bbox.isEmpty();
+    EXPECT_TRUE(!bbox.isEmpty()) << "SoShapeKit inside separator: bbox is empty";
     root->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit inside separator: bbox is empty";
 }
 
 // -----------------------------------------------------------------------
@@ -214,7 +207,6 @@ TEST(NodesNodekitTraversal, SoShapeKitGetPartStringForCubeShapePart)
     kit->setPart("shape", cube);
     SbString ps = kit->getPartString(cube);
     // Should return "shape" (the part name)
-    bool pass = (ps == "shape");
+    EXPECT_TRUE((ps == "shape")) << "SoShapeKit getPartString did not return \"shape\"";
     kit->unref();
-    EXPECT_TRUE(pass) << "SoShapeKit getPartString did not return \"shape\"";
 }

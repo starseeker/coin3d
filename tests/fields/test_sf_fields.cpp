@@ -135,20 +135,16 @@ TYPED_TEST(SingleFieldInitialization, ClassAndInstanceHaveValidTypes)
 TEST(FieldsSfFields, SoSFBoolSetTRUEFALSE)
 {
     SoSFBool field;
-    bool pass = true;
-
-    if (field.set("TRUE") != TRUE)  { pass = false; }
-    if (field.getValue() != TRUE)   { pass = false; }
-    if (field.set("FALSE") != TRUE) { pass = false; }
-    if (field.getValue() != FALSE)  { pass = false; }
+    EXPECT_TRUE(field.set("TRUE"));
+    EXPECT_TRUE(field.getValue());
+    EXPECT_TRUE(field.set("FALSE"));
+    EXPECT_FALSE(field.getValue());
 
     // Accept numeric 0/1 as well
-    if (field.set("1") != TRUE)     { pass = false; }
-    if (field.getValue() != TRUE)   { pass = false; }
-    if (field.set("0") != TRUE)     { pass = false; }
-    if (field.getValue() != FALSE)  { pass = false; }
-
-    EXPECT_TRUE(pass) << "SoSFBool::set() failed for TRUE/FALSE/0/1";
+    EXPECT_TRUE(field.set("1"));
+    EXPECT_TRUE(field.getValue());
+    EXPECT_TRUE(field.set("0"));
+    EXPECT_FALSE(field.getValue());
 }
 
 // Note: SoSFBool::set("MAYBE") triggers SoReadError::post() which may
@@ -167,8 +163,7 @@ TEST(FieldsSfFields, SoSFFloatSetGetRoundTrip)
 {
     SoSFFloat field;
     field.setValue(3.14f);
-    bool pass = (field.getValue() == 3.14f);
-    EXPECT_TRUE(pass) << "SoSFFloat set/get round-trip failed";
+    EXPECT_TRUE((field.getValue() == 3.14f)) << "SoSFFloat set/get round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -179,8 +174,7 @@ TEST(FieldsSfFields, SoSFInt32SetGetRoundTrip)
 {
     SoSFInt32 field;
     field.setValue(42);
-    bool pass = (field.getValue() == 42);
-    EXPECT_TRUE(pass) << "SoSFInt32 set/get round-trip failed";
+    EXPECT_TRUE((field.getValue() == 42)) << "SoSFInt32 set/get round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -192,8 +186,7 @@ TEST(FieldsSfFields, SoSFVec3fSetGetRoundTrip)
     SoSFVec3f field;
     field.setValue(1.0f, 2.0f, 3.0f);
     SbVec3f v = field.getValue();
-    bool pass = (v[0] == 1.0f && v[1] == 2.0f && v[2] == 3.0f);
-    EXPECT_TRUE(pass) << "SoSFVec3f set/get round-trip failed";
+    EXPECT_TRUE((v[0] == 1.0f && v[1] == 2.0f && v[2] == 3.0f)) << "SoSFVec3f set/get round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -204,8 +197,7 @@ TEST(FieldsSfFields, SoSFStringSetGetRoundTrip)
 {
     SoSFString field;
     field.setValue("hello");
-    bool pass = (field.getValue() == SbString("hello"));
-    EXPECT_TRUE(pass) << "SoSFString set/get round-trip failed";
+    EXPECT_TRUE((field.getValue() == SbString("hello"))) << "SoSFString set/get round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -217,8 +209,7 @@ TEST(FieldsSfFields, SoSFColorSetGetRoundTrip)
     SoSFColor field;
     field.setValue(SbColor(0.5f, 0.25f, 0.75f));
     SbColor c = field.getValue();
-    bool pass = (c[0] == 0.5f && c[1] == 0.25f && c[2] == 0.75f);
-    EXPECT_TRUE(pass) << "SoSFColor set/get round-trip failed";
+    EXPECT_TRUE((c[0] == 0.5f && c[1] == 0.25f && c[2] == 0.75f)) << "SoSFColor set/get round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -247,7 +238,6 @@ TEST(FieldsSfFields, SoSFVec4ubInitializedAndSetGet)
 {
     SoSFVec4ub field;
     field.setValue(1, 2, 3, 4);
-    bool pass = (field.getTypeId() != SoType::badType()) &&
-                (field.getValue() == SbVec4ub(1, 2, 3, 4));
-    EXPECT_TRUE(pass) << "SoSFVec4ub set/get failed";
+    EXPECT_TRUE((field.getTypeId() != SoType::badType()) &&
+                (field.getValue() == SbVec4ub(1, 2, 3, 4))) << "SoSFVec4ub set/get failed";
 }

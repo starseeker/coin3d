@@ -131,13 +131,13 @@ TEST(IoInputBinary, BinaryHeaderStartsWithInventorVPrefix)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeBinary(root, &buf, &sz);
-    bool pass = (buf != nullptr) && (sz > 10);
-    if (pass) {
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 10u);
+    if (buf != nullptr && sz > 10) {
         // Coin binary files start with "#Inventor V2.1 binary"
         std::string header(buf, std::min(sz, static_cast<size_t>(30)));
-        pass = (header.find("#Inventor") != std::string::npos);
+        EXPECT_NE(header.find("#Inventor"), std::string::npos);
     }
-    EXPECT_TRUE(pass) << "Binary buffer does not start with '#Inventor' header";
     root->unref();
 }
 
@@ -152,13 +152,13 @@ TEST(IoInputBinary, SoInputIsBinaryReturnsTRUEForBinaryBuffer)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeBinary(root, &buf, &sz);
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 0u);
     if (buf && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
-        pass = (in.isBinary() == TRUE);
+        EXPECT_TRUE(in.isBinary());
     }
-    EXPECT_TRUE(pass) << "SoInput::isBinary() returned FALSE for binary buffer";
     root->unref();
 }
 
@@ -173,14 +173,14 @@ TEST(IoInputBinary, SoInputGetHeaderReturnsNonEmptyStringForBinary)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeBinary(root, &buf, &sz);
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 0u);
     if (buf && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
         SbString hdr = in.getHeader();
-        pass = (hdr.getLength() > 0);
+        EXPECT_GT(hdr.getLength(), 0);
     }
-    EXPECT_TRUE(pass) << "SoInput::getHeader() returned empty string for binary buffer";
     root->unref();
 }
 
@@ -195,13 +195,13 @@ TEST(IoInputBinary, SoInputIsBinaryReturnsFALSEForASCIIBuffer)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeAscii(root, &buf, &sz);
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 0u);
     if (buf && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
-        pass = (in.isBinary() == FALSE);
+        EXPECT_FALSE(in.isBinary());
     }
-    EXPECT_TRUE(pass) << "SoInput::isBinary() returned TRUE for ASCII buffer";
     root->unref();
 }
 
@@ -216,18 +216,19 @@ TEST(IoInputBinary, BinaryRoundTripSoDBReadAllRecoversSameNodeCount)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeBinary(root, &buf, &sz);
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 0u);
     if (buf && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
         SoSeparator * r2 = SoDB::readAll(&in);
+        EXPECT_NE(r2, nullptr);
         if (r2) {
             r2->ref();
-            pass = (r2->getNumChildren() == root->getNumChildren());
+            EXPECT_EQ(r2->getNumChildren(), root->getNumChildren());
             r2->unref();
         }
     }
-    EXPECT_TRUE(pass) << "Binary round-trip: readAll returned wrong number of children";
     root->unref();
 }
 
@@ -246,7 +247,8 @@ TEST(IoInputBinary, TruncatedBinarySoDBReadAllReturnsNullGracefully)
     SoErrorCB * old = SoError::getHandlerCallback();
     SoError::setHandlerCallback(silentErrCb, nullptr);
 
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 10u);
     if (buf && sz > 10) {
         // Keep only the first 20 bytes (header only, body is truncated)
         size_t truncSz = (sz > 40) ? 40 : sz / 2;
@@ -255,17 +257,13 @@ TEST(IoInputBinary, TruncatedBinarySoDBReadAllReturnsNullGracefully)
         SoSeparator * r = SoDB::readAll(&in);
         // A truncated binary file should either return null or an empty tree.
         // Both are acceptable; the important thing is no crash.
-        pass = true;  // if we reach here without crashing, test passes
         if (r) {
             r->ref();
             r->unref();
         }
-    } else {
-        pass = false; // could not write binary
     }
 
     SoError::setHandlerCallback(old, nullptr);
-    EXPECT_TRUE(pass) << "Truncated binary: SoDB::readAll crashed or write failed";
     root->unref();
 }
 
@@ -316,8 +314,7 @@ TEST(IoInputBinary, SoInputIsValidBufferTRUEAfterSetBufferWithValidASCII)
         "#Inventor V2.1 ascii\nSeparator { Cube {} }\n";
     SoInput in;
     in.setBuffer(const_cast<char *>(scene), std::strlen(scene));
-    bool pass = (in.isValidBuffer() == TRUE);
-    EXPECT_TRUE(pass) << "isValidBuffer() returned FALSE for valid ASCII buffer";
+    EXPECT_TRUE((in.isValidBuffer() == TRUE)) << "isValidBuffer() returned FALSE for valid ASCII buffer";
     root->unref();
 }
 
@@ -366,10 +363,9 @@ TEST(IoInputBinary, SequentialSetBufferReadsSucceed)
     SoSeparator * r2 = SoDB::readAll(&in);
     if (r2) r2->ref();
 
-    bool pass = (r1 != nullptr) && (r2 != nullptr);
+    EXPECT_TRUE((r1 != nullptr) && (r2 != nullptr)) << "Sequential reads: one or both returned null";
     if (r1) r1->unref();
     if (r2) r2->unref();
-    EXPECT_TRUE(pass) << "Sequential reads: one or both returned null";
     root->unref();
 }
 
@@ -392,17 +388,18 @@ TEST(IoInputBinary, LargeBinarySceneRoundTrip10Children)
     writeBinary(big, &buf, &sz);
     big->unref();
 
-    bool pass = false;
+    EXPECT_NE(buf, nullptr);
+    EXPECT_GT(sz, 0u);
     if (buf && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
         SoSeparator * r = SoDB::readAll(&in);
+        EXPECT_NE(r, nullptr);
         if (r) {
             r->ref();
-            pass = (r->getNumChildren() == 10);
+            EXPECT_EQ(r->getNumChildren(), 10);
             r->unref();
         }
     }
-    EXPECT_TRUE(pass) << "Large binary round-trip: child count mismatch or readAll failed";
     root->unref();
 }

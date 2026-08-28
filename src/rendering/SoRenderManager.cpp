@@ -60,6 +60,7 @@
 #include <Inventor/elements/SoTextureOverrideElement.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 #include <Inventor/elements/SoLazyElement.h>
+#include <Inventor/errors/SoDebugError.h>
 
 #include <algorithm>
 //FIXME:Need this include early, since including it via SoRenderManagerP.h will cause problems for cygwin. Don't understand the root cause BFG 20090629
@@ -85,6 +86,7 @@
 
 #include "config.h"
 #include "CoinTidbits.h"
+#include "misc/SoOnce.h"
 
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
@@ -897,7 +899,15 @@ SoRenderManager::renderSingle(SoGLRenderAction * action,
     this->actuallyRender(action, initmatrices, clearwindow, clearzbuffer);
     break;
   default:
-    assert(0 && "unknown rendering mode");
+    {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoRenderManager::renderSingle",
+                                  "Unknown rendering mode %d; rendering AS_IS.",
+                                  static_cast<int>(this->getRenderMode()));
+      }
+    }
+    this->actuallyRender(action, initmatrices, clearwindow, clearzbuffer);
     break;
   }
   state->pop();
@@ -915,6 +925,26 @@ SoRenderManager::renderStereo(SoGLRenderAction * action,
                               SbBool clearzbuffer)
 {
   if (!PRIVATE(this)->camera) return;
+
+  switch (PRIVATE(this)->stereomode) {
+  case SoRenderManager::ANAGLYPH:
+  case SoRenderManager::QUAD_BUFFER:
+  case SoRenderManager::INTERLEAVED_ROWS:
+  case SoRenderManager::INTERLEAVED_COLUMNS:
+    break;
+  default:
+    {
+      static SoOnceFlag warning;
+      if (warning.first()) {
+        SoDebugError::postWarning("SoRenderManager::renderStereo",
+                                  "Unknown stereo mode %d; rendering monoscopically.",
+                                  static_cast<int>(PRIVATE(this)->stereomode));
+      }
+    }
+    PRIVATE(this)->camera->setStereoMode(SoCamera::MONOSCOPIC);
+    this->renderSingle(action, initmatrices, clearwindow, clearzbuffer);
+    return;
+  }
 
   this->clearBuffers(TRUE, TRUE);
   PRIVATE(this)->camera->setStereoAdjustment(PRIVATE(this)->stereooffset);
@@ -1664,10 +1694,11 @@ SoRenderManager::getDefaultRedrawPriority(void)
 void
 SoRenderManager::enableRealTimeUpdate(const SbBool flag)
 {
-  SoRenderManagerP::touchtimer = flag;
-  if (!SoRenderManagerP::cleanupfunctionset) {
+  SoRenderManagerP::touchtimer.store(flag, std::memory_order_release);
+  SbBool expected = FALSE;
+  if (SoRenderManagerP::cleanupfunctionset.compare_exchange_strong(
+        expected, TRUE, std::memory_order_acq_rel)) {
     coin_atexit((coin_atexit_f*) SoRenderManagerP::cleanup, CC_ATEXIT_NORMAL);
-    SoRenderManagerP::cleanupfunctionset = TRUE;
   }
 }
 
@@ -1678,7 +1709,7 @@ SoRenderManager::enableRealTimeUpdate(const SbBool flag)
 SbBool
 SoRenderManager::isRealTimeUpdateEnabled(void)
 {
-  return SoRenderManagerP::touchtimer;
+  return SoRenderManagerP::touchtimer.load(std::memory_order_acquire);
 }
 
 

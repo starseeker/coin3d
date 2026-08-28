@@ -414,47 +414,12 @@ static bool test7_wireframe(const char *basepath)
 /* -------------------------------------------------------------------------
  * main
  * ----------------------------------------------------------------------- */
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath =
-        (outputStem != nullptr) ? outputStem : "render_quad_mesh_deep";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *root = ObolTest::Scenes::createQuadMeshDeep(256, 256);
-        SbViewportRegion vp(256, 256);
-        SoOffscreenRenderer ren(vp);
-        ren.setComponents(SoOffscreenRenderer::RGB);
-        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (ren.render(root)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            ren.writeToRGB(primaryPath);
-        }
-        root->unref();
-    }
-
-    printf("\n=== SoQuadMesh deep binding/normal tests ===\n");
-
-    int failures = 0;
-    if (!test1_overall(basepath))      { printf("FAIL test1\n"); ++failures; }
-    if (!test2_perFace(basepath))      { printf("FAIL test2\n"); ++failures; }
-    if (!test3_perPart(basepath))      { printf("FAIL test3\n"); ++failures; }
-    if (!test4_autoNormals(basepath))  { printf("FAIL test4\n"); ++failures; }
-    if (!test5_textured(basepath))     { printf("FAIL test5\n"); ++failures; }
-    if (!test6_primitiveCount(basepath)){ printf("FAIL test6\n"); ++failures; }
-    if (!test7_wireframe(basepath))    { printf("FAIL test7\n"); ++failures; }
-
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_quad_mesh_deep) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_quad_mesh_deep");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, Overall, "quadmesh_overall", test1_overall(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, PerFace, "quadmesh_face", test2_perFace(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, PerPart, "quadmesh_part", test3_perPart(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, AutomaticNormals, "quadmesh_normals", test4_autoNormals(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, Textured, "quadmesh_textured", test5_textured(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, PrimitiveCount, "quadmesh_count", test6_primitiveCount(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(QuadMeshDeepRenderTest, Wireframe, "quadmesh_wire", test7_wireframe(outputStem.c_str()))

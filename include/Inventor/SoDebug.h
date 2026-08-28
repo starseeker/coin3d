@@ -46,6 +46,8 @@ public:
   static const char * GetEnv(const char * var);
   static void RTPrintf(const char * formatstr, ...) OBOL_PRINTF_FORMAT(1, 2);
   static void NamePtr(const char * name, void * ptr);
+  // The returned snapshot remains valid until the next successful PtrName()
+  // call on the same thread.
   static const char * PtrName(void * ptr);
   static void write(SoNode * node);
   static void writeToFile(SoNode * node, const char * filename);

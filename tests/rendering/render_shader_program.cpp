@@ -523,55 +523,12 @@ static bool test6_twoPrograms(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Scenario implementation// ---------------------------------------------------------------------------
-static int runScenario(const char *outputStem)
-{
-    initCoinHeadless();
-
-    const char *basepath = (outputStem != nullptr) ? outputStem : "render_shader_program";
-
-    /* Render the canonical factory scene as the primary output image.
-     * This keeps the GTest scenario and obol_viewer on identical scene construction. */
-    {
-        SoSeparator *fRoot = ObolTest::Scenes::createShaderProgram(256, 256);
-        SbViewportRegion fVp(256, 256);
-        SoOffscreenRenderer fRen(fVp);
-        fRen.setComponents(SoOffscreenRenderer::RGB);
-        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-        if (fRen.render(fRoot)) {
-            char primaryPath[4096];
-            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
-            fRen.writeToRGB(primaryPath);
-        }
-        fRoot->unref();
-    }
-
-#ifdef OBOL_TEST_WGL
-    /* The native Windows check deliberately uses one renderer.  It still
-     * compiles, links, binds uniforms, and draws a real GLSL program; the
-     * extended cases below remain covered by the OSMesa runner. */
-    return 0;
-#endif
-
-    int failures = 0;
-
-    printf("\n=== SoShaderProgram / GLSL shader tests ===\n");
-
-    if (!test1_basicShader(basepath))    ++failures;
-    if (!test2_multiParams(basepath))    ++failures;
-    if (!test3_shaderDisable(basepath))  ++failures;
-    if (!test4_arrayParams(basepath))    ++failures;
-    if (!test5_matrixParam(basepath))    ++failures;
-    if (!test6_twoPrograms(basepath))    ++failures;
-
-    printf("\n  enable-callback fire count: %d\n", g_enableCount);
-    printf("\n=== Summary: %d failure(s) ===\n", failures);
-    return failures ? 1 : 0;
-}
-
+// Independently registered GTest contracts
 #include "framework/render_test_registration.h"
 
-TEST(RenderingScenarios, render_shader_program) {
-    const std::string outputStem = ObolTest::renderingOutputStem("render_shader_program");
-    EXPECT_EQ(runScenario(outputStem.c_str()), 0);
-}
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, BasicShader, "shader_basic", test1_basicShader(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, MultipleParameters, "shader_params", test2_multiParams(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, DisableShader, "shader_disable", test3_shaderDisable(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, ArrayParameters, "shader_array", test4_arrayParams(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, MatrixParameter, "shader_matrix", test5_matrixParam(outputStem.c_str()))
+OBOL_RENDER_TEST_CASE(ShaderProgramRenderTest, TwoPrograms, "shader_two", test6_twoPrograms(outputStem.c_str()))
