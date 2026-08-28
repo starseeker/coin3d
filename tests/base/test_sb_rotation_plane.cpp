@@ -70,8 +70,7 @@ TEST(BaseSbRotationPlane, SbRotationIdentityHasZeroRotation)
     SbVec3f axis;
     float angle;
     r.getValue(axis, angle);
-    bool pass = floatNear(angle, 0.0f, 0.01f);
-    EXPECT_TRUE(pass) << "SbRotation::identity should have zero angle";
+    EXPECT_TRUE(floatNear(angle, 0.0f, 0.01f)) << "SbRotation::identity should have zero angle";
 }
 
 TEST(BaseSbRotationPlane, SbRotationAxisAngleConstructorRoundTrip)
@@ -82,8 +81,7 @@ TEST(BaseSbRotationPlane, SbRotationAxisAngleConstructorRoundTrip)
     SbVec3f outAxis;
     float outAngle;
     r.getValue(outAxis, outAngle);
-    bool pass = floatNear(outAngle, 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation axis/angle round-trip failed";
+    EXPECT_TRUE(floatNear(outAngle, 1.0f, 1e-4f)) << "SbRotation axis/angle round-trip failed";
 }
 
 TEST(BaseSbRotationPlane, SbRotationMultVec90AroundZRotatesXToY)
@@ -92,8 +90,7 @@ TEST(BaseSbRotationPlane, SbRotationMultVec90AroundZRotatesXToY)
     SbVec3f src(1, 0, 0);
     SbVec3f dst;
     r.multVec(src, dst);
-    bool pass = floatNear(dst[0], 0.0f, 1e-4f) && floatNear(dst[1], 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation::multVec 90° around Z failed";
+    EXPECT_TRUE(floatNear(dst[0], 0.0f, 1e-4f) && floatNear(dst[1], 1.0f, 1e-4f)) << "SbRotation::multVec 90° around Z failed";
 }
 
 TEST(BaseSbRotationPlane, SbRotationInverseReversesRotation)
@@ -104,8 +101,7 @@ TEST(BaseSbRotationPlane, SbRotationInverseReversesRotation)
     SbVec3f dst, back;
     r.multVec(src, dst);
     inv.multVec(dst, back);
-    bool pass = floatNear(back[0], 1.0f, 1e-4f) && floatNear(back[1], 0.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation::inverse should reverse rotation";
+    EXPECT_TRUE(floatNear(back[0], 1.0f, 1e-4f) && floatNear(back[1], 0.0f, 1e-4f)) << "SbRotation::inverse should reverse rotation";
 }
 
 TEST(BaseSbRotationPlane, SbRotationInvertModifiesInPlace)
@@ -113,18 +109,15 @@ TEST(BaseSbRotationPlane, SbRotationInvertModifiesInPlace)
     SbRotation r(SbVec3f(0, 1, 0), 0.5f);
     SbRotation orig = r;
     r.invert();
-    bool pass = !r.equals(orig, 1e-4f); // should differ from original
-    EXPECT_TRUE(pass) << "SbRotation::invert should modify in place";
+    EXPECT_FALSE(r.equals(orig, 1e-4f)); // should differ from original
 }
 
 TEST(BaseSbRotationPlane, SbRotationEqualsWithTolerance)
 {
     SbRotation r1(SbVec3f(0, 1, 0), 1.0f);
     SbRotation r2(SbVec3f(0, 1, 0), 1.000001f);
-    bool passClose = r1.equals(r2, 0.001f);
-    bool passFar = !r1.equals(SbRotation(SbVec3f(0, 1, 0), 2.0f), 0.01f);
-    EXPECT_TRUE((passClose && passFar)) << ((passClose && passFar) ? "" :
-                   "SbRotation::equals failed");
+    EXPECT_TRUE(r1.equals(r2, 0.001f));
+    EXPECT_FALSE(r1.equals(SbRotation(SbVec3f(0, 1, 0), 2.0f), 0.01f));
 }
 
 TEST(BaseSbRotationPlane, SbRotationGetValueMatrixIsRotationMatrix)
@@ -135,8 +128,8 @@ TEST(BaseSbRotationPlane, SbRotationGetValueMatrixIsRotationMatrix)
     SbVec3f pt(1, 0, 0);
     SbVec3f result;
     m.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 0.0f, 1e-4f) && floatNear(result[1], 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation::getValue(matrix) is wrong";
+    EXPECT_NEAR(result[0], 0.0f, 1e-4f);
+    EXPECT_NEAR(result[1], 1.0f, 1e-4f);
 }
 
 TEST(BaseSbRotationPlane, SbRotationSlerpInterpolatesHalfWay)
@@ -148,8 +141,7 @@ TEST(BaseSbRotationPlane, SbRotationSlerpInterpolatesHalfWay)
     float angle;
     mid.getValue(axis, angle);
     // Should be ~π/2 at t=0.5
-    bool pass = floatNear(std::fabs(angle), static_cast<float>(M_PI / 2), 0.05f);
-    EXPECT_TRUE(pass) << "SbRotation::slerp at t=0.5 should give π/2 rotation";
+    EXPECT_TRUE(floatNear(std::fabs(angle), static_cast<float>(M_PI / 2), 0.05f)) << "SbRotation::slerp at t=0.5 should give π/2 rotation";
 }
 
 TEST(BaseSbRotationPlane, SbRotationScaleAngleHalvesAngle)
@@ -159,8 +151,7 @@ TEST(BaseSbRotationPlane, SbRotationScaleAngleHalvesAngle)
     SbVec3f axis;
     float angle;
     r.getValue(axis, angle);
-    bool pass = floatNear(angle, 0.5f, 0.01f);
-    EXPECT_TRUE(pass) << "SbRotation::scaleAngle(0.5) should halve angle";
+    EXPECT_TRUE(floatNear(angle, 0.5f, 0.01f)) << "SbRotation::scaleAngle(0.5) should halve angle";
 }
 
 TEST(BaseSbRotationPlane, SbRotationOperatorReturnsQuaternionComponents)
@@ -168,8 +159,7 @@ TEST(BaseSbRotationPlane, SbRotationOperatorReturnsQuaternionComponents)
     SbRotation r = SbRotation::identity();
     // Identity quaternion is (0, 0, 0, 1)
     float w = r[3];
-    bool pass = floatNear(w, 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "Identity quaternion w component should be 1";
+    EXPECT_TRUE(floatNear(w, 1.0f, 1e-4f)) << "Identity quaternion w component should be 1";
 }
 
 TEST(BaseSbRotationPlane, SbRotationOperatorComposition)
@@ -181,8 +171,7 @@ TEST(BaseSbRotationPlane, SbRotationOperatorComposition)
     SbVec3f result;
     composed.multVec(pt, result);
     // Two 90° rotations = 180°: (1,0,0) → (-1,0,0)
-    bool pass = floatNear(result[0], -1.0f, 1e-4f) && floatNear(result[1], 0.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation operator* composition of 2x90°=180° failed";
+    EXPECT_TRUE(floatNear(result[0], -1.0f, 1e-4f) && floatNear(result[1], 0.0f, 1e-4f)) << "SbRotation operator* composition of 2x90°=180° failed";
 }
 
 TEST(BaseSbRotationPlane, SbRotationFromToVectorConstructor)
@@ -190,8 +179,7 @@ TEST(BaseSbRotationPlane, SbRotationFromToVectorConstructor)
     SbRotation r(SbVec3f(1, 0, 0), SbVec3f(0, 1, 0)); // rotate X to Y
     SbVec3f dst;
     r.multVec(SbVec3f(1, 0, 0), dst);
-    bool pass = floatNear(dst[0], 0.0f, 1e-4f) && floatNear(dst[1], 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbRotation from-to constructor failed";
+    EXPECT_TRUE(floatNear(dst[0], 0.0f, 1e-4f) && floatNear(dst[1], 1.0f, 1e-4f)) << "SbRotation from-to constructor failed";
 }
 
 // ======================================================================
@@ -201,62 +189,54 @@ TEST(BaseSbRotationPlane, SbRotationFromToVectorConstructor)
 TEST(BaseSbRotationPlane, SbPlaneConstructionFromNormalD)
 {
     SbPlane p(SbVec3f(0, 1, 0), 3.0f);
-    bool pass = floatNear(p.getDistanceFromOrigin(), 3.0f) &&
-                floatNear(p.getNormal()[1], 1.0f);
-    EXPECT_TRUE(pass) << "SbPlane(normal,D) construction failed";
+    EXPECT_TRUE(floatNear(p.getDistanceFromOrigin(), 3.0f) &&
+                floatNear(p.getNormal()[1], 1.0f)) << "SbPlane(normal,D) construction failed";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneConstructionFromNormalPoint)
 {
     SbPlane p(SbVec3f(0, 1, 0), SbVec3f(0, 3, 0));
-    bool pass = floatNear(p.getDistanceFromOrigin(), 3.0f);
-    EXPECT_TRUE(pass) << "SbPlane(normal,point) construction failed";
+    EXPECT_TRUE(floatNear(p.getDistanceFromOrigin(), 3.0f)) << "SbPlane(normal,point) construction failed";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneConstructionFrom3Points)
 {
     // 3 points on y=2 plane
     SbPlane p(SbVec3f(0, 2, 0), SbVec3f(1, 2, 0), SbVec3f(0, 2, 1));
-    bool pass = floatNear(std::fabs(p.getNormal()[1]), 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbPlane 3-point construction failed";
+    EXPECT_TRUE(floatNear(std::fabs(p.getNormal()[1]), 1.0f, 1e-4f)) << "SbPlane 3-point construction failed";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneGetDistanceForPointOnPlaneIsZero)
 {
     SbPlane p(SbVec3f(0, 1, 0), 3.0f);
     float d = p.getDistance(SbVec3f(0, 3, 0)); // on y=3 plane
-    bool pass = floatNear(d, 0.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbPlane::getDistance for point on plane should be 0";
+    EXPECT_TRUE(floatNear(d, 0.0f, 1e-4f)) << "SbPlane::getDistance for point on plane should be 0";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneGetDistanceForPointAbovePlane)
 {
     SbPlane p(SbVec3f(0, 1, 0), 0.0f); // y=0 plane
     float d = p.getDistance(SbVec3f(0, 5, 0)); // point at y=5
-    bool pass = floatNear(d, 5.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbPlane::getDistance for point 5 above y=0 plane should be 5";
+    EXPECT_TRUE(floatNear(d, 5.0f, 1e-4f)) << "SbPlane::getDistance for point 5 above y=0 plane should be 5";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneIsInHalfSpacePointAbovePositiveNormalSide)
 {
     SbPlane p(SbVec3f(0, 1, 0), 0.0f); // y=0 plane, normal pointing up
-    bool pass = p.isInHalfSpace(SbVec3f(0, 1, 0)); // y=1 is above
-    EXPECT_TRUE(pass) << "SbPlane::isInHalfSpace: y=1 should be in upper half-space";
+    EXPECT_TRUE(p.isInHalfSpace(SbVec3f(0, 1, 0))); // y=1 is above
 }
 
 TEST(BaseSbRotationPlane, SbPlaneIsInHalfSpacePointBelowIsNOTInHalfSpace)
 {
     SbPlane p(SbVec3f(0, 1, 0), 0.0f);
-    bool pass = !p.isInHalfSpace(SbVec3f(0, -1, 0));
-    EXPECT_TRUE(pass) << "SbPlane::isInHalfSpace: y=-1 should NOT be in upper half-space";
+    EXPECT_FALSE(p.isInHalfSpace(SbVec3f(0, -1, 0)));
 }
 
 TEST(BaseSbRotationPlane, SbPlaneOffsetShiftsPlane)
 {
     SbPlane p(SbVec3f(0, 1, 0), 0.0f); // y=0
     p.offset(2.0f);
-    bool pass = floatNear(p.getDistanceFromOrigin(), 2.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbPlane::offset should shift distance";
+    EXPECT_TRUE(floatNear(p.getDistanceFromOrigin(), 2.0f, 1e-4f)) << "SbPlane::offset should shift distance";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneIntersectWithLine)
@@ -266,8 +246,7 @@ TEST(BaseSbRotationPlane, SbPlaneIntersectWithLine)
     SbLine line(SbVec3f(0, 1, 0), SbVec3f(0, -1, 0));
     SbVec3f hit;
     bool intersected = p.intersect(line, hit);
-    bool pass = intersected && floatNear(hit[1], 0.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbPlane::intersect with line failed";
+    EXPECT_TRUE(intersected && floatNear(hit[1], 0.0f, 1e-4f)) << "SbPlane::intersect with line failed";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneIntersectWithParallelPlaneReturnsLine)
@@ -276,16 +255,14 @@ TEST(BaseSbRotationPlane, SbPlaneIntersectWithParallelPlaneReturnsLine)
     SbPlane p1(SbVec3f(1, 0, 0), 0.0f); // x=0
     SbPlane p2(SbVec3f(0, 1, 0), 0.0f); // y=0
     SbLine line;
-    bool pass = p1.intersect(p2, line);
-    EXPECT_TRUE(pass) << "Two non-parallel planes should intersect in a line";
+    EXPECT_TRUE(p1.intersect(p2, line)) << "Two non-parallel planes should intersect in a line";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneOperatorForEqualPlanes)
 {
     SbPlane p1(SbVec3f(0, 1, 0), 3.0f);
     SbPlane p2(SbVec3f(0, 1, 0), 3.0f);
-    bool pass = (p1 == p2);
-    EXPECT_TRUE(pass) << "Equal SbPlanes should be ==";
+    EXPECT_TRUE((p1 == p2)) << "Equal SbPlanes should be ==";
 }
 
 TEST(BaseSbRotationPlane, SbPlaneTransformWithTranslation)
@@ -295,6 +272,5 @@ TEST(BaseSbRotationPlane, SbPlaneTransformWithTranslation)
     m.setTranslate(SbVec3f(0, 3, 0)); // translate everything up by 3
     p.transform(m);
     // The plane should now be at y=3 (translated)
-    bool pass = floatNear(p.getDistanceFromOrigin(), 3.0f, 0.1f);
-    EXPECT_TRUE(pass) << "SbPlane::transform with translation failed";
+    EXPECT_TRUE(floatNear(p.getDistanceFromOrigin(), 3.0f, 0.1f)) << "SbPlane::transform with translation failed";
 }

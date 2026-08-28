@@ -59,8 +59,7 @@ using namespace ObolTest;
 TEST(BaseSbPlist, SbPListDefaultIsEmpty)
 {
     SbPList list;
-    bool pass = (list.getLength() == 0);
-    EXPECT_TRUE(pass) << "SbPList should start empty";
+    EXPECT_TRUE((list.getLength() == 0)) << "SbPList should start empty";
 }
 
 TEST(BaseSbPlist, SbPListAppendIncreasesLength)
@@ -70,8 +69,7 @@ TEST(BaseSbPlist, SbPListAppendIncreasesLength)
     list.append(&a);
     list.append(&b);
     list.append(&c);
-    bool pass = (list.getLength() == 3);
-    EXPECT_TRUE(pass) << "SbPList::append did not increase length";
+    EXPECT_TRUE((list.getLength() == 3)) << "SbPList::append did not increase length";
 }
 
 TEST(BaseSbPlist, SbPListOperatorReturnsCorrectElement)
@@ -80,8 +78,7 @@ TEST(BaseSbPlist, SbPListOperatorReturnsCorrectElement)
     int a = 10, b = 20;
     list.append(&a);
     list.append(&b);
-    bool pass = (list[0] == &a) && (list[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList operator[] returned wrong element";
+    EXPECT_TRUE((list[0] == &a) && (list[1] == &b)) << "SbPList operator[] returned wrong element";
 }
 
 TEST(BaseSbPlist, SbPListFindReturnsCorrectIndex)
@@ -91,16 +88,14 @@ TEST(BaseSbPlist, SbPListFindReturnsCorrectIndex)
     list.append(&a);
     list.append(&b);
     list.append(&c);
-    bool pass = (list.find(&b) == 1) && (list.find(&c) == 2);
-    EXPECT_TRUE(pass) << "SbPList::find returned wrong index";
+    EXPECT_TRUE((list.find(&b) == 1) && (list.find(&c) == 2)) << "SbPList::find returned wrong index";
 }
 
 TEST(BaseSbPlist, SbPListFindReturns1ForMissingElement)
 {
     SbPList list;
     int a = 5;
-    bool pass = (list.find(&a) == -1);
-    EXPECT_TRUE(pass) << "SbPList::find should return -1 for missing element";
+    EXPECT_TRUE((list.find(&a) == -1)) << "SbPList::find should return -1 for missing element";
 }
 
 TEST(BaseSbPlist, SbPListInsertAtPosition)
@@ -111,11 +106,10 @@ TEST(BaseSbPlist, SbPListInsertAtPosition)
     list.append(&b);
     list.insert(&c, 1); // insert before index 1
     // list: a, c, b
-    bool pass = (list.getLength() == 3) &&
+    EXPECT_TRUE((list.getLength() == 3) &&
                 (list[0] == &a) &&
                 (list[1] == &c) &&
-                (list[2] == &b);
-    EXPECT_TRUE(pass) << "SbPList::insert at position failed";
+                (list[2] == &b)) << "SbPList::insert at position failed";
 }
 
 TEST(BaseSbPlist, SbPListRemoveByIndex)
@@ -126,10 +120,9 @@ TEST(BaseSbPlist, SbPListRemoveByIndex)
     list.append(&b);
     list.append(&c);
     list.remove(1); // remove b
-    bool pass = (list.getLength() == 2) &&
+    EXPECT_TRUE((list.getLength() == 2) &&
                 (list[0] == &a) &&
-                (list[1] == &c);
-    EXPECT_TRUE(pass) << "SbPList::remove by index failed";
+                (list[1] == &c)) << "SbPList::remove by index failed";
 }
 
 TEST(BaseSbPlist, SbPListRemoveFastRemovesLastElementIntoSlot)
@@ -140,9 +133,8 @@ TEST(BaseSbPlist, SbPListRemoveFastRemovesLastElementIntoSlot)
     list.append(&b);
     list.append(&c);
     list.removeFast(0); // removes a, moves c into slot 0
-    bool pass = (list.getLength() == 2) &&
-                (list.find(&a) == -1);
-    EXPECT_TRUE(pass) << "SbPList::removeFast failed";
+    EXPECT_TRUE((list.getLength() == 2) &&
+                (list.find(&a) == -1)) << "SbPList::removeFast failed";
 }
 
 TEST(BaseSbPlist, SbPListRemoveItemByPointer)
@@ -153,8 +145,7 @@ TEST(BaseSbPlist, SbPListRemoveItemByPointer)
     list.append(&b);
     list.append(&c);
     list.removeItem(&b);
-    bool pass = (list.getLength() == 2) && (list.find(&b) == -1);
-    EXPECT_TRUE(pass) << "SbPList::removeItem failed";
+    EXPECT_TRUE((list.getLength() == 2) && (list.find(&b) == -1)) << "SbPList::removeItem failed";
 }
 
 TEST(BaseSbPlist, SbPListTruncateShortensTheList)
@@ -166,10 +157,9 @@ TEST(BaseSbPlist, SbPListTruncateShortensTheList)
     list.append(&c);
     list.append(&d);
     list.truncate(2);
-    bool pass = (list.getLength() == 2) &&
+    EXPECT_TRUE((list.getLength() == 2) &&
                 (list[0] == &a) &&
-                (list[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList::truncate failed";
+                (list[1] == &b)) << "SbPList::truncate failed";
 }
 
 TEST(BaseSbPlist, SbPListCopyConstructorReplicatesElements)
@@ -179,9 +169,8 @@ TEST(BaseSbPlist, SbPListCopyConstructorReplicatesElements)
     orig.append(&a);
     orig.append(&b);
     SbPList copy(orig);
-    bool pass = (copy.getLength() == 2) &&
-                (copy[0] == &a) && (copy[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList copy constructor failed";
+    EXPECT_TRUE((copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b)) << "SbPList copy constructor failed";
 }
 
 TEST(BaseSbPlist, SbPListOperatorCopiesElements)
@@ -192,9 +181,8 @@ TEST(BaseSbPlist, SbPListOperatorCopiesElements)
     orig.append(&b);
     SbPList copy;
     copy = orig;
-    bool pass = (copy.getLength() == 2) &&
-                (copy[0] == &a) && (copy[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList operator= failed";
+    EXPECT_TRUE((copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b)) << "SbPList operator= failed";
 }
 
 TEST(BaseSbPlist, SbPListCopyMemberFunctionReplicatesElements)
@@ -205,9 +193,8 @@ TEST(BaseSbPlist, SbPListCopyMemberFunctionReplicatesElements)
     orig.append(&b);
     SbPList copy;
     copy.copy(orig);
-    bool pass = (copy.getLength() == 2) &&
-                (copy[0] == &a) && (copy[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList::copy() failed";
+    EXPECT_TRUE((copy.getLength() == 2) &&
+                (copy[0] == &a) && (copy[1] == &b)) << "SbPList::copy() failed";
 }
 
 TEST(BaseSbPlist, SbPListOperatorForEqualLists)
@@ -216,8 +203,7 @@ TEST(BaseSbPlist, SbPListOperatorForEqualLists)
     int v1 = 1, v2 = 2;
     a.append(&v1); a.append(&v2);
     b.append(&v1); b.append(&v2);
-    bool pass = (a == b);
-    EXPECT_TRUE(pass) << "SbPList operator== failed for equal lists";
+    EXPECT_TRUE((a == b)) << "SbPList operator== failed for equal lists";
 }
 
 TEST(BaseSbPlist, SbPListOperatorForDifferentLists)
@@ -226,8 +212,7 @@ TEST(BaseSbPlist, SbPListOperatorForDifferentLists)
     int v1 = 1, v2 = 2;
     a.append(&v1);
     b.append(&v2);
-    bool pass = (a != b);
-    EXPECT_TRUE(pass) << "SbPList operator!= failed for different lists";
+    EXPECT_TRUE((a != b)) << "SbPList operator!= failed for different lists";
 }
 
 TEST(BaseSbPlist, SbPListGetAndSet)
@@ -236,12 +221,10 @@ TEST(BaseSbPlist, SbPListGetAndSet)
     int a = 5, b = 10;
     list.append(&a);
     // get
-    bool passGet = (list.get(0) == &a);
+    EXPECT_EQ(list.get(0), &a);
     // set
     list.set(0, &b);
-    bool passSet = (list.get(0) == &b);
-    bool pass = passGet && passSet;
-    EXPECT_TRUE(pass) << "SbPList get/set failed";
+    EXPECT_EQ(list.get(0), &b);
 }
 
 TEST(BaseSbPlist, SbPListGetArrayPtrReturnsNonNullForNonEmptyList)
@@ -251,8 +234,7 @@ TEST(BaseSbPlist, SbPListGetArrayPtrReturnsNonNullForNonEmptyList)
     list.append(&a);
     list.append(&b);
     void ** arr = list.getArrayPtr();
-    bool pass = (arr != nullptr) && (arr[0] == &a) && (arr[1] == &b);
-    EXPECT_TRUE(pass) << "SbPList::getArrayPtr failed";
+    EXPECT_TRUE((arr != nullptr) && (arr[0] == &a) && (arr[1] == &b)) << "SbPList::getArrayPtr failed";
 }
 
 TEST(BaseSbPlist, SbPListFitDoesNotCrash)
@@ -261,8 +243,7 @@ TEST(BaseSbPlist, SbPListFitDoesNotCrash)
     int a = 1;
     list.append(&a);
     list.fit(); // should compact internal storage
-    bool pass = (list.getLength() == 1) && (list[0] == &a);
-    EXPECT_TRUE(pass) << "SbPList::fit changed list contents";
+    EXPECT_TRUE((list.getLength() == 1) && (list[0] == &a)) << "SbPList::fit changed list contents";
 }
 
 // =======================================================================
@@ -276,12 +257,11 @@ TEST(BaseSbPlist, SbStringListAppendAndRetrieveStrings)
     SbString * s2 = new SbString("world");
     list.append(s1);
     list.append(s2);
-    bool pass = (list.getLength() == 2) &&
+    EXPECT_TRUE((list.getLength() == 2) &&
                 (list[0] == s1) &&
-                (list[1] == s2);
+                (list[1] == s2)) << "SbStringList append/retrieve failed";
     delete s1;
     delete s2;
-    EXPECT_TRUE(pass) << "SbStringList append/retrieve failed";
 }
 
 // =======================================================================
@@ -294,11 +274,10 @@ TEST(BaseSbPlist, SbIntListAppendAndOperator)
     list.append(10);
     list.append(20);
     list.append(30);
-    bool pass = (list.getLength() == 3) &&
+    EXPECT_TRUE((list.getLength() == 3) &&
                 (list[0] == 10) &&
                 (list[1] == 20) &&
-                (list[2] == 30);
-    EXPECT_TRUE(pass) << "SbIntList append/operator[] failed";
+                (list[2] == 30)) << "SbIntList append/operator[] failed";
 }
 
 TEST(BaseSbPlist, SbIntListFindReturnsCorrectIndex)
@@ -307,8 +286,7 @@ TEST(BaseSbPlist, SbIntListFindReturnsCorrectIndex)
     list.append(5);
     list.append(10);
     list.append(15);
-    bool pass = (list.find(10) == 1) && (list.find(99) == -1);
-    EXPECT_TRUE(pass) << "SbIntList::find failed";
+    EXPECT_TRUE((list.find(10) == 1) && (list.find(99) == -1)) << "SbIntList::find failed";
 }
 
 // =======================================================================
@@ -322,8 +300,7 @@ TEST(BaseSbPlist, SbVec3fListAppendAndRetrieve)
     SbVec3f v2(0.0f, 1.0f, 0.0f);
     list.append(&v1);
     list.append(&v2);
-    bool pass = (list.getLength() == 2) &&
+    EXPECT_TRUE((list.getLength() == 2) &&
                 (*list[0] == v1) &&
-                (*list[1] == v2);
-    EXPECT_TRUE(pass) << "SbVec3fList append/retrieve failed";
+                (*list[1] == v2)) << "SbVec3fList append/retrieve failed";
 }

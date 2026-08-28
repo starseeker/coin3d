@@ -82,8 +82,7 @@ TEST(SensorsSuite, SoFieldSensorAttachDetach)
     bool detached = (fs.getAttachedField() == nullptr);
 
     cube->unref();
-    bool pass = attached && detached;
-    EXPECT_TRUE(pass) << "SoFieldSensor attach/detach failed";
+    EXPECT_TRUE(attached && detached) << "SoFieldSensor attach/detach failed";
 }
 
 // -----------------------------------------------------------------------
@@ -98,10 +97,9 @@ TEST(SensorsSuite, SoFieldSensorReattach)
     SoFieldSensor fs(onFieldChange, nullptr);
     fs.attach(&cube->width);
     fs.attach(&cube->height); // re-attach
-    bool pass = (fs.getAttachedField() == &cube->height);
+    EXPECT_TRUE((fs.getAttachedField() == &cube->height)) << "SoFieldSensor reattach failed";
     fs.detach();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoFieldSensor reattach failed";
 }
 
 // -----------------------------------------------------------------------
@@ -121,8 +119,7 @@ TEST(SensorsSuite, SoNodeSensorAttachDetach)
     bool detached = (ns.getAttachedNode() == nullptr);
 
     cube->unref();
-    bool pass = attached && detached;
-    EXPECT_TRUE(pass) << "SoNodeSensor attach/detach failed";
+    EXPECT_TRUE(attached && detached) << "SoNodeSensor attach/detach failed";
 }
 
 // -----------------------------------------------------------------------
@@ -137,8 +134,7 @@ TEST(SensorsSuite, SoTimerSensorScheduleUnschedule)
     bool scheduled = ts.isScheduled();
     ts.unschedule();
     bool unscheduled = !ts.isScheduled();
-    bool pass = scheduled && unscheduled;
-    EXPECT_TRUE(pass) << "SoTimerSensor schedule/unschedule failed";
+    EXPECT_TRUE(scheduled && unscheduled) << "SoTimerSensor schedule/unschedule failed";
 }
 
 // -----------------------------------------------------------------------
@@ -153,8 +149,7 @@ TEST(SensorsSuite, SoAlarmSensorScheduleUnschedule)
     bool scheduled = as.isScheduled();
     as.unschedule();
     bool unscheduled = !as.isScheduled();
-    bool pass = scheduled && unscheduled;
-    EXPECT_TRUE(pass) << "SoAlarmSensor schedule/unschedule failed";
+    EXPECT_TRUE(scheduled && unscheduled) << "SoAlarmSensor schedule/unschedule failed";
 }
 
 // -----------------------------------------------------------------------
@@ -165,10 +160,9 @@ TEST(SensorsSuite, SoOneShotSensorScheduleUnschedule)
 {
     SoOneShotSensor oss(onTimer, nullptr);
     oss.schedule();
-    bool pass = oss.isScheduled();
+    EXPECT_TRUE(oss.isScheduled());
     oss.unschedule();
-    pass = pass && !oss.isScheduled();
-    EXPECT_TRUE(pass) << "SoOneShotSensor schedule/unschedule failed";
+    EXPECT_FALSE(oss.isScheduled());
 }
 
 // -----------------------------------------------------------------------
@@ -179,10 +173,9 @@ TEST(SensorsSuite, SoIdleSensorScheduleUnschedule)
 {
     SoIdleSensor ids(onTimer, nullptr);
     ids.schedule();
-    bool pass = ids.isScheduled();
+    EXPECT_TRUE(ids.isScheduled());
     ids.unschedule();
-    pass = pass && !ids.isScheduled();
-    EXPECT_TRUE(pass) << "SoIdleSensor schedule/unschedule failed";
+    EXPECT_FALSE(ids.isScheduled());
 }
 
 // -----------------------------------------------------------------------
@@ -209,8 +202,7 @@ TEST(SensorsSuite, SoPathSensorAttachDetach)
     path->unref();
     root->unref();
 
-    bool pass = attached && detached;
-    EXPECT_TRUE(pass) << "SoPathSensor attach/detach failed";
+    EXPECT_TRUE(attached && detached) << "SoPathSensor attach/detach failed";
 }
 
 // -----------------------------------------------------------------------
@@ -225,14 +217,12 @@ TEST(SensorsSuite, SoDataSensorClassInitializedViaSoFieldSensor)
     // accessible without crashing.
     SoField* tf = fs.getTriggerField();     // NULL before attach/trigger
     SbBool pathFlag = fs.getTriggerPathFlag(); // default FALSE
-    bool pass = (tf == nullptr) && (pathFlag == FALSE);
-    EXPECT_TRUE(pass) << "SoDataSensor getTriggerField/getTriggerPathFlag initial state wrong";
+    EXPECT_TRUE((tf == nullptr) && (pathFlag == FALSE)) << "SoDataSensor getTriggerField/getTriggerPathFlag initial state wrong";
 }
 
 TEST(SensorsSuite, SoDataSensorSetTriggerPathFlag)
 {
     SoFieldSensor fs(onFieldChange, nullptr);
     fs.setTriggerPathFlag(TRUE);
-    bool pass = (fs.getTriggerPathFlag() == TRUE);
-    EXPECT_TRUE(pass) << "SoDataSensor setTriggerPathFlag did not stick";
+    EXPECT_TRUE((fs.getTriggerPathFlag() == TRUE)) << "SoDataSensor setTriggerPathFlag did not stick";
 }

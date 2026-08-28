@@ -85,6 +85,8 @@
 
 #include <Inventor/draggers/SoTransformerDragger.h>
 
+#include <atomic>
+
 #include <cstring>
 
 #include <Inventor/nodes/SoAntiSquish.h>
@@ -214,7 +216,7 @@ public:
   SbVec2f normalizedStartLocaterPosition;
 
   SbBool locateHighlighting;
-  static int colinearThreshold;
+  static std::atomic<int> colinearThreshold;
   int constraintState;
 
   int whatkind;
@@ -222,7 +224,7 @@ public:
   int dimension;
 };
 
-int SoTransformerDraggerP::colinearThreshold = 3; // FIXME: find default value from somewhere
+std::atomic<int> SoTransformerDraggerP::colinearThreshold{3};
 
 #endif // DOXYGEN_SKIP_THIS
 
@@ -235,7 +237,7 @@ void
 SoTransformerDragger::initClass(void)
 {
   SO_KIT_INTERNAL_INIT_CLASS(SoTransformerDragger, SO_FROM_INVENTOR_1);
-  SoTransformerDraggerP::colinearThreshold = 3;
+  SoTransformerDraggerP::colinearThreshold.store(3, std::memory_order_release);
 }
 
 void
@@ -1013,13 +1015,15 @@ SoTransformerDragger::setLocateHighlighting(SbBool onoff)
 void
 SoTransformerDragger::setColinearThreshold(int newval)
 {
-  SoTransformerDraggerP::colinearThreshold = newval;
+  SoTransformerDraggerP::colinearThreshold.store(newval,
+                                                  std::memory_order_release);
 }
 
 int
 SoTransformerDragger::getColinearThreshold(void)
 {
-  return SoTransformerDraggerP::colinearThreshold;
+  return SoTransformerDraggerP::colinearThreshold.load(
+    std::memory_order_acquire);
 }
 
 SbVec3f

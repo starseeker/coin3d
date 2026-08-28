@@ -75,17 +75,15 @@ static void onDeselected(void * /*userdata*/, SoPath * /*path*/)
 
 TEST(NodesSelectionNodes, SoSelectionClassTypeIdValid)
 {
-    bool pass = (SoSelection::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoSelection has bad class type";
+    EXPECT_TRUE((SoSelection::getClassTypeId() != SoType::badType())) << "SoSelection has bad class type";
 }
 
 TEST(NodesSelectionNodes, SoSelectionIsOfTypeSoSeparator)
 {
     SoSelection * sel = new SoSelection;
     sel->ref();
-    bool pass = sel->isOfType(SoSeparator::getClassTypeId());
+    EXPECT_TRUE(sel->isOfType(SoSeparator::getClassTypeId())) << "SoSelection not a SoSeparator subtype";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection not a SoSeparator subtype";
 }
 
 TEST(NodesSelectionNodes, SoSelectionDefaultPolicyIsSHIFT)
@@ -93,9 +91,8 @@ TEST(NodesSelectionNodes, SoSelectionDefaultPolicyIsSHIFT)
     SoSelection * sel = new SoSelection;
     sel->ref();
     // Default policy in Open Inventor is SHIFT
-    bool pass = (sel->policy.getValue() == SoSelection::SHIFT);
+    EXPECT_TRUE((sel->policy.getValue() == SoSelection::SHIFT)) << "SoSelection default policy is not SHIFT";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection default policy is not SHIFT";
 }
 
 TEST(NodesSelectionNodes, SoSelectionSelectIsSelectedGetNumSelected)
@@ -110,11 +107,10 @@ TEST(NodesSelectionNodes, SoSelectionSelectIsSelectedGetNumSelected)
 
     // Select the cube via the convenience node API
     sel->select(cube);
-    bool pass = sel->isSelected(cube) &&
-                (sel->getNumSelected() == 1);
+    EXPECT_TRUE(sel->isSelected(cube) &&
+                (sel->getNumSelected() == 1)) << "SoSelection select/isSelected/getNumSelected failed";
 
     root->unref();
-    EXPECT_TRUE(pass) << "SoSelection select/isSelected/getNumSelected failed";
 }
 
 TEST(NodesSelectionNodes, SoSelectionDeselectDecrementsCount)
@@ -127,11 +123,10 @@ TEST(NodesSelectionNodes, SoSelectionDeselectDecrementsCount)
 
     sel->select(cube);
     sel->deselect(cube);
-    bool pass = !sel->isSelected(cube) &&
-                (sel->getNumSelected() == 0);
+    EXPECT_TRUE(!sel->isSelected(cube) &&
+                (sel->getNumSelected() == 0)) << "SoSelection deselect did not decrement count";
 
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection deselect did not decrement count";
 }
 
 TEST(NodesSelectionNodes, SoSelectionToggleSelectsThenDeselects)
@@ -165,10 +160,9 @@ TEST(NodesSelectionNodes, SoSelectionDeselectAllClearsSelection)
     sel->select(c1);
     sel->select(c2);
     sel->deselectAll();
-    bool pass = (sel->getNumSelected() == 0);
+    EXPECT_TRUE((sel->getNumSelected() == 0)) << "SoSelection deselectAll did not clear selection";
 
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection deselectAll did not clear selection";
 }
 
 TEST(NodesSelectionNodes, SoSelectionAddSelectionCallbackFiresOnSelect)
@@ -185,9 +179,8 @@ TEST(NodesSelectionNodes, SoSelectionAddSelectionCallbackFiresOnSelect)
     sel->select(cube);
 
     // Callback fires synchronously
-    bool pass = (g_selectionCount == 1);
+    EXPECT_TRUE((g_selectionCount == 1)) << "SoSelection addSelectionCallback did not fire";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection addSelectionCallback did not fire";
 }
 
 TEST(NodesSelectionNodes, SoSelectionAddDeselectionCallbackFiresOnDeselect)
@@ -204,9 +197,8 @@ TEST(NodesSelectionNodes, SoSelectionAddDeselectionCallbackFiresOnDeselect)
     sel->select(cube);
     sel->deselect(cube);
 
-    bool pass = (g_deselectionCount == 1);
+    EXPECT_TRUE((g_deselectionCount == 1)) << "SoSelection addDeselectionCallback did not fire";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection addDeselectionCallback did not fire";
 }
 
 TEST(NodesSelectionNodes, SoSelectionSoGetBoundingBoxActionDoesNotCrash)
@@ -225,9 +217,8 @@ TEST(NodesSelectionNodes, SoSelectionGetListReturnsNonNull)
 {
     SoSelection * sel = new SoSelection;
     sel->ref();
-    bool pass = (sel->getList() != nullptr);
+    EXPECT_TRUE((sel->getList() != nullptr)) << "SoSelection getList() returned null";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoSelection getList() returned null";
 }
 
 // =========================================================================
@@ -236,17 +227,15 @@ TEST(NodesSelectionNodes, SoSelectionGetListReturnsNonNull)
 
 TEST(NodesSelectionNodes, SoExtSelectionClassTypeIdValid)
 {
-    bool pass = (SoExtSelection::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoExtSelection has bad class type";
+    EXPECT_TRUE((SoExtSelection::getClassTypeId() != SoType::badType())) << "SoExtSelection has bad class type";
 }
 
 TEST(NodesSelectionNodes, SoExtSelectionIsOfTypeSoSelection)
 {
     SoExtSelection * sel = new SoExtSelection;
     sel->ref();
-    bool pass = sel->isOfType(SoSelection::getClassTypeId());
+    EXPECT_TRUE(sel->isOfType(SoSelection::getClassTypeId())) << "SoExtSelection not a SoSelection subtype";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoExtSelection not a SoSelection subtype";
 }
 
 TEST(NodesSelectionNodes, SoExtSelectionLassoTypeFieldAccessible)
@@ -255,9 +244,8 @@ TEST(NodesSelectionNodes, SoExtSelectionLassoTypeFieldAccessible)
     sel->ref();
     // Default lassoType should be NOLASSO or similar
     int lt = sel->lassoType.getValue();
-    bool pass = (lt >= 0); // any valid enum value
+    EXPECT_GE(lt, 0); // any valid enum value
     sel->unref();
-    EXPECT_TRUE(pass) << "SoExtSelection lassoType field returned invalid value";
 }
 
 TEST(NodesSelectionNodes, SoExtSelectionLassoPolicyFieldAccessible)
@@ -265,9 +253,8 @@ TEST(NodesSelectionNodes, SoExtSelectionLassoPolicyFieldAccessible)
     SoExtSelection * sel = new SoExtSelection;
     sel->ref();
     int lp = sel->lassoPolicy.getValue();
-    bool pass = (lp >= 0);
+    EXPECT_TRUE((lp >= 0)) << "SoExtSelection lassoPolicy field returned invalid value";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoExtSelection lassoPolicy field returned invalid value";
 }
 
 TEST(NodesSelectionNodes, SoExtSelectionLassoModeFieldAccessible)
@@ -275,9 +262,8 @@ TEST(NodesSelectionNodes, SoExtSelectionLassoModeFieldAccessible)
     SoExtSelection * sel = new SoExtSelection;
     sel->ref();
     int lm = sel->lassoMode.getValue();
-    bool pass = (lm >= 0);
+    EXPECT_TRUE((lm >= 0)) << "SoExtSelection lassoMode field returned invalid value";
     sel->unref();
-    EXPECT_TRUE(pass) << "SoExtSelection lassoMode field returned invalid value";
 }
 
 TEST(NodesSelectionNodes, SoExtSelectionSelectWith2DLassoDoesNotCrash)
@@ -313,7 +299,6 @@ TEST(NodesSelectionNodes, SoExtSelectionSoSearchActionFindsSoExtSelection)
     sa.setInterest(SoSearchAction::FIRST);
     sa.apply(root);
 
-    bool pass = (sa.getPath() != nullptr);
+    EXPECT_TRUE((sa.getPath() != nullptr)) << "SoSearchAction did not find SoExtSelection";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find SoExtSelection";
 }

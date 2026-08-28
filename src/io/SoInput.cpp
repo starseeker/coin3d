@@ -124,6 +124,10 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/threads/SbStorage.h>
 
+#include <memory>
+#include <mutex>
+#include <vector>
+
 #include "misc/SbHash.h"
 #include "misc/SoUtilities.h"
 
@@ -146,6 +150,7 @@
 // *************************************************************************
 
 SbStringList * SoInput::dirsearchlist = NULL;
+static std::recursive_mutex soinput_directory_mutex;
 
 static SbStorage * soinput_tls = NULL;
 
@@ -153,6 +158,24 @@ struct soinput_tls_data {
   SbStringList * searchlist;
   int instancecount;
 };
+
+struct soinput_directory_snapshot {
+  ~soinput_directory_snapshot()
+  {
+    this->clear();
+  }
+
+  void clear()
+  {
+    for (int i = 0; i < this->directories.getLength(); ++i)
+      delete this->directories[i];
+    this->directories.truncate(0);
+  }
+
+  SbStringList directories;
+};
+
+static thread_local soinput_directory_snapshot soinput_global_snapshot;
 
 static void
 soinput_construct_tls_data(void * closure)
@@ -234,6 +257,7 @@ SoInput::constructorsCommon(void)
 
   soinput_tls_data * data = (soinput_tls_data *)soinput_tls->get();
   if (data->instancecount == 0) {
+    const std::lock_guard<std::recursive_mutex> lock(soinput_directory_mutex);
     const SbStringList & dir = *SoInput::dirsearchlist;
     for (int i = 0; i < dir.getLength(); i++) {
       data->searchlist->append(new SbString(dir[i]->getString()));
@@ -1714,6 +1738,10 @@ SoInput::addDirectoryIdx(const int idx, const char * dirName)
     if (data->instancecount) { dirs = data->searchlist; }
   }
 
+  std::unique_lock<std::recursive_mutex> globallock(soinput_directory_mutex,
+                                                     std::defer_lock);
+  if (dirs == SoInput::dirsearchlist) globallock.lock();
+
   assert(idx <= dirs->getLength());
   // NB: note that it _should_ be possible to append/insert the same
   // directory name multiple times, as this is an easy way of
@@ -1757,9 +1785,7 @@ void
 SoInput::addEnvDirectoriesLast(const char * envVarName,
                                const char * separator)
 {
-  SoInput::addEnvDirectoriesIdx(SoInput::dirsearchlist->getLength(),
-                                envVarName,
-                                separator);
+  SoInput::addEnvDirectoriesIdx(-1, envVarName, separator);
 }
 
 /*!
@@ -1798,7 +1824,8 @@ SoInput::addEnvDirectoriesIdx(int startidx,
     if (hit && hit != p) {
       const ptrdiff_t offset = hit - p;
       SbString add = SbString(p).getSubString(0, (int)(offset - 1));
-      SoInput::addDirectoryIdx(startidx++, add.getString());
+      SoInput::addDirectoryIdx(startidx, add.getString());
+      if (startidx >= 0) ++startidx;
       p = hit+1;
     }
     else if (hit) { // more than one separator in a row
@@ -1832,6 +1859,10 @@ SoInput::removeDirectory(const char * dirName)
     if (data->instancecount) { dirs = data->searchlist; }
   }
 
+  std::unique_lock<std::recursive_mutex> globallock(soinput_directory_mutex,
+                                                     std::defer_lock);
+  if (dirs == SoInput::dirsearchlist) globallock.lock();
+
   // dirsearchlist might be null if user called SoDB::cleanup()
   if (dirs) {
     int idx = dirs->getLength() - 1;
@@ -1863,6 +1894,8 @@ SoInput::removeDirectory(const char * dirName)
 void
 SoInput::clearDirectories(void)
 {
+  const std::lock_guard<std::recursive_mutex> lock(soinput_directory_mutex);
+  if (!SoInput::dirsearchlist) return;
   while (SoInput::dirsearchlist->getLength() > 0) {
     delete (*SoInput::dirsearchlist)[0];
     SoInput::dirsearchlist->remove(0);
@@ -1882,7 +1915,13 @@ SoInput::getDirectories(void)
     if (data->instancecount) { return *data->searchlist; }
   }
 
-  return *SoInput::dirsearchlist;
+  const std::lock_guard<std::recursive_mutex> lock(soinput_directory_mutex);
+  soinput_global_snapshot.clear();
+  for (int i = 0; i < SoInput::dirsearchlist->getLength(); ++i) {
+    soinput_global_snapshot.directories.append(
+      new SbString((*SoInput::dirsearchlist)[i]->getString()));
+  }
+  return soinput_global_snapshot.directories;
 }
 
 /*!
@@ -2412,11 +2451,17 @@ SoInput::convertDoubleArray(char * from, double * to, int len)
 void
 SoInput::setDirectories(SbStringList * dirs)
 {
-  // Dealloc SbString objects
-  for (int i=0; i < SoInput::dirsearchlist->getLength(); i++)
-    delete (*SoInput::dirsearchlist)[i];
+  if (!dirs) return;
+  std::vector<SbString> copy;
+  copy.reserve(static_cast<size_t>(dirs->getLength()));
+  for (int i = 0; i < dirs->getLength(); ++i) copy.emplace_back(*(*dirs)[i]);
 
-  (*SoInput::dirsearchlist) = *dirs;
+  const std::lock_guard<std::recursive_mutex> lock(soinput_directory_mutex);
+  for (int i = 0; i < SoInput::dirsearchlist->getLength(); ++i)
+    delete (*SoInput::dirsearchlist)[i];
+  SoInput::dirsearchlist->truncate(0);
+  for (const SbString & directory : copy)
+    SoInput::dirsearchlist->append(new SbString(directory));
 }
 
 /*!

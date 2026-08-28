@@ -35,6 +35,8 @@
 
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodes/SoNode.h>
+
+#include <atomic>
 #ifdef OBOL_INTERNAL
 class SoNodeKitPath;
 #else // !OBOL_INTERNAL
@@ -172,7 +174,7 @@ private:
 
   static SoNodekitCatalog * classcatalog;
   static const SoNodekitCatalog ** parentcatalogptr;
-  static SbBool searchchildren;
+  static std::atomic<SbBool> searchchildren;
 
   class SoBaseKitP * pimpl;
   friend class SoBaseKitP;

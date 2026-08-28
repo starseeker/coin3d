@@ -1,4 +1,5 @@
 set(OBOL_CORE_UNIT_SOURCES
+    ${PROJECT_SOURCE_DIR}/tests/unit/action_exception_safety_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/base_math_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/base_geometry_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/base_utilities_test.cpp
@@ -8,14 +9,17 @@ set(OBOL_CORE_UNIT_SOURCES
     ${PROJECT_SOURCE_DIR}/tests/unit/error_handling_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/events_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/fields_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/global_thread_safety_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_assertions_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_fields_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_format_registry_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/image_resize_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/interaction_kit_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/nodes_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/nanort_context_manager_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/projectors_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/scene_graph_structure_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/sbimage_thread_safety_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/sensors_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/tools/test_tools_suite.cpp
     ${PROJECT_SOURCE_DIR}/tests/cad/test_cad_ids.cpp

@@ -72,23 +72,20 @@ using namespace ObolTest;
 
 TEST(DetailsDeep, SoCubeDetailClassTypeIdValid)
 {
-    bool pass = (SoCubeDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoCubeDetail has bad class type";
+    EXPECT_TRUE((SoCubeDetail::getClassTypeId() != SoType::badType())) << "SoCubeDetail has bad class type";
 }
 
 TEST(DetailsDeep, SoCubeDetailIsOfTypeSoDetail)
 {
     SoCubeDetail d;
-    bool pass = d.isOfType(SoDetail::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoCubeDetail not a SoDetail subtype";
+    EXPECT_TRUE(d.isOfType(SoDetail::getClassTypeId())) << "SoCubeDetail not a SoDetail subtype";
 }
 
 TEST(DetailsDeep, SoCubeDetailSetPartGetPartRoundTrip)
 {
     SoCubeDetail d;
     d.setPart(3);
-    bool pass = (d.getPart() == 3);
-    EXPECT_TRUE(pass) << "SoCubeDetail setPart(3) then getPart() != 3";
+    EXPECT_TRUE((d.getPart() == 3)) << "SoCubeDetail setPart(3) then getPart() != 3";
 }
 
 TEST(DetailsDeep, SoCubeDetailCopyReturnsCorrectType)
@@ -96,11 +93,10 @@ TEST(DetailsDeep, SoCubeDetailCopyReturnsCorrectType)
     SoCubeDetail d;
     d.setPart(2);
     SoDetail * c = d.copy();
-    bool pass = (c != nullptr) &&
+    EXPECT_TRUE((c != nullptr) &&
                 c->isOfType(SoCubeDetail::getClassTypeId()) &&
-                (static_cast<SoCubeDetail *>(c)->getPart() == 2);
+                (static_cast<SoCubeDetail *>(c)->getPart() == 2)) << "SoCubeDetail copy() returned null, wrong type, or wrong part";
     delete c;
-    EXPECT_TRUE(pass) << "SoCubeDetail copy() returned null, wrong type, or wrong part";
 }
 
 // Pick test: SoRayPickAction on a SoCube should yield SoCubeDetail.
@@ -118,14 +114,13 @@ TEST(DetailsDeep, SoRayPickActionOnSoCubeYieldsSoCubeDetail)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp) {
         const SoDetail * d = pp->getDetail();
-        pass = (d != nullptr) &&
-               d->isOfType(SoCubeDetail::getClassTypeId());
+        EXPECT_NE(d, nullptr);
+        if (d) EXPECT_TRUE(d->isOfType(SoCubeDetail::getClassTypeId()));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction on SoCube did not yield SoCubeDetail";
 }
 
 // =========================================================================
@@ -134,16 +129,14 @@ TEST(DetailsDeep, SoRayPickActionOnSoCubeYieldsSoCubeDetail)
 
 TEST(DetailsDeep, SoCylinderDetailClassTypeIdValid)
 {
-    bool pass = (SoCylinderDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoCylinderDetail has bad class type";
+    EXPECT_TRUE((SoCylinderDetail::getClassTypeId() != SoType::badType())) << "SoCylinderDetail has bad class type";
 }
 
 TEST(DetailsDeep, SoCylinderDetailSetPartGetPartRoundTrip)
 {
     SoCylinderDetail d;
     d.setPart(1);
-    bool pass = (d.getPart() == 1);
-    EXPECT_TRUE(pass) << "SoCylinderDetail setPart(1) then getPart() != 1";
+    EXPECT_TRUE((d.getPart() == 1)) << "SoCylinderDetail setPart(1) then getPart() != 1";
 }
 
 TEST(DetailsDeep, SoCylinderDetailCopyReturnsCorrectTypeAndPart)
@@ -151,11 +144,10 @@ TEST(DetailsDeep, SoCylinderDetailCopyReturnsCorrectTypeAndPart)
     SoCylinderDetail d;
     d.setPart(0);
     SoDetail * c = d.copy();
-    bool pass = (c != nullptr) &&
+    EXPECT_TRUE((c != nullptr) &&
                 c->isOfType(SoCylinderDetail::getClassTypeId()) &&
-                (static_cast<SoCylinderDetail *>(c)->getPart() == 0);
+                (static_cast<SoCylinderDetail *>(c)->getPart() == 0)) << "SoCylinderDetail copy() returned null, wrong type, or wrong part";
     delete c;
-    EXPECT_TRUE(pass) << "SoCylinderDetail copy() returned null, wrong type, or wrong part";
 }
 
 // Pick test: SoRayPickAction on a SoCylinder should yield SoCylinderDetail
@@ -171,14 +163,13 @@ TEST(DetailsDeep, SoRayPickActionOnSoCylinderYieldsSoCylinderDetail)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp) {
         const SoDetail * d = pp->getDetail();
-        pass = (d != nullptr) &&
-               d->isOfType(SoCylinderDetail::getClassTypeId());
+        EXPECT_NE(d, nullptr);
+        if (d) EXPECT_TRUE(d->isOfType(SoCylinderDetail::getClassTypeId()));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction on SoCylinder did not yield SoCylinderDetail";
 }
 
 // =========================================================================
@@ -187,16 +178,14 @@ TEST(DetailsDeep, SoRayPickActionOnSoCylinderYieldsSoCylinderDetail)
 
 TEST(DetailsDeep, SoConeDetailClassTypeIdValid)
 {
-    bool pass = (SoConeDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoConeDetail has bad class type";
+    EXPECT_TRUE((SoConeDetail::getClassTypeId() != SoType::badType())) << "SoConeDetail has bad class type";
 }
 
 TEST(DetailsDeep, SoConeDetailSetPartGetPartRoundTrip)
 {
     SoConeDetail d;
     d.setPart(1);
-    bool pass = (d.getPart() == 1);
-    EXPECT_TRUE(pass) << "SoConeDetail setPart(1) then getPart() != 1";
+    EXPECT_TRUE((d.getPart() == 1)) << "SoConeDetail setPart(1) then getPart() != 1";
 }
 
 TEST(DetailsDeep, SoConeDetailCopyReturnsCorrectType)
@@ -204,11 +193,10 @@ TEST(DetailsDeep, SoConeDetailCopyReturnsCorrectType)
     SoConeDetail d;
     d.setPart(0);
     SoDetail * c = d.copy();
-    bool pass = (c != nullptr) &&
+    EXPECT_TRUE((c != nullptr) &&
                 c->isOfType(SoConeDetail::getClassTypeId()) &&
-                (static_cast<SoConeDetail *>(c)->getPart() == 0);
+                (static_cast<SoConeDetail *>(c)->getPart() == 0)) << "SoConeDetail copy() returned null, wrong type, or wrong part";
     delete c;
-    EXPECT_TRUE(pass) << "SoConeDetail copy() returned null, wrong type, or wrong part";
 }
 
 // Pick test: SoRayPickAction on a SoCone should yield SoConeDetail
@@ -224,14 +212,13 @@ TEST(DetailsDeep, SoRayPickActionOnSoConeYieldsSoConeDetail)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp) {
         const SoDetail * d = pp->getDetail();
-        pass = (d != nullptr) &&
-               d->isOfType(SoConeDetail::getClassTypeId());
+        EXPECT_NE(d, nullptr);
+        if (d) EXPECT_TRUE(d->isOfType(SoConeDetail::getClassTypeId()));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction on SoCone did not yield SoConeDetail";
 }
 
 // =========================================================================
@@ -240,32 +227,28 @@ TEST(DetailsDeep, SoRayPickActionOnSoConeYieldsSoConeDetail)
 
 TEST(DetailsDeep, SoTextDetailClassTypeIdValid)
 {
-    bool pass = (SoTextDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTextDetail has bad class type";
+    EXPECT_TRUE((SoTextDetail::getClassTypeId() != SoType::badType())) << "SoTextDetail has bad class type";
 }
 
 TEST(DetailsDeep, SoTextDetailSetStringIndexGetStringIndexRoundTrip)
 {
     SoTextDetail d;
     d.setStringIndex(5);
-    bool pass = (d.getStringIndex() == 5);
-    EXPECT_TRUE(pass) << "SoTextDetail setStringIndex(5) then getStringIndex() != 5";
+    EXPECT_TRUE((d.getStringIndex() == 5)) << "SoTextDetail setStringIndex(5) then getStringIndex() != 5";
 }
 
 TEST(DetailsDeep, SoTextDetailSetCharacterIndexGetCharacterIndexRoundTrip)
 {
     SoTextDetail d;
     d.setCharacterIndex(3);
-    bool pass = (d.getCharacterIndex() == 3);
-    EXPECT_TRUE(pass) << "SoTextDetail setCharacterIndex(3) then getCharacterIndex() != 3";
+    EXPECT_TRUE((d.getCharacterIndex() == 3)) << "SoTextDetail setCharacterIndex(3) then getCharacterIndex() != 3";
 }
 
 TEST(DetailsDeep, SoTextDetailSetPartGetPartRoundTrip)
 {
     SoTextDetail d;
     d.setPart(2);
-    bool pass = (d.getPart() == 2);
-    EXPECT_TRUE(pass) << "SoTextDetail setPart(2) then getPart() != 2";
+    EXPECT_TRUE((d.getPart() == 2)) << "SoTextDetail setPart(2) then getPart() != 2";
 }
 
 TEST(DetailsDeep, SoTextDetailCopyPreservesAllFields)
@@ -275,20 +258,19 @@ TEST(DetailsDeep, SoTextDetailCopyPreservesAllFields)
     d.setCharacterIndex(4);
     d.setPart(1);
     SoDetail * c = d.copy();
-    bool pass = false;
+    EXPECT_NE(c, nullptr);
+    EXPECT_TRUE(c && c->isOfType(SoTextDetail::getClassTypeId()));
     if (c && c->isOfType(SoTextDetail::getClassTypeId())) {
         const SoTextDetail * cd = static_cast<const SoTextDetail *>(c);
-        pass = (cd->getStringIndex()    == 7) &&
-               (cd->getCharacterIndex() == 4) &&
-               (cd->getPart()           == 1);
+        EXPECT_EQ(cd->getStringIndex(), 7);
+        EXPECT_EQ(cd->getCharacterIndex(), 4);
+        EXPECT_EQ(cd->getPart(), 1);
     }
     delete c;
-    EXPECT_TRUE(pass) << "SoTextDetail copy() did not preserve all fields";
 }
 
 TEST(DetailsDeep, SoTextDetailIsOfTypeSoDetail)
 {
     SoTextDetail d;
-    bool pass = d.isOfType(SoDetail::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoTextDetail not a SoDetail subtype";
+    EXPECT_TRUE(d.isOfType(SoDetail::getClassTypeId())) << "SoTextDetail not a SoDetail subtype";
 }

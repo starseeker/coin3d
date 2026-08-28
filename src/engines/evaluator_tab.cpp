@@ -129,6 +129,7 @@
 #endif /* HAVE_IO_H */
 #include <Inventor/basic.h>
 #include "engines/evaluator.h"
+#include <mutex>
 
 
 # ifndef YY_CAST
@@ -679,13 +680,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   110,   110,   112,   115,   116,   117,   120,   121,   122,
-     124,   128,   129,   132,   134,   136,   139,   140,   141,   142,
-     143,   144,   146,   148,   151,   152,   153,   154,   155,   157,
-     158,   159,   160,   162,   164,   166,   170,   172,   174,   177,
-     178,   179,   180,   181,   182,   185,   186,   187,   190,   191,
-     192,   193,   197,   198,   199,   200,   201,   202,   203,   204,
-     205
+       0,   111,   111,   113,   116,   117,   118,   121,   122,   123,
+     125,   129,   130,   133,   135,   137,   140,   141,   142,   143,
+     144,   145,   147,   149,   152,   153,   154,   155,   156,   158,
+     159,   160,   161,   163,   165,   167,   171,   173,   175,   178,
+     179,   180,   181,   182,   183,   186,   187,   188,   191,   192,
+     193,   194,   198,   199,   200,   201,   202,   203,   204,   205,
+     206
 };
 #endif
 
@@ -1873,8 +1874,9 @@ get_regname(char reg, int regtype)
 #include "so_eval.ic" /* our lexical scanner */
 
 /* some very simple error handling for now :) */
-static char *myerrorptr;
-static char myerrorbuf[512];
+static std::mutex evaluator_parse_mutex;
+static thread_local char *myerrorptr;
+static thread_local char myerrorbuf[512];
 
 /*
  * parse the text string into a tree structure.
@@ -1882,6 +1884,7 @@ static char myerrorbuf[512];
 so_eval_node *
 so_eval_parse(const char *buffer)
 {
+  const std::lock_guard<std::mutex> guard(evaluator_parse_mutex);
   /* FIXME: better error handling is obviously needed */
   YY_BUFFER_STATE state;
   myerrorptr = NULL;

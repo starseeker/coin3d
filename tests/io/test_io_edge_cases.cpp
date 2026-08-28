@@ -110,10 +110,9 @@ TEST(IoEdgeCases, BinaryWriteBufferStartsWithInventorV21Binary)
     writeNodeBinary(root, &buf, &sz);
 
     static const char header[] = "#Inventor V2.1 binary";
-    bool pass = (buf != nullptr) &&
+    EXPECT_TRUE((buf != nullptr) &&
                 (sz  >= std::strlen(header)) &&
-                (std::memcmp(buf, header, std::strlen(header)) == 0);
-    EXPECT_TRUE(pass) << "Binary output does not start with '#Inventor V2.1 binary'";
+                (std::memcmp(buf, header, std::strlen(header)) == 0)) << "Binary output does not start with '#Inventor V2.1 binary'";
     root->unref();
 }
 
@@ -128,8 +127,7 @@ TEST(IoEdgeCases, SoOutputGetBufferReturnsNonNullAndPositiveSize)
     root->addChild(new SoCube);
     char * buf = nullptr; size_t sz = 0;
     writeNode(root, &buf, &sz);
-    bool pass = (buf != nullptr) && (sz > 0);
-    EXPECT_TRUE(pass) << "SoOutput::getBuffer returned null or zero size";
+    EXPECT_TRUE((buf != nullptr) && (sz > 0)) << "SoOutput::getBuffer returned null or zero size";
     root->unref();
 }
 
@@ -145,18 +143,17 @@ TEST(IoEdgeCases, BinaryRoundTripWriteBinaryThenReadBackNonNullRoot)
     char * buf = nullptr; size_t sz = 0;
     writeNodeBinary(root, &buf, &sz);
 
-    bool pass = false;
+    SoSeparator * readRoot = nullptr;
     if (buf != nullptr && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
-        SoSeparator * r2 = SoDB::readAll(&in);
-        pass = (r2 != nullptr);
-        if (r2) {
-            r2->ref();
-            r2->unref();
+        readRoot = SoDB::readAll(&in);
+        if (readRoot) {
+            readRoot->ref();
+            readRoot->unref();
         }
     }
-    EXPECT_TRUE(pass) << "Binary round-trip: SoDB::readAll returned null for binary scene";
+    EXPECT_NE(readRoot, nullptr);
     root->unref();
 }
 
@@ -168,18 +165,20 @@ TEST(IoEdgeCases, BinaryRoundTripRootHasExpectedChildren)
     char * buf = nullptr; size_t sz = 0;
     writeNodeBinary(root, &buf, &sz);
 
-    bool pass = false;
+    SoSeparator * readRoot = nullptr;
+    int childCount = 0;
     if (buf != nullptr && sz > 0) {
         SoInput in;
         in.setBuffer(buf, sz);
-        SoSeparator * r2 = SoDB::readAll(&in);
-        if (r2) {
-            r2->ref();
-            pass = (r2->getNumChildren() > 0);
-            r2->unref();
+        readRoot = SoDB::readAll(&in);
+        if (readRoot) {
+            readRoot->ref();
+            childCount = readRoot->getNumChildren();
+            readRoot->unref();
         }
     }
-    EXPECT_TRUE(pass) << "Binary round-trip: root has no children after read-back";
+    EXPECT_NE(readRoot, nullptr);
+    EXPECT_GT(childCount, 0);
     root->unref();
 }
 
@@ -206,10 +205,9 @@ TEST(IoEdgeCases, MultipleSequentialSetBufferReadsOnOneSoInput)
     SoSeparator * r2 = SoDB::readAll(&in);
     if (r2) r2->ref();
 
-    bool pass = (r1 != nullptr) && (r2 != nullptr);
+    EXPECT_TRUE((r1 != nullptr) && (r2 != nullptr)) << "Sequential setBuffer reads: one or both reads returned null";
     if (r1) r1->unref();
     if (r2) r2->unref();
-    EXPECT_TRUE(pass) << "Sequential setBuffer reads: one or both reads returned null";
     root->unref();
 }
 
@@ -234,12 +232,11 @@ TEST(IoEdgeCases, CorruptHeaderSoDBReadAllReturnsNull)
 
     SoError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = (r == nullptr);
+    EXPECT_TRUE((r == nullptr)) << "Corrupt header: SoDB::readAll should return null";
     if (r) {
         r->ref();
         r->unref();
     }
-    EXPECT_TRUE(pass) << "Corrupt header: SoDB::readAll should return null";
     root->unref();
 }
 
@@ -262,11 +259,10 @@ TEST(IoEdgeCases, EmptyBufferSoDBReadAllReturnsNull)
 
     SoError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = (r == nullptr);
+    EXPECT_TRUE((r == nullptr)) << "Empty buffer: SoDB::readAll should return null";
     if (r) {
         r->ref();
         r->unref();
     }
-    EXPECT_TRUE(pass) << "Empty buffer: SoDB::readAll should return null";
     root->unref();
 }

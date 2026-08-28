@@ -1647,17 +1647,8 @@ SoGLRenderActionP::addSortTransPath(SoPath * path)
   // faster than using an SoGetBoundingBoxAction.
   if (tail->isOfType(SoShape::getClassTypeId())) { // common case
     SoShape * tailshape = coin_assert_cast<SoShape *>(tail);
-    const SoBoundingBoxCache * bboxcache = tailshape->getBoundingBoxCache();
     SbVec3f center;
-
-    if (bboxcache && bboxcache->isValid(state)) {
-      bbox = bboxcache->getProjectedBox();
-      if (bboxcache->isCenterSet()) center = bboxcache->getCenter();
-      else center = bbox.getCenter();
-    }
-    else {
-      tailshape->computeBBox(action, bbox, center);
-    }
+    tailshape->getBoundingBoxData(action, bbox, center);
     SoModelMatrixElement::get(state).multVecMatrix(center, center);
     dist = -SoViewVolumeElement::get(state).getPlane(0.0f).getDistance(center);
   }

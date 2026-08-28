@@ -47,6 +47,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <mutex>
 
 #include "config.h"
 
@@ -103,7 +104,6 @@
 #include <Inventor/nodes/SoVertexProperty.h>
 #include <Inventor/nodes/SoVertexShape.h>
 #include <Inventor/system/gl.h>
-#include <Inventor/threads/SbMutex.h>
 #include <Inventor/threads/SbStorage.h>
 
 #include "nodes/SoSubNodeP.h"
@@ -202,29 +202,19 @@ public:
     // VRML97 support removed - this function is now a no-op
   }
 
-  // we can use a per-instance mutex here instead of this class-wide
-  // one, but we go for the class-wide one since at least Microsoft Windows
-  // might have a rather strict limit on the total amount of mutex
-  // resources a process / user can hold at any one time.
-  //
-  // i haven't looked too hard at the locked code regions, however --
-  // it might be that a class-wide lock can cause significantly less
-  // efficient execution in a multi-threaded environment. if so, we
-  // will have to come up with something smarter than this (a mutex
-  // pool or something, i suppose).
-  //
-  // -mortene.
-  static SbMutex * mutex;
+  // Traversal updates bbox/polygon caches even when the scene graph itself is
+  // read-only. Keep that implicit state per shape so unrelated geometry can
+  // still be traversed concurrently. Recursive locking permits cache creation
+  // to call the existing cache-validation helpers.
+  mutable std::recursive_mutex mutex;
 
-  void lock(void) { SoShapeP::mutex->lock(); }
-  void unlock(void) { SoShapeP::mutex->unlock(); }
+  void lock(void) const { this->mutex.lock(); }
+  void unlock(void) const { this->mutex.unlock(); }
 
   static void cleanup(void);
 };
 
 double SoShapeP::bboxcachetimelimit;
-
-SbMutex * SoShapeP::mutex = NULL;
 
 #undef PRIVATE
 #define PRIVATE(p) ((p)->pimpl)
@@ -306,8 +296,6 @@ SoShapeP::cleanup(void)
   delete soshape_staticstorage;
   soshape_staticstorage = NULL;
 
-  delete SoShapeP::mutex;
-  SoShapeP::mutex = NULL;
 }
 
 // *************************************************************************
@@ -340,8 +328,6 @@ void
 SoShape::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoShape, SO_FROM_INVENTOR_1);
-
-  SoShapeP::mutex = new SbMutex;
 
   soshape_staticstorage =
     new SbStorage(sizeof(soshape_staticdata),
@@ -425,6 +411,7 @@ SoShape::rayPick(SoRayPickAction * action)
   if (this->shouldRayPick(action)) {
     this->computeObjectSpaceRay(action);
 
+    const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
     if (!PRIVATE(this)->bboxcache ||
         !PRIVATE(this)->bboxcache->isValid(action->getState()) ||
         soshape_ray_intersect(action, PRIVATE(this)->bboxcache->getProjectedBox())) {
@@ -532,12 +519,16 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
   if (shapestyleflags & SoShapeStyleElement::INVISIBLE)
     return FALSE;
 
-  if (PRIVATE(this)->bboxcache && !state->isCacheOpen() && !SoCullElement::completelyInside(state)) {
-    if (PRIVATE(this)->bboxcache->isValid(state)) {
-      SbBox3f projbox = PRIVATE(this)->bboxcache->getProjectedBox();
-      SbBool culled = SoCullElement::cullTest(state, projbox);
-      if (culled) {
-        return FALSE;
+  {
+    const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
+    if (PRIVATE(this)->bboxcache && !state->isCacheOpen() &&
+        !SoCullElement::completelyInside(state)) {
+      if (PRIVATE(this)->bboxcache->isValid(state)) {
+        SbBox3f projbox = PRIVATE(this)->bboxcache->getProjectedBox();
+        SbBool culled = SoCullElement::cullTest(state, projbox);
+        if (culled) {
+          return FALSE;
+        }
       }
     }
   }
@@ -562,8 +553,8 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
 
   // test if we should sort triangles before rendering
   if (transparent && (shapestyleflags & SoShapeStyleElement::TRANSP_SORTED_TRIANGLES)) {
-    // lock since pvcache is shared among all threads
-    PRIVATE(this)->lock();
+    // lock since pvcache is shared among all traversals of this shape
+    const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
     this->validatePVCache(action);
 
     int arrays = SoPrimitiveVertexCache::NORMAL|SoPrimitiveVertexCache::COLOR;
@@ -592,7 +583,6 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
         SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
       }
     }
-    PRIVATE(this)->unlock();
     return FALSE; // tell shape _not_ to render
   }
 
@@ -644,13 +634,12 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
     const SoNodeList & lights = SoLightElement::getLights(state);
     if (lights.getLength()) {
       // lock since bumprender and pvcache is shared among all threads
-      PRIVATE(this)->lock();
+      std::unique_lock<std::recursive_mutex> guard(PRIVATE(this)->mutex);
       if (PRIVATE(this)->bumprender == NULL) {
         PRIVATE(this)->bumprender = new soshape_bumprender;
       }
       this->validatePVCache(action);
       if (PRIVATE(this)->pvcache->getNumTriangleIndices() == 0) {
-        PRIVATE(this)->unlock();
         return TRUE;
       }
       SoGLLazyElement::getInstance(state)->send(state, SoLazyElement::ALL_MASK);
@@ -726,7 +715,7 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
       }
 
 
-      PRIVATE(this)->unlock();
+      guard.unlock();
 
       SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
       // we used two units in the bumpmap code
@@ -742,10 +731,10 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
 
 
   if (shapestyleflags & SoShapeStyleElement::VERTEXARRAY) {
-    // lock since pvcache is shared among all threads
-    PRIVATE(this)->lock();
+    // The primitive cache is shared by traversals of this shape. Keep it
+    // locked through rendering, not only through validation.
+    const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
     this->validatePVCache(action);
-    PRIVATE(this)->unlock();
 
     SoGLCacheContextElement::shouldAutoCache(state,
                                              SoGLCacheContextElement::DONT_AUTO_CACHE);
@@ -777,8 +766,11 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
     return FALSE;
   }
 
-  if (PRIVATE(this)->rendercnt < ((1<<SoShapeP::RENDERCNT_BITS)-1)) {
-    PRIVATE(this)->rendercnt++;
+  {
+    const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
+    if (PRIVATE(this)->rendercnt < ((1<<SoShapeP::RENDERCNT_BITS)-1)) {
+      PRIVATE(this)->rendercnt++;
+    }
   }
   return TRUE; // let the shape node render the geometry using OpenGL
 }
@@ -1367,7 +1359,7 @@ void
 SoShape::notify(SoNotList * nl)
 {
   inherited::notify(nl);
-  PRIVATE(this)->lock();
+  const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
   if (PRIVATE(this)->bboxcache) {
     PRIVATE(this)->bboxcache->invalidate();
   }
@@ -1376,7 +1368,6 @@ SoShape::notify(SoNotList * nl)
   }
   PRIVATE(this)->flags &= ~SoShapeP::SHOULD_BBOX_CACHE;
   PRIVATE(this)->rendercnt = 0;
-  PRIVATE(this)->unlock();
 }
 
 /*!
@@ -1392,7 +1383,20 @@ SoShape::notify(SoNotList * nl)
 const SoBoundingBoxCache *
 SoShape::getBoundingBoxCache(void) const
 {
+  const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
   return PRIVATE(this)->bboxcache;
+}
+
+/*!
+  Returns a stable copy of this shape's bounding-box data.  Cache validation,
+  cache replacement, and any fallback computation are serialized with other
+  traversals of the same shape.
+*/
+void
+SoShape::getBoundingBoxData(SoAction * action, SbBox3f & box,
+                            SbVec3f & center)
+{
+  this->getBBox(action, box, center);
 }
 
 // return the bbox for this shape, using the cache if valid,
@@ -1400,6 +1404,7 @@ SoShape::getBoundingBoxCache(void) const
 void
 SoShape::getBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
 {
+  const std::lock_guard<std::recursive_mutex> guard(PRIVATE(this)->mutex);
   SoState * state = action->getState();
   SbBool isvalid = PRIVATE(this)->bboxcache && PRIVATE(this)->bboxcache->isValid(state);
   if (isvalid) {
@@ -1412,10 +1417,8 @@ SoShape::getBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
 
   // destroy the old cache if we have one
   if (PRIVATE(this)->bboxcache) {
-    PRIVATE(this)->lock();
     PRIVATE(this)->bboxcache->unref();
     PRIVATE(this)->bboxcache = NULL;
-    PRIVATE(this)->unlock();
     // don't create bbox caches for shapes that change
     PRIVATE(this)->flags &= ~SoShapeP::SHOULD_BBOX_CACHE;
   }
@@ -1427,10 +1430,8 @@ SoShape::getBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
     state->push();
     storedinvalid = SoCacheElement::setInvalid(FALSE);
     assert(PRIVATE(this)->bboxcache == NULL);
-    PRIVATE(this)->lock();
     PRIVATE(this)->bboxcache = new SoBoundingBoxCache(state);
     PRIVATE(this)->bboxcache->ref();
-    PRIVATE(this)->unlock();
     SoCacheElement::set(state, PRIVATE(this)->bboxcache);
   }
   SbTime begin = SbTime::getTimeOfDay();
@@ -1451,10 +1452,8 @@ SoShape::getBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
       state->push();
       storedinvalid = SoCacheElement::setInvalid(FALSE);
       assert(PRIVATE(this)->bboxcache == NULL);
-      PRIVATE(this)->lock();
       PRIVATE(this)->bboxcache = new SoBoundingBoxCache(state);
       PRIVATE(this)->bboxcache->ref();
-      PRIVATE(this)->unlock();
       SoCacheElement::set(state, PRIVATE(this)->bboxcache);
       box.makeEmpty();
       this->computeBBox(action, box, center);

@@ -332,15 +332,7 @@ SoTextureCoordinateBundle::initDefaultCallback(SoAction * action)
   // by using a SoTextureCoordinateCache soon though. pederb, 20000218
 
   SoShape * shape = coin_assert_cast<SoShape *>(this->shapenode);
-  const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
-  if (bboxcache && bboxcache->isValid(action->getState())) {
-    box = bboxcache->getProjectedBox();
-    if (bboxcache->isCenterSet()) center = bboxcache->getCenter();
-    else center = box.getCenter();
-  }
-  else {
-    shape->computeBBox(action, box, center);
-  }
+  shape->getBoundingBoxData(action, box, center);
 
   // just use some default values if the shape bbox is empty
   SbVec3f size(1.0f, 1.0f, 1.0f);

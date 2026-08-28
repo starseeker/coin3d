@@ -60,7 +60,9 @@
   - SB_IMAGE_RESIZE_FILTER_LANCZOS3: Sharp results, excellent for preserving fine details
   - SB_IMAGE_RESIZE_FILTER_MITCHELL: Good general-purpose filter with balanced sharpness
 */
-enum SbImageResizeFilter {
+// A fixed underlying type keeps out-of-range values representable so the
+// implementation can reject data supplied across ABI/plugin boundaries.
+enum SbImageResizeFilter : int {
   // Legacy quality options for backward compatibility
   SB_IMAGE_RESIZE_FAST = 0,      // Fast, lower quality resize (good for interactive use)
   SB_IMAGE_RESIZE_BILINEAR = 1,  // Bilinear interpolation (good balance)
@@ -82,7 +84,8 @@ enum SbImageResizeFilter {
   \param src Source image data
   \param width Source image width
   \param height Source image height
-  \param components Number of components per pixel (1=grayscale, 3=RGB, 4=RGBA)
+  \param components Number of components per pixel (1=grayscale,
+  2=grayscale+alpha, 3=RGB, 4=RGBA)
   \param newwidth Target image width
   \param newheight Target image height
   \param filter Filter/quality setting to use for resizing

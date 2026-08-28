@@ -119,9 +119,8 @@ TEST(ActionsSuite, SoCallbackActionDefaultSkipsSwitchChildren)
     cba.apply(sw);
 
     // Default: switch node visited, but not its child (whichChild == SO_SWITCH_NONE)
-    bool pass = (names == SbString("switch"));
+    EXPECT_TRUE((names == SbString("switch"))) << std::string("Expected 'switch', got '") + names.getString() + "'";
     sw->unref();
-    EXPECT_TRUE(pass) << std::string("Expected 'switch', got '") + names.getString() + "'";
 }
 
 TEST(ActionsSuite, SoCallbackActionSetCallbackAllTraversesSwitchChildren)
@@ -140,9 +139,8 @@ TEST(ActionsSuite, SoCallbackActionSetCallbackAllTraversesSwitchChildren)
     cba.apply(sw);
 
     // With callbackAll: both switch and cube visited
-    bool pass = (names == SbString("switchcube"));
+    EXPECT_TRUE((names == SbString("switchcube"))) << std::string("Expected 'switchcube', got '") + names.getString() + "'";
     sw->unref();
-    EXPECT_TRUE(pass) << std::string("Expected 'switchcube', got '") + names.getString() + "'";
 }
 
 // -----------------------------------------------------------------------
@@ -183,8 +181,7 @@ TEST(ActionsSuite, SoWriteActionWritesMultiRefNodeWithDEFUSE)
     s_buffer      = nullptr;
     s_buffer_size = 0;
 
-    bool pass = hasDef && hasUse;
-    EXPECT_TRUE(pass) << "SoWriteAction output missing DEF/USE for multi-ref node";
+    EXPECT_TRUE(hasDef && hasUse) << "SoWriteAction output missing DEF/USE for multi-ref node";
 }
 
 // -----------------------------------------------------------------------
@@ -203,9 +200,8 @@ TEST(ActionsSuite, SoSearchActionFindByName)
     search.setName(SbName("MyCube"));
     search.apply(root);
 
-    bool pass = (search.getPath() != nullptr);
+    EXPECT_TRUE((search.getPath() != nullptr)) << "SoSearchAction could not find node named 'MyCube'";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction could not find node named 'MyCube'";
 }
 
 TEST(ActionsSuite, SoSearchActionFindByType)
@@ -218,9 +214,8 @@ TEST(ActionsSuite, SoSearchActionFindByType)
     search.setType(SoCube::getClassTypeId());
     search.apply(root);
 
-    bool pass = (search.getPath() != nullptr);
+    EXPECT_TRUE((search.getPath() != nullptr)) << "SoSearchAction could not find SoCube by type";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction could not find SoCube by type";
 }
 
 // -----------------------------------------------------------------------
@@ -238,16 +233,15 @@ TEST(ActionsSuite, SoGetBoundingBoxActionUnitCube)
     bba.apply(root);
 
     SbBox3f bbox = bba.getBoundingBox();
-    bool pass = !bbox.isEmpty();
-    if (pass) {
+    EXPECT_FALSE(bbox.isEmpty());
+    if (!bbox.isEmpty()) {
         // Default SoCube is 2x2x2 centred at origin -> min=-1 max=1
         SbVec3f lo, hi;
         bbox.getBounds(lo, hi);
-        pass = (lo[0] == -1.0f && lo[1] == -1.0f && lo[2] == -1.0f) &&
-               (hi[0] ==  1.0f && hi[1] ==  1.0f && hi[2] ==  1.0f);
+        EXPECT_EQ(lo, SbVec3f(-1.0f, -1.0f, -1.0f));
+        EXPECT_EQ(hi, SbVec3f(1.0f, 1.0f, 1.0f));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction unit cube returned wrong bounds";
 }
 
 // -----------------------------------------------------------------------
@@ -264,16 +258,14 @@ TEST(ActionsSuite, SoGetMatrixActionIdentityForEmptySeparator)
 
     SbMatrix mat = gma.getMatrix();
     SbMatrix identity = SbMatrix::identity();
-    bool pass = (mat == identity);
+    EXPECT_TRUE((mat == identity)) << "SoGetMatrixAction did not return identity for empty scene";
     root->unref();
-    EXPECT_TRUE(pass) << "SoGetMatrixAction did not return identity for empty scene";
 }
 
 TEST(ActionsSuite, SoGetMatrixActionClassInitialized)
 {
     SoGetMatrixAction gma(SbViewportRegion(100, 100));
-    bool pass = (gma.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoGetMatrixAction has bad type";
+    EXPECT_TRUE((gma.getTypeId() != SoType::badType())) << "SoGetMatrixAction has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -283,8 +275,7 @@ TEST(ActionsSuite, SoGetMatrixActionClassInitialized)
 TEST(ActionsSuite, SoGetPrimitiveCountActionClassInitialized)
 {
     SoGetPrimitiveCountAction gpca(SbViewportRegion(100, 100));
-    bool pass = (gpca.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoGetPrimitiveCountAction has bad type";
+    EXPECT_TRUE((gpca.getTypeId() != SoType::badType())) << "SoGetPrimitiveCountAction has bad type";
 }
 
 TEST(ActionsSuite, SoGetPrimitiveCountActionEmptyScene)
@@ -296,9 +287,8 @@ TEST(ActionsSuite, SoGetPrimitiveCountActionEmptyScene)
     gpca.apply(root);
 
     // Empty scene: no triangles, no lines, no points
-    bool pass = (gpca.getTriangleCount() == 0);
+    EXPECT_TRUE((gpca.getTriangleCount() == 0)) << "SoGetPrimitiveCountAction should count 0 triangles for empty scene";
     root->unref();
-    EXPECT_TRUE(pass) << "SoGetPrimitiveCountAction should count 0 triangles for empty scene";
 }
 
 // -----------------------------------------------------------------------
@@ -308,8 +298,7 @@ TEST(ActionsSuite, SoGetPrimitiveCountActionEmptyScene)
 TEST(ActionsSuite, SoRayPickActionClassInitialized)
 {
     SoRayPickAction rpa(SbViewportRegion(100, 100));
-    bool pass = (rpa.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoRayPickAction has bad type";
+    EXPECT_TRUE((rpa.getTypeId() != SoType::badType())) << "SoRayPickAction has bad type";
 }
 
 TEST(ActionsSuite, SoRayPickActionNoPicksOnEmptyScene)
@@ -322,9 +311,8 @@ TEST(ActionsSuite, SoRayPickActionNoPicksOnEmptyScene)
     rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
     rpa.apply(root);
 
-    bool pass = (rpa.getPickedPoint() == nullptr);
+    EXPECT_TRUE((rpa.getPickedPoint() == nullptr)) << "SoRayPickAction should find no pick in an empty scene";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should find no pick in an empty scene";
 }
 
 TEST(ActionsSuite, SoRayPickActionPicksCubeAtOrigin)
@@ -338,9 +326,8 @@ TEST(ActionsSuite, SoRayPickActionPicksCubeAtOrigin)
     rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
     rpa.apply(root);
 
-    bool pass = (rpa.getPickedPoint() != nullptr);
+    EXPECT_TRUE((rpa.getPickedPoint() != nullptr)) << "SoRayPickAction should pick the cube at origin";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should pick the cube at origin";
 }
 
 // -----------------------------------------------------------------------
@@ -359,19 +346,18 @@ TEST(ActionsSuite, SoRayPickActionPickPointIsOnCubeSurface)
     rpa.apply(root);
 
     SoPickedPoint* pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         // The ray hits the front face of the cube at z = +1.0
         SbVec3f pt = pp->getPoint();
-        pass = (fabsf(pt[2] - 1.0f) < 0.01f);
+        EXPECT_NEAR(pt[2], 1.0f, 0.01f);
 
         // The pick path should end at the cube node
         SoPath* path = pp->getPath();
-        pass = pass && (path != nullptr) &&
-               (path->getTail() == cube);
+        EXPECT_NE(path, nullptr);
+        if (path) EXPECT_EQ(path->getTail(), cube);
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction pick point should be on front face of cube (z~=1)";
 }
 
 // -----------------------------------------------------------------------
@@ -381,8 +367,7 @@ TEST(ActionsSuite, SoRayPickActionPickPointIsOnCubeSurface)
 TEST(ActionsSuite, SoHandleEventActionClassInitialized)
 {
     SoHandleEventAction hea(SbViewportRegion(100, 100));
-    bool pass = (hea.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoHandleEventAction has bad type";
+    EXPECT_TRUE((hea.getTypeId() != SoType::badType())) << "SoHandleEventAction has bad type";
 }
 
 TEST(ActionsSuite, SoHandleEventActionDispatchOnEmptySceneDoesNotCrash)
@@ -398,9 +383,8 @@ TEST(ActionsSuite, SoHandleEventActionDispatchOnEmptySceneDoesNotCrash)
     hea.setEvent(&ev);
     hea.apply(root); // should complete without crash; not handled
 
-    bool pass = !hea.isHandled();
+    EXPECT_TRUE(!hea.isHandled()) << "SoHandleEventAction should not be handled for empty scene";
     root->unref();
-    EXPECT_TRUE(pass) << "SoHandleEventAction should not be handled for empty scene";
 }
 
 // -----------------------------------------------------------------------
@@ -410,8 +394,7 @@ TEST(ActionsSuite, SoHandleEventActionDispatchOnEmptySceneDoesNotCrash)
 TEST(ActionsSuite, SoReorganizeActionClassInitialized)
 {
     SoReorganizeAction ra;
-    bool pass = (ra.getTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoReorganizeAction has bad type";
+    EXPECT_TRUE((ra.getTypeId() != SoType::badType())) << "SoReorganizeAction has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -442,13 +425,12 @@ TEST(ActionsSuite, SoRayPickActionPicksSoFaceSetQuad)
     rpa.apply(root);
 
     SoPickedPoint* pp = rpa.getPickedPoint();
-    bool pass = (pp != nullptr);
-    if (pass) {
+    EXPECT_NE(pp, nullptr);
+    if (pp) {
         SbVec3f pt = pp->getPoint();
-        pass = (fabsf(pt[2]) < 0.01f); // hit at z~0
+        EXPECT_NEAR(pt[2], 0.0f, 0.01f); // hit at z~0
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should pick the quad face set at z~0";
 }
 
 TEST(ActionsSuite, SoRayPickActionMissesSoFaceSetWhenRayOffset)
@@ -472,9 +454,8 @@ TEST(ActionsSuite, SoRayPickActionMissesSoFaceSetWhenRayOffset)
     rpa.setRay(SbVec3f(5.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
     rpa.apply(root);
 
-    bool pass = (rpa.getPickedPoint() == nullptr);
+    EXPECT_TRUE((rpa.getPickedPoint() == nullptr)) << "SoRayPickAction should miss the quad when ray is offset";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should miss the quad when ray is offset";
 }
 
 TEST(ActionsSuite, SoRayPickActionPicksThroughSoTranslationCorrectly)
@@ -494,9 +475,8 @@ TEST(ActionsSuite, SoRayPickActionPicksThroughSoTranslationCorrectly)
     rpa.setRay(SbVec3f(3.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
     rpa.apply(root);
 
-    bool pass = (rpa.getPickedPoint() != nullptr);
+    EXPECT_TRUE((rpa.getPickedPoint() != nullptr)) << "SoRayPickAction should pick translated cube";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should pick translated cube";
 }
 
 TEST(ActionsSuite, SoRayPickActionMissesWhenRayPassesBesideTranslatedCube)
@@ -515,9 +495,8 @@ TEST(ActionsSuite, SoRayPickActionMissesWhenRayPassesBesideTranslatedCube)
     rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
     rpa.apply(root);
 
-    bool pass = (rpa.getPickedPoint() == nullptr);
+    EXPECT_TRUE((rpa.getPickedPoint() == nullptr)) << "SoRayPickAction should miss cube that is out of ray path";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should miss cube that is out of ray path";
 }
 
 TEST(ActionsSuite, SoRayPickActionPickPathEndsAtSoCubeNode)
@@ -532,13 +511,13 @@ TEST(ActionsSuite, SoRayPickActionPickPathEndsAtSoCubeNode)
     rpa.apply(root);
 
     SoPickedPoint* pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         SoPath* path = pp->getPath();
-        pass = (path != nullptr) && (path->getTail() == cube);
+        EXPECT_NE(path, nullptr);
+        if (path) EXPECT_EQ(path->getTail(), cube);
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction: pick path tail should be the SoCube node";
 }
 
 TEST(ActionsSuite, SoRayPickActionGetPickedPointListReturnsAllPicks)
@@ -568,9 +547,8 @@ TEST(ActionsSuite, SoRayPickActionGetPickedPointListReturnsAllPicks)
 
     const SoPickedPointList& list = rpa.getPickedPointList();
     // Both cubes are on the ray path; expect 2 picked points
-    bool pass = (list.getLength() >= 2);
+    EXPECT_TRUE((list.getLength() >= 2)) << "SoRayPickAction getPickedPointList should return >= 2 for two cubes on ray";
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction getPickedPointList should return >= 2 for two cubes on ray";
 }
 
 TEST(ActionsSuite, SoRayPickActionSoIndexedFaceSetPick)
@@ -597,11 +575,10 @@ TEST(ActionsSuite, SoRayPickActionSoIndexedFaceSetPick)
     rpa.apply(root);
 
     SoPickedPoint* pp = rpa.getPickedPoint();
-    bool pass = (pp != nullptr);
-    if (pass) {
+    EXPECT_NE(pp, nullptr);
+    if (pp) {
         SbVec3f pt = pp->getPoint();
-        pass = (fabsf(pt[2]) < 0.01f);
+        EXPECT_NEAR(pt[2], 0.0f, 0.01f);
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction should pick SoIndexedFaceSet triangle";
 }

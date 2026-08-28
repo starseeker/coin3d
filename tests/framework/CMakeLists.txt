@@ -34,8 +34,6 @@ if(NOT GTest_FOUND)
 else()
     message(STATUS "GTest: using system package")
 endif()
-include(GoogleTest)
-
 add_test(NAME package.installed_consumer
     COMMAND ${CMAKE_COMMAND}
         -DOBOL_BINARY_DIR=${PROJECT_BINARY_DIR}
@@ -144,7 +142,7 @@ function(obol_add_gtest target label)
     # ARGN here flattened Windows PATH values, causing every PATH component
     # after the first to be misinterpreted as an executable source file.
     cmake_parse_arguments(PARSE_ARGV 2 OBOL_GTEST ""
-        "TIMEOUT;ENVIRONMENT;TEST_PREFIX;SKIP_REGULAR_EXPRESSION" "")
+        "TIMEOUT;ENVIRONMENT;SKIP_REGULAR_EXPRESSION" "")
     if(OBOL_GTEST_TIMEOUT)
         set(_obol_gtest_timeout ${OBOL_GTEST_TIMEOUT})
     else()
@@ -160,10 +158,14 @@ function(obol_add_gtest target label)
     target_include_directories(${target} PRIVATE
         ${PROJECT_SOURCE_DIR}/tests
     )
-    # GoogleTest's discovery helper forwards PROPERTIES as a CMake list and
-    # cannot preserve a semicolon-containing LABELS value.  Normalize compound
-    # categories to one searchable label (for example render-osmesa) so later
-    # TIMEOUT and ENVIRONMENT pairs cannot be shifted and misinterpreted.
+    # Register each ordinary executable once. Running every case in a fresh
+    # process hid order dependencies and made CTest startup dominate the suite.
+    # A stable shuffled order gives local failures a reproducible seed; CI also
+    # runs repeated time-seeded shuffles to explore other orders.
+    add_test(NAME ${target}
+        COMMAND ${target} --gtest_shuffle --gtest_random_seed=73421)
+
+    # Normalize compound categories to one searchable CTest label.
     string(REPLACE ";" "-" _obol_gtest_labels "${label}")
     set(_obol_gtest_properties
         LABELS "${_obol_gtest_labels}"
@@ -182,16 +184,7 @@ function(obol_add_gtest target label)
             SKIP_REGULAR_EXPRESSION
             "${OBOL_GTEST_SKIP_REGULAR_EXPRESSION}")
     endif()
-    set(_obol_gtest_discovery_options)
-    if(OBOL_GTEST_TEST_PREFIX)
-        list(APPEND _obol_gtest_discovery_options
-            TEST_PREFIX "${OBOL_GTEST_TEST_PREFIX}")
-    endif()
-    gtest_discover_tests(${target}
-        DISCOVERY_MODE PRE_TEST
-        PROPERTIES ${_obol_gtest_properties}
-        ${_obol_gtest_discovery_options}
-    )
+    set_tests_properties(${target} PROPERTIES ${_obol_gtest_properties})
 endfunction()
 
 # Lifecycle tests must begin before SoDB has been initialized and must be able
@@ -212,12 +205,10 @@ target_include_directories(obol_lifecycle_tests PRIVATE
     ${PROJECT_BINARY_DIR}/include
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
-gtest_discover_tests(obol_lifecycle_tests
-    DISCOVERY_MODE PRE_TEST
-    PROPERTIES
-        LABELS "unit-lifecycle"
-        TIMEOUT 30
-)
+add_test(NAME obol_lifecycle_tests COMMAND obol_lifecycle_tests)
+set_tests_properties(obol_lifecycle_tests PROPERTIES
+    LABELS "unit-lifecycle"
+    TIMEOUT 30)
 
 # A loadable extension must bind to the same process-global type registry as
 # its host.  That is the supported shared-library plugin model; linking a
@@ -285,9 +276,10 @@ target_link_libraries(obol_type_capacity_tests PRIVATE
 target_include_directories(obol_type_capacity_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_BINARY_DIR}/include)
-gtest_discover_tests(obol_type_capacity_tests
-    DISCOVERY_MODE PRE_TEST
-    PROPERTIES LABELS "unit-capacity" TIMEOUT 60)
+add_test(NAME obol_type_capacity_tests COMMAND obol_type_capacity_tests)
+set_tests_properties(obol_type_capacity_tests PROPERTIES
+    LABELS "unit-capacity"
+    TIMEOUT 60)
 
 # Source manifests keep suite membership reviewable without letting this file
 # regress into another monolithic list of legacy translation units.
@@ -330,14 +322,12 @@ endif()
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
-        TEST_PREFIX "system-gl."
         SKIP_REGULAR_EXPRESSION "system OpenGL backend is unavailable"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     obol_configure_render_target(obol_system_gl_render_tests)
 elseif(OBOL_USE_SYSTEM_GL AND WIN32 AND FLTK_FOUND)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
-        TEST_PREFIX "system-gl."
         SKIP_REGULAR_EXPRESSION "system OpenGL backend is unavailable"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     target_compile_definitions(obol_system_gl_render_tests PRIVATE OBOL_TEST_WGL)

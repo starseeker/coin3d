@@ -1020,8 +1020,7 @@ SoFaceSet::useConvexCache(SoAction * action)
     nbind = SoConvexDataCache::NONE;
   }
   if (nbind == SoConvexDataCache::NONE && normals == NULL) {
-    static SbVec3f dummynormal;
-    dummynormal.setValue(0.0f, 0.0f, 1.0f);
+    static const SbVec3f dummynormal(0.0f, 0.0f, 1.0f);
     normals = &dummynormal;
   }
 

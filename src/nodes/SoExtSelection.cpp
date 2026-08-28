@@ -1536,15 +1536,7 @@ SoExtSelectionP::testBBox(SoCallbackAction * action,
 {
   SbBox3f bbox;
   SbVec3f center;
-  const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
-  if (bboxcache && bboxcache->isValid(action->getState())) {
-    bbox = bboxcache->getProjectedBox();
-    if (bboxcache->isCenterSet()) center = bboxcache->getCenter();
-    else center = bbox.getCenter();
-  }
-  else {
-    const_cast<SoShape*>(shape)->computeBBox(action, bbox, center);
-  }
+  const_cast<SoShape*>(shape)->getBoundingBoxData(action, bbox, center);
   SbVec3f mincorner = bbox.getMin();
   SbVec3f maxcorner = bbox.getMax();
 

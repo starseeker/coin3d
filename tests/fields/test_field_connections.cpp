@@ -65,8 +65,7 @@ TEST(FieldsFieldConnections, SoSFFloatConnectFromAnotherSoSFFloat)
     SoSFFloat master, slave;
     master.setValue(3.14f);
     bool connected = slave.connectFrom(&master);
-    bool pass = connected && slave.isConnectedFromField();
-    EXPECT_TRUE(pass) << "connectFrom failed or isConnectedFromField returned false";
+    EXPECT_TRUE(connected && slave.isConnectedFromField()) << "connectFrom failed or isConnectedFromField returned false";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatValuePropagatedAfterConnectFrom)
@@ -75,8 +74,7 @@ TEST(FieldsFieldConnections, SoSFFloatValuePropagatedAfterConnectFrom)
     master.setValue(2.718f);
     slave.connectFrom(&master);
     // After connection the slave should hold the master's current value
-    bool pass = (slave.getValue() == master.getValue());
-    EXPECT_TRUE(pass) << "slave value not equal to master after connectFrom";
+    EXPECT_TRUE((slave.getValue() == master.getValue())) << "slave value not equal to master after connectFrom";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatSlaveTracksMasterValueChange)
@@ -85,8 +83,7 @@ TEST(FieldsFieldConnections, SoSFFloatSlaveTracksMasterValueChange)
     master.setValue(1.0f);
     slave.connectFrom(&master);
     master.setValue(42.0f);
-    bool pass = (slave.getValue() == 42.0f);
-    EXPECT_TRUE(pass) << "slave did not track master value change";
+    EXPECT_TRUE((slave.getValue() == 42.0f)) << "slave did not track master value change";
 }
 
 // -----------------------------------------------------------------------
@@ -97,15 +94,13 @@ TEST(FieldsFieldConnections, SoSFFloatIsConnectedTrueAfterConnectFrom)
 {
     SoSFFloat master, slave;
     slave.connectFrom(&master);
-    bool pass = slave.isConnected();
-    EXPECT_TRUE(pass) << "isConnected should be true after connectFrom";
+    EXPECT_TRUE(slave.isConnected()) << "isConnected should be true after connectFrom";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatIsConnectedFalseBeforeConnection)
 {
     SoSFFloat field;
-    bool pass = !field.isConnected();
-    EXPECT_TRUE(pass) << "isConnected should be false for unconnected field";
+    EXPECT_TRUE(!field.isConnected()) << "isConnected should be false for unconnected field";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatDisconnectClearsConnection)
@@ -114,8 +109,7 @@ TEST(FieldsFieldConnections, SoSFFloatDisconnectClearsConnection)
     master.setValue(7.0f);
     slave.connectFrom(&master);
     slave.disconnect();
-    bool pass = !slave.isConnected() && !slave.isConnectedFromField();
-    EXPECT_TRUE(pass) << "disconnect did not clear connection";
+    EXPECT_TRUE(!slave.isConnected() && !slave.isConnectedFromField()) << "disconnect did not clear connection";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatSlaveRetainsLastValueAfterDisconnect)
@@ -126,8 +120,7 @@ TEST(FieldsFieldConnections, SoSFFloatSlaveRetainsLastValueAfterDisconnect)
     // value should be propagated
     slave.disconnect();
     // After disconnect the slave retains the last propagated value
-    bool pass = (slave.getValue() == 5.5f);
-    EXPECT_TRUE(pass) << "slave did not retain value after disconnect";
+    EXPECT_TRUE((slave.getValue() == 5.5f)) << "slave did not retain value after disconnect";
 }
 
 TEST(FieldsFieldConnections, SoSFFloatMasterChangeAfterDisconnectDoesNotAffectSlave)
@@ -137,8 +130,7 @@ TEST(FieldsFieldConnections, SoSFFloatMasterChangeAfterDisconnectDoesNotAffectSl
     slave.connectFrom(&master);
     slave.disconnect();
     master.setValue(99.0f);
-    bool pass = (slave.getValue() != 99.0f);
-    EXPECT_TRUE(pass) << "slave should not track master after disconnect";
+    EXPECT_TRUE((slave.getValue() != 99.0f)) << "slave should not track master after disconnect";
 }
 
 // -----------------------------------------------------------------------
@@ -150,8 +142,7 @@ TEST(FieldsFieldConnections, SoSFFloatDisconnectFieldRemovesSpecificConnection)
     SoSFFloat master, slave;
     slave.connectFrom(&master);
     slave.disconnect(&master);
-    bool pass = !slave.isConnected();
-    EXPECT_TRUE(pass) << "disconnect(field*) did not remove connection";
+    EXPECT_TRUE(!slave.isConnected()) << "disconnect(field*) did not remove connection";
 }
 
 // -----------------------------------------------------------------------
@@ -163,8 +154,7 @@ TEST(FieldsFieldConnections, SoSFVec3fConnectFromPropagatesVectorValue)
     SoSFVec3f master, slave;
     master.setValue(SbVec3f(1.0f, 2.0f, 3.0f));
     slave.connectFrom(&master);
-    bool pass = (slave.getValue() == SbVec3f(1.0f, 2.0f, 3.0f));
-    EXPECT_TRUE(pass) << "SoSFVec3f connectFrom did not propagate value";
+    EXPECT_TRUE((slave.getValue() == SbVec3f(1.0f, 2.0f, 3.0f))) << "SoSFVec3f connectFrom did not propagate value";
 }
 
 TEST(FieldsFieldConnections, SoSFVec3fSlaveTracksMasterUpdate)
@@ -173,8 +163,7 @@ TEST(FieldsFieldConnections, SoSFVec3fSlaveTracksMasterUpdate)
     master.setValue(SbVec3f(0.0f, 0.0f, 0.0f));
     slave.connectFrom(&master);
     master.setValue(SbVec3f(4.0f, 5.0f, 6.0f));
-    bool pass = (slave.getValue() == SbVec3f(4.0f, 5.0f, 6.0f));
-    EXPECT_TRUE(pass) << "SoSFVec3f slave did not track master update";
+    EXPECT_TRUE((slave.getValue() == SbVec3f(4.0f, 5.0f, 6.0f))) << "SoSFVec3f slave did not track master update";
 }
 
 // -----------------------------------------------------------------------
@@ -191,18 +180,19 @@ TEST(FieldsFieldConnections, SoMaterialFieldConnectFromPropagatesThroughNodeFiel
     srcMat->shininess.set1Value(0, 0.75f);
     dstMat->shininess.connectFrom(&srcMat->shininess);
 
-    bool pass = (dstMat->shininess.getNum() >= 1) &&
-                (dstMat->shininess[0] == 0.75f);
-    if (pass) {
-        srcMat->shininess.set1Value(0, 0.3f);
-        pass = (dstMat->shininess.getNum() >= 1) &&
-               (dstMat->shininess[0] == 0.3f);
+    EXPECT_GE(dstMat->shininess.getNum(), 1);
+    if (dstMat->shininess.getNum() >= 1) {
+        EXPECT_FLOAT_EQ(dstMat->shininess[0], 0.75f);
+    }
+    srcMat->shininess.set1Value(0, 0.3f);
+    EXPECT_GE(dstMat->shininess.getNum(), 1);
+    if (dstMat->shininess.getNum() >= 1) {
+        EXPECT_FLOAT_EQ(dstMat->shininess[0], 0.3f);
     }
 
     dstMat->shininess.disconnect();
     srcMat->unref();
     dstMat->unref();
-    EXPECT_TRUE(pass) << "SoMaterial field connection/propagation failed";
 }
 
 // -----------------------------------------------------------------------
@@ -214,13 +204,10 @@ TEST(FieldsFieldConnections, SoSFInt32ConnectFromAndValuePropagation)
     SoSFInt32 master, slave;
     master.setValue(42);
     slave.connectFrom(&master);
-    bool pass = (slave.getValue() == 42);
-    if (pass) {
-        master.setValue(100);
-        pass = (slave.getValue() == 100);
-    }
+    EXPECT_EQ(slave.getValue(), 42);
+    master.setValue(100);
+    EXPECT_EQ(slave.getValue(), 100);
     slave.disconnect();
-    EXPECT_TRUE(pass) << "SoSFInt32 connection/propagation failed";
 }
 
 // -----------------------------------------------------------------------
@@ -234,11 +221,10 @@ TEST(FieldsFieldConnections, SoMFFloatConnectFromPropagatesMultiValueField)
     master.set1Value(1, 2.0f);
     master.set1Value(2, 3.0f);
     slave.connectFrom(&master);
-    bool pass = slave.isConnected() &&
+    EXPECT_TRUE(slave.isConnected() &&
                 (slave.getNum() == 3) &&
                 (slave[0] == 1.0f) &&
                 (slave[1] == 2.0f) &&
-                (slave[2] == 3.0f);
+                (slave[2] == 3.0f)) << "SoMFFloat connectFrom failed";
     slave.disconnect();
-    EXPECT_TRUE(pass) << "SoMFFloat connectFrom failed";
 }

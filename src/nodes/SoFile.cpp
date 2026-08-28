@@ -58,6 +58,8 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoFile.h>
+
+#include <atomic>
 #include "config.h"
 
 #include <cstring>
@@ -90,11 +92,11 @@
 class SoFileP {
 public:
   static const char UNDEFINED_FILE[];
-  static SbBool searchok;
+  static std::atomic<SbBool> searchok;
 };
 
 const char SoFileP::UNDEFINED_FILE[] = "<Undefined file>";
-SbBool SoFileP::searchok = FALSE;
+std::atomic<SbBool> SoFileP::searchok{FALSE};
 
 // *************************************************************************
 
@@ -424,7 +426,8 @@ SoFile::search(SoSearchAction * action)
   SoNode::search(action); // always include this node in the search
 
   // only search children if the user has requested it
-  if (SoFileP::searchok) SoFile::doAction((SoAction *)action);
+  if (SoFileP::searchok.load(std::memory_order_acquire))
+    SoFile::doAction((SoAction *)action);
 }
 
 // Doc from superclass.
@@ -452,7 +455,7 @@ SoFile::copyContents(const SoFieldContainer * from, SbBool copyconnections)
 void
 SoFile::setSearchOK(SbBool dosearch)
 {
-  SoFileP::searchok = dosearch;
+  SoFileP::searchok.store(dosearch, std::memory_order_release);
 }
 
 /*!
@@ -461,5 +464,5 @@ SoFile::setSearchOK(SbBool dosearch)
 SbBool
 SoFile::getSearchOK()
 {
-  return SoFileP::searchok;
+  return SoFileP::searchok.load(std::memory_order_acquire);
 }

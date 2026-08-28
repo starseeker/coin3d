@@ -87,7 +87,7 @@ static SbColor * lazy_defaultdiffuse = NULL;
 static float * lazy_defaulttransp = NULL;
 static int32_t * lazy_defaultindex = NULL;
 static uint32_t * lazy_defaultpacked = NULL;
-static SbColor * lazy_unpacked = NULL;
+static thread_local SbColor lazy_unpacked;
 
 extern "C" {
 
@@ -98,7 +98,6 @@ lazyelement_cleanup(void)
   delete lazy_defaulttransp;
   delete lazy_defaultindex;
   delete lazy_defaultpacked;
-  delete lazy_unpacked;
   lazy_defaultdiffuse = NULL; // Only need to NULL this; see initClass().
 }
 
@@ -138,7 +137,6 @@ SoLazyElement::initClass()
     lazy_defaulttransp = new float;
     lazy_defaultindex = new int32_t;
     lazy_defaultpacked = new uint32_t;
-    lazy_unpacked = new SbColor;
 
     *lazy_defaultdiffuse = getDefaultDiffuse();
     *lazy_defaulttransp = getDefaultTransparency();
@@ -455,7 +453,7 @@ SoLazyElement::getDiffuse(SoState * state, int index)
   SoLazyElement * elem = getInstance(state);
   if (elem->coinstate.packeddiffuse) {
     float dummy;
-    return lazy_unpacked->setPackedValue(elem->coinstate.packedarray[index], dummy);
+    return lazy_unpacked.setPackedValue(elem->coinstate.packedarray[index], dummy);
   }
   return elem->coinstate.diffusearray[index];
 }

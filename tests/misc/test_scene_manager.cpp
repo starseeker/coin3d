@@ -80,9 +80,8 @@ static void renderCb(void * data, SoSceneManager * /*mgr*/)
 TEST(MiscSceneManager, SoSceneManagerConstructAndDestroyWithoutCrash)
 {
     SoSceneManager * mgr = new SoSceneManager;
-    bool pass = (mgr != nullptr);
+    EXPECT_TRUE((mgr != nullptr));
     delete mgr;
-    EXPECT_TRUE(pass);
 }
 
 // -----------------------------------------------------------------------
@@ -95,10 +94,9 @@ TEST(MiscSceneManager, SoSceneManagerSetSceneGraphGetSceneGraphRoundTrip)
     SoSeparator * root = new SoSeparator;
     root->ref();
     mgr->setSceneGraph(root);
-    bool pass = (mgr->getSceneGraph() == root);
+    EXPECT_TRUE((mgr->getSceneGraph() == root)) << "SoSceneManager setSceneGraph/getSceneGraph round-trip failed";
     delete mgr;
     root->unref();
-    EXPECT_TRUE(pass) << "SoSceneManager setSceneGraph/getSceneGraph round-trip failed";
 }
 
 TEST(MiscSceneManager, SoSceneManagerSetSceneGraphNullReturnsNullFromGetSceneGraph)
@@ -108,10 +106,9 @@ TEST(MiscSceneManager, SoSceneManagerSetSceneGraphNullReturnsNullFromGetSceneGra
     root->ref();
     mgr->setSceneGraph(root);
     mgr->setSceneGraph(nullptr);
-    bool pass = (mgr->getSceneGraph() == nullptr);
+    EXPECT_TRUE((mgr->getSceneGraph() == nullptr)) << "SoSceneManager getSceneGraph should return null after setSceneGraph(null)";
     delete mgr;
     root->unref();
-    EXPECT_TRUE(pass) << "SoSceneManager getSceneGraph should return null after setSceneGraph(null)";
 }
 
 // -----------------------------------------------------------------------
@@ -124,11 +121,10 @@ TEST(MiscSceneManager, SoSceneManagerSetBackgroundColorGetBackgroundColorRoundTr
     SbColor bg(0.1f, 0.2f, 0.3f);
     mgr->setBackgroundColor(bg);
     const SbColor & got = mgr->getBackgroundColor();
-    bool pass = (std::fabs(got[0] - 0.1f) < 1e-5f) &&
+    EXPECT_TRUE((std::fabs(got[0] - 0.1f) < 1e-5f) &&
                 (std::fabs(got[1] - 0.2f) < 1e-5f) &&
-                (std::fabs(got[2] - 0.3f) < 1e-5f);
+                (std::fabs(got[2] - 0.3f) < 1e-5f)) << "SoSceneManager background colour round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager background colour round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -141,10 +137,9 @@ TEST(MiscSceneManager, SoSceneManagerSetViewportRegionGetViewportRegionRoundTrip
     SbViewportRegion vp(320, 240);
     mgr->setViewportRegion(vp);
     const SbViewportRegion & got = mgr->getViewportRegion();
-    bool pass = (got.getWindowSize()[0] == 320) &&
-                (got.getWindowSize()[1] == 240);
+    EXPECT_TRUE((got.getWindowSize()[0] == 320) &&
+                (got.getWindowSize()[1] == 240)) << "SoSceneManager setViewportRegion round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setViewportRegion round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -156,9 +151,8 @@ TEST(MiscSceneManager, SoSceneManagerSetWindowSizeGetWindowSizeRoundTrip)
     SoSceneManager * mgr = new SoSceneManager;
     mgr->setWindowSize(SbVec2s(800, 600));
     const SbVec2s & got = mgr->getWindowSize();
-    bool pass = (got[0] == 800) && (got[1] == 600);
+    EXPECT_TRUE((got[0] == 800) && (got[1] == 600)) << "SoSceneManager setWindowSize/getWindowSize round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setWindowSize/getWindowSize round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -170,9 +164,8 @@ TEST(MiscSceneManager, SoSceneManagerSetSizeGetSizeRoundTrip)
     SoSceneManager * mgr = new SoSceneManager;
     mgr->setSize(SbVec2s(400, 300));
     const SbVec2s & got = mgr->getSize();
-    bool pass = (got[0] == 400) && (got[1] == 300);
+    EXPECT_TRUE((got[0] == 400) && (got[1] == 300)) << "SoSceneManager setSize/getSize round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setSize/getSize round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -184,9 +177,8 @@ TEST(MiscSceneManager, SoSceneManagerSetOriginGetOriginRoundTrip)
     SoSceneManager * mgr = new SoSceneManager;
     mgr->setOrigin(SbVec2s(10, 20));
     const SbVec2s & got = mgr->getOrigin();
-    bool pass = (got[0] == 10) && (got[1] == 20);
+    EXPECT_TRUE((got[0] == 10) && (got[1] == 20)) << "SoSceneManager setOrigin/getOrigin round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setOrigin/getOrigin round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -196,19 +188,17 @@ TEST(MiscSceneManager, SoSceneManagerSetOriginGetOriginRoundTrip)
 TEST(MiscSceneManager, SoSceneManagerIsRGBModeDefaultsToTRUE)
 {
     SoSceneManager * mgr = new SoSceneManager;
-    bool pass = (mgr->isRGBMode() == TRUE);
+    EXPECT_TRUE((mgr->isRGBMode() == TRUE)) << "SoSceneManager isRGBMode should default to TRUE";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager isRGBMode should default to TRUE";
 }
 
 TEST(MiscSceneManager, SoSceneManagerSetRGBModeFALSERoundTrip)
 {
     SoSceneManager * mgr = new SoSceneManager;
     mgr->setRGBMode(FALSE);
-    bool pass = (mgr->isRGBMode() == FALSE);
+    EXPECT_TRUE((mgr->isRGBMode() == FALSE)) << "SoSceneManager setRGBMode(FALSE) failed";
     mgr->setRGBMode(TRUE); // restore
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setRGBMode(FALSE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -218,9 +208,8 @@ TEST(MiscSceneManager, SoSceneManagerSetRGBModeFALSERoundTrip)
 TEST(MiscSceneManager, SoSceneManagerGetGLRenderActionIsNonNullByDefault)
 {
     SoSceneManager * mgr = new SoSceneManager;
-    bool pass = (mgr->getGLRenderAction() != nullptr);
+    EXPECT_TRUE((mgr->getGLRenderAction() != nullptr)) << "SoSceneManager getGLRenderAction should not be null";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager getGLRenderAction should not be null";
 }
 
 TEST(MiscSceneManager, SoSceneManagerSetGLRenderActionGetGLRenderActionRoundTrip)
@@ -228,10 +217,9 @@ TEST(MiscSceneManager, SoSceneManagerSetGLRenderActionGetGLRenderActionRoundTrip
     SoSceneManager * mgr = new SoSceneManager;
     SoGLRenderAction * ra = new SoGLRenderAction(SbViewportRegion(256, 256));
     mgr->setGLRenderAction(ra);
-    bool pass = (mgr->getGLRenderAction() == ra);
+    EXPECT_TRUE((mgr->getGLRenderAction() == ra)) << "SoSceneManager setGLRenderAction round-trip failed";
     delete mgr;
     // The manager takes ownership; do NOT delete ra separately
-    EXPECT_TRUE(pass) << "SoSceneManager setGLRenderAction round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -241,9 +229,8 @@ TEST(MiscSceneManager, SoSceneManagerSetGLRenderActionGetGLRenderActionRoundTrip
 TEST(MiscSceneManager, SoSceneManagerGetHandleEventActionIsNonNullByDefault)
 {
     SoSceneManager * mgr = new SoSceneManager;
-    bool pass = (mgr->getHandleEventAction() != nullptr);
+    EXPECT_TRUE((mgr->getHandleEventAction() != nullptr)) << "SoSceneManager getHandleEventAction should not be null";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager getHandleEventAction should not be null";
 }
 
 // -----------------------------------------------------------------------
@@ -254,15 +241,13 @@ TEST(MiscSceneManager, SoSceneManagerSetRedrawPriorityGetRedrawPriorityRoundTrip
 {
     SoSceneManager * mgr = new SoSceneManager;
     mgr->setRedrawPriority(5u);
-    bool pass = (mgr->getRedrawPriority() == 5u);
+    EXPECT_TRUE((mgr->getRedrawPriority() == 5u)) << "SoSceneManager setRedrawPriority round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setRedrawPriority round-trip failed";
 }
 
 TEST(MiscSceneManager, SoSceneManagerGetDefaultRedrawPriorityIsNonZero)
 {
-    bool pass = (SoSceneManager::getDefaultRedrawPriority() != 0u);
-    EXPECT_TRUE(pass) << "SoSceneManager::getDefaultRedrawPriority should be non-zero";
+    EXPECT_TRUE((SoSceneManager::getDefaultRedrawPriority() != 0u)) << "SoSceneManager::getDefaultRedrawPriority should be non-zero";
 }
 
 // -----------------------------------------------------------------------
@@ -276,9 +261,8 @@ TEST(MiscSceneManager, SoSceneManagerSetAntialiasingGetAntialiasingRoundTrip)
     SbBool smooth = FALSE;
     int    passes = 0;
     mgr->getAntialiasing(smooth, passes);
-    bool pass = (smooth == TRUE) && (passes == 4);
+    EXPECT_TRUE((smooth == TRUE) && (passes == 4)) << "SoSceneManager setAntialiasing round-trip failed";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager setAntialiasing round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -288,9 +272,8 @@ TEST(MiscSceneManager, SoSceneManagerSetAntialiasingGetAntialiasingRoundTrip)
 TEST(MiscSceneManager, SoSceneManagerIsAutoRedrawFALSEBeforeSetRenderCallback)
 {
     SoSceneManager * mgr = new SoSceneManager;
-    bool pass = (mgr->isAutoRedraw() == FALSE);
+    EXPECT_TRUE((mgr->isAutoRedraw() == FALSE)) << "SoSceneManager isAutoRedraw should be FALSE before setRenderCallback";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager isAutoRedraw should be FALSE before setRenderCallback";
 }
 
 TEST(MiscSceneManager, SoSceneManagerIsAutoRedrawTRUEAfterSetRenderCallback)
@@ -298,9 +281,8 @@ TEST(MiscSceneManager, SoSceneManagerIsAutoRedrawTRUEAfterSetRenderCallback)
     SoSceneManager * mgr = new SoSceneManager;
     RenderCap cap;
     mgr->setRenderCallback(renderCb, &cap);
-    bool pass = (mgr->isAutoRedraw() == TRUE);
+    EXPECT_TRUE((mgr->isAutoRedraw() == TRUE)) << "SoSceneManager isAutoRedraw should be TRUE after setRenderCallback";
     delete mgr;
-    EXPECT_TRUE(pass) << "SoSceneManager isAutoRedraw should be TRUE after setRenderCallback";
 }
 
 TEST(MiscSceneManager, SoSceneManagerSetRenderCallbackNullDoesNotCrash)
@@ -320,14 +302,12 @@ TEST(MiscSceneManager, SoSceneManagerSetRenderCallbackNullDoesNotCrash)
 
 TEST(MiscSceneManager, SoSceneManagerIsRealTimeUpdateEnabledDefaultsToTRUE)
 {
-    bool pass = (SoSceneManager::isRealTimeUpdateEnabled() == TRUE);
-    EXPECT_TRUE(pass) << "SoSceneManager isRealTimeUpdateEnabled should default to TRUE";
+    EXPECT_TRUE((SoSceneManager::isRealTimeUpdateEnabled() == TRUE)) << "SoSceneManager isRealTimeUpdateEnabled should default to TRUE";
 }
 
 TEST(MiscSceneManager, SoSceneManagerEnableRealTimeUpdateFALSERoundTrip)
 {
     SoSceneManager::enableRealTimeUpdate(FALSE);
-    bool pass = (SoSceneManager::isRealTimeUpdateEnabled() == FALSE);
+    EXPECT_TRUE((SoSceneManager::isRealTimeUpdateEnabled() == FALSE)) << "SoSceneManager enableRealTimeUpdate(FALSE) round-trip failed";
     SoSceneManager::enableRealTimeUpdate(TRUE); // restore
-    EXPECT_TRUE(pass) << "SoSceneManager enableRealTimeUpdate(FALSE) round-trip failed";
 }

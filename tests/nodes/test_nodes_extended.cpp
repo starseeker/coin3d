@@ -120,9 +120,8 @@ TEST(NodesExtended, SoCallbackCallbackFiresDuringSoCallbackActionTraversal)
     SoCallbackAction action(vp);
     action.apply(root);
 
-    bool pass = cap.fired;
+    EXPECT_TRUE(cap.fired) << "SoCallback: callback did not fire during traversal";
     root->unref();
-    EXPECT_TRUE(pass) << "SoCallback: callback did not fire during traversal";
 }
 
 // -----------------------------------------------------------------------
@@ -148,9 +147,8 @@ TEST(NodesExtended, SoEventCallbackCallbackFiresForMatchingEvent)
     action.setEvent(&evt);
     action.apply(root);
 
-    bool pass = cap.fired;
+    EXPECT_TRUE(cap.fired) << "SoEventCallback: callback did not fire for matching event";
     root->unref();
-    EXPECT_TRUE(pass) << "SoEventCallback: callback did not fire for matching event";
 }
 
 // -----------------------------------------------------------------------
@@ -161,9 +159,8 @@ TEST(NodesExtended, SoPathSwitchTypeCheck)
 {
     SoPathSwitch * n = new SoPathSwitch;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoPathSwitch has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoPathSwitch has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -174,9 +171,8 @@ TEST(NodesExtended, SoLabelLabelFieldDefaultIsUndefinedLabel)
 {
     SoLabel * n = new SoLabel;
     n->ref();
-    bool pass = (n->label.getValue() == SbName("<Undefined label>"));
+    EXPECT_TRUE((n->label.getValue() == SbName("<Undefined label>"))) << "SoLabel default label should be '<Undefined label>'";
     n->unref();
-    EXPECT_TRUE(pass) << "SoLabel default label should be '<Undefined label>'";
 }
 
 // -----------------------------------------------------------------------
@@ -187,10 +183,9 @@ TEST(NodesExtended, SoTransformSeparatorTypeCheckAndIsOfTypeSoGroup)
 {
     SoTransformSeparator * n = new SoTransformSeparator;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType()) &&
-                n->isOfType(SoGroup::getClassTypeId());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType()) &&
+                n->isOfType(SoGroup::getClassTypeId())) << "SoTransformSeparator bad type or not SoGroup subtype";
     n->unref();
-    EXPECT_TRUE(pass) << "SoTransformSeparator bad type or not SoGroup subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -201,9 +196,8 @@ TEST(NodesExtended, SoUnitsUnitsFieldDefaultIsMETERS)
 {
     SoUnits * n = new SoUnits;
     n->ref();
-    bool pass = (n->units.getValue() == SoUnits::METERS);
+    EXPECT_TRUE((n->units.getValue() == SoUnits::METERS)) << "SoUnits default units should be METERS";
     n->unref();
-    EXPECT_TRUE(pass) << "SoUnits default units should be METERS";
 }
 
 // -----------------------------------------------------------------------
@@ -214,18 +208,16 @@ TEST(NodesExtended, SoPolygonOffsetFactorDefaultIs10)
 {
     SoPolygonOffset * n = new SoPolygonOffset;
     n->ref();
-    bool pass = (n->factor.getValue() == 1.0f);
+    EXPECT_TRUE((n->factor.getValue() == 1.0f)) << "SoPolygonOffset factor default should be 1.0";
     n->unref();
-    EXPECT_TRUE(pass) << "SoPolygonOffset factor default should be 1.0";
 }
 
 TEST(NodesExtended, SoPolygonOffsetUnitsDefaultIs10)
 {
     SoPolygonOffset * n = new SoPolygonOffset;
     n->ref();
-    bool pass = (n->units.getValue() == 1.0f);
+    EXPECT_TRUE((n->units.getValue() == 1.0f)) << "SoPolygonOffset units default should be 1.0";
     n->unref();
-    EXPECT_TRUE(pass) << "SoPolygonOffset units default should be 1.0";
 }
 
 // -----------------------------------------------------------------------
@@ -236,9 +228,8 @@ TEST(NodesExtended, SoPickStyleTypeCheck)
 {
     SoPickStyle * n = new SoPickStyle;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoPickStyle has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoPickStyle has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -249,9 +240,8 @@ TEST(NodesExtended, SoFontTypeCheck)
 {
     SoFont * n = new SoFont;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoFont has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoFont has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -266,13 +256,12 @@ TEST(NodesExtended, SoFrustumCameraTypeCheckAndFrustumFields)
     n->right .setValue( 1.0f);
     n->top   .setValue( 1.0f);
     n->bottom.setValue(-1.0f);
-    bool pass = (n->getTypeId() != SoType::badType()) &&
+    EXPECT_TRUE((n->getTypeId() != SoType::badType()) &&
                 (n->left.getValue()   == -1.0f) &&
                 (n->right.getValue()  ==  1.0f) &&
                 (n->top.getValue()    ==  1.0f) &&
-                (n->bottom.getValue() == -1.0f);
+                (n->bottom.getValue() == -1.0f)) << "SoFrustumCamera bad type or frustum field mismatch";
     n->unref();
-    EXPECT_TRUE(pass) << "SoFrustumCamera bad type or frustum field mismatch";
 }
 
 // -----------------------------------------------------------------------
@@ -283,9 +272,8 @@ TEST(NodesExtended, SoReversePerspectiveCameraTypeCheck)
 {
     SoReversePerspectiveCamera * n = new SoReversePerspectiveCamera;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoReversePerspectiveCamera has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoReversePerspectiveCamera has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -296,9 +284,8 @@ TEST(NodesExtended, SoTextureCubeMapTypeCheck)
 {
     SoTextureCubeMap * n = new SoTextureCubeMap;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoTextureCubeMap has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoTextureCubeMap has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -309,9 +296,8 @@ TEST(NodesExtended, SoTextureUnitUnitFieldDefaultIs0)
 {
     SoTextureUnit * n = new SoTextureUnit;
     n->ref();
-    bool pass = (n->unit.getValue() == 0);
+    EXPECT_TRUE((n->unit.getValue() == 0)) << "SoTextureUnit unit default should be 0";
     n->unref();
-    EXPECT_TRUE(pass) << "SoTextureUnit unit default should be 0";
 }
 
 // -----------------------------------------------------------------------
@@ -322,9 +308,8 @@ TEST(NodesExtended, SoTextureCombineTypeCheck)
 {
     SoTextureCombine * n = new SoTextureCombine;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoTextureCombine has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoTextureCombine has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -335,9 +320,8 @@ TEST(NodesExtended, SoTextureMatrixTransformTypeCheck)
 {
     SoTextureMatrixTransform * n = new SoTextureMatrixTransform;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoTextureMatrixTransform has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoTextureMatrixTransform has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -348,9 +332,8 @@ TEST(NodesExtended, SoVertexAttributeTypeCheck)
 {
     SoVertexAttribute * n = new SoVertexAttribute;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoVertexAttribute has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoVertexAttribute has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -361,7 +344,6 @@ TEST(NodesExtended, SoVertexAttributeBindingValueFieldAccessible)
 {
     SoVertexAttributeBinding * n = new SoVertexAttributeBinding;
     n->ref();
-    bool pass = (n->getTypeId() != SoType::badType());
+    EXPECT_TRUE((n->getTypeId() != SoType::badType())) << "SoVertexAttributeBinding has bad type";
     n->unref();
-    EXPECT_TRUE(pass) << "SoVertexAttributeBinding has bad type";
 }

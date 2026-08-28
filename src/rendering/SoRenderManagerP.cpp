@@ -47,9 +47,8 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 
-SbBool SoRenderManagerP::touchtimer = TRUE;
-SbBool SoRenderManagerP::cleanupfunctionset = FALSE;
-int SoRenderManagerRootSensor::debugrootnotifications = -1;
+std::atomic<SbBool> SoRenderManagerP::touchtimer{TRUE};
+std::atomic<SbBool> SoRenderManagerP::cleanupfunctionset{FALSE};
 
 #define PRIVATE(p) (p->pimpl)
 #define PUBLIC(p) (p->publ)
@@ -93,8 +92,8 @@ SoRenderManagerP::redrawshotTriggeredCB(void * data, SoSensor * /* sensor */)
 void
 SoRenderManagerP::cleanup(void)
 {
-  SoRenderManagerP::touchtimer = TRUE;
-  SoRenderManagerP::cleanupfunctionset = FALSE;
+  SoRenderManagerP::touchtimer.store(TRUE, std::memory_order_release);
+  SoRenderManagerP::cleanupfunctionset.store(FALSE, std::memory_order_release);
 }
 
 void
@@ -368,9 +367,9 @@ SoRenderManagerRootSensor::notify(SoNotList * l)
 SbBool
 SoRenderManagerRootSensor::debug(void)
 {
-  if (SoRenderManagerRootSensor::debugrootnotifications == -1) {
+  static const SbBool debugrootnotifications = [] {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_ROOT_NOTIFICATIONS");
-    SoRenderManagerRootSensor::debugrootnotifications = env && (atoi(env) > 0);
-  }
-  return SoRenderManagerRootSensor::debugrootnotifications ? TRUE : FALSE;
+    return (env && (atoi(env) > 0)) ? TRUE : FALSE;
+  }();
+  return debugrootnotifications;
 }

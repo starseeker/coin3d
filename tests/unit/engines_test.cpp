@@ -29,6 +29,17 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/nodes/SoSphere.h>
 
+// This test deliberately exercises the private generated parser boundary;
+// keep internal visibility local so public compatibility headers retain their
+// normal behavior in the rest of the grouped unit executable.
+#define OBOL_INTERNAL 1
+#include "engines/evaluator.h"
+#undef OBOL_INTERNAL
+
+#include <atomic>
+#include <thread>
+#include <vector>
+
 TEST(Engines, ConstructWithValidRuntimeTypes)
 {
     auto * calculator = new SoCalculator;
@@ -55,6 +66,31 @@ TEST(Engines, CalculatorEvaluatesConnectedFloatOutput)
     EXPECT_FLOAT_EQ(result.getValue(), 7.0f);
     result.disconnect();
     calculator->unref();
+}
+
+TEST(Engines, ConcurrentCalculatorParserKeepsTreesAndErrorsIndependent)
+{
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> threads;
+    for (int thread = 0; thread < 8; ++thread) {
+        threads.emplace_back([&] {
+            for (int iteration = 0; iteration < 200; ++iteration) {
+                so_eval_node * tree = so_eval_parse("oa = a + b");
+                if (!tree || so_eval_error()) {
+                    failed.store(true, std::memory_order_relaxed);
+                }
+                so_eval_delete(tree);
+
+                tree = so_eval_parse("oa = ;");
+                if (tree || !so_eval_error()) {
+                    failed.store(true, std::memory_order_relaxed);
+                }
+                so_eval_delete(tree);
+            }
+        });
+    }
+    for (std::thread & thread : threads) thread.join();
+    EXPECT_FALSE(failed.load(std::memory_order_relaxed));
 }
 
 TEST(Engines, ComposeVec3fPublishesConnectedVectorOutput)

@@ -76,6 +76,10 @@ jobs:
           cd build
           xvfb-run -a ctest --output-on-failure -C Release
 
+      - name: Repeat unit tests in randomized orders
+        if: matrix.name == 'no-gl-static'
+        run: build/bin/obol_unit_tests --gtest_shuffle --gtest_random_seed=0 --gtest_repeat=3
+
   address-undefined-sanitizers:
     name: Linux ASan + UBSan
     runs-on: ubuntu-latest
@@ -126,8 +130,7 @@ jobs:
           build-sanitized/bin/obol_concurrent_render_tests
           xvfb-run -a build-sanitized/bin/obol_system_gl_render_tests \
             --gtest_filter='*nanort*:*NanoRT*:*arb_shader_parameter_ranges*'
-          ctest --test-dir build-sanitized --output-on-failure \
-            -R '^TypeDynamicLoading\.'
+          build-sanitized/bin/obol_dynload_tests
 
   build-windows:
     name: Windows MSVC
@@ -281,8 +284,11 @@ jobs:
         env:
           TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
         run: |
-          setarch "$(uname -m)" -R ctest --test-dir build-tsan \
-            --output-on-failure \
-            --timeout 180 \
-            -R '^(ThreadPrimitives|ThreadSafetyStress|CadInstanceRecords|ImageFormatRegistry|ErrorHandling|TypeDynamicLoading|ProfilerSuite)\.'
+          setarch "$(uname -m)" -R build-tsan/bin/obol_unit_tests \
+            --gtest_filter='ThreadPrimitives.*:GlobalThreadSafety.*:Sensors.ConcurrentQueueProcessors*:Sensors.DelayTimeoutConfiguration*:Engines.ConcurrentCalculatorParser*:ImageFormatRegistry.*:ErrorHandling.*:ProfilerSuite.*:ActionExceptionSafety.*:SbImageThreadSafety.*:IoSodb.*'
+          setarch "$(uname -m)" -R build-tsan/bin/obol_integration_tests \
+            --gtest_filter='CadInstanceRecords.*'
+          setarch "$(uname -m)" -R build-tsan/bin/obol_stress_tests \
+            --gtest_filter='ThreadSafetyStress.*'
+          setarch "$(uname -m)" -R build-tsan/bin/obol_dynload_tests
           setarch "$(uname -m)" -R build-tsan/bin/obol_concurrent_render_tests

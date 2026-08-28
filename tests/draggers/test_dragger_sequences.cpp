@@ -121,17 +121,15 @@ static bool searchDragger(SoDragger * d, SoType t)
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerClassTypeIdValid)
 {
-    bool pass = (SoRotateCylindricalDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoRotateCylindricalDragger has bad class type";
+    EXPECT_TRUE((SoRotateCylindricalDragger::getClassTypeId() != SoType::badType())) << "SoRotateCylindricalDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerIsOfTypeSoDragger)
 {
     SoRotateCylindricalDragger * d = new SoRotateCylindricalDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoRotateCylindricalDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoRotateCylindricalDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerDefaultRotationIsIdentity)
@@ -140,9 +138,8 @@ TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerDefaultRotationIsIdenti
     d->ref();
     SbVec3f ax; float ang;
     d->rotation.getValue().getValue(ax, ang);
-    bool pass = (fabsf(ang) < 1e-5f);
+    EXPECT_TRUE((fabsf(ang) < 1e-5f)) << "default rotation is not identity";
     d->unref();
-    EXPECT_TRUE(pass) << "default rotation is not identity";
 }
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerSetGetRotationRoundTrip)
@@ -156,27 +153,24 @@ TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerSetGetRotationRoundTrip
     d->rotation.getValue().getValue(ax, ang);
     SbVec3f rax; float rang;
     r.getValue(rax, rang);
-    bool pass = (fabsf(ang - rang) < 1e-4f);
+    EXPECT_TRUE((fabsf(ang - rang) < 1e-4f)) << "rotation round-trip failed";
     d->unref();
-    EXPECT_TRUE(pass) << "rotation round-trip failed";
 }
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoRotateCylindricalDragger * d = new SoRotateCylindricalDragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerSoSearchActionFindsIt)
 {
     SoRotateCylindricalDragger * d = new SoRotateCylindricalDragger;
     d->ref();
-    bool pass = searchDragger(d, SoRotateCylindricalDragger::getClassTypeId());
+    EXPECT_TRUE(searchDragger(d, SoRotateCylindricalDragger::getClassTypeId())) << "SoSearchAction did not find it";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find it";
 }
 
 // -----------------------------------------------------------------------
@@ -185,17 +179,15 @@ TEST(DraggersDraggerSequences, SoRotateCylindricalDraggerSoSearchActionFindsIt)
 
 TEST(DraggersDraggerSequences, SoRotateSphericalDraggerClassTypeIdValid)
 {
-    bool pass = (SoRotateSphericalDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoRotateSphericalDragger has bad class type";
+    EXPECT_TRUE((SoRotateSphericalDragger::getClassTypeId() != SoType::badType())) << "SoRotateSphericalDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoRotateSphericalDraggerIsOfTypeSoDragger)
 {
     SoRotateSphericalDragger * d = new SoRotateSphericalDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoRotateSphericalDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoRotateSphericalDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoRotateSphericalDraggerSetGetRotationRoundTrip)
@@ -209,18 +201,16 @@ TEST(DraggersDraggerSequences, SoRotateSphericalDraggerSetGetRotationRoundTrip)
     d->rotation.getValue().getValue(ax, ang);
     SbVec3f rax; float rang;
     r.getValue(rax, rang);
-    bool pass = (fabsf(ang - rang) < 1e-4f);
+    EXPECT_TRUE((fabsf(ang - rang) < 1e-4f)) << "rotation round-trip failed";
     d->unref();
-    EXPECT_TRUE(pass) << "rotation round-trip failed";
 }
 
 TEST(DraggersDraggerSequences, SoRotateSphericalDraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoRotateSphericalDragger * d = new SoRotateSphericalDragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 // -----------------------------------------------------------------------
@@ -229,17 +219,15 @@ TEST(DraggersDraggerSequences, SoRotateSphericalDraggerSoGetBoundingBoxActionDoe
 
 TEST(DraggersDraggerSequences, SoScale2DraggerClassTypeIdValid)
 {
-    bool pass = (SoScale2Dragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoScale2Dragger has bad class type";
+    EXPECT_TRUE((SoScale2Dragger::getClassTypeId() != SoType::badType())) << "SoScale2Dragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoScale2DraggerIsOfTypeSoDragger)
 {
     SoScale2Dragger * d = new SoScale2Dragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoScale2Dragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoScale2Dragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoScale2DraggerDefaultScaleFactorIs111)
@@ -247,11 +235,10 @@ TEST(DraggersDraggerSequences, SoScale2DraggerDefaultScaleFactorIs111)
     SoScale2Dragger * d = new SoScale2Dragger;
     d->ref();
     SbVec3f sf = d->scaleFactor.getValue();
-    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+    EXPECT_TRUE((fabsf(sf[0] - 1.0f) < 1e-5f) &&
                 (fabsf(sf[1] - 1.0f) < 1e-5f) &&
-                (fabsf(sf[2] - 1.0f) < 1e-5f);
+                (fabsf(sf[2] - 1.0f) < 1e-5f)) << "default scaleFactor is not (1,1,1)";
     d->unref();
-    EXPECT_TRUE(pass) << "default scaleFactor is not (1,1,1)";
 }
 
 TEST(DraggersDraggerSequences, SoScale2DraggerSetGetScaleFactorRoundTrip)
@@ -260,20 +247,18 @@ TEST(DraggersDraggerSequences, SoScale2DraggerSetGetScaleFactorRoundTrip)
     d->ref();
     d->scaleFactor.setValue(2.0f, 3.0f, 1.0f);
     SbVec3f sf = d->scaleFactor.getValue();
-    bool pass = (fabsf(sf[0] - 2.0f) < 1e-5f) &&
+    EXPECT_TRUE((fabsf(sf[0] - 2.0f) < 1e-5f) &&
                 (fabsf(sf[1] - 3.0f) < 1e-5f) &&
-                (fabsf(sf[2] - 1.0f) < 1e-5f);
+                (fabsf(sf[2] - 1.0f) < 1e-5f)) << "scaleFactor round-trip failed";
     d->unref();
-    EXPECT_TRUE(pass) << "scaleFactor round-trip failed";
 }
 
 TEST(DraggersDraggerSequences, SoScale2DraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoScale2Dragger * d = new SoScale2Dragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 // -----------------------------------------------------------------------
@@ -282,17 +267,15 @@ TEST(DraggersDraggerSequences, SoScale2DraggerSoGetBoundingBoxActionDoesNotCrash
 
 TEST(DraggersDraggerSequences, SoScale2UniformDraggerClassTypeIdValid)
 {
-    bool pass = (SoScale2UniformDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoScale2UniformDragger has bad class type";
+    EXPECT_TRUE((SoScale2UniformDragger::getClassTypeId() != SoType::badType())) << "SoScale2UniformDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoScale2UniformDraggerIsOfTypeSoDragger)
 {
     SoScale2UniformDragger * d = new SoScale2UniformDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoScale2UniformDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoScale2UniformDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoScale2UniformDraggerDefaultScaleFactorIs111)
@@ -300,9 +283,8 @@ TEST(DraggersDraggerSequences, SoScale2UniformDraggerDefaultScaleFactorIs111)
     SoScale2UniformDragger * d = new SoScale2UniformDragger;
     d->ref();
     SbVec3f sf = d->scaleFactor.getValue();
-    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f);
+    EXPECT_TRUE((fabsf(sf[0] - 1.0f) < 1e-5f)) << "default scaleFactor is not (1,1,1)";
     d->unref();
-    EXPECT_TRUE(pass) << "default scaleFactor is not (1,1,1)";
 }
 
 // -----------------------------------------------------------------------
@@ -311,17 +293,15 @@ TEST(DraggersDraggerSequences, SoScale2UniformDraggerDefaultScaleFactorIs111)
 
 TEST(DraggersDraggerSequences, SoScaleUniformDraggerClassTypeIdValid)
 {
-    bool pass = (SoScaleUniformDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoScaleUniformDragger has bad class type";
+    EXPECT_TRUE((SoScaleUniformDragger::getClassTypeId() != SoType::badType())) << "SoScaleUniformDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoScaleUniformDraggerIsOfTypeSoDragger)
 {
     SoScaleUniformDragger * d = new SoScaleUniformDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoScaleUniformDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoScaleUniformDragger not a SoDragger subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -330,17 +310,15 @@ TEST(DraggersDraggerSequences, SoScaleUniformDraggerIsOfTypeSoDragger)
 
 TEST(DraggersDraggerSequences, SoJackDraggerClassTypeIdValid)
 {
-    bool pass = (SoJackDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoJackDragger has bad class type";
+    EXPECT_TRUE((SoJackDragger::getClassTypeId() != SoType::badType())) << "SoJackDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoJackDraggerIsOfTypeSoDragger)
 {
     SoJackDragger * d = new SoJackDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoJackDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoJackDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoJackDraggerDefaultFields)
@@ -351,20 +329,18 @@ TEST(DraggersDraggerSequences, SoJackDraggerDefaultFields)
     SbVec3f t  = d->translation.getValue();
     SbVec3f ax; float ang;
     d->rotation.getValue().getValue(ax, ang);
-    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f) &&
+    EXPECT_TRUE((fabsf(sf[0] - 1.0f) < 1e-5f) &&
                 (fabsf(t[0]) < 1e-5f) &&
-                (fabsf(ang) < 1e-5f);
+                (fabsf(ang) < 1e-5f)) << "SoJackDragger default fields incorrect";
     d->unref();
-    EXPECT_TRUE(pass) << "SoJackDragger default fields incorrect";
 }
 
 TEST(DraggersDraggerSequences, SoJackDraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoJackDragger * d = new SoJackDragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 // -----------------------------------------------------------------------
@@ -373,17 +349,15 @@ TEST(DraggersDraggerSequences, SoJackDraggerSoGetBoundingBoxActionDoesNotCrash)
 
 TEST(DraggersDraggerSequences, SoDragPointDraggerClassTypeIdValid)
 {
-    bool pass = (SoDragPointDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoDragPointDragger has bad class type";
+    EXPECT_TRUE((SoDragPointDragger::getClassTypeId() != SoType::badType())) << "SoDragPointDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoDragPointDraggerIsOfTypeSoDragger)
 {
     SoDragPointDragger * d = new SoDragPointDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoDragPointDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoDragPointDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoDragPointDraggerDefaultTranslationIs000)
@@ -391,11 +365,10 @@ TEST(DraggersDraggerSequences, SoDragPointDraggerDefaultTranslationIs000)
     SoDragPointDragger * d = new SoDragPointDragger;
     d->ref();
     SbVec3f t = d->translation.getValue();
-    bool pass = (fabsf(t[0]) < 1e-5f) &&
+    EXPECT_TRUE((fabsf(t[0]) < 1e-5f) &&
                 (fabsf(t[1]) < 1e-5f) &&
-                (fabsf(t[2]) < 1e-5f);
+                (fabsf(t[2]) < 1e-5f)) << "default translation is not (0,0,0)";
     d->unref();
-    EXPECT_TRUE(pass) << "default translation is not (0,0,0)";
 }
 
 TEST(DraggersDraggerSequences, SoDragPointDraggerSetGetTranslationRoundTrip)
@@ -404,11 +377,10 @@ TEST(DraggersDraggerSequences, SoDragPointDraggerSetGetTranslationRoundTrip)
     d->ref();
     d->translation.setValue(1.0f, 2.0f, 3.0f);
     SbVec3f t = d->translation.getValue();
-    bool pass = (fabsf(t[0] - 1.0f) < 1e-5f) &&
+    EXPECT_TRUE((fabsf(t[0] - 1.0f) < 1e-5f) &&
                 (fabsf(t[1] - 2.0f) < 1e-5f) &&
-                (fabsf(t[2] - 3.0f) < 1e-5f);
+                (fabsf(t[2] - 3.0f) < 1e-5f)) << "translation round-trip failed";
     d->unref();
-    EXPECT_TRUE(pass) << "translation round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -417,17 +389,15 @@ TEST(DraggersDraggerSequences, SoDragPointDraggerSetGetTranslationRoundTrip)
 
 TEST(DraggersDraggerSequences, SoTrackballDraggerClassTypeIdValid)
 {
-    bool pass = (SoTrackballDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTrackballDragger has bad class type";
+    EXPECT_TRUE((SoTrackballDragger::getClassTypeId() != SoType::badType())) << "SoTrackballDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoTrackballDraggerIsOfTypeSoDragger)
 {
     SoTrackballDragger * d = new SoTrackballDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoTrackballDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoTrackballDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoTrackballDraggerDefaultRotationIsIdentity)
@@ -436,18 +406,16 @@ TEST(DraggersDraggerSequences, SoTrackballDraggerDefaultRotationIsIdentity)
     d->ref();
     SbVec3f ax; float ang;
     d->rotation.getValue().getValue(ax, ang);
-    bool pass = (fabsf(ang) < 1e-5f);
+    EXPECT_TRUE((fabsf(ang) < 1e-5f)) << "default rotation is not identity";
     d->unref();
-    EXPECT_TRUE(pass) << "default rotation is not identity";
 }
 
 TEST(DraggersDraggerSequences, SoTrackballDraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoTrackballDragger * d = new SoTrackballDragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 // -----------------------------------------------------------------------
@@ -456,17 +424,15 @@ TEST(DraggersDraggerSequences, SoTrackballDraggerSoGetBoundingBoxActionDoesNotCr
 
 TEST(DraggersDraggerSequences, SoTabPlaneDraggerClassTypeIdValid)
 {
-    bool pass = (SoTabPlaneDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTabPlaneDragger has bad class type";
+    EXPECT_TRUE((SoTabPlaneDragger::getClassTypeId() != SoType::badType())) << "SoTabPlaneDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoTabPlaneDraggerIsOfTypeSoDragger)
 {
     SoTabPlaneDragger * d = new SoTabPlaneDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoTabPlaneDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoTabPlaneDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoTabPlaneDraggerDefaultScaleFactorIs111)
@@ -474,18 +440,16 @@ TEST(DraggersDraggerSequences, SoTabPlaneDraggerDefaultScaleFactorIs111)
     SoTabPlaneDragger * d = new SoTabPlaneDragger;
     d->ref();
     SbVec3f sf = d->scaleFactor.getValue();
-    bool pass = (fabsf(sf[0] - 1.0f) < 1e-5f);
+    EXPECT_TRUE((fabsf(sf[0] - 1.0f) < 1e-5f)) << "default scaleFactor is not (1,1,1)";
     d->unref();
-    EXPECT_TRUE(pass) << "default scaleFactor is not (1,1,1)";
 }
 
 TEST(DraggersDraggerSequences, SoTabPlaneDraggerSoGetBoundingBoxActionDoesNotCrash)
 {
     SoTabPlaneDragger * d = new SoTabPlaneDragger;
     d->ref();
-    bool pass = bboxDragger(d);
+    EXPECT_TRUE(bboxDragger(d)) << "SoGetBoundingBoxAction crashed";
     d->unref();
-    EXPECT_TRUE(pass) << "SoGetBoundingBoxAction crashed";
 }
 
 // -----------------------------------------------------------------------
@@ -494,17 +458,15 @@ TEST(DraggersDraggerSequences, SoTabPlaneDraggerSoGetBoundingBoxActionDoesNotCra
 
 TEST(DraggersDraggerSequences, SoPointLightDraggerClassTypeIdValid)
 {
-    bool pass = (SoPointLightDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPointLightDragger has bad class type";
+    EXPECT_TRUE((SoPointLightDragger::getClassTypeId() != SoType::badType())) << "SoPointLightDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoPointLightDraggerIsOfTypeSoDragger)
 {
     SoPointLightDragger * d = new SoPointLightDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoPointLightDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoPointLightDragger not a SoDragger subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -513,17 +475,15 @@ TEST(DraggersDraggerSequences, SoPointLightDraggerIsOfTypeSoDragger)
 
 TEST(DraggersDraggerSequences, SoDirectionalLightDraggerClassTypeIdValid)
 {
-    bool pass = (SoDirectionalLightDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoDirectionalLightDragger has bad class type";
+    EXPECT_TRUE((SoDirectionalLightDragger::getClassTypeId() != SoType::badType())) << "SoDirectionalLightDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoDirectionalLightDraggerIsOfTypeSoDragger)
 {
     SoDirectionalLightDragger * d = new SoDirectionalLightDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoDirectionalLightDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoDirectionalLightDragger not a SoDragger subtype";
 }
 
 TEST(DraggersDraggerSequences, SoDirectionalLightDraggerDefaultTranslationIs000)
@@ -532,9 +492,8 @@ TEST(DraggersDraggerSequences, SoDirectionalLightDraggerDefaultTranslationIs000)
     d->ref();
     SbVec3f t = d->translation.getValue();
     // Default should be (0,0,0)
-    bool pass = (t.length() < 1e-5f);
+    EXPECT_TRUE((t.length() < 1e-5f)) << "default translation is not zero";
     d->unref();
-    EXPECT_TRUE(pass) << "default translation is not zero";
 }
 
 // -----------------------------------------------------------------------
@@ -543,17 +502,15 @@ TEST(DraggersDraggerSequences, SoDirectionalLightDraggerDefaultTranslationIs000)
 
 TEST(DraggersDraggerSequences, SoSpotLightDraggerClassTypeIdValid)
 {
-    bool pass = (SoSpotLightDragger::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoSpotLightDragger has bad class type";
+    EXPECT_TRUE((SoSpotLightDragger::getClassTypeId() != SoType::badType())) << "SoSpotLightDragger has bad class type";
 }
 
 TEST(DraggersDraggerSequences, SoSpotLightDraggerIsOfTypeSoDragger)
 {
     SoSpotLightDragger * d = new SoSpotLightDragger;
     d->ref();
-    bool pass = d->isOfType(SoDragger::getClassTypeId());
+    EXPECT_TRUE(d->isOfType(SoDragger::getClassTypeId())) << "SoSpotLightDragger not a SoDragger subtype";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSpotLightDragger not a SoDragger subtype";
 }
 
 // -----------------------------------------------------------------------
@@ -564,34 +521,30 @@ TEST(DraggersDraggerSequences, SoSearchActionFindsSoRotateCylindricalDragger)
 {
     SoRotateCylindricalDragger * d = new SoRotateCylindricalDragger;
     d->ref();
-    bool pass = searchDragger(d, SoRotateCylindricalDragger::getClassTypeId());
+    EXPECT_TRUE(searchDragger(d, SoRotateCylindricalDragger::getClassTypeId())) << "SoSearchAction did not find it";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find it";
 }
 
 TEST(DraggersDraggerSequences, SoSearchActionFindsSoRotateSphericalDragger)
 {
     SoRotateSphericalDragger * d = new SoRotateSphericalDragger;
     d->ref();
-    bool pass = searchDragger(d, SoRotateSphericalDragger::getClassTypeId());
+    EXPECT_TRUE(searchDragger(d, SoRotateSphericalDragger::getClassTypeId())) << "SoSearchAction did not find it";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find it";
 }
 
 TEST(DraggersDraggerSequences, SoSearchActionFindsSoJackDragger)
 {
     SoJackDragger * d = new SoJackDragger;
     d->ref();
-    bool pass = searchDragger(d, SoJackDragger::getClassTypeId());
+    EXPECT_TRUE(searchDragger(d, SoJackDragger::getClassTypeId())) << "SoSearchAction did not find it";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find it";
 }
 
 TEST(DraggersDraggerSequences, SoSearchActionFindsSoTrackballDragger)
 {
     SoTrackballDragger * d = new SoTrackballDragger;
     d->ref();
-    bool pass = searchDragger(d, SoTrackballDragger::getClassTypeId());
+    EXPECT_TRUE(searchDragger(d, SoTrackballDragger::getClassTypeId())) << "SoSearchAction did not find it";
     d->unref();
-    EXPECT_TRUE(pass) << "SoSearchAction did not find it";
 }

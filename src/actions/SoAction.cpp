@@ -211,6 +211,8 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <exception>
+#include <utility>
 
 #include <Inventor/actions/SoActions.h>
 
@@ -329,6 +331,38 @@ SoType SoAction::classTypeId STATIC_SOTYPE_INIT;
 // *************************************************************************
 
 #define PRIVATE(obj) ((obj)->pimpl)
+
+namespace {
+
+template <typename Function>
+class SoActionScopeExit {
+public:
+  explicit SoActionScopeExit(Function && function)
+    : function_(std::move(function)), active_(true) { }
+
+  SoActionScopeExit(const SoActionScopeExit &) = delete;
+  SoActionScopeExit & operator=(const SoActionScopeExit &) = delete;
+
+  ~SoActionScopeExit() noexcept
+  {
+    if (this->active_) this->function_();
+  }
+
+  void release() noexcept { this->active_ = false; }
+
+private:
+  Function function_;
+  bool active_;
+};
+
+template <typename Function>
+SoActionScopeExit<Function>
+soaction_scope_exit(Function && function)
+{
+  return SoActionScopeExit<Function>(std::forward<Function>(function));
+}
+
+} // namespace
 
 /*!
   Default constructor, does all necessary top level initialization.
@@ -456,10 +490,26 @@ void
 SoAction::apply(SoNode * root)
 {
   SoDB::readlock();
+  const auto databaseunlock = soaction_scope_exit([] { SoDB::readunlock(); });
   // need to store these in case action is re-applied
   AppliedCode storedcode = PRIVATE(this)->appliedcode;
   SoActionP::AppliedData storeddata = PRIVATE(this)->applieddata;
   PathCode storedcurr = this->currentpathcode;
+  const auto restoreappliedstate = soaction_scope_exit([&] {
+    PRIVATE(this)->appliedcode = storedcode;
+    PRIVATE(this)->applieddata = storeddata;
+    this->currentpathcode = storedcurr;
+  });
+  const int exceptioncount = std::uncaught_exceptions();
+  const auto recoverfailedtraversal = soaction_scope_exit([&] {
+    if (std::uncaught_exceptions() > exceptioncount) {
+      // Arbitrary nodes can leave both the traversal path and SoState stack
+      // pushed when an application callback throws. Recreate the state on
+      // the next apply instead of reusing that partially unwound traversal.
+      this->currentpath.truncate(0);
+      this->invalidateState();
+    }
+  });
 
   // This is a pretty good indicator on whether or not we remembered
   // to use the SO_ACTION_CONSTRUCTOR() macro in the constructor of
@@ -513,6 +563,7 @@ SoAction::apply(SoNode * root)
 #endif // OBOL_DEBUG
     // So the graph is not deallocated during traversal.
     root->ref();
+    const auto rootunref = soaction_scope_exit([root] { root->unrefNoDelete(); });
     this->currentpath.setHead(root);
 
     // make sure state is created before traversing
@@ -576,14 +627,8 @@ SoAction::apply(SoNode * root)
         }
       }
     }
-
     PRIVATE(this)->applieddata.node = NULL;
-    root->unrefNoDelete();
   }
-  PRIVATE(this)->appliedcode = storedcode;
-  PRIVATE(this)->applieddata = storeddata;
-  this->currentpathcode = storedcurr;
-  SoDB::readunlock();
 }
 
 /*!
@@ -602,10 +647,23 @@ void
 SoAction::apply(SoPath * path)
 {
   SoDB::readlock();
+  const auto databaseunlock = soaction_scope_exit([] { SoDB::readunlock(); });
   // need to store these in case action in reapplied
   AppliedCode storedcode = PRIVATE(this)->appliedcode;
   SoActionP::AppliedData storeddata = PRIVATE(this)->applieddata;
   PathCode storedcurr = this->currentpathcode;
+  const auto restoreappliedstate = soaction_scope_exit([&] {
+    PRIVATE(this)->appliedcode = storedcode;
+    PRIVATE(this)->applieddata = storeddata;
+    this->currentpathcode = storedcurr;
+  });
+  const int exceptioncount = std::uncaught_exceptions();
+  const auto recoverfailedtraversal = soaction_scope_exit([&] {
+    if (std::uncaught_exceptions() > exceptioncount) {
+      this->currentpath.truncate(0);
+      this->invalidateState();
+    }
+  });
 
   // This is a pretty good indicator on whether or not we remembered
   // to use the SO_ACTION_CONSTRUCTOR() macro in the constructor of
@@ -624,6 +682,7 @@ SoAction::apply(SoPath * path)
 
   // So the path is not deallocated during traversal.
   path->ref();
+  const auto pathunref = soaction_scope_exit([path] { path->unrefNoDelete(); });
 
   this->currentpathcode =
     path->getFullLength() > 1 ? SoAction::IN_PATH : SoAction::BELOW_PATH;
@@ -639,12 +698,6 @@ SoAction::apply(SoPath * path)
     this->beginTraversal(node);
     this->endTraversal(node);
   }
-
-  path->unrefNoDelete();
-  PRIVATE(this)->appliedcode = storedcode;
-  PRIVATE(this)->applieddata = storeddata;
-  this->currentpathcode = storedcurr;
-  SoDB::readunlock();
 }
 
 /*!
@@ -664,13 +717,13 @@ void
 SoAction::apply(const SoPathList & pathlist, SbBool obeysrules)
 {
   SoDB::readlock();
+  const auto databaseunlock = soaction_scope_exit([] { SoDB::readunlock(); });
   // This is a pretty good indicator on whether or not we remembered
   // to use the SO_ACTION_CONSTRUCTOR() macro in the constructor of
   // the SoAction subclass.
   assert(this->traversalMethods);
   this->traversalMethods->setUp();
   if (pathlist.getLength() == 0) {
-    SoDB::readunlock();
     return;
   }
 
@@ -678,6 +731,20 @@ SoAction::apply(const SoPathList & pathlist, SbBool obeysrules)
   AppliedCode storedcode = PRIVATE(this)->appliedcode;
   SoActionP::AppliedData storeddata = PRIVATE(this)->applieddata;
   PathCode storedcurr = this->currentpathcode;
+  const auto restoreappliedstate = soaction_scope_exit([&] {
+    delete PRIVATE(this)->applieddata.pathlistdata.compactlist;
+    PRIVATE(this)->applieddata.pathlistdata.compactlist = NULL;
+    PRIVATE(this)->appliedcode = storedcode;
+    PRIVATE(this)->applieddata = storeddata;
+    this->currentpathcode = storedcurr;
+  });
+  const int exceptioncount = std::uncaught_exceptions();
+  const auto recoverfailedtraversal = soaction_scope_exit([&] {
+    if (std::uncaught_exceptions() > exceptioncount) {
+      this->currentpath.truncate(0);
+      this->invalidateState();
+    }
+  });
 
   PRIVATE(this)->terminated = FALSE;
 
@@ -753,16 +820,13 @@ SoAction::apply(const SoPathList & pathlist, SbBool obeysrules)
           PRIVATE(this)->applieddata.pathlistdata.compactlist = NULL;
         }
         this->beginTraversal(templist[0]->getHead());
+        this->endTraversal(templist[0]->getHead());
         delete PRIVATE(this)->applieddata.pathlistdata.compactlist;
         PRIVATE(this)->applieddata.pathlistdata.compactlist = NULL;
         templist.truncate(0);
       }
     }
   }
-  PRIVATE(this)->appliedcode = storedcode;
-  PRIVATE(this)->applieddata = storeddata;
-  this->currentpathcode = storedcurr;
-  SoDB::readunlock();
 }
 
 /*!

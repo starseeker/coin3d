@@ -639,7 +639,10 @@ cc_dl_open(const char * filename)
        somewhere else between us opening it, and until it is used for
        resolving symbols.
     */
-    h->nativehnd = LoadLibrary(filename);
+    // The loader interface accepts narrow UTF-8/locale strings throughout.
+    // Spell out the matching Win32 API variant so a consumer or CI build
+    // defining UNICODE cannot silently redirect this call to LoadLibraryW.
+    h->nativehnd = LoadLibraryA(filename);
 
     if (cc_dl_debugging() && (h->nativehnd == NULL)) {
       std::string funcstr = std::string("LoadLibrary(\"") + filename + "\")";
@@ -647,7 +650,7 @@ cc_dl_open(const char * filename)
     }
   }
   else {
-    h->nativehnd = GetModuleHandle(NULL);
+    h->nativehnd = GetModuleHandleA(NULL);
     if (cc_dl_debugging() && (h->nativehnd == NULL)) {
       cc_win32_print_error("cc_dl_open", "GetModuleHandle(NULL)", GetLastError());
     }
@@ -721,7 +724,8 @@ cc_dl_open(const char * filename)
     if (cc_dl_debugging()) {
 #ifdef HAVE_WINDLL_RUNTIME_BINDING
       char libpath[512];
-      DWORD retval = GetModuleFileName((HINSTANCE) h->nativehnd, libpath, sizeof(libpath));
+      DWORD retval = GetModuleFileNameA(
+        (HINSTANCE) h->nativehnd, libpath, static_cast<DWORD>(sizeof(libpath)));
       assert(retval > 0 && "GetModuleFileName() failed");
       libpath[sizeof(libpath) - 1] = 0;
       cc_debugerror_postinfo("cc_dl_open", "Opened library '%s'", libpath);

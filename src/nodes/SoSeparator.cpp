@@ -66,6 +66,7 @@
 #include <cerrno>
 #include <cstdlib> // strtol()
 #include <climits> // LONG_MIN, LONG_MAX
+#include <mutex>
 
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -112,7 +113,7 @@
 
 // Maximum number of caches available for allocation for the
 // rendercaching.
-int SoSeparator::numrendercaches = 2;
+std::atomic<int> SoSeparator::numrendercaches{2};
 
 // *************************************************************************
 
@@ -338,13 +339,6 @@ public:
     glcachestorage->applyToAll(invalidate_gl_cache, NULL);
   }
 
-  void lock(void) {
-    this->mutex.lock();
-  }
-  void unlock(void) {
-    this->mutex.unlock();
-  }
-
   static SbBool doCull(SoSeparatorP * thisp, SoState * state,
                        SbBool (* cullfunc)(SoState *, const SbBox3f &, const SbBool));
 };
@@ -455,7 +449,7 @@ SoSeparator::initClass(void)
 
   SO_ENABLE(SoGetBoundingBoxAction, SoCacheElement);
   SO_ENABLE(SoGLRenderAction, SoCacheElement);
-  SoSeparator::numrendercaches = 2;
+  SoSeparator::numrendercaches.store(2, std::memory_order_release);
 
   // Environment-derived global policy belongs to the serial initialization
   // phase, not the first concurrently-created separator.
@@ -520,6 +514,12 @@ SoSeparator::getBoundingBox(SoGetBoundingBoxAction * action)
     break;
   }
 
+  // Bounding-box caches and their heuristic counters are shared by all
+  // traversals of this separator.  Serialize the complete cache transaction:
+  // publishing a cache before its child traversal is complete lets another
+  // action consume or replace a partially initialized cache.
+  const std::lock_guard<SbMutex> cacheguard(PRIVATE(this)->mutex);
+
   SbBool validcache = iscaching && PRIVATE(this)->bboxcache && PRIVATE(this)->bboxcache->isValid(state);
 
   if (iscaching && validcache) {
@@ -550,9 +550,6 @@ SoSeparator::getBoundingBox(SoGetBoundingBoxAction * action)
     state->push();
 
     if (iscaching) {
-      // lock before changing the bboxcache pointer so that the notify()
-      // function can be used by another thread.
-      PRIVATE(this)->lock();
       // if we get here, we know bbox cache is not created or is invalid
       if (PRIVATE(this)->bboxcache) {
         PRIVATE(this)->bboxcache_destroycount++;
@@ -560,7 +557,6 @@ SoSeparator::getBoundingBox(SoGetBoundingBoxAction * action)
       }
       PRIVATE(this)->bboxcache = new SoBoundingBoxCache(state);
       PRIVATE(this)->bboxcache->ref();
-      PRIVATE(this)->unlock();
       // set active cache to record cache dependencies
       SoCacheElement::set(state, PRIVATE(this)->bboxcache);
     }
@@ -660,9 +656,11 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
         return;
       }
     }
-    PRIVATE(this)->lock();
-    SoGLCacheList * glcachelist = PRIVATE(this)->getGLCacheList(TRUE);
-    PRIVATE(this)->unlock();
+    SoGLCacheList * glcachelist;
+    {
+      const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+      glcachelist = PRIVATE(this)->getGLCacheList(TRUE);
+    }
     if (glcachelist->call(action)) {
 #if GLCACHE_DEBUG // debug
       SoDebugError::postInfo("SoSeparator::GLRenderBelowPath",
@@ -836,10 +834,23 @@ ray_intersect(SoRayPickAction * action, const SbBox3f &box)
 void
 SoSeparator::rayPick(SoRayPickAction * action)
 {
-  if (this->pickCulling.getValue() == OFF ||
-      !PRIVATE(this)->bboxcache || !PRIVATE(this)->bboxcache->isValid(action->getState()) ||
-      !action->hasWorldSpaceRay() ||
-      ray_intersect(action, PRIVATE(this)->bboxcache->getProjectedBox())) {
+  if (this->pickCulling.getValue() == OFF) {
+    SoSeparator::doAction(action);
+    return;
+  }
+
+  SbBox3f projectedbox;
+  SbBool validcache = FALSE;
+  {
+    const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
+    if (PRIVATE(this)->bboxcache &&
+        PRIVATE(this)->bboxcache->isValid(action->getState())) {
+      projectedbox = PRIVATE(this)->bboxcache->getProjectedBox();
+      validcache = TRUE;
+    }
+  }
+  if (!validcache || !action->hasWorldSpaceRay() ||
+      ray_intersect(action, projectedbox)) {
     SoSeparator::doAction(action);
   }
 }
@@ -891,7 +902,7 @@ SoSeparator::getMatrix(SoGetMatrixAction * action)
 void
 SoSeparator::setNumRenderCaches(const int howmany)
 {
-  SoSeparator::numrendercaches = howmany;
+  SoSeparator::numrendercaches.store(howmany, std::memory_order_release);
 }
 
 /*!
@@ -903,7 +914,7 @@ SoSeparator::setNumRenderCaches(const int howmany)
 int
 SoSeparator::getNumRenderCaches(void)
 {
-  return SoSeparator::numrendercaches;
+  return SoSeparator::numrendercaches.load(std::memory_order_acquire);
 }
 
 // Doc from superclass.
@@ -931,11 +942,10 @@ SoSeparator::notify(SoNotList * nl)
 
   // lock before using the cache pointers so that we know the pointers
   // are valid while reading them
-  PRIVATE(this)->lock();
+  const std::lock_guard<SbMutex> guard(PRIVATE(this)->mutex);
   if (PRIVATE(this)->bboxcache) PRIVATE(this)->bboxcache->invalidate();
   PRIVATE(this)->invalidateGLCaches();
   PRIVATE(this)->hassoundchild = SoSeparatorP::MAYBE;
-  PRIVATE(this)->unlock();
 }
 
 
@@ -955,6 +965,7 @@ SoSeparatorP::doCull(SoSeparatorP * thisp, SoState * state,
   if (PUBLIC(thisp)->renderCulling.getValue() == SoSeparator::OFF) return FALSE;
   if (SoCullElement::completelyInside(state)) return FALSE;
 
+  const std::lock_guard<SbMutex> guard(thisp->mutex);
   SbBool outside = FALSE;
   if (thisp->bboxcache &&
       thisp->bboxcache->isValid(state)) {

@@ -117,11 +117,10 @@ TEST(FieldsMfFields, SoMFFloatSet1ValueGetNumOperator)
     field.set1Value(0, 1.0f);
     field.set1Value(1, 2.0f);
     field.set1Value(2, 3.0f);
-    bool pass = (field.getNum() == 3) &&
+    EXPECT_TRUE((field.getNum() == 3) &&
                 (field[0] == 1.0f) &&
                 (field[1] == 2.0f) &&
-                (field[2] == 3.0f);
-    EXPECT_TRUE(pass) << "SoMFFloat set/get values failed";
+                (field[2] == 3.0f)) << "SoMFFloat set/get values failed";
 }
 
 // -----------------------------------------------------------------------
@@ -133,10 +132,9 @@ TEST(FieldsMfFields, SoMFVec3fSet1ValueGetNumOperator)
     SoMFVec3f field;
     field.set1Value(0, SbVec3f(1.0f, 0.0f, 0.0f));
     field.set1Value(1, SbVec3f(0.0f, 1.0f, 0.0f));
-    bool pass = (field.getNum() == 2) &&
+    EXPECT_TRUE((field.getNum() == 2) &&
                 (field[0] == SbVec3f(1.0f, 0.0f, 0.0f)) &&
-                (field[1] == SbVec3f(0.0f, 1.0f, 0.0f));
-    EXPECT_TRUE(pass) << "SoMFVec3f set/get values failed";
+                (field[1] == SbVec3f(0.0f, 1.0f, 0.0f))) << "SoMFVec3f set/get values failed";
 }
 
 // -----------------------------------------------------------------------
@@ -148,10 +146,9 @@ TEST(FieldsMfFields, SoMFStringSet1ValueGetNumOperator)
     SoMFString field;
     field.set1Value(0, "foo");
     field.set1Value(1, "bar");
-    bool pass = (field.getNum() == 2) &&
+    EXPECT_TRUE((field.getNum() == 2) &&
                 (field[0] == SbString("foo")) &&
-                (field[1] == SbString("bar"));
-    EXPECT_TRUE(pass) << "SoMFString set/get values failed";
+                (field[1] == SbString("bar"))) << "SoMFString set/get values failed";
 }
 
 // -----------------------------------------------------------------------
@@ -165,10 +162,9 @@ TEST(FieldsMfFields, SoMFInt32DeleteValues)
     field.set1Value(1, 20);
     field.set1Value(2, 30);
     field.deleteValues(1, 1); // remove element at index 1
-    bool pass = (field.getNum() == 2) &&
+    EXPECT_TRUE((field.getNum() == 2) &&
                 (field[0] == 10) &&
-                (field[1] == 30);
-    EXPECT_TRUE(pass) << "SoMFInt32 deleteValues failed";
+                (field[1] == 30)) << "SoMFInt32 deleteValues failed";
 }
 
 // -----------------------------------------------------------------------
@@ -180,8 +176,7 @@ TEST(FieldsMfFields, SoMFColorSet1ValueOperator)
     SoMFColor field;
     field.set1Value(0, SbColor(1.0f, 0.0f, 0.0f));
     field.set1Value(1, SbColor(0.0f, 1.0f, 0.0f));
-    bool pass = (field.getNum() == 2) &&
+    EXPECT_TRUE((field.getNum() == 2) &&
                 (field[0] == SbColor(1.0f, 0.0f, 0.0f)) &&
-                (field[1] == SbColor(0.0f, 1.0f, 0.0f));
-    EXPECT_TRUE(pass) << "SoMFColor set/get values failed";
+                (field[1] == SbColor(0.0f, 1.0f, 0.0f))) << "SoMFColor set/get values failed";
 }

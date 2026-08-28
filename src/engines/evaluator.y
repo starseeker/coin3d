@@ -52,6 +52,7 @@
 #endif /* HAVE_IO_H */
 #include <Inventor/basic.h>
 #include "engines/evaluator.h"
+#include <mutex>
 %}
 
 %define api.prefix {so_eval}
@@ -243,8 +244,9 @@ get_regname(char reg, int regtype)
 #include "so_eval.ic" /* our lexical scanner */
 
 /* some very simple error handling for now :) */
-static char *myerrorptr;
-static char myerrorbuf[512];
+static std::mutex evaluator_parse_mutex;
+static thread_local char *myerrorptr;
+static thread_local char myerrorbuf[512];
 
 /*
  * parse the text string into a tree structure.
@@ -252,6 +254,7 @@ static char myerrorbuf[512];
 so_eval_node *
 so_eval_parse(const char *buffer)
 {
+  const std::lock_guard<std::mutex> guard(evaluator_parse_mutex);
   /* FIXME: better error handling is obviously needed */
   YY_BUFFER_STATE state;
   myerrorptr = NULL;

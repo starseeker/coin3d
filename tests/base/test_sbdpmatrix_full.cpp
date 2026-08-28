@@ -57,8 +57,7 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixDet3OnIdentityMatrix10)
 {
     SbDPMatrix m = SbDPMatrix::identity();
     double d = m.det3(0, 1, 2, 0, 1, 2);
-    bool pass = (std::fabs(d - 1.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix det3 identity should be 1.0";
+    EXPECT_TRUE((std::fabs(d - 1.0) < 1e-9)) << "SbDPMatrix det3 identity should be 1.0";
 }
 
 // -----------------------------------------------------------------------
@@ -69,8 +68,7 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixDet4OnIdentityMatrix10)
 {
     SbDPMatrix m = SbDPMatrix::identity();
     double d = m.det4();
-    bool pass = (std::fabs(d - 1.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix det4 identity should be 1.0";
+    EXPECT_TRUE((std::fabs(d - 1.0) < 1e-9)) << "SbDPMatrix det4 identity should be 1.0";
 }
 
 TEST(BaseSbdpmatrixFull, SbDPMatrixDet4On2Identity160)
@@ -81,8 +79,7 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixDet4On2Identity160)
                  0.0, 0.0, 2.0, 0.0,
                  0.0, 0.0, 0.0, 2.0);
     double d = m.det4();
-    bool pass = (std::fabs(d - 16.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix det4 of 2*identity should be 16.0";
+    EXPECT_TRUE((std::fabs(d - 16.0) < 1e-9)) << "SbDPMatrix det4 of 2*identity should be 16.0";
 }
 
 // -----------------------------------------------------------------------
@@ -98,8 +95,7 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixInverseOfTranslationMatrix)
 
     // product should be close to identity
     SbDPMatrix id = SbDPMatrix::identity();
-    bool pass = product.equals(id, 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix M * M.inverse() should be identity";
+    EXPECT_TRUE(product.equals(id, 1e-9)) << "SbDPMatrix M * M.inverse() should be identity";
 }
 
 // -----------------------------------------------------------------------
@@ -121,8 +117,7 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixMultLeftAMultLeftBBA)
     SbDPMatrix C = A;
     C.multLeft(B);
 
-    bool pass = C.equals(BA, 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix multLeft did not match B*A";
+    EXPECT_TRUE(C.equals(BA, 1e-9)) << "SbDPMatrix multLeft did not match B*A";
 }
 
 // -----------------------------------------------------------------------
@@ -141,13 +136,12 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixSetTransformGetTransformRoundTrip)
     SbVec3d    tOut; SbDPRotation rOut; SbVec3d sOut; SbDPRotation soOut;
     m.getTransform(tOut, rOut, sOut, soOut);
 
-    bool pass = (std::fabs(tOut[0] - 1.0) < 1e-9) &&
+    EXPECT_TRUE((std::fabs(tOut[0] - 1.0) < 1e-9) &&
                 (std::fabs(tOut[1] - 2.0) < 1e-9) &&
                 (std::fabs(tOut[2] - 3.0) < 1e-9) &&
                 (std::fabs(sOut[0] - 1.0) < 1e-9) &&
                 (std::fabs(sOut[1] - 1.0) < 1e-9) &&
-                (std::fabs(sOut[2] - 1.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix setTransform/getTransform round-trip failed";
+                (std::fabs(sOut[2] - 1.0) < 1e-9)) << "SbDPMatrix setTransform/getTransform round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -164,6 +158,5 @@ TEST(BaseSbdpmatrixFull, SbDPMatrixEqualsWithSmallPerturbationAndTolerance)
     (void)bArr; // b is effectively unmodified since we only read
 
     // Both are identity — equals should be TRUE
-    bool pass = (a.equals(b, 1e-9) == TRUE);
-    EXPECT_TRUE(pass) << "SbDPMatrix equals() failed for two identity matrices";
+    EXPECT_TRUE((a.equals(b, 1e-9) == TRUE)) << "SbDPMatrix equals() failed for two identity matrices";
 }

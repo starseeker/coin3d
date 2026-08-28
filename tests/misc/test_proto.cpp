@@ -60,24 +60,21 @@ using namespace ObolTest;
 
 TEST(MiscProto, SoProtoGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoProto::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoProto has bad class type";
+    EXPECT_TRUE((SoProto::getClassTypeId() != SoType::badType())) << "SoProto has bad class type";
 }
 
 TEST(MiscProto, SoProtoInstanceGetTypeIdMatchesClassType)
 {
     SoProto * proto = new SoProto;
     proto->ref();
-    bool pass = (proto->getTypeId() == SoProto::getClassTypeId());
+    EXPECT_TRUE((proto->getTypeId() == SoProto::getClassTypeId())) << "SoProto instance type does not match class type";
     proto->unref();
-    EXPECT_TRUE(pass) << "SoProto instance type does not match class type";
 }
 
 TEST(MiscProto, SoProtoIsSubtypeOfSoNode)
 {
-    bool pass = SoProto::getClassTypeId().isDerivedFrom(
-                    SoNode::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoProto should be derived from SoNode";
+    EXPECT_TRUE(SoProto::getClassTypeId().isDerivedFrom(
+                    SoNode::getClassTypeId())) << "SoProto should be derived from SoNode";
 }
 
 TEST(MiscProto, SoProtoGetProtoNameDefaultIsEmptySbName)
@@ -86,9 +83,8 @@ TEST(MiscProto, SoProtoGetProtoNameDefaultIsEmptySbName)
     proto->ref();
     SbName name = proto->getProtoName();
     // Default proto name is empty
-    bool pass = (name == SbName("") || name.getLength() == 0);
+    EXPECT_TRUE((name == SbName("") || name.getLength() == 0)) << "SoProto default proto name should be empty";
     proto->unref();
-    EXPECT_TRUE(pass) << "SoProto default proto name should be empty";
 }
 
 // -----------------------------------------------------------------------
@@ -97,13 +93,11 @@ TEST(MiscProto, SoProtoGetProtoNameDefaultIsEmptySbName)
 
 TEST(MiscProto, SoProtoInstanceGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoProtoInstance::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoProtoInstance has bad class type";
+    EXPECT_TRUE((SoProtoInstance::getClassTypeId() != SoType::badType())) << "SoProtoInstance has bad class type";
 }
 
 TEST(MiscProto, SoProtoInstanceIsSubtypeOfSoNode)
 {
-    bool pass = SoProtoInstance::getClassTypeId().isDerivedFrom(
-                    SoNode::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoProtoInstance should be derived from SoNode";
+    EXPECT_TRUE(SoProtoInstance::getClassTypeId().isDerivedFrom(
+                    SoNode::getClassTypeId())) << "SoProtoInstance should be derived from SoNode";
 }

@@ -71,11 +71,12 @@ static bool floatNear(float a, float b, float eps = 1e-4f)
 TEST(BaseSbMatrixBox, SbMatrixIdentityIsIdentity)
 {
     SbMatrix m = SbMatrix::identity();
-    bool pass = true;
-    for (int i = 0; i < 4 && pass; ++i)
-        for (int j = 0; j < 4 && pass; ++j)
-            pass = floatNear(m[i][j], (i == j) ? 1.0f : 0.0f);
-    EXPECT_TRUE(pass) << "SbMatrix::identity() is not identity";
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            EXPECT_FLOAT_EQ(m[i][j], (i == j) ? 1.0f : 0.0f)
+                << "matrix element [" << i << "][" << j << "]";
+        }
+    }
 }
 
 TEST(BaseSbMatrixBox, SbMatrixMakeIdentityResetsMatrix)
@@ -83,8 +84,7 @@ TEST(BaseSbMatrixBox, SbMatrixMakeIdentityResetsMatrix)
     SbMatrix m;
     m[0][3] = 5.0f; // disturb
     m.makeIdentity();
-    bool pass = (m == SbMatrix::identity());
-    EXPECT_TRUE(pass) << "SbMatrix::makeIdentity failed";
+    EXPECT_TRUE((m == SbMatrix::identity())) << "SbMatrix::makeIdentity failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixSetTranslate)
@@ -94,10 +94,9 @@ TEST(BaseSbMatrixBox, SbMatrixSetTranslate)
     SbVec3f pt(0, 0, 0);
     SbVec3f result;
     m.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 1.0f) &&
+    EXPECT_TRUE(floatNear(result[0], 1.0f) &&
                 floatNear(result[1], 2.0f) &&
-                floatNear(result[2], 3.0f);
-    EXPECT_TRUE(pass) << "SbMatrix::setTranslate translation wrong";
+                floatNear(result[2], 3.0f)) << "SbMatrix::setTranslate translation wrong";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixSetScaleFloatScalesAllAxesEqually)
@@ -107,10 +106,9 @@ TEST(BaseSbMatrixBox, SbMatrixSetScaleFloatScalesAllAxesEqually)
     SbVec3f pt(1, 1, 1);
     SbVec3f result;
     m.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 2.0f) &&
+    EXPECT_TRUE(floatNear(result[0], 2.0f) &&
                 floatNear(result[1], 2.0f) &&
-                floatNear(result[2], 2.0f);
-    EXPECT_TRUE(pass) << "SbMatrix setScale(float) wrong";
+                floatNear(result[2], 2.0f)) << "SbMatrix setScale(float) wrong";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixSetScaleSbVec3fScalesAxesIndependently)
@@ -120,10 +118,9 @@ TEST(BaseSbMatrixBox, SbMatrixSetScaleSbVec3fScalesAxesIndependently)
     SbVec3f pt(1, 1, 1);
     SbVec3f result;
     m.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 2.0f) &&
+    EXPECT_TRUE(floatNear(result[0], 2.0f) &&
                 floatNear(result[1], 3.0f) &&
-                floatNear(result[2], 4.0f);
-    EXPECT_TRUE(pass) << "SbMatrix setScale(vec) wrong";
+                floatNear(result[2], 4.0f)) << "SbMatrix setScale(vec) wrong";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixSetRotateAroundZBy2)
@@ -135,16 +132,14 @@ TEST(BaseSbMatrixBox, SbMatrixSetRotateAroundZBy2)
     SbVec3f result;
     m.multVecMatrix(pt, result);
     // After 90° CCW around Z: (1,0,0) → (0,1,0)
-    bool pass = floatNear(result[0], 0.0f, 1e-4f) && floatNear(result[1], 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbMatrix setRotate around Z by π/2 wrong";
+    EXPECT_TRUE(floatNear(result[0], 0.0f, 1e-4f) && floatNear(result[1], 1.0f, 1e-4f)) << "SbMatrix setRotate around Z by π/2 wrong";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixTransposeOfIdentityIsIdentity)
 {
     SbMatrix m = SbMatrix::identity();
     SbMatrix t = m.transpose();
-    bool pass = (t == m);
-    EXPECT_TRUE(pass) << "Transpose of identity should be identity";
+    EXPECT_TRUE((t == m)) << "Transpose of identity should be identity";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixTransposeSwapsOffDiagonal)
@@ -152,16 +147,14 @@ TEST(BaseSbMatrixBox, SbMatrixTransposeSwapsOffDiagonal)
     SbMatrix m = SbMatrix::identity();
     m[0][1] = 5.0f;
     SbMatrix t = m.transpose();
-    bool pass = floatNear(t[1][0], 5.0f) && floatNear(t[0][1], 0.0f);
-    EXPECT_TRUE(pass) << "SbMatrix transpose should swap off-diagonal elements";
+    EXPECT_TRUE(floatNear(t[1][0], 5.0f) && floatNear(t[0][1], 0.0f)) << "SbMatrix transpose should swap off-diagonal elements";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixInverseOfIdentityIsIdentity)
 {
     SbMatrix m = SbMatrix::identity();
     SbMatrix inv = m.inverse();
-    bool pass = (inv == SbMatrix::identity());
-    EXPECT_TRUE(pass) << "Inverse of identity should be identity";
+    EXPECT_TRUE((inv == SbMatrix::identity())) << "Inverse of identity should be identity";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixInverseOfTranslationReversesTranslation)
@@ -174,15 +167,13 @@ TEST(BaseSbMatrixBox, SbMatrixInverseOfTranslationReversesTranslation)
     m.multVecMatrix(pt, result);   // result = (3,0,0)
     SbVec3f back;
     inv.multVecMatrix(result, back); // back = (0,0,0)
-    bool pass = floatNear(back[0], 0.0f) && floatNear(back[1], 0.0f);
-    EXPECT_TRUE(pass) << "Inverse of translation should restore original point";
+    EXPECT_TRUE(floatNear(back[0], 0.0f) && floatNear(back[1], 0.0f)) << "Inverse of translation should restore original point";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixDet4OfIdentityIs10)
 {
     SbMatrix m = SbMatrix::identity();
-    bool pass = floatNear(m.det4(), 1.0f);
-    EXPECT_TRUE(pass) << "det4 of identity != 1.0";
+    EXPECT_TRUE(floatNear(m.det4(), 1.0f)) << "det4 of identity != 1.0";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixEqualsWithTolerance)
@@ -190,8 +181,7 @@ TEST(BaseSbMatrixBox, SbMatrixEqualsWithTolerance)
     SbMatrix m = SbMatrix::identity();
     SbMatrix n = SbMatrix::identity();
     n[0][0] = 1.00001f;
-    bool pass = m.equals(n, 0.001f) && !m.equals(n, 0.000001f);
-    EXPECT_TRUE(pass) << "SbMatrix::equals with tolerance failed";
+    EXPECT_TRUE(m.equals(n, 0.001f) && !m.equals(n, 0.000001f)) << "SbMatrix::equals with tolerance failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixMultRightComposition)
@@ -203,8 +193,7 @@ TEST(BaseSbMatrixBox, SbMatrixMultRightComposition)
     SbVec3f pt(0, 0, 0);
     SbVec3f result;
     m.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 1.0f);
-    EXPECT_TRUE(pass) << "SbMatrix multRight failed";
+    EXPECT_TRUE(floatNear(result[0], 1.0f)) << "SbMatrix multRight failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixMultLeftComposition)
@@ -220,8 +209,7 @@ TEST(BaseSbMatrixBox, SbMatrixMultLeftComposition)
     SbVec3f pt(1, 0, 0);
     SbVec3f result;
     s.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 4.0f, 0.01f);
-    EXPECT_TRUE(pass) << "SbMatrix multLeft failed";
+    EXPECT_TRUE(floatNear(result[0], 4.0f, 0.01f)) << "SbMatrix multLeft failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixMultDirMatrixDoesNotApplyTranslation)
@@ -232,8 +220,7 @@ TEST(BaseSbMatrixBox, SbMatrixMultDirMatrixDoesNotApplyTranslation)
     SbVec3f result;
     m.multDirMatrix(dir, result);
     // Direction should be unchanged by translation
-    bool pass = floatNear(result[0], 1.0f) && floatNear(result[1], 0.0f);
-    EXPECT_TRUE(pass) << "SbMatrix multDirMatrix should ignore translation";
+    EXPECT_TRUE(floatNear(result[0], 1.0f) && floatNear(result[1], 0.0f)) << "SbMatrix multDirMatrix should ignore translation";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixMultMatrixVecIsInverseOfMultVecMatrix)
@@ -244,8 +231,7 @@ TEST(BaseSbMatrixBox, SbMatrixMultMatrixVecIsInverseOfMultVecMatrix)
     SbVec3f forward, back;
     m.multVecMatrix(pt, forward);
     m.inverse().multVecMatrix(forward, back);
-    bool pass = floatNear(back[0], 0.0f) && floatNear(back[1], 0.0f) && floatNear(back[2], 0.0f);
-    EXPECT_TRUE(pass) << "multMatrixVec inverse round-trip failed";
+    EXPECT_TRUE(floatNear(back[0], 0.0f) && floatNear(back[1], 0.0f) && floatNear(back[2], 0.0f)) << "multMatrixVec inverse round-trip failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixSetTransformGetTransformRoundTrip)
@@ -263,10 +249,9 @@ TEST(BaseSbMatrixBox, SbMatrixSetTransformGetTransformRoundTrip)
     SbVec3f outS;
     m.getTransform(outT, outR, outS, outSO);
 
-    bool pass = floatNear(outT[0], 1.0f, 0.01f) &&
+    EXPECT_TRUE(floatNear(outT[0], 1.0f, 0.01f) &&
                 floatNear(outT[1], 2.0f, 0.01f) &&
-                floatNear(outT[2], 3.0f, 0.01f);
-    EXPECT_TRUE(pass) << "SbMatrix setTransform/getTransform round-trip failed";
+                floatNear(outT[2], 3.0f, 0.01f)) << "SbMatrix setTransform/getTransform round-trip failed";
 }
 
 TEST(BaseSbMatrixBox, SbMatrixOperatorComposesTwoTranslations)
@@ -278,8 +263,7 @@ TEST(BaseSbMatrixBox, SbMatrixOperatorComposesTwoTranslations)
     SbVec3f pt(0, 0, 0);
     SbVec3f result;
     c.multVecMatrix(pt, result);
-    bool pass = floatNear(result[0], 1.0f) && floatNear(result[1], 2.0f);
-    EXPECT_TRUE(pass) << "SbMatrix operator* composition failed";
+    EXPECT_TRUE(floatNear(result[0], 1.0f) && floatNear(result[1], 2.0f)) << "SbMatrix operator* composition failed";
 }
 
 // ======================================================================
@@ -289,61 +273,53 @@ TEST(BaseSbMatrixBox, SbMatrixOperatorComposesTwoTranslations)
 TEST(BaseSbMatrixBox, SbBox3fDefaultIsEmpty)
 {
     SbBox3f box;
-    bool pass = box.isEmpty();
-    EXPECT_TRUE(pass) << "Default SbBox3f should be empty";
+    EXPECT_TRUE(box.isEmpty()) << "Default SbBox3f should be empty";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fMakeEmptyResetsBox)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     box.makeEmpty();
-    bool pass = box.isEmpty();
-    EXPECT_TRUE(pass) << "SbBox3f makeEmpty should make box empty";
+    EXPECT_TRUE(box.isEmpty()) << "SbBox3f makeEmpty should make box empty";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fHasVolumeFALSEForEmptyBox)
 {
     SbBox3f box;
-    bool pass = !box.hasVolume();
-    EXPECT_TRUE(pass) << "Empty SbBox3f should have no volume";
+    EXPECT_TRUE(!box.hasVolume()) << "Empty SbBox3f should have no volume";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fHasVolumeTRUEForNonEmptyBox)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
-    bool pass = box.hasVolume();
-    EXPECT_TRUE(pass) << "Non-empty SbBox3f should have volume";
+    EXPECT_TRUE(box.hasVolume()) << "Non-empty SbBox3f should have volume";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fGetVolumeIsCorrectFor2x2x2Box)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
-    bool pass = floatNear(box.getVolume(), 8.0f);
-    EXPECT_TRUE(pass) << "2x2x2 SbBox3f volume should be 8.0";
+    EXPECT_TRUE(floatNear(box.getVolume(), 8.0f)) << "2x2x2 SbBox3f volume should be 8.0";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fGetCenterOfSymmetricBoxIsOrigin)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     SbVec3f c = box.getCenter();
-    bool pass = floatNear(c[0], 0.0f) && floatNear(c[1], 0.0f) && floatNear(c[2], 0.0f);
-    EXPECT_TRUE(pass) << "SbBox3f center should be origin for symmetric box";
+    EXPECT_TRUE(floatNear(c[0], 0.0f) && floatNear(c[1], 0.0f) && floatNear(c[2], 0.0f)) << "SbBox3f center should be origin for symmetric box";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fGetSizeIs222ForUnitBox)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     SbVec3f sz = box.getSize();
-    bool pass = floatNear(sz[0], 2.0f) && floatNear(sz[1], 2.0f) && floatNear(sz[2], 2.0f);
-    EXPECT_TRUE(pass) << "SbBox3f getSize of 2x2x2 box failed";
+    EXPECT_TRUE(floatNear(sz[0], 2.0f) && floatNear(sz[1], 2.0f) && floatNear(sz[2], 2.0f)) << "SbBox3f getSize of 2x2x2 box failed";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fExtendByPointGrowsBoxToIncludePoint)
 {
     SbBox3f box;
     box.extendBy(SbVec3f(3, 0, 0));
-    bool pass = !box.isEmpty() && floatNear(box.getMax()[0], 3.0f);
-    EXPECT_TRUE(pass) << "SbBox3f extendBy point failed";
+    EXPECT_TRUE(!box.isEmpty() && floatNear(box.getMax()[0], 3.0f)) << "SbBox3f extendBy point failed";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fExtendByBoxMergesTwoBoxes)
@@ -351,38 +327,33 @@ TEST(BaseSbMatrixBox, SbBox3fExtendByBoxMergesTwoBoxes)
     SbBox3f a(SbVec3f(0,0,0), SbVec3f(1,1,1));
     SbBox3f b(SbVec3f(2,0,0), SbVec3f(3,1,1));
     a.extendBy(b);
-    bool pass = floatNear(a.getMax()[0], 3.0f) && floatNear(a.getMin()[0], 0.0f);
-    EXPECT_TRUE(pass) << "SbBox3f extendBy box failed";
+    EXPECT_TRUE(floatNear(a.getMax()[0], 3.0f) && floatNear(a.getMin()[0], 0.0f)) << "SbBox3f extendBy box failed";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fIntersectPointTRUEForPointInside)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
-    bool pass = box.intersect(SbVec3f(0, 0, 0));
-    EXPECT_TRUE(pass) << "SbBox3f: origin should be inside unit box";
+    EXPECT_TRUE(box.intersect(SbVec3f(0, 0, 0))) << "SbBox3f: origin should be inside unit box";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fIntersectPointFALSEForPointOutside)
 {
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
-    bool pass = !box.intersect(SbVec3f(5, 0, 0));
-    EXPECT_TRUE(pass) << "SbBox3f: (5,0,0) should be outside unit box";
+    EXPECT_TRUE(!box.intersect(SbVec3f(5, 0, 0))) << "SbBox3f: (5,0,0) should be outside unit box";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fIntersectBoxTRUEForOverlappingBoxes)
 {
     SbBox3f a(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     SbBox3f b(SbVec3f(0,0,0), SbVec3f(2,2,2));
-    bool pass = a.intersect(b);
-    EXPECT_TRUE(pass) << "Overlapping SbBox3f::intersect should return TRUE";
+    EXPECT_TRUE(a.intersect(b)) << "Overlapping SbBox3f::intersect should return TRUE";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fIntersectBoxFALSEForNonOverlappingBoxes)
 {
     SbBox3f a(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     SbBox3f b(SbVec3f(5,5,5), SbVec3f(6,6,6));
-    bool pass = !a.intersect(b);
-    EXPECT_TRUE(pass) << "Non-overlapping SbBox3f::intersect should return FALSE";
+    EXPECT_TRUE(!a.intersect(b)) << "Non-overlapping SbBox3f::intersect should return FALSE";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fTransformWithTranslationShiftsBox)
@@ -391,8 +362,7 @@ TEST(BaseSbMatrixBox, SbBox3fTransformWithTranslationShiftsBox)
     SbMatrix m;
     m.setTranslate(SbVec3f(5, 0, 0));
     box.transform(m);
-    bool pass = floatNear(box.getCenter()[0], 5.0f, 0.1f);
-    EXPECT_TRUE(pass) << "SbBox3f transform should shift box centre";
+    EXPECT_TRUE(floatNear(box.getCenter()[0], 5.0f, 0.1f)) << "SbBox3f transform should shift box centre";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fGetOriginReturnsMinPoint)
@@ -400,8 +370,7 @@ TEST(BaseSbMatrixBox, SbBox3fGetOriginReturnsMinPoint)
     SbBox3f box(SbVec3f(1,2,3), SbVec3f(4,5,6));
     float ox, oy, oz;
     box.getOrigin(ox, oy, oz);
-    bool pass = floatNear(ox, 1.0f) && floatNear(oy, 2.0f) && floatNear(oz, 3.0f);
-    EXPECT_TRUE(pass) << "SbBox3f getOrigin should return min point";
+    EXPECT_TRUE(floatNear(ox, 1.0f) && floatNear(oy, 2.0f) && floatNear(oz, 3.0f)) << "SbBox3f getOrigin should return min point";
 }
 
 TEST(BaseSbMatrixBox, SbBox3fGetSpanAlongXAxis)
@@ -409,8 +378,7 @@ TEST(BaseSbMatrixBox, SbBox3fGetSpanAlongXAxis)
     SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
     float dmin, dmax;
     box.getSpan(SbVec3f(1, 0, 0), dmin, dmax);
-    bool pass = floatNear(dmin, -1.0f) && floatNear(dmax, 1.0f);
-    EXPECT_TRUE(pass) << "SbBox3f getSpan along X axis failed";
+    EXPECT_TRUE(floatNear(dmin, -1.0f) && floatNear(dmax, 1.0f)) << "SbBox3f getSpan along X axis failed";
 }
 
 // ======================================================================
@@ -420,47 +388,41 @@ TEST(BaseSbMatrixBox, SbBox3fGetSpanAlongXAxis)
 TEST(BaseSbMatrixBox, SbBox2fDefaultIsEmpty)
 {
     SbBox2f box;
-    bool pass = box.isEmpty();
-    EXPECT_TRUE(pass) << "Default SbBox2f should be empty";
+    EXPECT_TRUE(box.isEmpty()) << "Default SbBox2f should be empty";
 }
 
 TEST(BaseSbMatrixBox, SbBox2fMakeEmptyResetsBox)
 {
     SbBox2f box(SbVec2f(-1,-1), SbVec2f(1,1));
     box.makeEmpty();
-    bool pass = box.isEmpty();
-    EXPECT_TRUE(pass) << "SbBox2f makeEmpty should make box empty";
+    EXPECT_TRUE(box.isEmpty()) << "SbBox2f makeEmpty should make box empty";
 }
 
 TEST(BaseSbMatrixBox, SbBox2fGetCenterOfSymmetricBoxIsOrigin)
 {
     SbBox2f box(SbVec2f(-1,-1), SbVec2f(1,1));
     SbVec2f c = box.getCenter();
-    bool pass = floatNear(c[0], 0.0f) && floatNear(c[1], 0.0f);
-    EXPECT_TRUE(pass) << "SbBox2f center should be origin for symmetric box";
+    EXPECT_TRUE(floatNear(c[0], 0.0f) && floatNear(c[1], 0.0f)) << "SbBox2f center should be origin for symmetric box";
 }
 
 TEST(BaseSbMatrixBox, SbBox2fExtendByPointGrowsBox)
 {
     SbBox2f box;
     box.extendBy(SbVec2f(3, 4));
-    bool pass = !box.isEmpty() && floatNear(box.getMax()[0], 3.0f);
-    EXPECT_TRUE(pass) << "SbBox2f extendBy point failed";
+    EXPECT_TRUE(!box.isEmpty() && floatNear(box.getMax()[0], 3.0f)) << "SbBox2f extendBy point failed";
 }
 
 TEST(BaseSbMatrixBox, SbBox2fIntersectPointTRUEForInsidePoint)
 {
     SbBox2f box(SbVec2f(-1,-1), SbVec2f(1,1));
-    bool pass = box.intersect(SbVec2f(0, 0));
-    EXPECT_TRUE(pass) << "SbBox2f: origin should be inside unit box";
+    EXPECT_TRUE(box.intersect(SbVec2f(0, 0))) << "SbBox2f: origin should be inside unit box";
 }
 
 TEST(BaseSbMatrixBox, SbBox2fGetMinGetMax)
 {
     SbBox2f box(SbVec2f(-2,-3), SbVec2f(4,5));
-    bool pass = floatNear(box.getMin()[0], -2.0f) &&
+    EXPECT_TRUE(floatNear(box.getMin()[0], -2.0f) &&
                 floatNear(box.getMin()[1], -3.0f) &&
                 floatNear(box.getMax()[0], 4.0f) &&
-                floatNear(box.getMax()[1], 5.0f);
-    EXPECT_TRUE(pass) << "SbBox2f getMin/getMax failed";
+                floatNear(box.getMax()[1], 5.0f)) << "SbBox2f getMin/getMax failed";
 }

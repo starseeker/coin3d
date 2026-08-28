@@ -135,9 +135,8 @@ TEST(NodesSuite, SoAnnotationClassInitialized)
 {
     SoAnnotation* node = new SoAnnotation;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoAnnotation has bad typeId";
     node->unref();
-    EXPECT_TRUE(pass) << "SoAnnotation has bad typeId";
 }
 
 // -----------------------------------------------------------------------
@@ -161,8 +160,7 @@ TEST(NodesSuite, SoTypeCreateTypeAndRemoveType)
     bool removed = SoType::removeType(typeName);
     bool gone    = (SoType::fromName(typeName) == SoType::badType());
 
-    bool pass = notYet && created && removed && gone;
-    EXPECT_TRUE(pass) << "SoType createType/removeType did not behave as expected";
+    EXPECT_TRUE(notYet && created && removed && gone) << "SoType createType/removeType did not behave as expected";
 }
 
 // -----------------------------------------------------------------------
@@ -173,18 +171,16 @@ TEST(NodesSuite, SoCubeIsOfTypeSoNode)
 {
     SoCube* cube = new SoCube;
     cube->ref();
-    bool pass = cube->isOfType(SoNode::getClassTypeId());
+    EXPECT_TRUE(cube->isOfType(SoNode::getClassTypeId())) << "SoCube should be of type SoNode";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoCube should be of type SoNode";
 }
 
 TEST(NodesSuite, SoSeparatorIsOfTypeSoGroup)
 {
     SoSeparator* sep = new SoSeparator;
     sep->ref();
-    bool pass = sep->isOfType(SoGroup::getClassTypeId());
+    EXPECT_TRUE(sep->isOfType(SoGroup::getClassTypeId())) << "SoSeparator should be a SoGroup";
     sep->unref();
-    EXPECT_TRUE(pass) << "SoSeparator should be a SoGroup";
 }
 
 // -----------------------------------------------------------------------
@@ -201,13 +197,12 @@ TEST(NodesSuite, SoSeparatorAddChildGetNumChildrenRemoveChild)
     root->addChild(c1);
     root->addChild(c2);
 
-    bool pass = (root->getNumChildren() == 2);
+    EXPECT_EQ(root->getNumChildren(), 2);
     root->removeChild(c1);
-    pass = pass && (root->getNumChildren() == 1);
-    pass = pass && (root->getChild(0) == c2);
+    EXPECT_EQ(root->getNumChildren(), 1);
+    EXPECT_EQ(root->getChild(0), c2);
 
     root->unref();
-    EXPECT_TRUE(pass) << "SoSeparator child management failed";
 }
 
 TEST(NodesSuite, SoSeparatorInsertChild)
@@ -219,11 +214,10 @@ TEST(NodesSuite, SoSeparatorInsertChild)
     root->addChild(c1);
     root->insertChild(s1, 0); // insert at front
 
-    bool pass = (root->getNumChildren() == 2) &&
+    EXPECT_TRUE((root->getNumChildren() == 2) &&
                 (root->getChild(0) == s1) &&
-                (root->getChild(1) == c1);
+                (root->getChild(1) == c1)) << "SoSeparator insertChild failed";
     root->unref();
-    EXPECT_TRUE(pass) << "SoSeparator insertChild failed";
 }
 
 // -----------------------------------------------------------------------
@@ -235,9 +229,8 @@ TEST(NodesSuite, SoNodeSetNameGetName)
     SoCube* cube = new SoCube;
     cube->ref();
     cube->setName("TestCube");
-    bool pass = (cube->getName() == SbName("TestCube"));
+    EXPECT_TRUE((cube->getName() == SbName("TestCube"))) << "SoNode setName/getName failed";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoNode setName/getName failed";
 }
 
 // -----------------------------------------------------------------------
@@ -250,9 +243,8 @@ TEST(NodesSuite, SoNodeGetByName)
     cyl->ref();
     cyl->setName("UniqueCylinder");
     SoNode* found = SoNode::getByName(SbName("UniqueCylinder"));
-    bool pass = (found == cyl);
+    EXPECT_TRUE((found == cyl)) << "SoNode::getByName did not find the named node";
     cyl->unref();
-    EXPECT_TRUE(pass) << "SoNode::getByName did not find the named node";
 }
 
 // -----------------------------------------------------------------------
@@ -263,30 +255,27 @@ TEST(NodesSuite, SoCubeDefaultFields)
 {
     SoCube* cube = new SoCube;
     cube->ref();
-    bool pass = (cube->width.getValue()  == 2.0f) &&
+    EXPECT_TRUE((cube->width.getValue()  == 2.0f) &&
                 (cube->height.getValue() == 2.0f) &&
-                (cube->depth.getValue()  == 2.0f);
+                (cube->depth.getValue()  == 2.0f)) << "SoCube default field values wrong";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoCube default field values wrong";
 }
 
 TEST(NodesSuite, SoSphereDefaultRadius)
 {
     SoSphere* sphere = new SoSphere;
     sphere->ref();
-    bool pass = (sphere->radius.getValue() == 1.0f);
+    EXPECT_TRUE((sphere->radius.getValue() == 1.0f)) << "SoSphere default radius != 1.0";
     sphere->unref();
-    EXPECT_TRUE(pass) << "SoSphere default radius != 1.0";
 }
 
 TEST(NodesSuite, SoConeDefaultFields)
 {
     SoCone* cone = new SoCone;
     cone->ref();
-    bool pass = (cone->bottomRadius.getValue() == 1.0f) &&
-                (cone->height.getValue()        == 2.0f);
+    EXPECT_TRUE((cone->bottomRadius.getValue() == 1.0f) &&
+                (cone->height.getValue()        == 2.0f)) << "SoCone default field values wrong";
     cone->unref();
-    EXPECT_TRUE(pass) << "SoCone default field values wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -298,9 +287,8 @@ TEST(NodesSuite, SoMaterialDefaultDiffuseColorField)
     SoMaterial* mat = new SoMaterial;
     mat->ref();
     // Default diffuseColor is one value (0.8, 0.8, 0.8)
-    bool pass = (mat->diffuseColor.getNum() == 1);
+    EXPECT_TRUE((mat->diffuseColor.getNum() == 1)) << "SoMaterial default diffuseColor should have 1 value";
     mat->unref();
-    EXPECT_TRUE(pass) << "SoMaterial default diffuseColor should have 1 value";
 }
 
 // -----------------------------------------------------------------------
@@ -311,10 +299,9 @@ TEST(NodesSuite, SoCylinderDefaultFields)
 {
     SoCylinder* cyl = new SoCylinder;
     cyl->ref();
-    bool pass = (cyl->radius.getValue() == 1.0f) &&
-                (cyl->height.getValue() == 2.0f);
+    EXPECT_TRUE((cyl->radius.getValue() == 1.0f) &&
+                (cyl->height.getValue() == 2.0f)) << "SoCylinder default field values wrong";
     cyl->unref();
-    EXPECT_TRUE(pass) << "SoCylinder default field values wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -325,27 +312,24 @@ TEST(NodesSuite, SoDirectionalLightClassInitialized)
 {
     SoDirectionalLight* light = new SoDirectionalLight;
     light->ref();
-    bool pass = (light->getTypeId() != SoType::badType());
+    EXPECT_TRUE((light->getTypeId() != SoType::badType())) << "SoDirectionalLight has bad type";
     light->unref();
-    EXPECT_TRUE(pass) << "SoDirectionalLight has bad type";
 }
 
 TEST(NodesSuite, SoPointLightClassInitialized)
 {
     SoPointLight* light = new SoPointLight;
     light->ref();
-    bool pass = (light->getTypeId() != SoType::badType());
+    EXPECT_TRUE((light->getTypeId() != SoType::badType())) << "SoPointLight has bad type";
     light->unref();
-    EXPECT_TRUE(pass) << "SoPointLight has bad type";
 }
 
 TEST(NodesSuite, SoSpotLightClassInitialized)
 {
     SoSpotLight* light = new SoSpotLight;
     light->ref();
-    bool pass = (light->getTypeId() != SoType::badType());
+    EXPECT_TRUE((light->getTypeId() != SoType::badType())) << "SoSpotLight has bad type";
     light->unref();
-    EXPECT_TRUE(pass) << "SoSpotLight has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -357,9 +341,8 @@ TEST(NodesSuite, SoTranslationDefaultTranslation)
     SoTranslation* t = new SoTranslation;
     t->ref();
     SbVec3f v = t->translation.getValue();
-    bool pass = (v == SbVec3f(0, 0, 0));
+    EXPECT_TRUE((v == SbVec3f(0, 0, 0))) << "SoTranslation default translation != (0,0,0)";
     t->unref();
-    EXPECT_TRUE(pass) << "SoTranslation default translation != (0,0,0)";
 }
 
 TEST(NodesSuite, SoRotationDefaultRotation)
@@ -369,9 +352,8 @@ TEST(NodesSuite, SoRotationDefaultRotation)
     // Default rotation is identity (0,0,1,0) = zero angle around z
     SbVec3f axis; float angle;
     r->rotation.getValue().getValue(axis, angle);
-    bool pass = (angle == 0.0f);
+    EXPECT_TRUE((angle == 0.0f)) << "SoRotation default rotation is not identity";
     r->unref();
-    EXPECT_TRUE(pass) << "SoRotation default rotation is not identity";
 }
 
 TEST(NodesSuite, SoScaleDefaultScaleFactor)
@@ -379,9 +361,8 @@ TEST(NodesSuite, SoScaleDefaultScaleFactor)
     SoScale* s = new SoScale;
     s->ref();
     SbVec3f sf = s->scaleFactor.getValue();
-    bool pass = (sf == SbVec3f(1, 1, 1));
+    EXPECT_TRUE((sf == SbVec3f(1, 1, 1))) << "SoScale default scaleFactor != (1,1,1)";
     s->unref();
-    EXPECT_TRUE(pass) << "SoScale default scaleFactor != (1,1,1)";
 }
 
 TEST(NodesSuite, SoTransformDefaultTranslation)
@@ -389,9 +370,8 @@ TEST(NodesSuite, SoTransformDefaultTranslation)
     SoTransform* xf = new SoTransform;
     xf->ref();
     SbVec3f t = xf->translation.getValue();
-    bool pass = (t == SbVec3f(0, 0, 0));
+    EXPECT_TRUE((t == SbVec3f(0, 0, 0))) << "SoTransform default translation != (0,0,0)";
     xf->unref();
-    EXPECT_TRUE(pass) << "SoTransform default translation != (0,0,0)";
 }
 
 // -----------------------------------------------------------------------
@@ -402,18 +382,16 @@ TEST(NodesSuite, SoPerspectiveCameraClassInitialized)
 {
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     cam->ref();
-    bool pass = (cam->getTypeId() != SoType::badType());
+    EXPECT_TRUE((cam->getTypeId() != SoType::badType())) << "SoPerspectiveCamera has bad type";
     cam->unref();
-    EXPECT_TRUE(pass) << "SoPerspectiveCamera has bad type";
 }
 
 TEST(NodesSuite, SoOrthographicCameraClassInitialized)
 {
     SoOrthographicCamera* cam = new SoOrthographicCamera;
     cam->ref();
-    bool pass = (cam->getTypeId() != SoType::badType());
+    EXPECT_TRUE((cam->getTypeId() != SoType::badType())) << "SoOrthographicCamera has bad type";
     cam->unref();
-    EXPECT_TRUE(pass) << "SoOrthographicCamera has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -426,9 +404,8 @@ TEST(NodesSuite, SoPerspectiveCameraDefaultNearDistance)
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     cam->ref();
     // Default nearDistance is 1.0
-    bool pass = (cam->nearDistance.getValue() == 1.0f);
+    EXPECT_TRUE((cam->nearDistance.getValue() == 1.0f)) << "SoPerspectiveCamera nearDistance default != 1.0";
     cam->unref();
-    EXPECT_TRUE(pass) << "SoPerspectiveCamera nearDistance default != 1.0";
 }
 
 TEST(NodesSuite, SoPerspectiveCameraDefaultFarDistance)
@@ -436,9 +413,8 @@ TEST(NodesSuite, SoPerspectiveCameraDefaultFarDistance)
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     cam->ref();
     // Default farDistance is 10.0
-    bool pass = (cam->farDistance.getValue() == 10.0f);
+    EXPECT_TRUE((cam->farDistance.getValue() == 10.0f)) << "SoPerspectiveCamera farDistance default != 10.0";
     cam->unref();
-    EXPECT_TRUE(pass) << "SoPerspectiveCamera farDistance default != 10.0";
 }
 
 TEST(NodesSuite, SoOrthographicCameraDefaultHeight)
@@ -446,9 +422,8 @@ TEST(NodesSuite, SoOrthographicCameraDefaultHeight)
     SoOrthographicCamera* cam = new SoOrthographicCamera;
     cam->ref();
     // Default height is 2.0
-    bool pass = (cam->height.getValue() == 2.0f);
+    EXPECT_TRUE((cam->height.getValue() == 2.0f)) << "SoOrthographicCamera height default != 2.0";
     cam->unref();
-    EXPECT_TRUE(pass) << "SoOrthographicCamera height default != 2.0";
 }
 
 // -----------------------------------------------------------------------
@@ -460,9 +435,8 @@ TEST(NodesSuite, SoSwitchDefaultWhichChild)
     SoSwitch* sw = new SoSwitch;
     sw->ref();
     // Default whichChild is SO_SWITCH_NONE (-1)
-    bool pass = (sw->whichChild.getValue() == SO_SWITCH_NONE);
+    EXPECT_TRUE((sw->whichChild.getValue() == SO_SWITCH_NONE)) << "SoSwitch default whichChild != SO_SWITCH_NONE";
     sw->unref();
-    EXPECT_TRUE(pass) << "SoSwitch default whichChild != SO_SWITCH_NONE";
 }
 
 // -----------------------------------------------------------------------
@@ -473,18 +447,16 @@ TEST(NodesSuite, SoCoordinate3ClassInitialized)
 {
     SoCoordinate3* coord = new SoCoordinate3;
     coord->ref();
-    bool pass = (coord->getTypeId() != SoType::badType());
+    EXPECT_TRUE((coord->getTypeId() != SoType::badType())) << "SoCoordinate3 has bad type";
     coord->unref();
-    EXPECT_TRUE(pass) << "SoCoordinate3 has bad type";
 }
 
 TEST(NodesSuite, SoNormalClassInitialized)
 {
     SoNormal* norm = new SoNormal;
     norm->ref();
-    bool pass = (norm->getTypeId() != SoType::badType());
+    EXPECT_TRUE((norm->getTypeId() != SoType::badType())) << "SoNormal has bad type";
     norm->unref();
-    EXPECT_TRUE(pass) << "SoNormal has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -496,36 +468,32 @@ TEST(NodesSuite, SoShaderProgramClassInitialized)
 {
     SoShaderProgram* prog = new SoShaderProgram;
     prog->ref();
-    bool pass = (prog->getTypeId() != SoType::badType());
+    EXPECT_TRUE((prog->getTypeId() != SoType::badType())) << "SoShaderProgram has bad type";
     prog->unref();
-    EXPECT_TRUE(pass) << "SoShaderProgram has bad type";
 }
 
 TEST(NodesSuite, SoFragmentShaderClassInitialized)
 {
     SoFragmentShader* fs = new SoFragmentShader;
     fs->ref();
-    bool pass = (fs->getTypeId() != SoType::badType());
+    EXPECT_TRUE((fs->getTypeId() != SoType::badType())) << "SoFragmentShader has bad type";
     fs->unref();
-    EXPECT_TRUE(pass) << "SoFragmentShader has bad type";
 }
 
 TEST(NodesSuite, SoVertexShaderClassInitialized)
 {
     SoVertexShader* vs = new SoVertexShader;
     vs->ref();
-    bool pass = (vs->getTypeId() != SoType::badType());
+    EXPECT_TRUE((vs->getTypeId() != SoType::badType())) << "SoVertexShader has bad type";
     vs->unref();
-    EXPECT_TRUE(pass) << "SoVertexShader has bad type";
 }
 
 TEST(NodesSuite, SoGeometryShaderClassInitialized)
 {
     SoGeometryShader* gs = new SoGeometryShader;
     gs->ref();
-    bool pass = (gs->getTypeId() != SoType::badType());
+    EXPECT_TRUE((gs->getTypeId() != SoType::badType())) << "SoGeometryShader has bad type";
     gs->unref();
-    EXPECT_TRUE(pass) << "SoGeometryShader has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -537,18 +505,16 @@ TEST(NodesSuite, SoShadowGroupClassInitialized)
 {
     SoShadowGroup* node = new SoShadowGroup;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShadowGroup has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShadowGroup has bad type";
 }
 
 TEST(NodesSuite, SoShadowStyleClassInitialized)
 {
     SoShadowStyle* node = new SoShadowStyle;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShadowStyle has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShadowStyle has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -559,18 +525,16 @@ TEST(NodesSuite, SoRotationXYZClassInitialized)
 {
     SoRotationXYZ* node = new SoRotationXYZ;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoRotationXYZ has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoRotationXYZ has bad type";
 }
 
 TEST(NodesSuite, SoMatrixTransformClassInitialized)
 {
     SoMatrixTransform* node = new SoMatrixTransform;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoMatrixTransform has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoMatrixTransform has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -581,72 +545,64 @@ TEST(NodesSuite, SoLightModelClassInitialized)
 {
     SoLightModel* node = new SoLightModel;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoLightModel has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoLightModel has bad type";
 }
 
 TEST(NodesSuite, SoDrawStyleClassInitialized)
 {
     SoDrawStyle* node = new SoDrawStyle;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoDrawStyle has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoDrawStyle has bad type";
 }
 
 TEST(NodesSuite, SoComplexityClassInitialized)
 {
     SoComplexity* node = new SoComplexity;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoComplexity has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoComplexity has bad type";
 }
 
 TEST(NodesSuite, SoEnvironmentClassInitialized)
 {
     SoEnvironment* node = new SoEnvironment;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoEnvironment has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoEnvironment has bad type";
 }
 
 TEST(NodesSuite, SoClipPlaneClassInitialized)
 {
     SoClipPlane* node = new SoClipPlane;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoClipPlane has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoClipPlane has bad type";
 }
 
 TEST(NodesSuite, SoNormalBindingClassInitialized)
 {
     SoNormalBinding* node = new SoNormalBinding;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoNormalBinding has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoNormalBinding has bad type";
 }
 
 TEST(NodesSuite, SoMaterialBindingClassInitialized)
 {
     SoMaterialBinding* node = new SoMaterialBinding;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoMaterialBinding has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoMaterialBinding has bad type";
 }
 
 TEST(NodesSuite, SoVertexPropertyClassInitialized)
 {
     SoVertexProperty* node = new SoVertexProperty;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoVertexProperty has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoVertexProperty has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -657,27 +613,24 @@ TEST(NodesSuite, SoTexture2ClassInitialized)
 {
     SoTexture2* node = new SoTexture2;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoTexture2 has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTexture2 has bad type";
 }
 
 TEST(NodesSuite, SoTextureCoordinate2ClassInitialized)
 {
     SoTextureCoordinate2* node = new SoTextureCoordinate2;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoTextureCoordinate2 has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTextureCoordinate2 has bad type";
 }
 
 TEST(NodesSuite, SoTextureCoordinateBindingClassInitialized)
 {
     SoTextureCoordinateBinding* node = new SoTextureCoordinateBinding;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoTextureCoordinateBinding has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTextureCoordinateBinding has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -688,63 +641,56 @@ TEST(NodesSuite, SoFaceSetClassInitialized)
 {
     SoFaceSet* node = new SoFaceSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoFaceSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoFaceSet has bad type";
 }
 
 TEST(NodesSuite, SoIndexedFaceSetClassInitialized)
 {
     SoIndexedFaceSet* node = new SoIndexedFaceSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoIndexedFaceSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedFaceSet has bad type";
 }
 
 TEST(NodesSuite, SoTriangleStripSetClassInitialized)
 {
     SoTriangleStripSet* node = new SoTriangleStripSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoTriangleStripSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTriangleStripSet has bad type";
 }
 
 TEST(NodesSuite, SoIndexedTriangleStripSetClassInitialized)
 {
     SoIndexedTriangleStripSet* node = new SoIndexedTriangleStripSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoIndexedTriangleStripSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedTriangleStripSet has bad type";
 }
 
 TEST(NodesSuite, SoLineSetClassInitialized)
 {
     SoLineSet* node = new SoLineSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoLineSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoLineSet has bad type";
 }
 
 TEST(NodesSuite, SoIndexedLineSetClassInitialized)
 {
     SoIndexedLineSet* node = new SoIndexedLineSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoIndexedLineSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoIndexedLineSet has bad type";
 }
 
 TEST(NodesSuite, SoPointSetClassInitialized)
 {
     SoPointSet* node = new SoPointSet;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoPointSet has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoPointSet has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -755,27 +701,24 @@ TEST(NodesSuite, SoFileClassInitialized)
 {
     SoFile* node = new SoFile;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoFile has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoFile has bad type";
 }
 
 TEST(NodesSuite, SoInfoClassInitialized)
 {
     SoInfo* node = new SoInfo;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoInfo has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoInfo has bad type";
 }
 
 TEST(NodesSuite, SoLODClassInitialized)
 {
     SoLOD* node = new SoLOD;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoLOD has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoLOD has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -786,18 +729,16 @@ TEST(NodesSuite, SoBlinkerClassInitialized)
 {
     SoBlinker* node = new SoBlinker;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoBlinker has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoBlinker has bad type";
 }
 
 TEST(NodesSuite, SoRotorClassInitialized)
 {
     SoRotor* node = new SoRotor;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoRotor has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoRotor has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -809,117 +750,104 @@ TEST(NodesSuite, SoShaderParameter1fClassInitialized)
 {
     SoShaderParameter1f* node = new SoShaderParameter1f;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter1f has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter1f has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter1iClassInitialized)
 {
     SoShaderParameter1i* node = new SoShaderParameter1i;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter1i has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter1i has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter2fClassInitialized)
 {
     SoShaderParameter2f* node = new SoShaderParameter2f;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter2f has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter2f has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter2iClassInitialized)
 {
     SoShaderParameter2i* node = new SoShaderParameter2i;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter2i has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter2i has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter3fClassInitialized)
 {
     SoShaderParameter3f* node = new SoShaderParameter3f;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter3f has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter3f has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter3iClassInitialized)
 {
     SoShaderParameter3i* node = new SoShaderParameter3i;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter3i has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter3i has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter4fClassInitialized)
 {
     SoShaderParameter4f* node = new SoShaderParameter4f;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter4f has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter4f has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameter4iClassInitialized)
 {
     SoShaderParameter4i* node = new SoShaderParameter4i;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameter4i has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameter4i has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameterArray1fClassInitialized)
 {
     SoShaderParameterArray1f* node = new SoShaderParameterArray1f;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameterArray1f has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameterArray1f has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameterArray1iClassInitialized)
 {
     SoShaderParameterArray1i* node = new SoShaderParameterArray1i;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameterArray1i has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameterArray1i has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameterMatrixClassInitialized)
 {
     SoShaderParameterMatrix* node = new SoShaderParameterMatrix;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameterMatrix has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameterMatrix has bad type";
 }
 
 TEST(NodesSuite, SoShaderParameterMatrixArrayClassInitialized)
 {
     SoShaderParameterMatrixArray* node = new SoShaderParameterMatrixArray;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderParameterMatrixArray has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderParameterMatrixArray has bad type";
 }
 
 TEST(NodesSuite, SoShaderStateMatrixParameterClassInitialized)
 {
     SoShaderStateMatrixParameter* node = new SoShaderStateMatrixParameter;
     node->ref();
-    bool pass = (node->getTypeId() != SoType::badType());
+    EXPECT_TRUE((node->getTypeId() != SoType::badType())) << "SoShaderStateMatrixParameter has bad type";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShaderStateMatrixParameter has bad type";
 }
 
 // -----------------------------------------------------------------------
@@ -929,7 +857,7 @@ TEST(NodesSuite, SoShaderStateMatrixParameterClassInitialized)
 
 TEST(NodesSuite, AllDraggerClassTypesRegistered)
 {
-    bool pass =
+    EXPECT_TRUE(
         (SoCenterballDragger::getClassTypeId()       != SoType::badType()) &&
         (SoDirectionalLightDragger::getClassTypeId() != SoType::badType()) &&
         (SoDragPointDragger::getClassTypeId()        != SoType::badType()) &&
@@ -950,8 +878,7 @@ TEST(NodesSuite, AllDraggerClassTypesRegistered)
         (SoTransformBoxDragger::getClassTypeId()     != SoType::badType()) &&
         (SoTransformerDragger::getClassTypeId()      != SoType::badType()) &&
         (SoTranslate1Dragger::getClassTypeId()       != SoType::badType()) &&
-        (SoTranslate2Dragger::getClassTypeId()       != SoType::badType());
-    EXPECT_TRUE(pass) << "One or more dragger class types not registered";
+        (SoTranslate2Dragger::getClassTypeId()       != SoType::badType())) << "One or more dragger class types not registered";
 }
 
 // -----------------------------------------------------------------------
@@ -969,155 +896,71 @@ TEST(NodesSuite, AllDraggerClassTypesRegistered)
 // rendering context and are verified here.
 // -----------------------------------------------------------------------
 
-TEST(NodesSuite, SoTranslate1DraggerDeepCopyProducesIndependentNodes)
+namespace {
+
+template <typename Dragger>
+void expectIndependentDraggerCopy()
 {
     SoSeparator* root = new SoSeparator;
     root->ref();
-    root->addChild(new SoTranslate1Dragger);
+    root->addChild(new Dragger);
     SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
+
+    EXPECT_NE(copy, nullptr);
+    if (copy != nullptr) {
         copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
+        EXPECT_EQ(copy->getNumChildren(), 1);
+        if (copy->getNumChildren() == 1) {
+            EXPECT_NE(copy->getChild(0), root->getChild(0));
+        }
         copy->unref();
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoTranslate1Dragger deep copy failed or shared child pointer";
+}
+
+} // namespace
+
+TEST(NodesSuite, SoTranslate1DraggerDeepCopyProducesIndependentNodes)
+{
+    expectIndependentDraggerCopy<SoTranslate1Dragger>();
 }
 
 TEST(NodesSuite, SoTranslate2DraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoTranslate2Dragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoTranslate2Dragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoTranslate2Dragger>();
 }
 
 TEST(NodesSuite, SoDragPointDraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoDragPointDragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoDragPointDragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoDragPointDragger>();
 }
 
 TEST(NodesSuite, SoRotateDiscDraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoRotateDiscDragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoRotateDiscDragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoRotateDiscDragger>();
 }
 
 TEST(NodesSuite, SoRotateCylindricalDraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoRotateCylindricalDragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoRotateCylindricalDragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoRotateCylindricalDragger>();
 }
 
 TEST(NodesSuite, SoRotateSphericalDraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoRotateSphericalDragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoRotateSphericalDragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoRotateSphericalDragger>();
 }
 
 TEST(NodesSuite, SoScale1DraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoScale1Dragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoScale1Dragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoScale1Dragger>();
 }
 
 TEST(NodesSuite, SoScale2DraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoScale2Dragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoScale2Dragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoScale2Dragger>();
 }
 
 TEST(NodesSuite, SoDirectionalLightDraggerDeepCopyProducesIndependentNodes)
 {
-    SoSeparator* root = new SoSeparator;
-    root->ref();
-    root->addChild(new SoDirectionalLightDragger);
-    SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
-    bool pass = (copy != nullptr);
-    if (pass) {
-        copy->ref();
-        pass = (copy->getNumChildren() == 1) &&
-               (copy->getChild(0) != root->getChild(0));
-        copy->unref();
-    }
-    root->unref();
-    EXPECT_TRUE(pass) << "SoDirectionalLightDragger deep copy failed or shared child pointer";
+    expectIndependentDraggerCopy<SoDirectionalLightDragger>();
 }

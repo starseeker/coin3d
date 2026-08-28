@@ -85,8 +85,7 @@ TEST(SensorsDeeper, SoFieldSensorSetFunctionGetFunctionRoundTrip)
 {
     SoFieldSensor sensor;
     sensor.setFunction(countCB);
-    bool pass = (sensor.getFunction() == countCB);
-    EXPECT_TRUE(pass) << "SoSensor setFunction/getFunction failed";
+    EXPECT_TRUE((sensor.getFunction() == countCB)) << "SoSensor setFunction/getFunction failed";
 }
 
 TEST(SensorsDeeper, SoFieldSensorSetDataGetDataRoundTrip)
@@ -94,8 +93,7 @@ TEST(SensorsDeeper, SoFieldSensorSetDataGetDataRoundTrip)
     SoFieldSensor sensor;
     int dummy = 42;
     sensor.setData(&dummy);
-    bool pass = (sensor.getData() == &dummy);
-    EXPECT_TRUE(pass) << "SoSensor setData/getData failed";
+    EXPECT_TRUE((sensor.getData() == &dummy)) << "SoSensor setData/getData failed";
 }
 
 // -----------------------------------------------------------------------
@@ -109,10 +107,9 @@ TEST(SensorsDeeper, SoFieldSensorAttachGetAttachedField)
     SoFieldSensor sensor;
     sensor.attach(&cube->width);
     SoField * attached = sensor.getAttachedField();
-    bool pass = (attached == &cube->width);
+    EXPECT_TRUE((attached == &cube->width)) << "SoFieldSensor getAttachedField returned wrong field";
     sensor.detach();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoFieldSensor getAttachedField returned wrong field";
 }
 
 TEST(SensorsDeeper, SoFieldSensorDetachSetsGetAttachedFieldToNULL)
@@ -122,9 +119,8 @@ TEST(SensorsDeeper, SoFieldSensorDetachSetsGetAttachedFieldToNULL)
     SoFieldSensor sensor;
     sensor.attach(&cube->width);
     sensor.detach();
-    bool pass = (sensor.getAttachedField() == nullptr);
+    EXPECT_TRUE((sensor.getAttachedField() == nullptr)) << "After detach, getAttachedField should be NULL";
     cube->unref();
-    EXPECT_TRUE(pass) << "After detach, getAttachedField should be NULL";
 }
 
 TEST(SensorsDeeper, SoFieldSensorFiresCallbackOnFieldChange)
@@ -137,10 +133,9 @@ TEST(SensorsDeeper, SoFieldSensorFiresCallbackOnFieldChange)
     cube->width.setValue(5.0f);
     // The sensor queues a callback; process the sensor queue
     SoDB::getSensorManager()->processDelayQueue(FALSE);
-    bool pass = (callCount >= 1);
+    EXPECT_TRUE((callCount >= 1)) << "SoFieldSensor callback did not fire on field change";
     sensor.detach();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoFieldSensor callback did not fire on field change";
 }
 
 // -----------------------------------------------------------------------
@@ -154,10 +149,9 @@ TEST(SensorsDeeper, SoNodeSensorAttachGetAttachedNode)
     SoNodeSensor sensor;
     sensor.attach(cube);
     SoNode * attached = sensor.getAttachedNode();
-    bool pass = (attached == cube);
+    EXPECT_TRUE((attached == cube)) << "SoNodeSensor getAttachedNode returned wrong node";
     sensor.detach();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoNodeSensor getAttachedNode returned wrong node";
 }
 
 TEST(SensorsDeeper, SoNodeSensorDetachSetsGetAttachedNodeToNULL)
@@ -167,9 +161,8 @@ TEST(SensorsDeeper, SoNodeSensorDetachSetsGetAttachedNodeToNULL)
     SoNodeSensor sensor;
     sensor.attach(cube);
     sensor.detach();
-    bool pass = (sensor.getAttachedNode() == nullptr);
+    EXPECT_TRUE((sensor.getAttachedNode() == nullptr)) << "After detach, getAttachedNode should be NULL";
     cube->unref();
-    EXPECT_TRUE(pass) << "After detach, getAttachedNode should be NULL";
 }
 
 TEST(SensorsDeeper, SoNodeSensorFiresCallbackOnNodeFieldChange)
@@ -181,10 +174,9 @@ TEST(SensorsDeeper, SoNodeSensorFiresCallbackOnNodeFieldChange)
     sensor.attach(cube);
     cube->height.setValue(3.0f);
     SoDB::getSensorManager()->processDelayQueue(FALSE);
-    bool pass = (callCount >= 1);
+    EXPECT_TRUE((callCount >= 1)) << "SoNodeSensor callback did not fire on node change";
     sensor.detach();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoNodeSensor callback did not fire on node change";
 }
 
 // -----------------------------------------------------------------------
@@ -196,8 +188,7 @@ TEST(SensorsDeeper, SoTimerSensorSetIntervalGetIntervalRoundTrip)
     SoTimerSensor sensor;
     SbTime interval(0.5);
     sensor.setInterval(interval);
-    bool pass = (std::fabs(sensor.getInterval().getValue() - 0.5) < 1e-9);
-    EXPECT_TRUE(pass) << "SoTimerSensor setInterval/getInterval failed";
+    EXPECT_TRUE((std::fabs(sensor.getInterval().getValue() - 0.5) < 1e-9)) << "SoTimerSensor setInterval/getInterval failed";
 }
 
 TEST(SensorsDeeper, SoTimerSensorSetBaseTimeGetBaseTimeRoundTrip)
@@ -205,15 +196,13 @@ TEST(SensorsDeeper, SoTimerSensorSetBaseTimeGetBaseTimeRoundTrip)
     SoTimerSensor sensor;
     SbTime base(1.0);
     sensor.setBaseTime(base);
-    bool pass = (std::fabs(sensor.getBaseTime().getValue() - 1.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SoTimerSensor setBaseTime/getBaseTime failed";
+    EXPECT_TRUE((std::fabs(sensor.getBaseTime().getValue() - 1.0) < 1e-9)) << "SoTimerSensor setBaseTime/getBaseTime failed";
 }
 
 TEST(SensorsDeeper, SoTimerSensorIsScheduledFALSEBeforeSchedule)
 {
     SoTimerSensor sensor;
-    bool pass = !sensor.isScheduled();
-    EXPECT_TRUE(pass) << "SoTimerSensor should not be scheduled initially";
+    EXPECT_TRUE(!sensor.isScheduled()) << "SoTimerSensor should not be scheduled initially";
 }
 
 TEST(SensorsDeeper, SoTimerSensorIsScheduledTRUEAfterSchedule)
@@ -221,9 +210,8 @@ TEST(SensorsDeeper, SoTimerSensorIsScheduledTRUEAfterSchedule)
     SoTimerSensor sensor;
     sensor.setInterval(SbTime(1.0));
     sensor.schedule();
-    bool pass = sensor.isScheduled();
+    EXPECT_TRUE(sensor.isScheduled()) << "SoTimerSensor should be scheduled after schedule()";
     sensor.unschedule();
-    EXPECT_TRUE(pass) << "SoTimerSensor should be scheduled after schedule()";
 }
 
 // -----------------------------------------------------------------------
@@ -235,15 +223,13 @@ TEST(SensorsDeeper, SoAlarmSensorSetTimeGetTimeRoundTrip)
     SoAlarmSensor sensor;
     SbTime t(10.0);
     sensor.setTime(t);
-    bool pass = (std::fabs(sensor.getTime().getValue() - 10.0) < 1e-9);
-    EXPECT_TRUE(pass) << "SoAlarmSensor setTime/getTime failed";
+    EXPECT_TRUE((std::fabs(sensor.getTime().getValue() - 10.0) < 1e-9)) << "SoAlarmSensor setTime/getTime failed";
 }
 
 TEST(SensorsDeeper, SoAlarmSensorIsScheduledFALSEBeforeSchedule)
 {
     SoAlarmSensor sensor;
-    bool pass = !sensor.isScheduled();
-    EXPECT_TRUE(pass) << "SoAlarmSensor should not be scheduled initially";
+    EXPECT_TRUE(!sensor.isScheduled()) << "SoAlarmSensor should not be scheduled initially";
 }
 
 TEST(SensorsDeeper, SoAlarmSensorSetTimeFromNowScheduleUnschedule)
@@ -253,8 +239,7 @@ TEST(SensorsDeeper, SoAlarmSensorSetTimeFromNowScheduleUnschedule)
     sensor.schedule();
     bool isScheduled = sensor.isScheduled();
     sensor.unschedule();
-    bool pass = isScheduled;
-    EXPECT_TRUE(pass) << "SoAlarmSensor should be scheduled after schedule()";
+    EXPECT_TRUE(isScheduled) << "SoAlarmSensor should be scheduled after schedule()";
 }
 
 // -----------------------------------------------------------------------
@@ -264,17 +249,15 @@ TEST(SensorsDeeper, SoAlarmSensorSetTimeFromNowScheduleUnschedule)
 TEST(SensorsDeeper, SoOneShotSensorIsScheduledFALSEBeforeSchedule)
 {
     SoOneShotSensor sensor;
-    bool pass = !sensor.isScheduled();
-    EXPECT_TRUE(pass) << "SoOneShotSensor should not be scheduled initially";
+    EXPECT_TRUE(!sensor.isScheduled()) << "SoOneShotSensor should not be scheduled initially";
 }
 
 TEST(SensorsDeeper, SoOneShotSensorIsScheduledTRUEAfterSchedule)
 {
     SoOneShotSensor sensor;
     sensor.schedule();
-    bool pass = sensor.isScheduled();
+    EXPECT_TRUE(sensor.isScheduled()) << "SoOneShotSensor should be scheduled after schedule()";
     sensor.unschedule();
-    EXPECT_TRUE(pass) << "SoOneShotSensor should be scheduled after schedule()";
 }
 
 // -----------------------------------------------------------------------
@@ -284,17 +267,15 @@ TEST(SensorsDeeper, SoOneShotSensorIsScheduledTRUEAfterSchedule)
 TEST(SensorsDeeper, SoIdleSensorIsScheduledFALSEBeforeSchedule)
 {
     SoIdleSensor sensor;
-    bool pass = !sensor.isScheduled();
-    EXPECT_TRUE(pass) << "SoIdleSensor should not be scheduled initially";
+    EXPECT_TRUE(!sensor.isScheduled()) << "SoIdleSensor should not be scheduled initially";
 }
 
 TEST(SensorsDeeper, SoIdleSensorIsScheduledTRUEAfterSchedule)
 {
     SoIdleSensor sensor;
     sensor.schedule();
-    bool pass = sensor.isScheduled();
+    EXPECT_TRUE(sensor.isScheduled()) << "SoIdleSensor should be scheduled after schedule()";
     sensor.unschedule();
-    EXPECT_TRUE(pass) << "SoIdleSensor should be scheduled after schedule()";
 }
 
 // -----------------------------------------------------------------------
@@ -305,14 +286,12 @@ TEST(SensorsDeeper, SoDataSensorSetTriggerPathFlagTRUEGetTriggerPathFlag)
 {
     SoFieldSensor sensor; // SoFieldSensor is a SoDataSensor
     sensor.setTriggerPathFlag(TRUE);
-    bool pass = (sensor.getTriggerPathFlag() == TRUE);
-    EXPECT_TRUE(pass) << "setTriggerPathFlag(TRUE) failed";
+    EXPECT_TRUE((sensor.getTriggerPathFlag() == TRUE)) << "setTriggerPathFlag(TRUE) failed";
 }
 
 TEST(SensorsDeeper, SoDataSensorSetTriggerPathFlagFALSEGetTriggerPathFlag)
 {
     SoFieldSensor sensor;
     sensor.setTriggerPathFlag(FALSE);
-    bool pass = (sensor.getTriggerPathFlag() == FALSE);
-    EXPECT_TRUE(pass) << "setTriggerPathFlag(FALSE) failed";
+    EXPECT_TRUE((sensor.getTriggerPathFlag() == FALSE)) << "setTriggerPathFlag(FALSE) failed";
 }

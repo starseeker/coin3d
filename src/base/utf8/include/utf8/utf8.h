@@ -832,7 +832,6 @@ bool operator !=(const exception& lhs, const exception& rhs)
 #if defined(_WIN32) && !defined(UTF8_KEEP_WIN32_API)
 #include <utf8/winutf8.h>
 #endif
-#include <utf8/ini.h>
 
 #if defined(_MSC_VER) && !defined(UTF8_NO_AUTOLINK)
 #pragma comment (lib, "utf8")

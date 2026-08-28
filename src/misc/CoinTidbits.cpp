@@ -129,143 +129,20 @@ void coin_init_tidbits(void)
 /* ********************************************************************** */
 /* Environment variable functions */
 
-#ifdef HAVE_GETENVIRONMENTVARIABLE
-static struct envvar_data* envlist_head = NULL;
-static struct envvar_data* envlist_tail = NULL;
-
-struct envvar_data {
-    char* name;
-    char* val;
-    struct envvar_data* next;
-};
-
-static void envlist_cleanup(void)
-{
-    struct envvar_data* ptr = envlist_head;
-    while (ptr != NULL) {
-        struct envvar_data* tmp = ptr;
-        free(ptr->name);
-        free(ptr->val);
-        ptr = ptr->next;
-        free(tmp);
-    }
-    envlist_head = NULL;
-    envlist_tail = NULL;
-}
-
-static void envlist_append(struct envvar_data* item)
-{
-    item->next = NULL;
-    if (envlist_head == NULL) {
-        envlist_head = item;
-        envlist_tail = item;
-        coin_atexit_func("envlist_cleanup", envlist_cleanup, CC_ATEXIT_ENVIRONMENT);
-    } else {
-        envlist_tail->next = item;
-        envlist_tail = item;
-    }
-}
-#endif /* HAVE_GETENVIRONMENTVARIABLE */
-
 const char* coin_getenv(const char* envname)
 {
-#ifdef HAVE_GETENVIRONMENTVARIABLE
-    int neededsize;
-    neededsize = GetEnvironmentVariable(envname, NULL, 0);
-    
-    if (neededsize >= 1) {
-        int resultsize;
-        struct envvar_data* envptr;
-        char* valbuf = (char*)malloc(neededsize);
-        if (valbuf == NULL) {
-            return NULL;
-        }
-        resultsize = GetEnvironmentVariable(envname, valbuf, neededsize);
-        if (resultsize != (neededsize - 1)) {
-            free(valbuf);
-            return NULL;
-        }
-        
-        envptr = envlist_head;
-        while ((envptr != NULL) && (strcmp(envptr->name, envname) != 0))
-            envptr = envptr->next;
-        
-        if (envptr != NULL) {
-            free(envptr->val);
-            envptr->val = valbuf;
-        } else {
-            envptr = (struct envvar_data*)malloc(sizeof(struct envvar_data));
-            if (envptr == NULL) {
-                free(valbuf);
-                return NULL;
-            }
-            envptr->name = strdup(envname);
-            if (envptr->name == NULL) {
-                free(envptr);
-                free(valbuf);
-                return NULL;
-            }
-            envptr->val = valbuf;
-            envlist_append(envptr);
-        }
-        return envptr->val;
-    }
-    return NULL;
-#else
-    return getenv(envname);
-#endif
+    return CoinInternal::getEnvironmentVariableRaw(envname);
 }
 
 SbBool coin_setenv(const char* name, const char* value, int overwrite)
 {
-#ifdef HAVE_GETENVIRONMENTVARIABLE
-    struct envvar_data* envptr, * prevptr;
-    envptr = envlist_head;
-    prevptr = NULL;
-    while ((envptr != NULL) && (strcmp(envptr->name, name) != 0)) {
-        prevptr = envptr;
-        envptr = envptr->next;
-    }
-    if (envptr) {
-        if (prevptr) prevptr->next = envptr->next;
-        else envlist_head = envptr->next;
-        if (envlist_tail == envptr) envlist_tail = prevptr;
-        free(envptr->name);
-        free(envptr->val);
-        free(envptr);
-    }
-    
-    if (overwrite || (GetEnvironmentVariable(name, NULL, 0) == 0))
-        return SetEnvironmentVariable(name, value) ? OBOL_TRUE : OBOL_FALSE;
-    else
-        return OBOL_TRUE;
-#else
-    return (setenv(name, value, overwrite) == 0);
-#endif
+    return CoinInternal::setEnvironmentVariable(name, value, overwrite != 0) ?
+      OBOL_TRUE : OBOL_FALSE;
 }
 
 void coin_unsetenv(const char* name)
 {
-#ifdef HAVE_GETENVIRONMENTVARIABLE
-    struct envvar_data* envptr, * prevptr;
-    envptr = envlist_head;
-    prevptr = NULL;
-    while ((envptr != NULL) && (strcmp(envptr->name, name) != 0)) {
-        prevptr = envptr;
-        envptr = envptr->next;
-    }
-    if (envptr) {
-        if (prevptr) prevptr->next = envptr->next;
-        else envlist_head = envptr->next;
-        if (envlist_tail == envptr) envlist_tail = prevptr;
-        free(envptr->name);
-        free(envptr->val);
-        free(envptr);
-    }
-    SetEnvironmentVariable(name, NULL);
-#else
-    unsetenv(name);
-#endif
+    CoinInternal::unsetEnvironmentVariable(name);
 }
 
 /* ********************************************************************** */
@@ -276,29 +153,25 @@ void coin_unsetenv(const char* name)
 #define OBOL_BSWAP_32(x) ((OBOL_BSWAP_16(x) << 16) | OBOL_BSWAP_16((x) >> 16))
 #define OBOL_BSWAP_64(x) ((OBOL_BSWAP_32(x) << 32) | OBOL_BSWAP_32((x) >> 32))
 
-static int coin_endianness = OBOL_HOST_IS_UNKNOWNENDIAN;
-
 int coin_host_get_endianness(void)
 {
-    union temptype {
-        uint32_t value;
-        uint8_t  bytes[4];
-    } temp;
-    
-    if (coin_endianness != OBOL_HOST_IS_UNKNOWNENDIAN) {
-        return coin_endianness;
-    }
-    
-    temp.bytes[0] = 0x00;
-    temp.bytes[1] = 0x01;
-    temp.bytes[2] = 0x02;
-    temp.bytes[3] = 0x03;
-    switch (temp.value) {
-        case 0x03020100: return coin_endianness = OBOL_HOST_IS_LITTLEENDIAN;
-        case 0x00010203: return coin_endianness = OBOL_HOST_IS_BIGENDIAN;
-    }
-    assert(0 && "system has unknown endianness");
-    return OBOL_HOST_IS_UNKNOWNENDIAN;
+    static const int coin_endianness = [] {
+        union temptype {
+            uint32_t value;
+            uint8_t  bytes[4];
+        } temp = {};
+        temp.bytes[0] = 0x00;
+        temp.bytes[1] = 0x01;
+        temp.bytes[2] = 0x02;
+        temp.bytes[3] = 0x03;
+        switch (temp.value) {
+            case 0x03020100: return OBOL_HOST_IS_LITTLEENDIAN;
+            case 0x00010203: return OBOL_HOST_IS_BIGENDIAN;
+        }
+        assert(0 && "system has unknown endianness");
+        return OBOL_HOST_IS_UNKNOWNENDIAN;
+    }();
+    return coin_endianness;
 }
 
 std::uint16_t coin_hton_uint16(std::uint16_t value)
@@ -689,9 +562,11 @@ static FILE* coin_stderr = NULL;
 static int coin_dup_stdin = -1;
 static int coin_dup_stdout = -1;
 static int coin_dup_stderr = -1;
+static std::mutex std_fds_mutex;
 
 void free_std_fds(void)
 {
+    const std::lock_guard<std::mutex> guard(std_fds_mutex);
     if (coin_stdin) {
         assert(coin_dup_stdin != -1);
         fclose(coin_stdin);
@@ -720,6 +595,7 @@ void free_std_fds(void)
 
 FILE* coin_get_stdin(void)
 {
+    const std::lock_guard<std::mutex> guard(std_fds_mutex);
     if (!coin_stdin) {
         coin_dup_stdin = dup(STDIN_FILENO);
         coin_stdin = fdopen(STDIN_FILENO, "r");
@@ -729,6 +605,7 @@ FILE* coin_get_stdin(void)
 
 FILE* coin_get_stdout(void)
 {
+    const std::lock_guard<std::mutex> guard(std_fds_mutex);
     if (!coin_stdout) {
         coin_dup_stdout = dup(STDOUT_FILENO);
         coin_stdout = fdopen(STDOUT_FILENO, "w");
@@ -738,6 +615,7 @@ FILE* coin_get_stdout(void)
 
 FILE* coin_get_stderr(void)
 {
+    const std::lock_guard<std::mutex> guard(std_fds_mutex);
     if (!coin_stderr) {
         coin_dup_stderr = dup(STDERR_FILENO);
         coin_stderr = fdopen(STDERR_FILENO, "w");

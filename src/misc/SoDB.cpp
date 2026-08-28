@@ -700,6 +700,7 @@ SoDB::registerHeader(const SbString & headerstring,
   SoDB_HeaderInfo * newheader =
     new SoDB_HeaderInfo(headerstring, isbinary, ivversion,
                         precallback, postcallback, userdata);
+  const std::unique_lock<std::shared_mutex> lock(SoDBP::registrymutex);
   SoDBP::headerlist->append(newheader);
   return TRUE;
 }
@@ -734,8 +735,9 @@ SoDB::getHeaderData(const SbString & headerstring, SbBool & isbinary,
 
   SbString tryheader = headerstring.getSubString(0, hslen-1);
 
+  const std::shared_lock<std::shared_mutex> lock(SoDBP::registrymutex);
   SbBool hit = FALSE;
-  for (int i=0; (i < SoDB::getNumHeaders()) && !hit; i++) {
+  for (int i=0; (i < SoDBP::headerlist->getLength()) && !hit; i++) {
     SoDB_HeaderInfo * hi = (*SoDBP::headerlist)[i];
     SbString & s = hi->headerstring;
     unsigned int reglen = s.getLength();
@@ -772,6 +774,7 @@ SoDB::getHeaderData(const SbString & headerstring, SbBool & isbinary,
 int
 SoDB::getNumHeaders(void)
 {
+  const std::shared_lock<std::shared_mutex> lock(SoDBP::registrymutex);
   return SoDBP::headerlist->getLength();
 }
 
@@ -783,6 +786,7 @@ SoDB::getNumHeaders(void)
 SbString
 SoDB::getHeaderString(const int i)
 {
+  const std::shared_lock<std::shared_mutex> lock(SoDBP::registrymutex);
 #if OBOL_DEBUG
   if ((i < 0) || (i >= SoDBP::headerlist->getLength())) {
     SoDebugError::post("SoDB::getHeaderString", "Index %d out of range.", i);
@@ -810,6 +814,9 @@ SoField *
 SoDB::createGlobalField(const SbName & name, SoType type)
 {
   assert(name != "" && "invalid name for a global field");
+
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
 
   SoField * f = SoDB::getGlobalField(name);
   if (f) {
@@ -853,6 +860,8 @@ SoDB::createGlobalField(const SbName & name, SoType type)
 SoField *
 SoDB::getGlobalField(const SbName & name)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   SoGlobalField * gf = SoGlobalField::getGlobalFieldContainer(name);
   return gf ? gf->getGlobalField() : NULL;
 }
@@ -867,6 +876,8 @@ SoDB::getGlobalField(const SbName & name)
 void
 SoDB::renameGlobalField(const SbName & from, const SbName & to)
 {
+  const std::lock_guard<std::recursive_mutex> lock(
+    SoGlobalField::registrymutex);
   SoGlobalField * gf = SoGlobalField::getGlobalFieldContainer(from);
 
 #if OBOL_DEBUG
@@ -991,6 +1002,7 @@ void
 SoDB::addConverter(SoType from, SoType to, SoType converter)
 {
   const uint32_t linkid = (((uint32_t)from.getKey()) << 16) + to.getKey();
+  const std::unique_lock<std::shared_mutex> lock(SoDBP::registrymutex);
   SbBool nonexist = SoDBP::converters->put(linkid, converter.getKey());
   if (!nonexist) {
 #if OBOL_DEBUG
@@ -1019,6 +1031,7 @@ SoDB::getConverter(SoType from, SoType to)
 {
   uint32_t val = (((uint32_t)from.getKey()) << 16) + to.getKey();
   int16_t key;
+  const std::shared_lock<std::shared_mutex> lock(SoDBP::registrymutex);
   if (!SoDBP::converters->get(val, key)) { return SoType::badType(); }
   return SoType::fromKey(key);
 }
@@ -1105,11 +1118,19 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   assert(grouptype.canCreateInstance());
   assert(grouptype.isDerivedFrom(SoGroup::getClassTypeId()));
 
+  const SbName progressid("File import");
+  if (SoDBP::progress(progressid, 0.0f, TRUE)) {
+    (void)SoDBP::progress(progressid, -1.0f, FALSE);
+    return NULL;
+  }
+
   SbBool valid = in->isValidFile();
 
   if (!valid && SoDBP::is3dsFile(in)) {
     SoSeparator * root3ds = SoDBP::read3DSFile(in);
     if (root3ds == NULL) { return NULL; }
+
+    (void)SoDBP::progress(progressid, 1.0f, FALSE);
 
     if (!SoSeparator::getClassTypeId().isDerivedFrom(grouptype)) {
       SoGroup * root = (SoGroup *)grouptype.createInstance(in->getContextManager());
@@ -1132,13 +1153,28 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
 
   SoGroup * root = (SoGroup *)grouptype.createInstance(in->getContextManager());
   SoNode * topnode;
+  size_t topnodecount = 0;
   do {
     if (!SoDB::read(in, topnode)) {
       root->ref();
       root->unref();
       return NULL;
     }
-    if (topnode) { root->addChild(topnode); }
+    if (topnode) {
+      root->addChild(topnode);
+      ++topnodecount;
+      // The final number of top-level objects is not known for streams. This
+      // monotonic estimate still gives callers responsive cancellation points
+      // and is followed by an exact 1.0 completion notification.
+      const float estimate = static_cast<float>(topnodecount) /
+        static_cast<float>(topnodecount + 1);
+      if (SoDBP::progress(progressid, estimate, TRUE)) {
+        (void)SoDBP::progress(progressid, -1.0f, FALSE);
+        root->ref();
+        root->unref();
+        return NULL;
+      }
+    }
   } while (topnode && in->skipWhiteSpace());
 
   if (!in->eof()) {
@@ -1184,6 +1220,8 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   assert((stackdepth == 1 && in->filestack.getLength() == 1) ||
          (stackdepth - 1 == in->filestack.getLength()));
 #endif
+
+  (void)SoDBP::progress(progressid, 1.0f, FALSE);
 
   // Strip off extra root group node if it was unnecessary (i.e. if
   // the file only had a single top-level root, and it was of the same
@@ -1261,6 +1299,12 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   will then have to be considered to be "stacked", and client code
   must be aware of and treat this properly.
 
+  Callback registration is synchronized. Dispatch takes a snapshot and invokes
+  client code without holding the registry mutex, so callbacks may register or
+  remove callbacks reentrantly. Removal prevents future snapshots but does not
+  wait for a callback already in progress; the application must keep userdata
+  alive until the corresponding long-running operations have completed.
+
   \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.2
@@ -1268,6 +1312,8 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
 void
 SoDB::addProgressCallback(ProgressCallbackType * func, void * userdata)
 {
+  if (!func) return;
+  const std::lock_guard<std::mutex> lock(SoDBP::progressmutex);
   if (SoDBP::progresscblist == NULL) {
     SoDBP::progresscblist = new SbList<SoDBP::ProgressCallbackInfo>;
   }
@@ -1277,18 +1323,18 @@ SoDB::addProgressCallback(ProgressCallbackType * func, void * userdata)
 }
 
 /*!
-  Removes a progress callback function, which will no longer be
-  invoked.
+  Removes a progress callback function from future dispatch snapshots. An
+  invocation already present in an active snapshot can still complete.
 */
 void
 SoDB::removeProgressCallback(ProgressCallbackType * func, void * userdata)
 {
-  assert(SoDBP::progresscblist);
+  const std::lock_guard<std::mutex> lock(SoDBP::progressmutex);
+  if (SoDBP::progresscblist == NULL) return;
 
   const SoDBP::ProgressCallbackInfo item = { func, userdata };
   const int idx = SoDBP::progresscblist->find(item);
-  assert(idx != -1);
-  SoDBP::progresscblist->remove(idx);
+  if (idx != -1) SoDBP::progresscblist->remove(idx);
 }
 
 /*!

@@ -677,14 +677,8 @@ SoVectorizeActionP::pre_shape_cb(void * userdata,
   SbBox3f bbox;
 
   SoShape * shape = const_cast<SoShape*>(static_cast<const SoShape*>(node));
-  const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
-  if (bboxcache && bboxcache->isValid(state)) {
-    bbox = bboxcache->getProjectedBox();
-  }
-  else {
-    SbVec3f center;
-    shape->computeBBox(action, bbox, center);
-  }
+  SbVec3f center;
+  shape->getBoundingBoxData(action, bbox, center);
   if (SoCullElement::cullBox(state, bbox, TRUE)) {
     return SoCallbackAction::PRUNE;
   }

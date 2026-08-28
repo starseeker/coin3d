@@ -302,6 +302,7 @@ endif()
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h"
+          PATTERN "*.icc"
           # Exclude specific internal C headers that are no longer part of public API
           PATTERN "C/glue/dl.h" EXCLUDE
           PATTERN "C/basic.h.in" EXCLUDE

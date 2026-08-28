@@ -21,9 +21,14 @@ ctest --test-dir .build -L integration --output-on-failure
 ctest --test-dir .build -L render --output-on-failure
 ```
 
-The modern suite uses GTest's CTest discovery.  A test process receives an
-explicit `SoDB::ContextManager`; non-rendering tests use a no-op manager and
-render fixtures select either OSMesa or native GLX through their CTest lane.
+The modern suite registers one shuffled CTest invocation per GTest executable.
+Ordinary cases share a process, exposing order dependencies while avoiding
+thousands of process startups. The shuffle seed is fixed locally for
+reproducibility; CI repeats the unit executable with time-derived seeds.
+Lifecycle and irreversible type-capacity contracts remain in dedicated
+executables. A test process receives an explicit `SoDB::ContextManager`;
+non-rendering tests use a no-op manager and render fixtures select either
+OSMesa or native GLX through their CTest lane.
 Tests must not change the global rendering backend as part of ordinary setup.
 Test configuration prefers an installed GoogleTest 1.10 or newer and falls
 back to the pinned `external/googletest` submodule. Recursive repository
@@ -74,8 +79,8 @@ materials, transforms, and offscreen-rendering wrappers are now fixture-backed
 OSMesa feature contracts; their viewer scenes live only in
 `examples/demo_scenes`.
 
-The former standalone rendering sources now register one independently
-discoverable GTest scenario per source in each enabled backend target. Their
+The former standalone rendering sources now register ordinary filterable GTest
+scenarios in each enabled backend target. Their
 scene construction, rendering, picking, interaction, and pixel contracts
 remain covered. They call scenario code directly and use build-local output
 stems only for optional diagnostic images; there is no command-line or

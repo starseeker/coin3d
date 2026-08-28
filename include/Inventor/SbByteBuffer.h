@@ -67,7 +67,7 @@ class OBOL_DLL_API SbByteBuffer {
 };
 
 #ifdef ABI_BREAKING_OPTIMIZE
-#include "SbByteBufferP.icc"
+#include "SbByteBuffer.icc"
 #endif //ABI_BREAKING_OPTIMIZE
 
 #endif // !OBOL_SBBYTEBUFFER_H

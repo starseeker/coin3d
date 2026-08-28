@@ -130,12 +130,16 @@
 
 #include "CoinTidbits.h"
 
+#include <mutex>
+
 // *************************************************************************
 
 static SbBool hardcopy_isinitialized = FALSE;
+static std::mutex hardcopy_init_mutex;
 
 static void hardcopy_cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(hardcopy_init_mutex);
   hardcopy_isinitialized = FALSE;
 }
 
@@ -147,6 +151,7 @@ static void hardcopy_cleanup(void)
 void
 SoHardCopy::init(void)
 {
+  const std::lock_guard<std::mutex> lock(hardcopy_init_mutex);
   if (hardcopy_isinitialized) { return; }
 
   SoVectorizeAction::initClass();

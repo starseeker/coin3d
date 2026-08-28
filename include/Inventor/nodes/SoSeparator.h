@@ -36,6 +36,8 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoGroup.h>
+
+#include <atomic>
 #include <Inventor/tools/SbPimplPtr.h>
 
 class SoState;
@@ -103,7 +105,7 @@ private:
   void commonConstructor(void);
   SbBool cullTestNoPush(SoState * state);
 
-  static int numrendercaches;
+  static std::atomic<int> numrendercaches;
 
   SbPimplPtr<SoSeparatorP> pimpl;
 

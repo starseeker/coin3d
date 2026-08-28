@@ -7,6 +7,9 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 
+#include <shared_mutex>
+#include <vector>
+
 #include "config.h"
 
 #ifdef HAVE_3DS_IMPORT_CAPABILITIES
@@ -25,6 +28,8 @@ SoTimerSensor * SoDBP::globaltimersensor = NULL;
 UInt32ToInt16Map * SoDBP::converters = NULL;
 std::atomic<SbBool> SoDBP::isinitialized{FALSE};
 std::atomic<int> SoDBP::notificationcounter{0};
+std::shared_mutex SoDBP::registrymutex;
+std::mutex SoDBP::progressmutex;
 SbList<SoDBP::ProgressCallbackInfo> * SoDBP::progresscblist = NULL;
 
 // *************************************************************************
@@ -37,8 +42,11 @@ SbList<SoDBP::ProgressCallbackInfo> * SoDBP::progresscblist = NULL;
 void
 SoDBP::clean(void)
 {
-  delete SoDBP::progresscblist;
-  SoDBP::progresscblist = NULL;
+  {
+    const std::lock_guard<std::mutex> lock(SoDBP::progressmutex);
+    delete SoDBP::progresscblist;
+    SoDBP::progresscblist = NULL;
+  }
 
   // Avoid having the SoSensorManager instance trigging the callback
   // into the So@Gui@ class -- not only have it possible "died", but
@@ -52,16 +60,19 @@ SoDBP::clean(void)
 
   delete SoDBP::globaltimersensor;
   SoDBP::globaltimersensor = NULL;
-  delete SoDBP::converters;
-  SoDBP::converters = NULL;
+  {
+    const std::unique_lock<std::shared_mutex> lock(SoDBP::registrymutex);
+    delete SoDBP::converters;
+    SoDBP::converters = NULL;
+
+    for (int i = 0; i < SoDBP::headerlist->getLength(); i++)
+      delete (*SoDBP::headerlist)[i];
+    delete SoDBP::headerlist;
+    SoDBP::headerlist = NULL;
+  }
 
   delete SoDBP::sensormanager;
   SoDBP::sensormanager = NULL;
-
-  for (int i = 0; i < SoDBP::headerlist->getLength(); i++)
-    delete (*SoDBP::headerlist)[i];
-  delete SoDBP::headerlist;
-  SoDBP::headerlist = NULL;
 
   delete SoDBP::globalmutex;
   SoDBP::globalmutex = NULL;
@@ -125,27 +136,27 @@ SoDBP::is3dsFile(SoInput * in)
 #include <tlhelp32.h>
 
 typedef HANDLE (WINAPI * CreateToolhelp32Snapshot_t)(DWORD, DWORD);
-typedef BOOL (WINAPI * Module32First_t)(HANDLE, LPMODULEENTRY32);
-typedef BOOL (WINAPI * Module32Next_t)(HANDLE, LPMODULEENTRY32);
-
-static CreateToolhelp32Snapshot_t funCreateToolhelp32Snapshot;
-static Module32First_t funModule32First;
-static Module32Next_t funModule32Next;
+// The diagnostics below are narrow-string based. Use the explicit ANSI
+// Toolhelp API throughout so builds defining UNICODE neither bind the A
+// symbol to a W structure nor pass wchar_t buffers to a "%s" formatter.
+typedef BOOL (WINAPI * Module32First_t)(HANDLE, LPMODULEENTRY32A);
+typedef BOOL (WINAPI * Module32Next_t)(HANDLE, LPMODULEENTRY32A);
 
 void
 SoDBP::listWin32ProcessModules(void)
 {
   BOOL ok;
 
-  HINSTANCE kernel32dll = LoadLibrary("kernel32.dll");
+  HINSTANCE kernel32dll = LoadLibraryA("kernel32.dll");
   assert(kernel32dll && "LoadLibrary(''kernel32.dll'') failed");
 
-  funCreateToolhelp32Snapshot = (CreateToolhelp32Snapshot_t)
+  const CreateToolhelp32Snapshot_t funCreateToolhelp32Snapshot =
+    (CreateToolhelp32Snapshot_t)
     GetProcAddress(kernel32dll, "CreateToolhelp32Snapshot");
-  funModule32First = (Module32First_t)
-    GetProcAddress(kernel32dll, "Module32First");
-  funModule32Next = (Module32Next_t)
-    GetProcAddress(kernel32dll, "Module32Next");
+  const Module32First_t funModule32First = (Module32First_t)
+    GetProcAddress(kernel32dll, "Module32FirstA");
+  const Module32Next_t funModule32Next = (Module32Next_t)
+    GetProcAddress(kernel32dll, "Module32NextA");
 
   if (!funCreateToolhelp32Snapshot || !funModule32First || !funModule32Next) {
     SoDebugError::postWarning("SoDBP::listWin32ProcessModules",
@@ -155,8 +166,8 @@ SoDBP::listWin32ProcessModules(void)
     HANDLE tool32snap = funCreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
     assert((tool32snap != (void *)-1) && "CreateToolhelp32Snapshot() failed");
 
-    MODULEENTRY32 moduleentry;
-    moduleentry.dwSize = sizeof(MODULEENTRY32);
+    MODULEENTRY32A moduleentry = {};
+    moduleentry.dwSize = sizeof(MODULEENTRY32A);
     ok = funModule32First(tool32snap, &moduleentry);
     assert(ok && "Module32First() failed");
 
@@ -217,15 +228,29 @@ SoDBP::read3DSFile(SoInput * OBOL_UNUSED_ARG(in))
 }
 
 
-void
+SbBool
 SoDBP::progress(const SbName & itemid,
                 float fraction,
                 SbBool interruptible)
 {
-  if (SoDBP::progresscblist != NULL) {
-    for (int i = 0; i < SoDBP::progresscblist->getLength(); i++) {
-      SoDBP::ProgressCallbackInfo info = (*SoDBP::progresscblist)[i];
-      info.func(itemid, fraction, interruptible, info.userdata);
+  std::vector<ProgressCallbackInfo> callbacks;
+  {
+    const std::lock_guard<std::mutex> lock(SoDBP::progressmutex);
+    if (SoDBP::progresscblist != NULL) {
+      callbacks.reserve(
+        static_cast<size_t>(SoDBP::progresscblist->getLength()));
+      for (int i = 0; i < SoDBP::progresscblist->getLength(); ++i) {
+        callbacks.push_back((*SoDBP::progresscblist)[i]);
+      }
     }
   }
+
+  SbBool abortrequested = FALSE;
+  for (const ProgressCallbackInfo & info : callbacks) {
+    if (info.func(itemid, fraction, interruptible, info.userdata) &&
+        interruptible) {
+      abortrequested = TRUE;
+    }
+  }
+  return abortrequested;
 }

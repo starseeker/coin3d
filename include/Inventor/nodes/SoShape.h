@@ -90,6 +90,13 @@ public:
 
   static void getScreenSize(SoState * const state, const SbBox3f & boundingbox,
                             SbVec2s & rectsize);
+  // Returns a cache-backed snapshot when possible and otherwise computes the
+  // values while holding the shape's traversal-cache lock. Prefer this over
+  // retaining the raw cache pointer in concurrent traversal code.
+  void getBoundingBoxData(SoAction * action, SbBox3f & box,
+                          SbVec3f & center);
+  // Compatibility API: the returned pointer is borrowed and requires the
+  // caller to prevent concurrent notification or traversal of this shape.
   const SoBoundingBoxCache * getBoundingBoxCache(void) const;
   
 protected:

@@ -311,7 +311,7 @@ SoBase::destroy(void)
 
 
 #if OBOL_DEBUG
-  if (SoBase::PImpl::tracerefs) {
+  if (SoBase::PImpl::tracerefs.load(std::memory_order_acquire)) {
     SoDebugError::postInfo("SoBase::destroy",
                            "%p ('%s')",
                            static_cast<void *>(this),
@@ -423,7 +423,7 @@ SoBase::cleanClass(void)
 
   SoBase::classTypeId STATIC_SOTYPE_INIT;
 
-  SoBase::PImpl::tracerefs = FALSE;
+  SoBase::PImpl::tracerefs.store(FALSE, std::memory_order_release);
   SoBase::PImpl::writecounter = 0;
 }
 
@@ -501,7 +501,7 @@ SoBase::ref(void) const
     // it can hold up to 2,147,483,647 (2^31 − 1) references.
     assert(FALSE && "reference count overflow");
   }
-  if (SoBase::PImpl::tracerefs) {
+  if (SoBase::PImpl::tracerefs.load(std::memory_order_acquire)) {
     SoDebugError::postInfo("SoBase::ref",
                            "%p ('%s') - referencecount: %d",
                            static_cast<const void *>(this),
@@ -536,7 +536,7 @@ SoBase::unref(void) const
   int32_t refcount = this->referencecount.fetch_sub(1, std::memory_order_acq_rel) - 1;
 
 #if OBOL_DEBUG
-  if (SoBase::PImpl::tracerefs) {
+  if (SoBase::PImpl::tracerefs.load(std::memory_order_acquire)) {
     SoDebugError::postInfo("SoBase::unref",
                            "%p ('%s') - referencecount: %d",
                            static_cast<const void *>(this),
@@ -574,7 +574,7 @@ SoBase::unrefNoDelete(void) const
 
 #if OBOL_DEBUG
   int32_t newrefcount = this->referencecount.fetch_sub(1, std::memory_order_acq_rel) - 1;
-  if (SoBase::PImpl::tracerefs) {
+  if (SoBase::PImpl::tracerefs.load(std::memory_order_acquire)) {
     SoDebugError::postInfo("SoBase::unrefNoDelete",
                            "%p ('%s') - referencecount: %d",
                            static_cast<const void *>(this),
@@ -1155,6 +1155,8 @@ void
 SoBase::setInstancePrefix(const SbString & c)
 {
   SoWriterefCounter::setInstancePrefix(c);
+  const std::unique_lock<std::shared_mutex> lock(
+    SoBase::PImpl::base_dict_mutex);
   (*SoBase::PImpl::refwriteprefix) = c;
 }
 
@@ -1170,7 +1172,7 @@ SoBase::setInstancePrefix(const SbString & c)
 void
 SoBase::setTraceRefs(SbBool trace)
 {
-  SoBase::PImpl::tracerefs = trace;
+  SoBase::PImpl::tracerefs.store(trace, std::memory_order_release);
 }
 
 /*!
@@ -1181,7 +1183,7 @@ SoBase::setTraceRefs(SbBool trace)
 SbBool
 SoBase::getTraceRefs(void)
 {
-  return SoBase::PImpl::tracerefs;
+  return SoBase::PImpl::tracerefs.load(std::memory_order_acquire);
 }
 
 /*!

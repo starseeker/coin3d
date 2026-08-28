@@ -175,6 +175,17 @@ public:
   static SbBool isNotifying(void);
   static void endNotify(void);
 
+  /**
+   * Progress callback used by long-running operations. File import reports
+   * exact 0 and 1 endpoints, monotonically increasing intermediate fractions,
+   * and a final -1 when an interruptible import is successfully cancelled.
+   * Returning TRUE requests cancellation only when interruptible is TRUE.
+   *
+   * Callbacks are invoked from a registry snapshot without an internal lock,
+   * so they may add or remove callbacks. Removal affects future snapshots but
+   * does not wait for an invocation already in progress; callback userdata
+   * must remain alive until those operations have completed.
+   */
   typedef SbBool ProgressCallbackType(const SbName & itemid, float fraction,
                                       SbBool interruptible, void * userdata);
   static void addProgressCallback(ProgressCallbackType * func, void * userdata);

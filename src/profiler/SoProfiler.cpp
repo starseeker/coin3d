@@ -73,6 +73,7 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SoType.h>
@@ -109,6 +110,7 @@ namespace {
 
   namespace profiler {
     static SbBool initialized = FALSE;
+    static std::mutex init_mutex;
 
     static std::atomic<SbBool> enabled{FALSE};
     static thread_local unsigned int pause_depth = 0;
@@ -167,6 +169,7 @@ namespace {
 void
 SoProfiler::init(void)
 {
+  const std::lock_guard<std::mutex> lock(profiler::init_mutex);
   if (profiler::initialized) return;
 
   SoProfilerStats::initClass();
@@ -194,6 +197,7 @@ SoProfiler::init(void)
 void
 SoProfiler::cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(profiler::init_mutex);
   // Release objects while their profiler node types are still registered.
   SoActionP::cleanupProfilerResources();
   SoProfilingReportGenerator::cleanup();

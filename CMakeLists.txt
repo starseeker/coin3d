@@ -285,16 +285,16 @@ unset(_obol_swrast_explicitly_set)
 # compatibility only; it has no effect on the build.
 option(OBOL_THREADSAFE "Deprecated – thread safety is now always on; kept for compatibility" ON)
 
-# Component options
-option(HAVE_NODEKITS "Enable NodeKit support" ON)
-option(HAVE_DRAGGERS "Enable Dragger support" ON)
-option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
+# NodeKits, draggers, and manipulators form one required dependency chain in
+# modern Obol. The old independent switches admitted link-incomplete builds
+# (for example manipulators without their dragger base classes), so these
+# components are now always present.
+set(HAVE_NODEKITS ON)
+set(HAVE_DRAGGERS ON)
+set(HAVE_MANIPULATORS ON)
 option(OBOL_PROFILING
     "Compile in the profiling subsystem (runtime collection remains off by default)"
     ON)
-
-# External dependencies
-option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 
 # Code coverage (GCC/Clang only; builds with --coverage flags and provides a
 # 'coverage' target that runs CTest then generates an lcov HTML report)
@@ -890,7 +890,6 @@ add_feature_info(ThreadSafe FEAT_HAVE_SAFETHREAD "Thread safe render traversals 
 add_feature_info(ThreadSanitizer OBOL_TSAN "ThreadSanitizer instrumentation")
 add_feature_info(Profiler OBOL_PROFILING
   "Profiling support (runtime collection is off by default)")
-add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL
   INCLUDE_QUIET_PACKAGES

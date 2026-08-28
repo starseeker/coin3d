@@ -580,7 +580,7 @@ public:
 #define PRIVATE(p) ((p)->pimpl)
 #define PUBLIC(p) ((p)->kit)
 
-SbBool SoBaseKit::searchchildren = FALSE;
+std::atomic<SbBool> SoBaseKit::searchchildren{FALSE};
 
 SO_KIT_SOURCE(SoBaseKit);
 
@@ -677,7 +677,7 @@ SoBaseKit::initClass(void)
   // set rayPick method
   SoType type = SoBaseKit::getClassTypeId();
   SoRayPickAction::addMethod(type, SoNode::rayPickS);
-  SoBaseKit::searchchildren = FALSE;
+  SoBaseKit::searchchildren.store(FALSE, std::memory_order_release);
 }
 
 /*!
@@ -1079,7 +1079,8 @@ void
 SoBaseKit::search(SoSearchAction * action)
 {
   inherited::search(action);
-  if (action->isFound() || !SoBaseKit::searchchildren) return;
+  if (action->isFound() ||
+      !SoBaseKit::searchchildren.load(std::memory_order_acquire)) return;
   SoBaseKit::doAction((SoAction *)action);
 }
 
@@ -1521,7 +1522,7 @@ SoBaseKit::printTable(void)
 SbBool
 SoBaseKit::isSearchingChildren(void)
 {
-  return SoBaseKit::searchchildren;
+  return SoBaseKit::searchchildren.load(std::memory_order_acquire);
 }
 
 /*!
@@ -1531,7 +1532,7 @@ SoBaseKit::isSearchingChildren(void)
 void
 SoBaseKit::setSearchingChildren(const SbBool newval)
 {
-  SoBaseKit::searchchildren = newval;
+  SoBaseKit::searchchildren.store(newval, std::memory_order_release);
 }
 
 // Documented in superclass. Overridden to also recurse on non-null

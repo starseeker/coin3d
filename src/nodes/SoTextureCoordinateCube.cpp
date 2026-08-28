@@ -186,15 +186,9 @@ textureCoordinateCubeCallback(void * userdata,
 
   if (shape != data->currentshape) {
     data->boundingbox.makeEmpty();
-    const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
-    if (bboxcache && bboxcache->isValid(state)) {
-      data->boundingbox = bboxcache->getProjectedBox();
-      data->origo = data->boundingbox.getCenter();
-    }
-    else {
-      shape->computeBBox(state->getAction(), data->boundingbox, data->origo);
-      data->origo = data->boundingbox.getCenter();
-    }
+    shape->getBoundingBoxData(
+      state->getAction(), data->boundingbox, data->origo);
+    data->origo = data->boundingbox.getCenter();
     data->currentshape = shape;
 
     // Expanding the bbox making it cube shaped

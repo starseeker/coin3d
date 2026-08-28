@@ -46,6 +46,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoNodeVisualize.h>
 
 #include <map>
+#include <mutex>
 #include <string>
 #include <memory>
 
@@ -139,6 +140,7 @@ namespace {
     }
 
     void clear() {
+      const std::lock_guard<std::mutex> guard(this->mutex);
       std::map<const TextureImageData *, SoTexture2 *>::iterator it, end;
       for (it = this->nodemap.begin(), end = this->nodemap.end();
            it != end; ++it) {
@@ -150,6 +152,7 @@ namespace {
 
     SoTexture2 * operator[](const TextureImageData & data)
     {
+      const std::lock_guard<std::mutex> guard(this->mutex);
       std::map<const TextureImageData *, SoTexture2 *>::iterator e;
       e = this->nodemap.find(&data);
       if (e == this->nodemap.end()) {
@@ -165,6 +168,7 @@ namespace {
 
 
   private:
+    std::mutex mutex;
     std::map<const TextureImageData *, SoTexture2 *> nodemap;
   };
 }

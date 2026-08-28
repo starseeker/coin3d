@@ -539,7 +539,10 @@ static bool test13_vertexProperty()
         SbVec3f(0,0,1),SbVec3f(0,0,1),SbVec3f(0,0,1),SbVec3f(0,0,1)
     };
     vp->normal.setValues(0,4,norms);
-    vp->normalBinding.setValue(SoVertexProperty::PER_VERTEX);
+    // The coordinate stream reuses vertices through coordIndex, so the four
+    // normals are indexed by vertex too. PER_VERTEX would require one normal
+    // for every index occurrence (six normals for these two triangles).
+    vp->normalBinding.setValue(SoVertexProperty::PER_VERTEX_INDEXED);
 
     static const int32_t idx[] = {0,1,2,-1,0,2,3,-1};
     ifs->coordIndex.setValues(0,8,idx);

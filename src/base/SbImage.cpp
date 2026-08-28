@@ -62,8 +62,15 @@
 #include <Inventor/SbImage.h>
 
 #include <cstring>
-#include <cstdlib>
+#include <algorithm>
+#include <condition_variable>
+#include <exception>
+#include <functional>
 #include <limits>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <vector>
 
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbVec3s.h>
@@ -104,7 +111,8 @@ public:
       size(0,0,0),
       bpp(0),
       schedulecb(NULL),
-      scheduleclosure(NULL)
+      scheduleclosure(NULL),
+      scheduleloading(false)
     , rwmutex(SbRWMutex::READ_PRECEDENCE)
   { }
   void freeData(void) {
@@ -136,8 +144,9 @@ public:
   SbString schedulename;
   SbImageScheduleReadCB * schedulecb;
   void * scheduleclosure;
-
-  static SbList <ReadImageCBData> * readimagecallbacks;
+  std::mutex schedulemutex;
+  std::condition_variable schedulecondition;
+  bool scheduleloading;
 
   SbRWMutex rwmutex;
   void readLock(void) {
@@ -160,6 +169,53 @@ public:
   }
 
 };
+
+namespace {
+
+class SbImageReadGuard {
+public:
+  explicit SbImageReadGuard(SbImageP * image) : image_(image)
+  {
+    this->image_->readLock();
+  }
+  ~SbImageReadGuard() { this->image_->readUnlock(); }
+  SbImageReadGuard(const SbImageReadGuard &) = delete;
+  SbImageReadGuard & operator=(const SbImageReadGuard &) = delete;
+
+private:
+  SbImageP * image_;
+};
+
+class SbImageWriteGuard {
+public:
+  explicit SbImageWriteGuard(SbImageP * image) : image_(image)
+  {
+    this->image_->writeLock();
+  }
+  ~SbImageWriteGuard() { this->image_->writeUnlock(); }
+  SbImageWriteGuard(const SbImageWriteGuard &) = delete;
+  SbImageWriteGuard & operator=(const SbImageWriteGuard &) = delete;
+
+private:
+  SbImageP * image_;
+};
+
+struct SbImageReadCallbackRegistry {
+  std::mutex mutex;
+  std::vector<SbImageP::ReadImageCBData> callbacks;
+};
+
+SbImageReadCallbackRegistry &
+sbimage_read_callback_registry()
+{
+  // The registry intentionally has process lifetime. This avoids shutdown
+  // ordering races with image loaders and removes the old std::atexit hook.
+  static SbImageReadCallbackRegistry * registry =
+    new SbImageReadCallbackRegistry;
+  return *registry;
+}
+
+} // namespace
 
 static bool
 checked_image_buffer_size(const SbVec3s & size, int bytesperpixel,
@@ -187,17 +243,6 @@ checked_image_buffer_size(const SbVec3s & size, int bytesperpixel,
   buffersize *= static_cast<size_t>(bytesperpixel);
   return buffersize <= maxsize - 3;
 }
-
-extern "C" {
-
-static void SbImage_cleanup_callback(void) {
-  delete SbImageP::readimagecallbacks;
-  SbImageP::readimagecallbacks = NULL;
-}
-
-} // extern "C"
-
-SbList <SbImageP::ReadImageCBData> * SbImageP::readimagecallbacks = NULL;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -322,7 +367,7 @@ SbImage::setValuePtr(const SbVec3s & size, const int bytesperpixel,
                               "Image dimensions or component count are invalid");
     return;
   }
-  PRIVATE(this)->writeLock();
+  const SbImageWriteGuard lock(PRIVATE(this));
   PRIVATE(this)->schedulename = "";
   PRIVATE(this)->schedulecb = NULL;
   PRIVATE(this)->freeData();
@@ -330,7 +375,6 @@ SbImage::setValuePtr(const SbVec3s & size, const int bytesperpixel,
   PRIVATE(this)->datatype = SbImageP::SETVALUEPTR_DATA;
   PRIVATE(this)->size = size;
   PRIVATE(this)->bpp = bytesperpixel;
-  PRIVATE(this)->writeUnlock();
 }
 
 /*!
@@ -370,33 +414,24 @@ SbImage::setValue(const SbVec3s & size, const int bytesperpixel,
                               "Image dimensions or component count are invalid");
     return;
   }
-  PRIVATE(this)->writeLock();
+
+  std::unique_ptr<unsigned char[]> newbytes;
+  if (buffersize) {
+    const size_t alignedbuffersize = ((buffersize + 3) / 4) * 4;
+    newbytes = std::make_unique<unsigned char[]>(alignedbuffersize);
+    if (bytes) (void)memcpy(newbytes.get(), bytes, buffersize);
+  }
+
+  const SbImageWriteGuard lock(PRIVATE(this));
   PRIVATE(this)->schedulename = "";
   PRIVATE(this)->schedulecb = NULL;
-  if (PRIVATE(this)->bytes && PRIVATE(this)->datatype == SbImageP::INTERNAL_DATA) {
-    // check for special case where we don't have to reallocate
-    if (bytes && (size == PRIVATE(this)->size) && (bytesperpixel == PRIVATE(this)->bpp)) {
-      (void)memcpy(PRIVATE(this)->bytes, bytes, buffersize);
-      PRIVATE(this)->writeUnlock();
-      return;
-    }
-  }
   PRIVATE(this)->freeData();
   PRIVATE(this)->size = size;
   PRIVATE(this)->bpp = bytesperpixel;
-  if (buffersize) {
-    // Align buffers because the binary file format has the data aligned
-    // (simplifies export code in SoSFImage).
-    size_t alignedbuffersize = ((buffersize + 3) / 4) * 4;
-    PRIVATE(this)->bytes = new unsigned char[alignedbuffersize];
+  if (newbytes) {
+    PRIVATE(this)->bytes = newbytes.release();
     PRIVATE(this)->datatype = SbImageP::INTERNAL_DATA;
-
-    if (bytes) {
-      // Important: don't copy buffersize num bytes here!
-      (void)memcpy(PRIVATE(this)->bytes, bytes, buffersize);
-    }
   }
-  PRIVATE(this)->writeUnlock();
 }
 
 /*!
@@ -419,20 +454,81 @@ SbImage::getValue(SbVec2s & size, int & bytesperpixel) const
 unsigned char *
 SbImage::getValue(SbVec3s & size, int & bytesperpixel) const
 {
-  PRIVATE(this)->readLock();
-  if (PRIVATE(this)->schedulecb) {
-    // start a thread to read the image.
-    SbBool scheduled = PRIVATE(this)->schedulecb(PRIVATE(this)->schedulename, const_cast<SbImage *>(this),
-                                        PRIVATE(this)->scheduleclosure);
-    if (scheduled) {
-      PRIVATE(this)->schedulecb = NULL;
+  SbImageScheduleReadCB * callback = NULL;
+  void * closure = NULL;
+  SbString schedulename;
+
+  // Only one thread may execute a deferred loader for an image. Other
+  // readers wait for that loader to finish instead of observing the empty
+  // placeholder that precedes a synchronous setValue() callback.
+  std::unique_lock<std::mutex> schedulelock(PRIVATE(this)->schedulemutex);
+  PRIVATE(this)->schedulecondition.wait(schedulelock, [this] {
+    return !PRIVATE(this)->scheduleloading;
+  });
+
+  {
+    const SbImageReadGuard lock(PRIVATE(this));
+    if (!PRIVATE(this)->schedulecb) {
+      size = PRIVATE(this)->size;
+      bytesperpixel = PRIVATE(this)->bpp;
+      return PRIVATE(this)->bytes;
     }
   }
+
+  // Atomically claim the scheduled callback. User code must never execute
+  // while an SbImage lock is held: a synchronous loader commonly calls
+  // setValue(), which needs the write side of the same mutex.
+  {
+    const SbImageWriteGuard lock(PRIVATE(this));
+    callback = PRIVATE(this)->schedulecb;
+    if (callback) {
+      closure = PRIVATE(this)->scheduleclosure;
+      schedulename = PRIVATE(this)->schedulename;
+      PRIVATE(this)->schedulecb = NULL;
+      PRIVATE(this)->scheduleloading = true;
+    }
+  }
+
+  schedulelock.unlock();
+
+  const auto finishScheduledRead = [this] {
+    {
+      const std::lock_guard<std::mutex> lock(PRIVATE(this)->schedulemutex);
+      PRIVATE(this)->scheduleloading = false;
+    }
+    PRIVATE(this)->schedulecondition.notify_all();
+  };
+
+  if (callback) {
+    SbBool scheduled = FALSE;
+    try {
+      scheduled = callback(schedulename, const_cast<SbImage *>(this), closure);
+    }
+    catch (...) {
+      const SbImageWriteGuard lock(PRIVATE(this));
+      if (!PRIVATE(this)->schedulecb &&
+          PRIVATE(this)->schedulename == schedulename) {
+        PRIVATE(this)->schedulecb = callback;
+        PRIVATE(this)->scheduleclosure = closure;
+      }
+      finishScheduledRead();
+      throw;
+    }
+    if (!scheduled) {
+      const SbImageWriteGuard lock(PRIVATE(this));
+      if (!PRIVATE(this)->schedulecb &&
+          PRIVATE(this)->schedulename == schedulename) {
+        PRIVATE(this)->schedulecb = callback;
+        PRIVATE(this)->scheduleclosure = closure;
+      }
+    }
+    finishScheduledRead();
+  }
+
+  const SbImageReadGuard lock(PRIVATE(this));
   size = PRIVATE(this)->size;
   bytesperpixel = PRIVATE(this)->bpp;
-  unsigned char * bytes = PRIVATE(this)->bytes;
-  PRIVATE(this)->readUnlock();
-  return bytes;
+  return PRIVATE(this)->bytes;
 
 }
 
@@ -500,13 +596,16 @@ SbImage::readFile(const SbString & filename,
   SbString finalname = SbImage::searchForFile(filename, searchdirectories,
                                               numdirectories);
 
-  // use callback to load the image if it is set
-  if (SbImageP::readimagecallbacks) {
-    for (int i = 0; i < SbImageP::readimagecallbacks->getLength(); i++) {
-      SbImageP::ReadImageCBData cbdata = (*SbImageP::readimagecallbacks)[i];
-      if (finalname.getLength() > 0 && cbdata.cb(finalname, this, cbdata.closure)) return TRUE;
-      if (cbdata.cb(filename, this, cbdata.closure)) return TRUE;
-    }
+  std::vector<SbImageP::ReadImageCBData> callbacks;
+  {
+    SbImageReadCallbackRegistry & registry = sbimage_read_callback_registry();
+    const std::lock_guard<std::mutex> lock(registry.mutex);
+    callbacks = registry.callbacks;
+  }
+  for (const SbImageP::ReadImageCBData & cbdata : callbacks) {
+    if (finalname.getLength() > 0 &&
+        cbdata.cb(finalname, this, cbdata.closure)) return TRUE;
+    if (cbdata.cb(filename, this, cbdata.closure)) return TRUE;
   }
 
   if (finalname.getLength() == 0) {
@@ -521,17 +620,23 @@ SbImage::readFile(const SbString & filename,
   unsigned char * imagedata = registry.readImage(finalname.getString(), &w, &h, &nc);
   
   if (imagedata) {
-    //FIXME: Add 3'rd dimension (kintel 20011110)
-    this->setValuePtr(
-                    SbVec3s(static_cast<short>(w),
-                           static_cast<short>(h),
-                           static_cast<short>(0)
-                           ),
-                    nc, imagedata);
-    // NB, this is a trick. We use setValuePtr() to set the size
-    // and data pointer, and then we change the data type to FORMAT_HANDLER_DATA
-    // so it gets freed correctly
+    if (w < 0 || h < 0 ||
+        w > std::numeric_limits<short>::max() ||
+        h > std::numeric_limits<short>::max()) {
+      registry.freeImageData(imagedata);
+      SoDebugError::post("SbImage::readFile",
+                         "image dimensions exceed SbImage limits");
+      return FALSE;
+    }
+    const SbImageWriteGuard lock(PRIVATE(this));
+    PRIVATE(this)->schedulename = "";
+    PRIVATE(this)->schedulecb = NULL;
+    PRIVATE(this)->freeData();
+    PRIVATE(this)->bytes = imagedata;
     PRIVATE(this)->datatype = SbImageP::FORMAT_HANDLER_DATA;
+    PRIVATE(this)->size.setValue(static_cast<short>(w),
+                                 static_cast<short>(h), 0);
+    PRIVATE(this)->bpp = nc;
     return TRUE;
   }
 #if OBOL_DEBUG
@@ -560,7 +665,14 @@ SbImage::readFile(const SbString & filename,
 int
 SbImage::operator==(const SbImage & image) const
 {
-  this->readLock();
+  if (this == &image) return TRUE;
+
+  SbImageP * first = PRIVATE(this);
+  SbImageP * second = PRIVATE(&image);
+  if (std::less<SbImageP *>()(second, first)) std::swap(first, second);
+  const SbImageReadGuard firstlock(first);
+  const SbImageReadGuard secondlock(second);
+
   int ret = 0;
   if (!PRIVATE(this)->schedulecb && !PRIVATE(&image)->schedulecb) {
     if (PRIVATE(this)->size != PRIVATE(&image)->size) ret = 0;
@@ -577,7 +689,6 @@ SbImage::operator==(const SbImage & image) const
                    buffersize) == 0;
     }
   }
-  this->readUnlock();
   return ret;
 }
 
@@ -587,35 +698,56 @@ SbImage::operator==(const SbImage & image) const
 SbImage & 
 SbImage::operator=(const SbImage & image)
 {
-  if (*this != image ) {
-    PRIVATE(this)->writeLock();
-    PRIVATE(this)->freeData();
-    PRIVATE(this)->writeUnlock();
+  if (this == &image) return *this;
 
-    if (PRIVATE(&image)->bytes) {
-      PRIVATE(&image)->readLock();
+  SbVec3s size;
+  int bpp = 0;
+  SbImageP::DataType datatype = SbImageP::SETVALUEPTR_DATA;
+  unsigned char * externalbytes = NULL;
+  std::unique_ptr<unsigned char[]> ownedbytes;
+  SbString schedulename;
+  SbImageScheduleReadCB * schedulecb = NULL;
+  void * scheduleclosure = NULL;
 
-      switch (PRIVATE(&image)->datatype) {
-      default:
-        assert(0 && "unknown data type");
-        break;
-      case SbImageP::INTERNAL_DATA:
-      case SbImageP::FORMAT_HANDLER_DATA:
-        // need to copy data both for INTERNAL and FORMAT_HANDLER_DATA, since
-        // we can only free the data once when the data is of FORMAT_HANDLER_DATA type.
-        this->setValue(PRIVATE(&image)->size,
-                       PRIVATE(&image)->bpp,
-                       PRIVATE(&image)->bytes);
-        break;
-      case SbImageP::SETVALUEPTR_DATA:
-        // just set the data ptr
-        this->setValuePtr(PRIVATE(&image)->size,
-                          PRIVATE(&image)->bpp,
-                          PRIVATE(&image)->bytes);
-        break;
+  {
+    const SbImageReadGuard lock(PRIVATE(&image));
+    size = PRIVATE(&image)->size;
+    bpp = PRIVATE(&image)->bpp;
+    datatype = PRIVATE(&image)->datatype;
+    schedulename = PRIVATE(&image)->schedulename;
+    schedulecb = PRIVATE(&image)->schedulecb;
+    scheduleclosure = PRIVATE(&image)->scheduleclosure;
+
+    if (PRIVATE(&image)->bytes &&
+        datatype != SbImageP::SETVALUEPTR_DATA) {
+      size_t buffersize = 0;
+      if (!checked_image_buffer_size(size, bpp, buffersize)) {
+        throw std::length_error("invalid SbImage source dimensions");
       }
-      PRIVATE(&image)->readUnlock();
+      const size_t alignedbuffersize = ((buffersize + 3) / 4) * 4;
+      ownedbytes = std::make_unique<unsigned char[]>(alignedbuffersize);
+      (void)memcpy(ownedbytes.get(), PRIVATE(&image)->bytes, buffersize);
+      datatype = SbImageP::INTERNAL_DATA;
     }
+    else {
+      externalbytes = PRIVATE(&image)->bytes;
+    }
+  }
+
+  const SbImageWriteGuard lock(PRIVATE(this));
+  PRIVATE(this)->freeData();
+  PRIVATE(this)->size = size;
+  PRIVATE(this)->bpp = bpp;
+  PRIVATE(this)->schedulename = schedulename;
+  PRIVATE(this)->schedulecb = schedulecb;
+  PRIVATE(this)->scheduleclosure = scheduleclosure;
+  if (ownedbytes) {
+    PRIVATE(this)->bytes = ownedbytes.release();
+    PRIVATE(this)->datatype = SbImageP::INTERNAL_DATA;
+  }
+  else {
+    PRIVATE(this)->bytes = externalbytes;
+    PRIVATE(this)->datatype = datatype;
   }
   return *this;
 }
@@ -623,9 +755,13 @@ SbImage::operator=(const SbImage & image)
 
 /*!
   Schedule a file for reading. \a cb will be called the first time
-  getValue() is called for this image, and the callback should then
-  start a thread to read the image. Do not read the image in the
-  callback, as this will lock up the application.
+  getValue() is called for this image. The callback is invoked without
+  holding the image mutex, so it may either start an asynchronous read or
+  synchronously populate the image with setValue(). Only one thread invokes a
+  pending callback; concurrent getValue() callers wait for that invocation to
+  return. The callback must therefore not recursively call getValue() on the
+  same image. The caller must keep a closure alive until the scheduled read
+  has run or the image has been destroyed.
 
   \sa readFile()
   \since Coin 2.0
@@ -637,17 +773,17 @@ SbImage::scheduleReadFile(SbImageScheduleReadCB * cb,
                           const SbString * const * searchdirectories,
                           const int numdirectories)
 {
-  this->setValue(SbVec3s(0,0,0), 0, NULL);
-  PRIVATE(this)->writeLock();
-  PRIVATE(this)->schedulecb = NULL;
-  PRIVATE(this)->schedulename =
+  const SbString resolvedname =
     this->searchForFile(filename, searchdirectories, numdirectories);
+  this->setValue(SbVec3s(0,0,0), 0, NULL);
+  const SbImageWriteGuard lock(PRIVATE(this));
+  PRIVATE(this)->schedulecb = NULL;
+  PRIVATE(this)->schedulename = resolvedname;
   int len = PRIVATE(this)->schedulename.getLength();
   if (len > 0) {
     PRIVATE(this)->schedulecb = cb;
     PRIVATE(this)->scheduleclosure = closure;
   }
-  PRIVATE(this)->writeUnlock();
   return len > 0;
 }
 
@@ -661,11 +797,8 @@ SbImage::scheduleReadFile(SbImageScheduleReadCB * cb,
 SbBool 
 SbImage::hasData(void) const
 {
-  SbBool ret;
-  this->readLock();
-  ret = PRIVATE(this)->bytes != NULL;
-  this->readUnlock();
-  return ret;
+  const SbImageReadGuard lock(PRIVATE(this));
+  return PRIVATE(this)->bytes != NULL;
 }
 
 /*!
@@ -678,6 +811,7 @@ SbImage::hasData(void) const
 SbVec3s
 SbImage::getSize(void) const
 {
+  const SbImageReadGuard lock(PRIVATE(this));
   return PRIVATE(this)->size;
 }
 
@@ -687,7 +821,11 @@ SbImage::getSize(void) const
   successfully read and set the image data, and FALSE otherwise.
 
   The callback(s) will be called before attempting to use simage to
-  load images.
+  load images. Registry dispatch uses a snapshot and does not hold the
+  registry mutex while client code runs. Consequently, callbacks may add or
+  remove callbacks reentrantly, but a removal does not cancel an invocation
+  that was already present in an active snapshot. Keep a closure alive until
+  all such reads have completed.
   
   \sa removeReadImageCB()
   \since Coin 3.0
@@ -695,19 +833,16 @@ SbImage::getSize(void) const
 void 
 SbImage::addReadImageCB(SbImageReadImageCB * cb, void * closure)
 {
-  if (!SbImageP::readimagecallbacks) {
-    SbImageP::readimagecallbacks = new SbList <SbImageP::ReadImageCBData>;
-    std::atexit(SbImage_cleanup_callback);
-  }
-  SbImageP::ReadImageCBData data;
-  data.cb = cb;
-  data.closure = closure;
-  
-  SbImageP::readimagecallbacks->append(data);
+  if (!cb) return;
+  SbImageReadCallbackRegistry & registry = sbimage_read_callback_registry();
+  const std::lock_guard<std::mutex> lock(registry.mutex);
+  registry.callbacks.push_back({ cb, closure });
 }
 
 /*!
-  Remove a read image callback added with addReadImageCB().
+  Remove a read image callback added with addReadImageCB(). This prevents the
+  callback from appearing in future dispatch snapshots; it does not wait for
+  invocations from snapshots already in progress.
 
   \sa addReadImageCB()
   \since Coin 3.0
@@ -715,15 +850,14 @@ SbImage::addReadImageCB(SbImageReadImageCB * cb, void * closure)
 void 
 SbImage::removeReadImageCB(SbImageReadImageCB * cb, void * closure)
 {
-  if (SbImageP::readimagecallbacks) {
-    for (int i = 0; i < SbImageP::readimagecallbacks->getLength(); i++) {
-      SbImageP::ReadImageCBData data = (*SbImageP::readimagecallbacks)[i];
-      if (data.cb == cb && data.closure == closure) {
-        SbImageP::readimagecallbacks->remove(i);
-        return;
-      }
-    }
-  }
+  SbImageReadCallbackRegistry & registry = sbimage_read_callback_registry();
+  const std::lock_guard<std::mutex> lock(registry.mutex);
+  const auto iter = std::find_if(
+    registry.callbacks.begin(), registry.callbacks.end(),
+    [cb, closure](const SbImageP::ReadImageCBData & data) {
+      return data.cb == cb && data.closure == closure;
+    });
+  if (iter != registry.callbacks.end()) registry.callbacks.erase(iter);
 }
 
 #undef PRIVATE

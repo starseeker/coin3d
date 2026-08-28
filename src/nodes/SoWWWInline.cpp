@@ -83,6 +83,8 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoWWWInline.h>
+
+#include <mutex>
 #include "glue/glp.h"
 
 #include <cstddef>
@@ -157,6 +159,7 @@ SbColor * SoWWWInline::bboxcolor = NULL;
 static SbStorage * wwwinline_colorpacker_storage = NULL;
 SoWWWInline::BboxVisibility SoWWWInline::bboxvisibility = SoWWWInline::UNTIL_LOADED;
 SbBool SoWWWInline::readassofile = FALSE;
+static std::mutex wwwinline_global_mutex;
 
 static void alloc_colorpacker(void * ptr)
 {
@@ -173,6 +176,7 @@ static void free_colorpacker(void * ptr)
 void
 SoWWWInline::cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   delete SoWWWInline::bboxcolor;
   SoWWWInline::bboxcolor = NULL;
   delete wwwinline_colorpacker_storage;
@@ -229,6 +233,7 @@ SoWWWInline::SoWWWInline()
 
   // Instantiated dynamically to avoid problems on platforms with
   // systemloaders that hate static constructors in C++ libraries.
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   if (SoWWWInline::bboxcolor == NULL) {
     SoWWWInline::bboxcolor = new SbColor(0.8f, 0.8f, 0.8f);
     wwwinline_colorpacker_storage = new SbStorage(sizeof(void*), alloc_colorpacker, free_colorpacker);
@@ -372,6 +377,7 @@ void
 SoWWWInline::setFetchURLCallBack(SoWWWInlineFetchURLCB * f,
                                  void * userdata)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   SoWWWInline::fetchurlcb = f;
   SoWWWInline::fetchurlcbdata = userdata;
 }
@@ -383,6 +389,7 @@ SoWWWInline::setFetchURLCallBack(SoWWWInlineFetchURLCB * f,
 void
 SoWWWInline::setBoundingBoxVisibility(BboxVisibility b)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   SoWWWInline::bboxvisibility = b;
 }
 
@@ -392,6 +399,7 @@ SoWWWInline::setBoundingBoxVisibility(BboxVisibility b)
 SoWWWInline::BboxVisibility
 SoWWWInline::getBoundingBoxVisibility(void)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   return SoWWWInline::bboxvisibility;
 }
 
@@ -401,6 +409,7 @@ SoWWWInline::getBoundingBoxVisibility(void)
 void
 SoWWWInline::setBoundingBoxColor(SbColor & c)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   *SoWWWInline::bboxcolor = c;
 }
 
@@ -410,7 +419,10 @@ SoWWWInline::setBoundingBoxColor(SbColor & c)
 const SbColor &
 SoWWWInline::getBoundingBoxColor(void)
 {
-  return *SoWWWInline::bboxcolor;
+  static thread_local SbColor snapshot;
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
+  snapshot = *SoWWWInline::bboxcolor;
+  return snapshot;
 }
 
 /*!
@@ -424,6 +436,7 @@ SoWWWInline::getBoundingBoxColor(void)
 void
 SoWWWInline::setReadAsSoFile(SbBool onoff)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   SoWWWInline::readassofile = onoff;
 }
 
@@ -435,6 +448,7 @@ SoWWWInline::setReadAsSoFile(SbBool onoff)
 SbBool
 SoWWWInline::getReadAsSoFile(void)
 {
+  const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
   return SoWWWInline::readassofile;
 }
 
@@ -444,18 +458,25 @@ SoWWWInline::getReadAsSoFile(void)
 void
 SoWWWInline::GLRender(SoGLRenderAction * action)
 {
+  BboxVisibility visibility;
+  SbColor boundingBoxColor;
+  {
+    const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
+    visibility = SoWWWInline::bboxvisibility;
+    boundingBoxColor = *SoWWWInline::bboxcolor;
+  }
   if (this->getChildData()) {
     SoWWWInline::doAction(action);
-    if (SoWWWInline::bboxvisibility == UNTIL_LOADED) return;
+    if (visibility == UNTIL_LOADED) return;
   }
-  if (SoWWWInline::bboxvisibility == NEVER) return;
+  if (visibility == NEVER) return;
 
   SoState * state = action->getState();
   state->push();
 
   SoColorPacker ** cptr = (SoColorPacker**) wwwinline_colorpacker_storage->get();
 
-  SoLazyElement::setDiffuse(state, this, 1, SoWWWInline::bboxcolor, *cptr);
+  SoLazyElement::setDiffuse(state, this, 1, &boundingBoxColor, *cptr);
 
   // disable lighting
   SoLazyElement::setLightModel(state, SoLazyElement::BASE_COLOR);
@@ -727,19 +748,26 @@ SoWWWInlineP::readNamedFile()
 SbBool
 SoWWWInlineP::readChildren()
 {
-  if (!SoWWWInline::fetchurlcb) {
+  SoWWWInlineFetchURLCB * fetchurlcb = NULL;
+  void * fetchurlcbdata = NULL;
+  SbBool readassofile = FALSE;
+  {
+    const std::lock_guard<std::mutex> lock(wwwinline_global_mutex);
+    fetchurlcb = SoWWWInline::fetchurlcb;
+    fetchurlcbdata = SoWWWInline::fetchurlcbdata;
+    readassofile = SoWWWInline::readassofile;
+  }
+  if (!fetchurlcb) {
     if (this->owner->alternateRep.getValue()) {
       this->owner->setChildData(this->owner->alternateRep.getValue());
     }
   }
   else if (this->owner->name.getValue() != SoWWWInlineP::UNDEFINED_FILE) {
-    if (SoWWWInline::readassofile) {
+    if (readassofile) {
       return this->readNamedFile();
     }
     else {
-      SoWWWInline::fetchurlcb(this->owner->getFullURLName(),
-                              SoWWWInline::fetchurlcbdata,
-                              this->owner);
+      fetchurlcb(this->owner->getFullURLName(), fetchurlcbdata, this->owner);
     }
   }
   return TRUE;

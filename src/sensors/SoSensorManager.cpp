@@ -84,7 +84,10 @@
 
 #include <Inventor/sensors/SoSensorManager.h>
 
+#include <atomic>
 #include <cassert>
+#include <mutex>
+#include <vector>
 
 #include "config.h"
 
@@ -134,8 +137,9 @@ public:
   SoSensorManagerP(void) : alive(ALIVE_PATTERN) { }
   ~SoSensorManagerP() { this->alive = 0xdeadbeef; /* set to whatever != ALIVE_PATTERN */ }
 
-  SbBool processingtimerqueue, processingdelayqueue;
-  SbBool processingimmediatequeue;
+  std::atomic<SbBool> processingtimerqueue;
+  std::atomic<SbBool> processingdelayqueue;
+  std::atomic<SbBool> processingimmediatequeue;
 
   // immediatequeue - stores SoDelayQueueSensors with priority 0. FIFO.
   // delayqueue   - stores SoDelayQueueSensor's in sorted order.
@@ -157,9 +161,13 @@ public:
 
   void (*queueChangedCB)(void *);
   void * queueChangedCBData;
+  std::mutex queueChangedMutex;
 
   SbTime delaysensortimeout;
   SoAlarmSensor * timeoutsensor;
+  std::recursive_mutex configurationmutex;
+  std::recursive_mutex processingmutex;
+  std::recursive_mutex delayprocessingmutex;
 
   uint32_t alive;
   static void assertAlive(SoSensorManagerP * that);
@@ -209,10 +217,10 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
   _mgr_->pimpl->immediatemutex.unlock();
 
 #define LOCK_RESCHEDULE_LIST(_mgr_) \
-  _mgr_->pimpl->immediatemutex.lock();
+  _mgr_->pimpl->reschedulemutex.lock();
 
 #define UNLOCK_RESCHEDULE_LIST(_mgr_) \
-  _mgr_->pimpl->immediatemutex.unlock();
+  _mgr_->pimpl->reschedulemutex.unlock();
 
 
 #define PRIVATE(obj) ((obj)->pimpl)
@@ -281,11 +289,8 @@ SoSensorManager::insertDelaySensor(SoDelayQueueSensor * newentry)
     UNLOCK_IMMEDIATE_QUEUE(this);
   }
   else {
-    if (!PRIVATE(this)->timeoutsensor->isScheduled() &&
-        PRIVATE(this)->delaysensortimeout != SbTime::zero()) {
-      PRIVATE(this)->timeoutsensor->setTimeFromNow(PRIVATE(this)->delaysensortimeout);
-      PRIVATE(this)->timeoutsensor->schedule();
-    }
+    const std::lock_guard<std::recursive_mutex> guard(
+      PRIVATE(this)->configurationmutex);
 
     LOCK_DELAY_QUEUE(this);
     SbList <SoDelayQueueSensor *> & delayqueue = PRIVATE(this)->delayqueue;
@@ -300,6 +305,11 @@ SoSensorManager::insertDelaySensor(SoDelayQueueSensor * newentry)
     }
     delayqueue.insert(newentry, pos);
     UNLOCK_DELAY_QUEUE(this);
+    if (!PRIVATE(this)->timeoutsensor->isScheduled() &&
+        PRIVATE(this)->delaysensortimeout != SbTime::zero()) {
+      PRIVATE(this)->timeoutsensor->setTimeFromNow(PRIVATE(this)->delaysensortimeout);
+      PRIVATE(this)->timeoutsensor->schedule();
+    }
     this->notifyChanged();
   }
 
@@ -383,6 +393,8 @@ SoSensorManager::removeDelaySensor(SoDelayQueueSensor * entry)
   }
   // ..then the reinsert list
   if (idx == -1) {
+    const std::lock_guard<std::recursive_mutex> guard(
+      PRIVATE(this)->delayprocessingmutex);
     if (PRIVATE(this)->reinsertdict.erase(entry)) {
       idx = 0; // make sure notifyChanged() is called.
     }
@@ -429,9 +441,12 @@ void
 SoSensorManager::processTimerQueue(void)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
+  const std::lock_guard<std::recursive_mutex> processingguard(
+    PRIVATE(this)->processingmutex);
 
-  if (PRIVATE(this)->processingtimerqueue || PRIVATE(this)->timerqueue.getLength() == 0)
-    return;
+  SbBool expected = FALSE;
+  if (!PRIVATE(this)->processingtimerqueue.compare_exchange_strong(
+        expected, TRUE, std::memory_order_acq_rel)) return;
 
 #if DEBUG_TIMER_SENSORHANDLING // debug
   SoDebugError::postInfo("SoSensorManager::processTimerQueue",
@@ -443,22 +458,29 @@ SoSensorManager::processTimerQueue(void)
   // from the sensor's callback function.
   class FlagReset {
   public:
-    FlagReset(SbBool& flag) : myflag(flag) {}
+    FlagReset(std::atomic<SbBool>& flag) : myflag(flag) {}
     ~FlagReset() {
-      if (this->myflag) {
+      if (this->myflag.load(std::memory_order_acquire)) {
         SoDebugError::post("SoSensorManager::processTimerQueue",
                            "Unexpected function exit. Unhandled Exception?");
         this->myflag = FALSE;
       }
     }
-    SbBool& myflag;
+    std::atomic<SbBool>& myflag;
   };
 
-  assert(PRIVATE(this)->reschedulelist.getLength() == 0);
-  PRIVATE(this)->processingtimerqueue = TRUE;
   FlagReset fr(PRIVATE(this)->processingtimerqueue);
 
+  LOCK_RESCHEDULE_LIST(this);
+  assert(PRIVATE(this)->reschedulelist.getLength() == 0);
+  UNLOCK_RESCHEDULE_LIST(this);
+
   LOCK_TIMER_QUEUE(this);
+  if (PRIVATE(this)->timerqueue.getLength() == 0) {
+    UNLOCK_TIMER_QUEUE(this);
+    PRIVATE(this)->processingtimerqueue.store(FALSE, std::memory_order_release);
+    return;
+  }
 
   SbTime currenttime = SbTime::getTimeOfDay();
   while (PRIVATE(this)->timerqueue.getLength() > 0 &&
@@ -471,7 +493,14 @@ SoSensorManager::processTimerQueue(void)
     SoSensor * sensor = PRIVATE(this)->timerqueue[0];
     PRIVATE(this)->timerqueue.remove(0);
     UNLOCK_TIMER_QUEUE(this);
-    sensor->trigger();
+    if (sensor == PRIVATE(this)->timeoutsensor) {
+      const std::lock_guard<std::recursive_mutex> guard(
+        PRIVATE(this)->configurationmutex);
+      sensor->trigger();
+    }
+    else {
+      sensor->trigger();
+    }
     LOCK_TIMER_QUEUE(this);
   }
 
@@ -494,7 +523,7 @@ SoSensorManager::processTimerQueue(void)
   }
   UNLOCK_RESCHEDULE_LIST(this);
 
-  PRIVATE(this)->processingtimerqueue = FALSE;
+  PRIVATE(this)->processingtimerqueue.store(FALSE, std::memory_order_release);
 
 #if DEBUG_TIMER_SENSORHANDLING // debug
   SoDebugError::postInfo("SoSensorManager::processTimerQueue",
@@ -525,11 +554,14 @@ void
 SoSensorManager::processDelayQueue(SbBool isidle)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
+  const std::lock_guard<std::recursive_mutex> processingguard(
+    PRIVATE(this)->processingmutex);
 
   this->processImmediateQueue();
 
-  if (PRIVATE(this)->processingdelayqueue || PRIVATE(this)->delayqueue.getLength() == 0)
-    return;
+  SbBool expected = FALSE;
+  if (!PRIVATE(this)->processingdelayqueue.compare_exchange_strong(
+        expected, TRUE, std::memory_order_acq_rel)) return;
 
 #if DEBUG_DELAY_SENSORHANDLING // debug
   SoDebugError::postInfo("SoSensorManager::processDelayQueue",
@@ -541,18 +573,17 @@ SoSensorManager::processDelayQueue(SbBool isidle)
   // from the sensor's callback function.
   class FlagReset {
   public:
-    FlagReset(SbBool& flag) : myflag(flag) {}
+    FlagReset(std::atomic<SbBool>& flag) : myflag(flag) {}
     ~FlagReset() {
-      if (this->myflag) {
+      if (this->myflag.load(std::memory_order_acquire)) {
         SoDebugError::post("SoSensorManager::processDelayQueue",
                            "Unexpected function exit. Unhandled Exception?");
         this->myflag = FALSE;
       }
     }
-    SbBool& myflag;
+    std::atomic<SbBool>& myflag;
   };
 
-  PRIVATE(this)->processingdelayqueue = TRUE;
   FlagReset fr(PRIVATE(this)->processingdelayqueue);
 
   // triggerdict is used to store sensors that have already been
@@ -565,6 +596,11 @@ SoSensorManager::processDelayQueue(SbBool isidle)
   PRIVATE(this)->triggerdict.clear();
 
   LOCK_DELAY_QUEUE(this);
+  if (PRIVATE(this)->delayqueue.getLength() == 0) {
+    UNLOCK_DELAY_QUEUE(this);
+    PRIVATE(this)->processingdelayqueue.store(FALSE, std::memory_order_release);
+    return;
+  }
 
   // Sensors with higher priorities are triggered first.
   while (PRIVATE(this)->delayqueue.getLength()) {
@@ -583,6 +619,8 @@ SoSensorManager::processDelayQueue(SbBool isidle)
       // at the end of this function. We do this to be able to always
       // remove the first list element. We avoid searching for the
       // first non-idle sensor.
+      const std::lock_guard<std::recursive_mutex> guard(
+        PRIVATE(this)->delayprocessingmutex);
       (void) PRIVATE(this)->reinsertdict.put(sensor, sensor);
     }
     else {
@@ -593,6 +631,8 @@ SoSensorManager::processDelayQueue(SbBool isidle)
       else {
         // Reuse the "reinsert" list to store the sensor. It will be
         // reinserted at the end of this function.
+        const std::lock_guard<std::recursive_mutex> guard(
+          PRIVATE(this)->delayprocessingmutex);
         (void) PRIVATE(this)->reinsertdict.put(sensor, sensor);
       }
     }
@@ -603,22 +643,36 @@ SoSensorManager::processDelayQueue(SbBool isidle)
   // reinsert sensors that couldn't be triggered, either because it
   // was an idle sensor, or because the sensor had already been
   // triggered
-  for(
-      SbHash<SoDelayQueueSensor *, SoDelayQueueSensor *>::const_iterator iter =
-       PRIVATE(this)->reinsertdict.const_begin();
-      iter!=PRIVATE(this)->reinsertdict.const_end();
-      ++iter
-      ) {
-    this->insertDelaySensor(iter->obj);
+  std::vector<SoDelayQueueSensor *> reinserts;
+  {
+    const std::lock_guard<std::recursive_mutex> guard(
+      PRIVATE(this)->delayprocessingmutex);
+    for (SbHash<SoDelayQueueSensor *, SoDelayQueueSensor *>::const_iterator iter =
+           PRIVATE(this)->reinsertdict.const_begin();
+         iter != PRIVATE(this)->reinsertdict.const_end(); ++iter) {
+      reinserts.push_back(iter->obj);
+    }
+    PRIVATE(this)->reinsertdict.clear();
+    // Keep removals from observing the temporary gap between the reinsert
+    // dictionary and the live queue.
+    for (SoDelayQueueSensor * sensor : reinserts) {
+      this->insertDelaySensor(sensor);
+    }
   }
-  PRIVATE(this)->reinsertdict.clear();
-  PRIVATE(this)->processingdelayqueue = FALSE;
+  PRIVATE(this)->processingdelayqueue.store(FALSE, std::memory_order_release);
 
   // If we still have pending sensors and the timeoutsensor
   // isn't currently scheduled, schedule it.
-  if (PRIVATE(this)->delayqueue.getLength() && !PRIVATE(this)->timeoutsensor->isScheduled()) {
-    PRIVATE(this)->timeoutsensor->setTimeFromNow(PRIVATE(this)->delaysensortimeout);
-    PRIVATE(this)->timeoutsensor->schedule();
+  LOCK_DELAY_QUEUE(this);
+  const bool delaypending = PRIVATE(this)->delayqueue.getLength() != 0;
+  UNLOCK_DELAY_QUEUE(this);
+  if (delaypending) {
+    const std::lock_guard<std::recursive_mutex> guard(
+      PRIVATE(this)->configurationmutex);
+    if (!PRIVATE(this)->timeoutsensor->isScheduled()) {
+      PRIVATE(this)->timeoutsensor->setTimeFromNow(PRIVATE(this)->delaysensortimeout);
+      PRIVATE(this)->timeoutsensor->schedule();
+    }
   }
 }
 
@@ -635,8 +689,12 @@ void
 SoSensorManager::processImmediateQueue(void)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
+  const std::lock_guard<std::recursive_mutex> processingguard(
+    PRIVATE(this)->processingmutex);
 
-  if (PRIVATE(this)->processingimmediatequeue) return;
+  SbBool expected = FALSE;
+  if (!PRIVATE(this)->processingimmediatequeue.compare_exchange_strong(
+        expected, TRUE, std::memory_order_acq_rel)) return;
 
 #if DEBUG_DELAY_SENSORHANDLING || 0 // debug
   SoDebugError::postInfo("SoSensorManager::processImmediateQueue",
@@ -649,18 +707,17 @@ SoSensorManager::processImmediateQueue(void)
   // from the sensor's callback function.
   class FlagReset {
   public:
-    FlagReset(SbBool& flag) : myflag(flag) {}
+    FlagReset(std::atomic<SbBool>& flag) : myflag(flag) {}
     ~FlagReset() {
-      if (this->myflag) {
+      if (this->myflag.load(std::memory_order_acquire)) {
         SoDebugError::post("SoSensorManager::processImmediateQueue",
                            "Unexpected function exit. Unhandled Exception?");
         this->myflag = FALSE;
       }
     }
-    SbBool& myflag;
+    std::atomic<SbBool>& myflag;
   };
 
-  PRIVATE(this)->processingimmediatequeue = TRUE;
   FlagReset fr(PRIVATE(this)->processingimmediatequeue);
 
   // FIXME: implement some better logic to break out of the
@@ -693,7 +750,7 @@ SoSensorManager::processImmediateQueue(void)
   }
   UNLOCK_IMMEDIATE_QUEUE(this);
 
-  PRIVATE(this)->processingimmediatequeue = FALSE;
+  PRIVATE(this)->processingimmediatequeue.store(FALSE, std::memory_order_release);
 }
 
 /*!
@@ -738,8 +795,13 @@ SoSensorManager::isDelaySensorPending(void)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
 
-  return (PRIVATE(this)->delayqueue.getLength() ||
-          PRIVATE(this)->immediatequeue.getLength()) ? TRUE : FALSE;
+  LOCK_DELAY_QUEUE(this);
+  const bool delaypending = PRIVATE(this)->delayqueue.getLength() != 0;
+  UNLOCK_DELAY_QUEUE(this);
+  LOCK_IMMEDIATE_QUEUE(this);
+  const bool immediatepending = PRIVATE(this)->immediatequeue.getLength() != 0;
+  UNLOCK_IMMEDIATE_QUEUE(this);
+  return (delaypending || immediatepending) ? TRUE : FALSE;
 }
 
 /*!
@@ -794,15 +856,25 @@ SoSensorManager::setDelaySensorTimeout(const SbTime & t)
   }
 #endif // OBOL_DEBUG
 
+  const std::lock_guard<std::recursive_mutex> guard(
+    PRIVATE(this)->configurationmutex);
   PRIVATE(this)->delaysensortimeout = t;
 
-  if (t == SbTime::zero() && PRIVATE(this)->timeoutsensor->isScheduled()) {
+  if (t == SbTime::zero()) {
+    if (PRIVATE(this)->timeoutsensor->isScheduled()) {
+      PRIVATE(this)->timeoutsensor->unschedule();
+    }
+    return;
+  }
+  LOCK_DELAY_QUEUE(this);
+  const bool delaypending = PRIVATE(this)->delayqueue.getLength() != 0;
+  UNLOCK_DELAY_QUEUE(this);
+  if (!delaypending) return;
+  if (PRIVATE(this)->timeoutsensor->isScheduled()) {
     PRIVATE(this)->timeoutsensor->unschedule();
   }
-  else if (PRIVATE(this)->delayqueue.getLength()) {
-    PRIVATE(this)->timeoutsensor->setTimeFromNow(t);
-    PRIVATE(this)->timeoutsensor->schedule();
-  }
+  PRIVATE(this)->timeoutsensor->setTimeFromNow(t);
+  PRIVATE(this)->timeoutsensor->schedule();
 }
 
 /*!
@@ -815,7 +887,11 @@ SoSensorManager::getDelaySensorTimeout(void)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
 
-  return PRIVATE(this)->delaysensortimeout;
+  static thread_local SbTime snapshot;
+  const std::lock_guard<std::recursive_mutex> guard(
+    PRIVATE(this)->configurationmutex);
+  snapshot = PRIVATE(this)->delaysensortimeout;
+  return snapshot;
 }
 
 /*!
@@ -830,6 +906,7 @@ SoSensorManager::setChangedCallback(void (*func)(void *), void * data)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
 
+  const std::lock_guard<std::mutex> lock(PRIVATE(this)->queueChangedMutex);
   PRIVATE(this)->queueChangedCB = func;
   PRIVATE(this)->queueChangedCBData = data;
 }
@@ -839,11 +916,18 @@ SoSensorManager::notifyChanged(void)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
 
-  if (PRIVATE(this)->queueChangedCB &&
-      !PRIVATE(this)->processingtimerqueue &&
-      !PRIVATE(this)->processingdelayqueue &&
-      !PRIVATE(this)->processingimmediatequeue) {
-    PRIVATE(this)->queueChangedCB(PRIVATE(this)->queueChangedCBData);
+  void (*callback)(void *) = nullptr;
+  void * callbackData = nullptr;
+  {
+    const std::lock_guard<std::mutex> lock(PRIVATE(this)->queueChangedMutex);
+    callback = PRIVATE(this)->queueChangedCB;
+    callbackData = PRIVATE(this)->queueChangedCBData;
+  }
+  if (callback &&
+      !PRIVATE(this)->processingtimerqueue.load(std::memory_order_acquire) &&
+      !PRIVATE(this)->processingdelayqueue.load(std::memory_order_acquire) &&
+      !PRIVATE(this)->processingimmediatequeue.load(std::memory_order_acquire)) {
+    callback(callbackData);
   }
 }
 

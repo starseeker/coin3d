@@ -35,6 +35,7 @@ migration guide.
 22. [Summary Table](#22-summary-table)
 23. [New: Extended ContextManager API](#23-new-extended-contextmanager-api)
 24. [New: Dual-GL Architecture (System GL + OSMesa in One Library)](#24-new-dual-gl-architecture-system-gl--osmesa-in-one-library)
+25. [New: Thread-Safe Shape Bounding-Box Snapshot](#25-new-thread-safe-shape-bounding-box-snapshot)
 
 ---
 
@@ -584,7 +585,10 @@ been removed from the build and its header deleted.
 ### utf8/ini.cpp INI file library
 
 The `utf8::IniFile` class bundled as part of the `neacsum/utf8` library is
-never instantiated.  `utf8/ini.cpp` has been excluded from the build.
+unrelated to Obol's scene-graph functionality, was never linked into Obol,
+and has no callers in the source tree. Its implementation, declaration, and
+the umbrella-header include have been removed rather than advertising an API
+whose symbols were unavailable at link time.
 
 ### User implications
 
@@ -767,11 +771,11 @@ The combination of these two flags determines the build mode:
 | `OBOL_BUILD_EXAMPLES` | `OFF` | Build examples and viewer applications |
 | `OBOL_BUILD_DOCS` | `OFF` | Build Doxygen API documentation (requires Doxygen) |
 | `OBOL_THREADSAFE` | `ON` | Deprecated compatibility option; thread safety is always enabled |
-| `HAVE_NODEKITS` | `ON` | NodeKit support |
-| `HAVE_DRAGGERS` | `ON` | Dragger support |
-| `HAVE_MANIPULATORS` | `ON` | Manipulator support |
 | `OBOL_PROFILING` | `ON` | Compile the profiling subsystem; runtime collection remains opt-in |
-| `USE_EXCEPTIONS` | `ON` | Compile with C++ exceptions (GCC/Clang) |
+
+NodeKits, draggers, manipulators, and standard C++ exception support are now
+unconditional. Their former independent switches admitted unsupported or
+link-incomplete configurations and have been removed.
 
 ### Build quality options
 
@@ -1139,3 +1143,16 @@ ensuring complete isolation.
 
 For detailed information on implementing a context manager for any of these
 scenarios, see `docs/CONTEXT_MANAGEMENT_API.md`.
+
+---
+
+## 25. New: Thread-Safe Shape Bounding-Box Snapshot
+
+Obol adds `SoShape::getBoundingBoxData(SoAction *, SbBox3f &, SbVec3f &)`.
+It returns copied bounding-box and center values while holding the shape's
+internal cache lock, computing and populating the cache when necessary.
+
+Coin's `getBoundingBoxCache()` remains available for source compatibility, but
+its returned pointer is borrowed. A caller that retains or dereferences that
+pointer must prevent concurrent traversal or notification of the same shape.
+New code that only needs the box and center should use `getBoundingBoxData()`.

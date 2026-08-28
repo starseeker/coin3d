@@ -75,6 +75,11 @@ public:
                    const unsigned char * bytes);
   void setValuePtr(const SbVec3s & size, const int bytesperpixel,
                    const unsigned char * bytes);
+
+  /* The returned pointer aliases this image's storage. Callers that retain or
+     inspect it while another thread may modify the image must bracket the
+     getValue()/use interval with readLock()/readUnlock(). Trigger a scheduled
+     read before taking that external lock. */
   unsigned char * getValue(SbVec2s & size, int & bytesperpixel) const;
   unsigned char * getValue(SbVec3s & size, int & bytesperpixel) const;
   SbVec3s getSize(void) const;
@@ -90,6 +95,9 @@ public:
   SbImage & operator=(const SbImage & image);
 
   static void addReadImageCB(SbImageReadImageCB * cb, void * closure);
+  /* Removal prevents inclusion in later callback snapshots. A callback that
+     was already snapshotted may still be running, so the caller must keep its
+     closure alive until those reads have completed. */
   static void removeReadImageCB(SbImageReadImageCB * cb, void * closure);
 
   static SbString searchForFile(const SbString & basename,

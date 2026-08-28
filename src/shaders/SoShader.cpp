@@ -182,12 +182,15 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 #include <Inventor/nodes/SoShaderProgram.h>
 #include <Inventor/nodes/SoShaderObject.h>
 #include <Inventor/nodes/SoFragmentShader.h>
 #include <Inventor/nodes/SoVertexShader.h>
 #include <Inventor/nodes/SoGeometryShader.h>
+
+#include <mutex>
 #include <Inventor/nodes/SoShaderParameter.h>
 #include <Inventor/elements/SoGLShaderProgramElement.h>
 #include "CoinTidbits.h"
@@ -207,13 +210,15 @@
 
 // *************************************************************************
 
-static const char * SO_SHADER_DIR = NULL;
+static std::string shader_directory;
 static SbHash<const char *, char *> * shader_dict = NULL;
 static SbHash<const char *, char *> * shader_builtin_dict = NULL;
+static std::mutex shader_dict_mutex;
 
 static void
 soshader_cleanup(void)
 {
+  const std::lock_guard<std::mutex> lock(shader_dict_mutex);
   for(
       SbHash<const char *, char *>::const_iterator iter =
        shader_dict->const_begin();
@@ -223,10 +228,13 @@ soshader_cleanup(void)
     delete[] iter->obj;
   }
   delete shader_dict;
+  shader_dict = NULL;
 
   // no need to apply on objects since strings are compiled into the
   // library and should not be deleted
   delete shader_builtin_dict;
+  shader_builtin_dict = NULL;
+  shader_directory.clear();
 }
 
 void
@@ -304,7 +312,8 @@ SoShader::init(void)
     SoShaderParameterArray4i::initClass();
 #endif
 
-  SO_SHADER_DIR = CoinInternal::getEnvironmentVariableRaw("SO_SHADER_DIR");
+  shader_directory =
+    CoinInternal::getEnvironmentVariable("SO_SHADER_DIR").value_or(std::string());
   shader_dict = new SbHash<const char *, char *>;
   shader_builtin_dict = new SbHash<const char *, char *>;
   setupBuiltinShaders();
@@ -318,10 +327,11 @@ SoShader::init(void)
 const char *
 SoShader::getNamedScript(const SbName & name, const Type type)
 {
+  const std::lock_guard<std::mutex> lock(shader_dict_mutex);
   char * shader = NULL;
 
-  if (SO_SHADER_DIR) {
-    SbString filename(SO_SHADER_DIR);
+  if (!shader_directory.empty()) {
+    SbString filename(shader_directory.c_str());
     filename += "/";
     filename += name.getString();
 

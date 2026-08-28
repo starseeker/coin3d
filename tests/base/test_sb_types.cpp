@@ -136,8 +136,7 @@ TEST(BaseSbTypes, SbVec3fFromStringValid)
     SbString test = "0.333333343 -2 -3.0";
     SbVec3f trueVal(0.333333343f, -2.0f, -3.0f);
     SbBool ok = foo.fromString(test);
-    bool pass = (ok == TRUE) && (trueVal == foo);
-    EXPECT_TRUE(pass) << std::string("Mismatch: got '") + foo.toString().getString() +
+    EXPECT_TRUE((ok == TRUE) && (trueVal == foo)) << std::string("Mismatch: got '") + foo.toString().getString() +
         "' expected '" + trueVal.toString().getString() + "'";
 }
 
@@ -146,8 +145,7 @@ TEST(BaseSbTypes, SbVec3fFromStringInvalidNonNumeric)
     SbVec3f foo;
     SbString test = "a 2 3";
     SbBool ok = foo.fromString(test);
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "fromString should have returned FALSE for 'a 2 3'";
+    EXPECT_TRUE((ok == FALSE)) << "fromString should have returned FALSE for 'a 2 3'";
 }
 
 // -----------------------------------------------------------------------
@@ -161,8 +159,7 @@ TEST(BaseSbTypes, SbBox2fGetSize)
     SbVec2f hi(3.0f, 4.0f);
     SbVec2f expected = hi - lo;
     SbBox2f box(lo, hi);
-    bool pass = (box.getSize() == expected);
-    EXPECT_TRUE(pass) << "SbBox2f::getSize returned wrong value";
+    EXPECT_TRUE((box.getSize() == expected)) << "SbBox2f::getSize returned wrong value";
 }
 
 TEST(BaseSbTypes, SbBox2fGetClosestPointOutside)
@@ -172,8 +169,7 @@ TEST(BaseSbTypes, SbBox2fGetClosestPointOutside)
     SbVec2f hi(3113.0f, 30157.0f);
     SbBox2f box(lo, hi);
     SbVec2f expected(1557.0f, 13794.0f);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox2f::getClosestPoint wrong result for point outside box";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox2f::getClosestPoint wrong result for point outside box";
 }
 
 TEST(BaseSbTypes, SbBox2fGetClosestPointCenter)
@@ -183,8 +179,7 @@ TEST(BaseSbTypes, SbBox2fGetClosestPointCenter)
     SbBox2f box(lo, hi);
     SbVec2f sizes = box.getSize();
     SbVec2f expected(hi[0], sizes[1] / 2.0f);
-    bool pass = (box.getClosestPoint(box.getCenter()) == expected);
-    EXPECT_TRUE(pass) << "SbBox2f::getClosestPoint wrong result for center query";
+    EXPECT_TRUE((box.getClosestPoint(box.getCenter()) == expected)) << "SbBox2f::getClosestPoint wrong result for center query";
 }
 
 // -----------------------------------------------------------------------
@@ -199,8 +194,7 @@ TEST(BaseSbTypes, SbBox3fGetClosestPointOutside)
     SbVec3f hi(3113.0f, 30157.0f, 1886.0f);
     SbBox3f box(lo, hi);
     SbVec3f expected(1557.0f, 13794.0f, 851.0f);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox3f::getClosestPoint wrong result";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox3f::getClosestPoint wrong result";
 }
 
 TEST(BaseSbTypes, SbBox3fGetClosestPointCenter)
@@ -210,8 +204,7 @@ TEST(BaseSbTypes, SbBox3fGetClosestPointCenter)
     SbBox3f box(lo, hi);
     SbVec3f sizes = box.getSize();
     SbVec3f expected(sizes[0]/2.0f, sizes[1]/2.0f, hi[2]);
-    bool pass = (box.getClosestPoint(box.getCenter()) == expected);
-    EXPECT_TRUE(pass) << "SbBox3f::getClosestPoint wrong result for center query";
+    EXPECT_TRUE((box.getClosestPoint(box.getCenter()) == expected)) << "SbBox3f::getClosestPoint wrong result for center query";
 }
 
 // -----------------------------------------------------------------------
@@ -225,8 +218,7 @@ TEST(BaseSbTypes, SbBox3i32GetSize)
     SbVec3i32 hi(3, 4, 5);
     SbVec3i32 expected = hi - lo;
     SbBox3i32 box(lo, hi);
-    bool pass = (box.getSize() == expected);
-    EXPECT_TRUE(pass) << "SbBox3i32::getSize returned wrong value";
+    EXPECT_TRUE((box.getSize() == expected)) << "SbBox3i32::getSize returned wrong value";
 }
 
 TEST(BaseSbTypes, SbBox3i32GetClosestPointOutside)
@@ -236,8 +228,7 @@ TEST(BaseSbTypes, SbBox3i32GetClosestPointOutside)
     SbVec3i32 hi(3113, 30157, 1886);
     SbBox3i32 box(lo, hi);
     SbVec3f expected(1557.0f, 13794.0f, 851.0f);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox3i32::getClosestPoint wrong result";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox3i32::getClosestPoint wrong result";
 }
 
 // -----------------------------------------------------------------------
@@ -260,8 +251,7 @@ TEST(BaseSbTypes, SbByteBufferPushUnique)
     for (size_t i = 0; i < 6; ++i) {
         if (c[i] != expected[i]) { contentsOk = false; break; }
     }
-    bool pass = sizeOk && contentsOk;
-    EXPECT_TRUE(pass) << "SbByteBuffer::push gave wrong size or contents";
+    EXPECT_TRUE(sizeOk && contentsOk) << "SbByteBuffer::push gave wrong size or contents";
 }
 
 TEST(BaseSbTypes, SbByteBufferPushOntoEmpty)
@@ -269,8 +259,7 @@ TEST(BaseSbTypes, SbByteBufferPushOntoEmpty)
     SbByteBuffer empty;
     SbByteBuffer content("foo");
     empty.push(content);
-    bool pass = (empty.size() == content.size());
-    EXPECT_TRUE(pass) << "SbByteBuffer push onto empty gave wrong size";
+    EXPECT_TRUE((empty.size() == content.size())) << "SbByteBuffer push onto empty gave wrong size";
 }
 
 // -----------------------------------------------------------------------
@@ -288,27 +277,24 @@ TEST(BaseSbTypes, SbBSPTreeAddFindRemove)
     void* ud1 = reinterpret_cast<void*>(&p1);
     void* ud2 = reinterpret_cast<void*>(&p2);
 
-    bool pass = true;
-    if (bsp.addPoint(p0, ud0) != 0) { pass = false; }
-    if (bsp.addPoint(p1, ud1) != 1) { pass = false; }
-    if (bsp.addPoint(p2, ud2) != 2) { pass = false; }
+    EXPECT_EQ(bsp.addPoint(p0, ud0), 0);
+    EXPECT_EQ(bsp.addPoint(p1, ud1), 1);
+    EXPECT_EQ(bsp.addPoint(p2, ud2), 2);
     // re-adding same point returns existing index
-    if (bsp.addPoint(p2, ud2) != 2) { pass = false; }
-    if (bsp.numPoints() != 3)        { pass = false; }
-    if (bsp.findPoint(p0) != 0)      { pass = false; }
-    if (bsp.getUserData(0) != ud0)   { pass = false; }
-    if (bsp.findPoint(p1) != 1)      { pass = false; }
-    if (bsp.getUserData(1) != ud1)   { pass = false; }
-    if (bsp.findPoint(p2) != 2)      { pass = false; }
-    if (bsp.getUserData(2) != ud2)   { pass = false; }
+    EXPECT_EQ(bsp.addPoint(p2, ud2), 2);
+    EXPECT_EQ(bsp.numPoints(), 3);
+    EXPECT_EQ(bsp.findPoint(p0), 0);
+    EXPECT_EQ(bsp.getUserData(0), ud0);
+    EXPECT_EQ(bsp.findPoint(p1), 1);
+    EXPECT_EQ(bsp.getUserData(1), ud1);
+    EXPECT_EQ(bsp.findPoint(p2), 2);
+    EXPECT_EQ(bsp.getUserData(2), ud2);
 
     bsp.removePoint(p1);
-    if (bsp.numPoints() != 2)        { pass = false; }
+    EXPECT_EQ(bsp.numPoints(), 2);
     bsp.removePoint(p0);
     bsp.removePoint(p2);
-    if (bsp.numPoints() != 0)        { pass = false; }
-
-    EXPECT_TRUE(pass) << "SbBSPTree add/find/remove failed";
+    EXPECT_EQ(bsp.numPoints(), 0);
 }
 
 // -----------------------------------------------------------------------
@@ -323,8 +309,7 @@ TEST(BaseSbTypes, SbMatrixConstructFromSbDPMatrix)
     SbMatrix b;
     b.setValue(c);
     SbMatrix d(a);
-    bool pass = (b == d);
-    EXPECT_TRUE(pass) << "SbMatrix construct from SbDPMatrix failed";
+    EXPECT_TRUE((b == d)) << "SbMatrix construct from SbDPMatrix failed";
 }
 
 // -----------------------------------------------------------------------
@@ -339,8 +324,7 @@ TEST(BaseSbTypes, SbDPMatrixConstructFromSbMatrix)
     SbDPMatrix b;
     b.setValue(c);
     SbDPMatrix d(a);
-    bool pass = (b == d);
-    EXPECT_TRUE(pass) << "SbDPMatrix construct from SbMatrix failed";
+    EXPECT_TRUE((b == d)) << "SbDPMatrix construct from SbMatrix failed";
 }
 
 // -----------------------------------------------------------------------
@@ -354,8 +338,7 @@ TEST(BaseSbTypes, SbRotationFromStringValid)
     SbString test = "0 -1 0 1";
     SbRotation trueVal(SbVec3f(0, -1, 0), 1.0f);
     SbBool ok = foo.fromString(test);
-    bool pass = (ok == TRUE) && (trueVal == foo);
-    EXPECT_TRUE(pass) << std::string("SbRotation fromString mismatch: got '") +
+    EXPECT_TRUE((ok == TRUE) && (trueVal == foo)) << std::string("SbRotation fromString mismatch: got '") +
         foo.toString().getString() + "'";
 }
 
@@ -364,8 +347,7 @@ TEST(BaseSbTypes, SbRotationFromStringInvalid)
     SbRotation foo;
     SbString test = "2.- 2 3 4";
     SbBool ok = foo.fromString(test);
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "SbRotation fromString should return FALSE for invalid input";
+    EXPECT_TRUE((ok == FALSE)) << "SbRotation fromString should return FALSE for invalid input";
 }
 
 // -----------------------------------------------------------------------
@@ -378,8 +360,7 @@ TEST(BaseSbTypes, SbStringOperatorStrStr)
     SbString s1("First");
     SbString s2("Second");
     SbString result = s1 + s2;
-    bool pass = (result == SbString("FirstSecond"));
-    EXPECT_TRUE(pass) << std::string("SbString operator+ got '") +
+    EXPECT_TRUE((result == SbString("FirstSecond"))) << std::string("SbString operator+ got '") +
         result.getString() + "' expected 'FirstSecond'";
 }
 
@@ -388,8 +369,7 @@ TEST(BaseSbTypes, SbStringOperatorCstrStr)
     const char* cstr = "Erste";
     SbString s2("Second");
     SbString result = cstr + s2;
-    bool pass = (result == SbString("ErsteSecond"));
-    EXPECT_TRUE(pass) << std::string("SbString cstr+str got '") +
+    EXPECT_TRUE((result == SbString("ErsteSecond"))) << std::string("SbString cstr+str got '") +
         result.getString() + "' expected 'ErsteSecond'";
 }
 
@@ -398,8 +378,7 @@ TEST(BaseSbTypes, SbStringOperatorStrCstr)
     SbString s1("First");
     const char* cstr = "Zweite";
     SbString result = s1 + cstr;
-    bool pass = (result == SbString("FirstZweite"));
-    EXPECT_TRUE(pass) << std::string("SbString str+cstr got '") +
+    EXPECT_TRUE((result == SbString("FirstZweite"))) << std::string("SbString str+cstr got '") +
         result.getString() + "' expected 'FirstZweite'";
 }
 
@@ -414,15 +393,14 @@ TEST(BaseSbTypes, SbPlaneIntersectSignCorrect)
     SbPlane plane2(SbVec3f(1.0f, 0.0f, 0.0f), 21.0f);
     SbLine line;
     bool intersects = plane1.intersect(plane2, line);
-    bool pass = intersects;
-    if (pass) {
+    EXPECT_TRUE(intersects);
+    if (intersects) {
         SbVec3f pos = line.getPosition();
         SbVec3f expected(21.0f, 0.0f, 3.0f);
-        pass = floatNear(pos[0], expected[0], 0.1f) &&
-               floatNear(pos[1], expected[1], 0.1f) &&
-               floatNear(pos[2], expected[2], 0.1f);
+        EXPECT_NEAR(pos[0], expected[0], 0.1f);
+        EXPECT_NEAR(pos[1], expected[1], 0.1f);
+        EXPECT_NEAR(pos[2], expected[2], 0.1f);
     }
-    EXPECT_TRUE(pass) << "SbPlane intersect gave wrong position";
 }
 
 // -----------------------------------------------------------------------
@@ -436,13 +414,12 @@ TEST(BaseSbTypes, SbViewVolumeOrthoIntersectPartialOverlap)
     vv.ortho(-0.5f, 0.5f, -0.5f, 0.5f, -1.0f, 10.0f);
     SbBox3f box(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
     SbBox3f isect = vv.intersectionBox(box);
-    bool pass = floatNear(isect.getMin()[0], 0.0f) &&
+    EXPECT_TRUE(floatNear(isect.getMin()[0], 0.0f) &&
                 floatNear(isect.getMin()[1], 0.0f) &&
                 floatNear(isect.getMin()[2], 0.0f) &&
                 floatNear(isect.getMax()[0], 0.5f) &&
                 floatNear(isect.getMax()[1], 0.5f) &&
-                floatNear(isect.getMax()[2], 1.0f);
-    EXPECT_TRUE(pass) << "SbViewVolume ortho intersection wrong";
+                floatNear(isect.getMax()[2], 1.0f)) << "SbViewVolume ortho intersection wrong";
 }
 
 TEST(BaseSbTypes, SbViewVolumeOrthoIntersectBboxInsideVv)
@@ -451,13 +428,12 @@ TEST(BaseSbTypes, SbViewVolumeOrthoIntersectBboxInsideVv)
     vv.ortho(-0.5f, 0.5f, -0.5f, 0.5f, -1.0f, 10.0f);
     SbBox3f box(-0.25f, -0.25f, -0.25f, 0.25f, 0.25f, 0.25f);
     SbBox3f isect = vv.intersectionBox(box);
-    bool pass = floatNear(isect.getMin()[0], -0.25f) &&
+    EXPECT_TRUE(floatNear(isect.getMin()[0], -0.25f) &&
                 floatNear(isect.getMin()[1], -0.25f) &&
                 floatNear(isect.getMin()[2], -0.25f) &&
                 floatNear(isect.getMax()[0],  0.25f) &&
                 floatNear(isect.getMax()[1],  0.25f) &&
-                floatNear(isect.getMax()[2],  0.25f);
-    EXPECT_TRUE(pass) << "SbViewVolume ortho (bbox inside) intersection wrong";
+                floatNear(isect.getMax()[2],  0.25f)) << "SbViewVolume ortho (bbox inside) intersection wrong";
 }
 
 TEST(BaseSbTypes, SbViewVolumeOrthoIntersectVvInsideBbox)
@@ -466,13 +442,12 @@ TEST(BaseSbTypes, SbViewVolumeOrthoIntersectVvInsideBbox)
     vv.ortho(-0.5f, 0.5f, -0.5f, 0.5f, 0.0f, 5.0f);
     SbBox3f box(-10.0f, -10.0f, -10.0f, 10.0f, 10.0f, 10.0f);
     SbBox3f isect = vv.intersectionBox(box);
-    bool pass = floatNear(isect.getMin()[0], -0.5f) &&
+    EXPECT_TRUE(floatNear(isect.getMin()[0], -0.5f) &&
                 floatNear(isect.getMin()[1], -0.5f) &&
                 floatNear(isect.getMin()[2], -5.0f) &&
                 floatNear(isect.getMax()[0],  0.5f) &&
                 floatNear(isect.getMax()[1],  0.5f) &&
-                floatNear(isect.getMax()[2],  0.0f);
-    EXPECT_TRUE(pass) << "SbViewVolume ortho (vv inside bbox) intersection wrong";
+                floatNear(isect.getMax()[2],  0.0f)) << "SbViewVolume ortho (vv inside bbox) intersection wrong";
 }
 
 TEST(BaseSbTypes, SbViewVolumePerspectiveIntersect)
@@ -482,13 +457,12 @@ TEST(BaseSbTypes, SbViewVolumePerspectiveIntersect)
     vv.translateCamera(SbVec3f(0.0f, 0.0f, 5.0f));
     SbBox3f box(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
     SbBox3f isect = vv.intersectionBox(box);
-    bool pass = floatNear(isect.getMin()[0], 0.0f,  0.01f) &&
+    EXPECT_TRUE(floatNear(isect.getMin()[0], 0.0f,  0.01f) &&
                 floatNear(isect.getMin()[1], 0.0f,  0.01f) &&
                 floatNear(isect.getMin()[2], 0.25f, 0.01f) &&
                 floatNear(isect.getMax()[0], 1.0f,  0.01f) &&
                 floatNear(isect.getMax()[1], 1.0f,  0.01f) &&
-                floatNear(isect.getMax()[2], 0.75f, 0.01f);
-    EXPECT_TRUE(pass) << "SbViewVolume perspective intersection wrong";
+                floatNear(isect.getMax()[2], 0.75f, 0.01f)) << "SbViewVolume perspective intersection wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -502,8 +476,7 @@ TEST(BaseSbTypes, SbVec3dFromString)
     SbString test = "0.3333333333333333 -2 -3.0";
     SbVec3d trueVal(0.3333333333333333, -2, -3);
     SbBool ok = foo.fromString(test);
-    bool pass = ok && (trueVal == foo);
-    EXPECT_TRUE(pass) << "SbVec3d::fromString failed";
+    EXPECT_TRUE(ok && (trueVal == foo)) << "SbVec3d::fromString failed";
 }
 
 // -----------------------------------------------------------------------
@@ -516,11 +489,10 @@ TEST(BaseSbTypes, SbVec4fNormalizeAlreadyNormalizedVector)
     const float SQRT2 = sqrtf(2.0f) / 2.0f;
     SbVec4f vec(0, -SQRT2, 0, SQRT2);
     vec.normalize();
-    bool pass = (vec[0] == 0.0f) &&
+    EXPECT_TRUE((vec[0] == 0.0f) &&
                 (fabsf(vec[1] - (-SQRT2)) < 1e-5f) &&
                 (vec[2] == 0.0f) &&
-                (fabsf(vec[3] - SQRT2)    < 1e-5f);
-    EXPECT_TRUE(pass) << "SbVec4f normalize already-normalized failed";
+                (fabsf(vec[3] - SQRT2)    < 1e-5f)) << "SbVec4f normalize already-normalized failed";
 }
 
 // -----------------------------------------------------------------------
@@ -534,8 +506,7 @@ TEST(BaseSbTypes, SbVec3sFromString)
     SbString test = "1 -2 3";
     SbVec3s trueVal(1, -2, 3);
     foo.fromString(test);
-    bool pass = (trueVal == foo);
-    EXPECT_TRUE(pass) << "SbVec3s::fromString failed";
+    EXPECT_TRUE((trueVal == foo)) << "SbVec3s::fromString failed";
 }
 
 TEST(BaseSbTypes, SbVec3sFromInvalidString)
@@ -543,8 +514,7 @@ TEST(BaseSbTypes, SbVec3sFromInvalidString)
     SbVec3s foo;
     SbString test = "a,2,3";
     SbBool ok = foo.fromString(test);
-    bool pass = (ok == FALSE);
-    EXPECT_TRUE(pass) << "SbVec3s::fromString should fail for 'a,2,3'";
+    EXPECT_TRUE((ok == FALSE)) << "SbVec3s::fromString should fail for 'a,2,3'";
 }
 
 // -----------------------------------------------------------------------
@@ -557,8 +527,7 @@ TEST(BaseSbTypes, SbBox2dGetSize)
     SbVec2d minPt(1, 2), maxPt(3, 4);
     SbBox2d box(minPt, maxPt);
     SbVec2d diff = maxPt - minPt;
-    bool pass = (box.getSize() == diff);
-    EXPECT_TRUE(pass) << "SbBox2d getSize incorrect";
+    EXPECT_TRUE((box.getSize() == diff)) << "SbBox2d getSize incorrect";
 }
 
 TEST(BaseSbTypes, SbBox2dGetClosestPointOutside)
@@ -566,8 +535,7 @@ TEST(BaseSbTypes, SbBox2dGetClosestPointOutside)
     SbVec2d point(1524, 13794);
     SbBox2d box(SbVec2d(1557, 3308), SbVec2d(3113, 30157));
     SbVec2d expected(1557, 13794);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox2d getClosestPoint outside wrong";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox2d getClosestPoint outside wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -580,8 +548,7 @@ TEST(BaseSbTypes, SbBox3dGetClosestPointOutside)
     SbVec3d point(1524, 13794, 851);
     SbBox3d box(SbVec3d(1557, 3308, 850), SbVec3d(3113, 30157, 1886));
     SbVec3d expected(1557, 13794, 851);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox3d getClosestPoint outside wrong";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox3d getClosestPoint outside wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -594,8 +561,7 @@ TEST(BaseSbTypes, SbBox2sGetSize)
     SbVec2s minPt(1, 2), maxPt(3, 4);
     SbBox2s box(minPt, maxPt);
     SbVec2s diff = maxPt - minPt;
-    bool pass = (box.getSize() == diff);
-    EXPECT_TRUE(pass) << "SbBox2s getSize incorrect";
+    EXPECT_TRUE((box.getSize() == diff)) << "SbBox2s getSize incorrect";
 }
 
 // -----------------------------------------------------------------------
@@ -608,8 +574,7 @@ TEST(BaseSbTypes, SbBox3sGetSize)
     SbVec3s minPt(1, 2, 3), maxPt(3, 4, 5);
     SbBox3s box(minPt, maxPt);
     SbVec3s diff = maxPt - minPt;
-    bool pass = (box.getSize() == diff);
-    EXPECT_TRUE(pass) << "SbBox3s getSize incorrect";
+    EXPECT_TRUE((box.getSize() == diff)) << "SbBox3s getSize incorrect";
 }
 
 TEST(BaseSbTypes, SbBox3sGetClosestPointOutside)
@@ -617,8 +582,7 @@ TEST(BaseSbTypes, SbBox3sGetClosestPointOutside)
     SbVec3f point(1524.0f, 13794.0f, 851.0f);
     SbBox3s box(SbVec3s(1557, 3308, 850), SbVec3s(3113, 30157, 1886));
     SbVec3f expected(1557.0f, 13794.0f, 851.0f);
-    bool pass = (box.getClosestPoint(point) == expected);
-    EXPECT_TRUE(pass) << "SbBox3s getClosestPoint outside wrong";
+    EXPECT_TRUE((box.getClosestPoint(point) == expected)) << "SbBox3s getClosestPoint outside wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -632,8 +596,7 @@ TEST(BaseSbTypes, SbDPRotationConstructFromAxisAngle)
     // A non-trivial rotation should have a non-zero quaternion w component
     double q[4];
     rot.getValue(q[0], q[1], q[2], q[3]);
-    bool pass = (q[3] != 0.0);
-    EXPECT_TRUE(pass) << "SbDPRotation construction failed";
+    EXPECT_TRUE((q[3] != 0.0)) << "SbDPRotation construction failed";
 }
 
 // -----------------------------------------------------------------------
@@ -648,8 +611,7 @@ TEST(BaseSbTypes, SbDPPlanePlanePlaneIntersectionSignCorrect)
     SbDPLine line;
     bool ok = plane1.intersect(plane2, line);
     // The intersection line position z-component should be >= plane1 distance (3.0)
-    bool pass = ok && (line.getPosition()[2] > 0.0);
-    EXPECT_TRUE(pass) << "SbDPPlane intersection sign wrong";
+    EXPECT_TRUE(ok && (line.getPosition()[2] > 0.0)) << "SbDPPlane intersection sign wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -667,10 +629,11 @@ TEST(BaseSbTypes, SbImageCopyConstruct)
     const unsigned char* barData = bar.getValue(tmp1, tmp2);
     const unsigned char* fooData = foo.getValue(tmp1, tmp2);
 
-    bool pass = (fooData != nullptr) && (barData != nullptr);
-    for (int i = 0; i < 4 && pass; ++i)
-        pass = (fooData[i] == barData[i]);
-    EXPECT_TRUE(pass) << "SbImage copy construct values differ";
+    ASSERT_NE(fooData, nullptr);
+    ASSERT_NE(barData, nullptr);
+    for (int i = 0; i < 4; ++i) {
+        EXPECT_EQ(fooData[i], barData[i]) << "pixel " << i;
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -682,10 +645,9 @@ TEST(BaseSbTypes, SbLineGetClosestPoint)
     // Line along X axis at origin
     SbLine line(SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f));
     SbVec3f closest = line.getClosestPoint(SbVec3f(3.0f, 5.0f, 0.0f));
-    bool pass = (closest[0] == 3.0f) &&
+    EXPECT_TRUE((closest[0] == 3.0f) &&
                 (fabsf(closest[1]) < 1e-5f) &&
-                (fabsf(closest[2]) < 1e-5f);
-    EXPECT_TRUE(pass) << "SbLine::getClosestPoint returned wrong point";
+                (fabsf(closest[2]) < 1e-5f)) << "SbLine::getClosestPoint returned wrong point";
 }
 
 TEST(BaseSbTypes, SbLineGetClosestPointsBetweenTwoLines)
@@ -708,8 +670,7 @@ TEST(BaseSbTypes, SbSpherePointInside)
     SbSphere sphere(SbVec3f(0.0f, 0.0f, 0.0f), 2.0f);
     bool inside  = sphere.pointInside(SbVec3f(1.0f, 0.0f, 0.0f));
     bool outside = sphere.pointInside(SbVec3f(3.0f, 0.0f, 0.0f));
-    bool pass = inside && !outside;
-    EXPECT_TRUE(pass) << "SbSphere::pointInside gave wrong result";
+    EXPECT_TRUE(inside && !outside) << "SbSphere::pointInside gave wrong result";
 }
 
 TEST(BaseSbTypes, SbSphereGetRadiusSetRadius)
@@ -717,9 +678,8 @@ TEST(BaseSbTypes, SbSphereGetRadiusSetRadius)
     SbSphere sphere;
     sphere.setCenter(SbVec3f(1.0f, 2.0f, 3.0f));
     sphere.setRadius(5.0f);
-    bool pass = (sphere.getRadius() == 5.0f) &&
-                (sphere.getCenter() == SbVec3f(1.0f, 2.0f, 3.0f));
-    EXPECT_TRUE(pass) << "SbSphere set/get radius/center failed";
+    EXPECT_TRUE((sphere.getRadius() == 5.0f) &&
+                (sphere.getCenter() == SbVec3f(1.0f, 2.0f, 3.0f))) << "SbSphere set/get radius/center failed";
 }
 
 // -----------------------------------------------------------------------
@@ -730,8 +690,7 @@ TEST(BaseSbTypes, SbCylinderGetRadius)
 {
     SbLine axis(SbVec3f(0,0,0), SbVec3f(0,1,0));
     SbCylinder cyl(axis, 3.0f);
-    bool pass = (cyl.getRadius() == 3.0f);
-    EXPECT_TRUE(pass) << "SbCylinder getRadius returned wrong value";
+    EXPECT_TRUE((cyl.getRadius() == 3.0f)) << "SbCylinder getRadius returned wrong value";
 }
 
 // -----------------------------------------------------------------------
@@ -741,11 +700,10 @@ TEST(BaseSbTypes, SbCylinderGetRadius)
 TEST(BaseSbTypes, SbColor4fSetGetRoundTrip)
 {
     SbColor4f c(0.5f, 0.25f, 0.75f, 0.9f);
-    bool pass = (fabsf(c[0] - 0.5f)  < 1e-5f) &&
+    EXPECT_TRUE((fabsf(c[0] - 0.5f)  < 1e-5f) &&
                 (fabsf(c[1] - 0.25f) < 1e-5f) &&
                 (fabsf(c[2] - 0.75f) < 1e-5f) &&
-                (fabsf(c[3] - 0.9f)  < 1e-5f);
-    EXPECT_TRUE(pass) << "SbColor4f construction/get failed";
+                (fabsf(c[3] - 0.9f)  < 1e-5f)) << "SbColor4f construction/get failed";
 }
 
 // -----------------------------------------------------------------------
@@ -758,8 +716,7 @@ TEST(BaseSbTypes, SbBox2i32GetSize)
     SbVec2i32 minPt(1, 2), maxPt(3, 4);
     SbBox2i32 box(minPt, maxPt);
     SbVec2i32 diff = maxPt - minPt;
-    bool pass = (box.getSize() == diff);
-    EXPECT_TRUE(pass) << "SbBox2i32 getSize incorrect";
+    EXPECT_TRUE((box.getSize() == diff)) << "SbBox2i32 getSize incorrect";
 }
 
 // -----------------------------------------------------------------------
@@ -773,8 +730,7 @@ TEST(BaseSbTypes, SbVec3usConstructionAndGetValue)
     SbVec3us v(1, 2, 3);
     unsigned short x, y, z;
     v.getValue(x, y, z);
-    bool pass = (x == 1) && (y == 2) && (z == 3);
-    EXPECT_TRUE(pass) << "SbVec3us getValue returned wrong values";
+    EXPECT_TRUE((x == 1) && (y == 2) && (z == 3)) << "SbVec3us getValue returned wrong values";
 }
 
 TEST(BaseSbTypes, SbVec3usSetValueRoundTrip)
@@ -782,8 +738,7 @@ TEST(BaseSbTypes, SbVec3usSetValueRoundTrip)
     SbVec3us v;
     v.setValue(10, 20, 30);
     const unsigned short* p = v.getValue();
-    bool pass = (p[0] == 10) && (p[1] == 20) && (p[2] == 30);
-    EXPECT_TRUE(pass) << "SbVec3us setValue/getValue mismatch";
+    EXPECT_TRUE((p[0] == 10) && (p[1] == 20) && (p[2] == 30)) << "SbVec3us setValue/getValue mismatch";
 }
 
 // -----------------------------------------------------------------------
@@ -800,8 +755,7 @@ TEST(BaseSbTypes, SbHeapMinHeapOrdering)
         cc_heap_print(heap, pprint, result, FALSE);
         cc_heap_destruct(heap);
         SbString expected("1 3 2 15 5 4 45 ");
-        bool pass = (result == expected);
-        EXPECT_TRUE(pass) << std::string("min_heap mismatch: got '") + result.getString() +
+        EXPECT_TRUE((result == expected)) << std::string("min_heap mismatch: got '") + result.getString() +
             "' expected '" + expected.getString() + "'";
 }
 
@@ -814,8 +768,7 @@ TEST(BaseSbTypes, SbHeapMaxHeapOrdering)
         cc_heap_print(heap, pprint, result, FALSE);
         cc_heap_destruct(heap);
         SbString expected("45 5 15 2 3 1 4 ");
-        bool pass = (result == expected);
-        EXPECT_TRUE(pass) << std::string("max_heap mismatch: got '") + result.getString() +
+        EXPECT_TRUE((result == expected)) << std::string("max_heap mismatch: got '") + result.getString() +
             "' expected '" + expected.getString() + "'";
 }
 
@@ -830,8 +783,7 @@ TEST(BaseSbTypes, SbHeapHeapAdd)
         cc_heap_print(heap, pprint, result, FALSE);
         cc_heap_destruct(heap);
         SbString expected("1 3 2 12 5 4 45 15 ");
-        bool pass = (result == expected);
-        EXPECT_TRUE(pass) << std::string("heap_add mismatch: got '") + result.getString() +
+        EXPECT_TRUE((result == expected)) << std::string("heap_add mismatch: got '") + result.getString() +
             "' expected '" + expected.getString() + "'";
 }
 
@@ -845,8 +797,7 @@ TEST(BaseSbTypes, SbHeapHeapRemove)
         cc_heap_print(heap, pprint, result, FALSE);
         cc_heap_destruct(heap);
         SbString expected("1 3 2 45 5 4 ");
-        bool pass = (result == expected);
-        EXPECT_TRUE(pass) << std::string("heap_remove mismatch: got '") + result.getString() +
+        EXPECT_TRUE((result == expected)) << std::string("heap_remove mismatch: got '") + result.getString() +
             "' expected '" + expected.getString() + "'";
 }
 
@@ -861,8 +812,7 @@ TEST(BaseSbTypes, SbHeapHeapUpdate)
         cc_heap_print(heap, pprint, result, FALSE);
         cc_heap_destruct(heap);
         SbString expected("1 1 2 3 5 4 45 ");
-        bool pass = (result == expected);
-        EXPECT_TRUE(pass) << std::string("heap_update mismatch: got '") + result.getString() +
+        EXPECT_TRUE((result == expected)) << std::string("heap_update mismatch: got '") + result.getString() +
             "' expected '" + expected.getString() + "'";
 }
 
@@ -875,8 +825,7 @@ TEST(BaseSbTypes, SbMatrixDet4Identity)
 {
     SbMatrix m = SbMatrix::identity();
     float d = m.det4();
-    bool pass = floatNear(d, 1.0f, 1e-4f);
-    EXPECT_TRUE(pass) << "SbMatrix identity det4 != 1";
+    EXPECT_TRUE(floatNear(d, 1.0f, 1e-4f)) << "SbMatrix identity det4 != 1";
 }
 
 TEST(BaseSbTypes, SbMatrixDet4ScaleMatrix)
@@ -887,8 +836,7 @@ TEST(BaseSbTypes, SbMatrixDet4ScaleMatrix)
     m[2][2] = 4.0f;
     // det = 2*3*4 = 24
     float d = m.det4();
-    bool pass = floatNear(d, 24.0f, 1e-3f);
-    EXPECT_TRUE(pass) << "SbMatrix scale det4 incorrect";
+    EXPECT_TRUE(floatNear(d, 24.0f, 1e-3f)) << "SbMatrix scale det4 incorrect";
 }
 
 TEST(BaseSbTypes, SbMatrixInverseOfIdentityIsIdentity)
@@ -897,13 +845,13 @@ TEST(BaseSbTypes, SbMatrixInverseOfIdentityIsIdentity)
     SbMatrix inv  = m.inverse();
     SbMatrix prod = m.multRight(inv);
     // product should be (close to) identity
-    bool pass = true;
-    for (int r = 0; r < 4 && pass; ++r)
-        for (int c = 0; c < 4 && pass; ++c) {
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
             float expected = (r == c) ? 1.0f : 0.0f;
-            if (!floatNear(prod[r][c], expected, 1e-4f)) pass = false;
+            EXPECT_NEAR(prod[r][c], expected, 1e-4f)
+                << "matrix element [" << r << "][" << c << "]";
         }
-    EXPECT_TRUE(pass) << "SbMatrix inverse(identity) != identity";
+    }
 }
 
 TEST(BaseSbTypes, SbMatrixInverseOfScaleMatrix)
@@ -914,10 +862,9 @@ TEST(BaseSbTypes, SbMatrixInverseOfScaleMatrix)
     m[2][2] = 0.5f;
     SbMatrix inv = m.inverse();
     // Expected diagonal: 0.5, 0.25, 2.0
-    bool pass = floatNear(inv[0][0], 0.5f,  1e-4f) &&
+    EXPECT_TRUE(floatNear(inv[0][0], 0.5f,  1e-4f) &&
                 floatNear(inv[1][1], 0.25f, 1e-4f) &&
-                floatNear(inv[2][2], 2.0f,  1e-4f);
-    EXPECT_TRUE(pass) << "SbMatrix scale inverse incorrect";
+                floatNear(inv[2][2], 2.0f,  1e-4f)) << "SbMatrix scale inverse incorrect";
 }
 
 TEST(BaseSbTypes, SbMatrixMultVecMatrixTranslation)
@@ -929,10 +876,9 @@ TEST(BaseSbTypes, SbMatrixMultVecMatrixTranslation)
     m[3][2] = 3.0f;
     SbVec3f src(0.0f, 0.0f, 0.0f), dst;
     m.multVecMatrix(src, dst);
-    bool pass = floatNear(dst[0], 1.0f) &&
+    EXPECT_TRUE(floatNear(dst[0], 1.0f) &&
                 floatNear(dst[1], 2.0f) &&
-                floatNear(dst[2], 3.0f);
-    EXPECT_TRUE(pass) << "SbMatrix multVecMatrix translation incorrect";
+                floatNear(dst[2], 3.0f)) << "SbMatrix multVecMatrix translation incorrect";
 }
 
 TEST(BaseSbTypes, SbMatrixMultVecMatrixScale)
@@ -943,10 +889,9 @@ TEST(BaseSbTypes, SbMatrixMultVecMatrixScale)
     m[2][2] = 3.0f;
     SbVec3f src(1.0f, 1.0f, 1.0f), dst;
     m.multVecMatrix(src, dst);
-    bool pass = floatNear(dst[0], 3.0f) &&
+    EXPECT_TRUE(floatNear(dst[0], 3.0f) &&
                 floatNear(dst[1], 3.0f) &&
-                floatNear(dst[2], 3.0f);
-    EXPECT_TRUE(pass) << "SbMatrix multVecMatrix scale incorrect";
+                floatNear(dst[2], 3.0f)) << "SbMatrix multVecMatrix scale incorrect";
 }
 
 TEST(BaseSbTypes, SbMatrixMultDirMatrixIgnoresTranslation)
@@ -959,10 +904,9 @@ TEST(BaseSbTypes, SbMatrixMultDirMatrixIgnoresTranslation)
     SbVec3f dir(1.0f, 0.0f, 0.0f), dst;
     m.multDirMatrix(dir, dst);
     // Direction must NOT be translated
-    bool pass = floatNear(dst[0], 1.0f) &&
+    EXPECT_TRUE(floatNear(dst[0], 1.0f) &&
                 floatNear(dst[1], 0.0f) &&
-                floatNear(dst[2], 0.0f);
-    EXPECT_TRUE(pass) << "SbMatrix multDirMatrix should not translate direction vector";
+                floatNear(dst[2], 0.0f)) << "SbMatrix multDirMatrix should not translate direction vector";
 }
 
 // -----------------------------------------------------------------------
@@ -975,8 +919,7 @@ TEST(BaseSbTypes, SbDPMatrixIdentityDet41)
 {
     SbMatrixd m = SbMatrixd::identity();
     double d = m.det4();
-    bool pass = doubleNear(d, 1.0);
-    EXPECT_TRUE(pass) << "SbDPMatrix identity det4 != 1";
+    EXPECT_TRUE(doubleNear(d, 1.0)) << "SbDPMatrix identity det4 != 1";
 }
 
 TEST(BaseSbTypes, SbDPMatrixScaleDet4)
@@ -985,21 +928,20 @@ TEST(BaseSbTypes, SbDPMatrixScaleDet4)
     m[0][0] = 2.0; m[1][1] = 3.0; m[2][2] = 5.0;
     // det = 2*3*5 = 30
     double d = m.det4();
-    bool pass = doubleNear(d, 30.0, 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix scale det4 incorrect";
+    EXPECT_TRUE(doubleNear(d, 30.0, 1e-9)) << "SbDPMatrix scale det4 incorrect";
 }
 
 TEST(BaseSbTypes, SbDPMatrixInverseOfIdentity)
 {
     SbMatrixd m   = SbMatrixd::identity();
     SbMatrixd inv = m.inverse();
-    bool pass = true;
-    for (int r = 0; r < 4 && pass; ++r)
-        for (int c = 0; c < 4 && pass; ++c) {
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
             double expected = (r == c) ? 1.0 : 0.0;
-            if (!doubleNear(inv[r][c], expected, 1e-9)) pass = false;
+            EXPECT_NEAR(inv[r][c], expected, 1e-9)
+                << "matrix element [" << r << "][" << c << "]";
         }
-    EXPECT_TRUE(pass) << "SbDPMatrix inverse(identity) != identity";
+    }
 }
 
 TEST(BaseSbTypes, SbDPMatrixMultRightProducesCorrectProduct)
@@ -1017,10 +959,9 @@ TEST(BaseSbTypes, SbDPMatrixMultRightProducesCorrectProduct)
     SbVec3d src(1.0, 0.0, 0.0), dst;
     prod.multVecMatrix(src, dst);
     // scale(1,0,0) -> (2,0,0), then translate -> (3,0,0)
-    bool pass = doubleNear(dst[0], 3.0, 1e-9) &&
+    EXPECT_TRUE(doubleNear(dst[0], 3.0, 1e-9) &&
                 doubleNear(dst[1], 0.0, 1e-9) &&
-                doubleNear(dst[2], 0.0, 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix multRight incorrect result";
+                doubleNear(dst[2], 0.0, 1e-9)) << "SbDPMatrix multRight incorrect result";
 }
 
 TEST(BaseSbTypes, SbDPMatrixMultLeftProducesCorrectProduct)
@@ -1041,10 +982,9 @@ TEST(BaseSbTypes, SbDPMatrixMultLeftProducesCorrectProduct)
     SbVec3d src(1.0, 0.0, 0.0), dst;
     prod.multVecMatrix(src, dst);
     // (1,0,0) scaled to (2,0,0), then translated to (3,0,0)
-    bool pass = doubleNear(dst[0], 3.0, 1e-9) &&
+    EXPECT_TRUE(doubleNear(dst[0], 3.0, 1e-9) &&
                 doubleNear(dst[1], 0.0, 1e-9) &&
-                doubleNear(dst[2], 0.0, 1e-9);
-    EXPECT_TRUE(pass) << "SbDPMatrix multLeft incorrect result";
+                doubleNear(dst[2], 0.0, 1e-9)) << "SbDPMatrix multLeft incorrect result";
 }
 
 TEST(BaseSbTypes, SbDPMatrixMultVecMatrixTranslation)
@@ -1053,10 +993,9 @@ TEST(BaseSbTypes, SbDPMatrixMultVecMatrixTranslation)
     m[3][0] = 4.0; m[3][1] = 5.0; m[3][2] = 6.0;
     SbVec3d src(0.0, 0.0, 0.0), dst;
     m.multVecMatrix(src, dst);
-    bool pass = doubleNear(dst[0], 4.0) &&
+    EXPECT_TRUE(doubleNear(dst[0], 4.0) &&
                 doubleNear(dst[1], 5.0) &&
-                doubleNear(dst[2], 6.0);
-    EXPECT_TRUE(pass) << "SbDPMatrix multVecMatrix translation incorrect";
+                doubleNear(dst[2], 6.0)) << "SbDPMatrix multVecMatrix translation incorrect";
 }
 
 TEST(BaseSbTypes, SbDPMatrixMultDirMatrixIgnoresTranslation)
@@ -1065,10 +1004,9 @@ TEST(BaseSbTypes, SbDPMatrixMultDirMatrixIgnoresTranslation)
     m[3][0] = 10.0; m[3][1] = 20.0; m[3][2] = 30.0;
     SbVec3d dir(1.0, 0.0, 0.0), dst;
     m.multDirMatrix(dir, dst);
-    bool pass = doubleNear(dst[0], 1.0) &&
+    EXPECT_TRUE(doubleNear(dst[0], 1.0) &&
                 doubleNear(dst[1], 0.0) &&
-                doubleNear(dst[2], 0.0);
-    EXPECT_TRUE(pass) << "SbDPMatrix multDirMatrix should not translate direction";
+                doubleNear(dst[2], 0.0)) << "SbDPMatrix multDirMatrix should not translate direction";
 }
 
 TEST(BaseSbTypes, SbDPMatrixGetTransformRoundTripsTranslation)
@@ -1084,8 +1022,7 @@ TEST(BaseSbTypes, SbDPMatrixGetTransformRoundTripsTranslation)
     SbVec3d    outS;
     m.getTransform(outT, outR, outS, outSO);
 
-    bool pass = doubleNear(outT[0], 1.5, 1e-6) &&
+    EXPECT_TRUE(doubleNear(outT[0], 1.5, 1e-6) &&
                 doubleNear(outT[1], -2.5, 1e-6) &&
-                doubleNear(outT[2], 3.0, 1e-6);
-    EXPECT_TRUE(pass) << "SbDPMatrix getTransform translation round-trip failed";
+                doubleNear(outT[2], 3.0, 1e-6)) << "SbDPMatrix getTransform translation round-trip failed";
 }

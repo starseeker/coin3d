@@ -84,17 +84,15 @@ using namespace ObolTest;
 
 TEST(NodesMisc, SoAnnotationClassTypeRegistered)
 {
-    bool pass = (SoAnnotation::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoAnnotation has bad class type";
+    EXPECT_TRUE((SoAnnotation::getClassTypeId() != SoType::badType())) << "SoAnnotation has bad class type";
 }
 
 TEST(NodesMisc, SoAnnotationIsOfTypeSoSeparator)
 {
     SoAnnotation * ann = new SoAnnotation;
     ann->ref();
-    bool pass = ann->isOfType(SoSeparator::getClassTypeId());
+    EXPECT_TRUE(ann->isOfType(SoSeparator::getClassTypeId())) << "SoAnnotation should be derived from SoSeparator";
     ann->unref();
-    EXPECT_TRUE(pass) << "SoAnnotation should be derived from SoSeparator";
 }
 
 TEST(NodesMisc, SoAnnotationAddChildGetNumChildren)
@@ -103,9 +101,8 @@ TEST(NodesMisc, SoAnnotationAddChildGetNumChildren)
     ann->ref();
     ann->addChild(new SoSeparator);
     ann->addChild(new SoSeparator);
-    bool pass = (ann->getNumChildren() == 2);
+    EXPECT_TRUE((ann->getNumChildren() == 2)) << "SoAnnotation addChild/getNumChildren failed";
     ann->unref();
-    EXPECT_TRUE(pass) << "SoAnnotation addChild/getNumChildren failed";
 }
 
 // -----------------------------------------------------------------------
@@ -114,8 +111,7 @@ TEST(NodesMisc, SoAnnotationAddChildGetNumChildren)
 
 TEST(NodesMisc, SoResetTransformClassTypeRegistered)
 {
-    bool pass = (SoResetTransform::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoResetTransform bad class type";
+    EXPECT_TRUE((SoResetTransform::getClassTypeId() != SoType::badType())) << "SoResetTransform bad class type";
 }
 
 TEST(NodesMisc, SoResetTransformWhatToResetDefaultIsTRANSFORM)
@@ -123,9 +119,8 @@ TEST(NodesMisc, SoResetTransformWhatToResetDefaultIsTRANSFORM)
     SoResetTransform * node = new SoResetTransform;
     node->ref();
     // Default whatToReset is TRANSFORM (bit 0x01)
-    bool pass = (node->whatToReset.getValue() == SoResetTransform::TRANSFORM);
+    EXPECT_TRUE((node->whatToReset.getValue() == SoResetTransform::TRANSFORM)) << "SoResetTransform default whatToReset != TRANSFORM";
     node->unref();
-    EXPECT_TRUE(pass) << "SoResetTransform default whatToReset != TRANSFORM";
 }
 
 TEST(NodesMisc, SoResetTransformBBOXFlagRoundTrip)
@@ -133,9 +128,8 @@ TEST(NodesMisc, SoResetTransformBBOXFlagRoundTrip)
     SoResetTransform * node = new SoResetTransform;
     node->ref();
     node->whatToReset.setValue(SoResetTransform::BBOX);
-    bool pass = (node->whatToReset.getValue() == SoResetTransform::BBOX);
+    EXPECT_TRUE((node->whatToReset.getValue() == SoResetTransform::BBOX)) << "SoResetTransform BBOX flag round-trip failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoResetTransform BBOX flag round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -144,8 +138,7 @@ TEST(NodesMisc, SoResetTransformBBOXFlagRoundTrip)
 
 TEST(NodesMisc, SoCoordinate4ClassTypeRegistered)
 {
-    bool pass = (SoCoordinate4::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoCoordinate4 bad class type";
+    EXPECT_TRUE((SoCoordinate4::getClassTypeId() != SoType::badType())) << "SoCoordinate4 bad class type";
 }
 
 TEST(NodesMisc, SoCoordinate4PointFieldStartsWithDefaultValue)
@@ -153,9 +146,8 @@ TEST(NodesMisc, SoCoordinate4PointFieldStartsWithDefaultValue)
     SoCoordinate4 * node = new SoCoordinate4;
     node->ref();
     // Default is one entry SbVec4f(0,0,0,1)
-    bool pass = (node->point.getNum() >= 1);
+    EXPECT_TRUE((node->point.getNum() >= 1)) << "SoCoordinate4 point should have at least 1 default value";
     node->unref();
-    EXPECT_TRUE(pass) << "SoCoordinate4 point should have at least 1 default value";
 }
 
 TEST(NodesMisc, SoCoordinate4PointFieldSetGetRoundTrip)
@@ -164,9 +156,8 @@ TEST(NodesMisc, SoCoordinate4PointFieldSetGetRoundTrip)
     node->ref();
     SbVec4f pts[2] = { SbVec4f(1,2,3,1), SbVec4f(4,5,6,1) };
     node->point.setValues(0, 2, pts);
-    bool pass = (node->point.getNum() == 2);
+    EXPECT_TRUE((node->point.getNum() == 2)) << "SoCoordinate4 point field set/get failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoCoordinate4 point field set/get failed";
 }
 
 // -----------------------------------------------------------------------
@@ -175,26 +166,23 @@ TEST(NodesMisc, SoCoordinate4PointFieldSetGetRoundTrip)
 
 TEST(NodesMisc, SoPendulumClassTypeRegistered)
 {
-    bool pass = (SoPendulum::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPendulum bad class type";
+    EXPECT_TRUE((SoPendulum::getClassTypeId() != SoType::badType())) << "SoPendulum bad class type";
 }
 
 TEST(NodesMisc, SoPendulumSpeedDefaultIs10)
 {
     SoPendulum * node = new SoPendulum;
     node->ref();
-    bool pass = (node->speed.getValue() == 1.0f);
+    EXPECT_TRUE((node->speed.getValue() == 1.0f)) << "SoPendulum default speed != 1.0";
     node->unref();
-    EXPECT_TRUE(pass) << "SoPendulum default speed != 1.0";
 }
 
 TEST(NodesMisc, SoPendulumOnFieldDefaultIsTRUE)
 {
     SoPendulum * node = new SoPendulum;
     node->ref();
-    bool pass = (node->on.getValue() == TRUE);
+    EXPECT_TRUE((node->on.getValue() == TRUE)) << "SoPendulum default on != TRUE";
     node->unref();
-    EXPECT_TRUE(pass) << "SoPendulum default on != TRUE";
 }
 
 TEST(NodesMisc, SoPendulumRotation0Rotation1FieldRoundTrip)
@@ -205,10 +193,9 @@ TEST(NodesMisc, SoPendulumRotation0Rotation1FieldRoundTrip)
     SbRotation r1(SbVec3f(0,1,0), -0.5f);
     node->rotation0.setValue(r0);
     node->rotation1.setValue(r1);
-    bool pass = (node->rotation0.getValue() == r0) &&
-                (node->rotation1.getValue() == r1);
+    EXPECT_TRUE((node->rotation0.getValue() == r0) &&
+                (node->rotation1.getValue() == r1)) << "SoPendulum rotation0/rotation1 field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoPendulum rotation0/rotation1 field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -217,26 +204,23 @@ TEST(NodesMisc, SoPendulumRotation0Rotation1FieldRoundTrip)
 
 TEST(NodesMisc, SoShuttleClassTypeRegistered)
 {
-    bool pass = (SoShuttle::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoShuttle bad class type";
+    EXPECT_TRUE((SoShuttle::getClassTypeId() != SoType::badType())) << "SoShuttle bad class type";
 }
 
 TEST(NodesMisc, SoShuttleSpeedDefaultIs10)
 {
     SoShuttle * node = new SoShuttle;
     node->ref();
-    bool pass = (node->speed.getValue() == 1.0f);
+    EXPECT_TRUE((node->speed.getValue() == 1.0f)) << "SoShuttle default speed != 1.0";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShuttle default speed != 1.0";
 }
 
 TEST(NodesMisc, SoShuttleOnFieldDefaultIsTRUE)
 {
     SoShuttle * node = new SoShuttle;
     node->ref();
-    bool pass = (node->on.getValue() == TRUE);
+    EXPECT_TRUE((node->on.getValue() == TRUE)) << "SoShuttle default on != TRUE";
     node->unref();
-    EXPECT_TRUE(pass) << "SoShuttle default on != TRUE";
 }
 
 // -----------------------------------------------------------------------
@@ -245,8 +229,7 @@ TEST(NodesMisc, SoShuttleOnFieldDefaultIsTRUE)
 
 TEST(NodesMisc, SoLinearProfileClassTypeRegistered)
 {
-    bool pass = (SoLinearProfile::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoLinearProfile bad class type";
+    EXPECT_TRUE((SoLinearProfile::getClassTypeId() != SoType::badType())) << "SoLinearProfile bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -255,8 +238,7 @@ TEST(NodesMisc, SoLinearProfileClassTypeRegistered)
 
 TEST(NodesMisc, SoProfileCoordinate2ClassTypeRegistered)
 {
-    bool pass = (SoProfileCoordinate2::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoProfileCoordinate2 bad class type";
+    EXPECT_TRUE((SoProfileCoordinate2::getClassTypeId() != SoType::badType())) << "SoProfileCoordinate2 bad class type";
 }
 
 TEST(NodesMisc, SoProfileCoordinate2PointFieldSetGetRoundTrip)
@@ -265,9 +247,8 @@ TEST(NodesMisc, SoProfileCoordinate2PointFieldSetGetRoundTrip)
     node->ref();
     SbVec2f pts[3] = { SbVec2f(0,0), SbVec2f(1,0), SbVec2f(1,1) };
     node->point.setValues(0, 3, pts);
-    bool pass = (node->point.getNum() >= 3);
+    EXPECT_TRUE((node->point.getNum() >= 3)) << "SoProfileCoordinate2 point set/get failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoProfileCoordinate2 point set/get failed";
 }
 
 // -----------------------------------------------------------------------
@@ -276,8 +257,7 @@ TEST(NodesMisc, SoProfileCoordinate2PointFieldSetGetRoundTrip)
 
 TEST(NodesMisc, SoProfileCoordinate3ClassTypeRegistered)
 {
-    bool pass = (SoProfileCoordinate3::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoProfileCoordinate3 bad class type";
+    EXPECT_TRUE((SoProfileCoordinate3::getClassTypeId() != SoType::badType())) << "SoProfileCoordinate3 bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -286,8 +266,7 @@ TEST(NodesMisc, SoProfileCoordinate3ClassTypeRegistered)
 
 TEST(NodesMisc, SoWWWAnchorClassTypeRegistered)
 {
-    bool pass = (SoWWWAnchor::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoWWWAnchor bad class type";
+    EXPECT_TRUE((SoWWWAnchor::getClassTypeId() != SoType::badType())) << "SoWWWAnchor bad class type";
 }
 
 TEST(NodesMisc, SoWWWAnchorNameFieldRoundTrip)
@@ -295,9 +274,8 @@ TEST(NodesMisc, SoWWWAnchorNameFieldRoundTrip)
     SoWWWAnchor * node = new SoWWWAnchor;
     node->ref();
     node->name.setValue("http://example.com");
-    bool pass = (node->name.getValue() == SbString("http://example.com"));
+    EXPECT_TRUE((node->name.getValue() == SbString("http://example.com"))) << "SoWWWAnchor name field failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoWWWAnchor name field failed";
 }
 
 // -----------------------------------------------------------------------
@@ -306,8 +284,7 @@ TEST(NodesMisc, SoWWWAnchorNameFieldRoundTrip)
 
 TEST(NodesMisc, SoWWWInlineClassTypeRegistered)
 {
-    bool pass = (SoWWWInline::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoWWWInline bad class type";
+    EXPECT_TRUE((SoWWWInline::getClassTypeId() != SoType::badType())) << "SoWWWInline bad class type";
 }
 
 TEST(NodesMisc, SoWWWInlineBboxSizeDefaultIs000)
@@ -315,9 +292,8 @@ TEST(NodesMisc, SoWWWInlineBboxSizeDefaultIs000)
     SoWWWInline * node = new SoWWWInline;
     node->ref();
     SbVec3f sz = node->bboxSize.getValue();
-    bool pass = (sz == SbVec3f(0, 0, 0));
+    EXPECT_TRUE((sz == SbVec3f(0, 0, 0))) << "SoWWWInline bboxSize default not (0,0,0)";
     node->unref();
-    EXPECT_TRUE(pass) << "SoWWWInline bboxSize default not (0,0,0)";
 }
 
 // -----------------------------------------------------------------------
@@ -326,8 +302,7 @@ TEST(NodesMisc, SoWWWInlineBboxSizeDefaultIs000)
 
 TEST(NodesMisc, SoSurroundScaleClassTypeRegistered)
 {
-    bool pass = (SoSurroundScale::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoSurroundScale bad class type";
+    EXPECT_TRUE((SoSurroundScale::getClassTypeId() != SoType::badType())) << "SoSurroundScale bad class type";
 }
 
 TEST(NodesMisc, SoSurroundScaleNumNodesUpToContainerResetDefaults)
@@ -335,10 +310,9 @@ TEST(NodesMisc, SoSurroundScaleNumNodesUpToContainerResetDefaults)
     SoSurroundScale * node = new SoSurroundScale;
     node->ref();
     // Default values are 0 for both
-    bool pass = (node->numNodesUpToContainer.getValue() == 0) &&
-                (node->numNodesUpToReset.getValue() == 0);
+    EXPECT_TRUE((node->numNodesUpToContainer.getValue() == 0) &&
+                (node->numNodesUpToReset.getValue() == 0)) << "SoSurroundScale field defaults wrong";
     node->unref();
-    EXPECT_TRUE(pass) << "SoSurroundScale field defaults wrong";
 }
 
 // -----------------------------------------------------------------------
@@ -347,17 +321,15 @@ TEST(NodesMisc, SoSurroundScaleNumNodesUpToContainerResetDefaults)
 
 TEST(NodesMisc, SoAntiSquishClassTypeRegistered)
 {
-    bool pass = (SoAntiSquish::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoAntiSquish bad class type";
+    EXPECT_TRUE((SoAntiSquish::getClassTypeId() != SoType::badType())) << "SoAntiSquish bad class type";
 }
 
 TEST(NodesMisc, SoAntiSquishRecalcAlwaysDefaultIsTRUE)
 {
     SoAntiSquish * node = new SoAntiSquish;
     node->ref();
-    bool pass = (node->recalcAlways.getValue() == TRUE);
+    EXPECT_TRUE((node->recalcAlways.getValue() == TRUE)) << "SoAntiSquish recalcAlways default != TRUE";
     node->unref();
-    EXPECT_TRUE(pass) << "SoAntiSquish recalcAlways default != TRUE";
 }
 
 // -----------------------------------------------------------------------
@@ -366,8 +338,7 @@ TEST(NodesMisc, SoAntiSquishRecalcAlwaysDefaultIsTRUE)
 
 TEST(NodesMisc, SoCacheHintClassTypeRegistered)
 {
-    bool pass = (SoCacheHint::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoCacheHint bad class type";
+    EXPECT_TRUE((SoCacheHint::getClassTypeId() != SoType::badType())) << "SoCacheHint bad class type";
 }
 
 TEST(NodesMisc, SoCacheHintMemValueGfxValueFieldsRoundTrip)
@@ -376,10 +347,9 @@ TEST(NodesMisc, SoCacheHintMemValueGfxValueFieldsRoundTrip)
     node->ref();
     node->memValue.setValue(0.8f);
     node->gfxValue.setValue(0.6f);
-    bool pass = (node->memValue.getValue() == 0.8f) &&
-                (node->gfxValue.getValue() == 0.6f);
+    EXPECT_TRUE((node->memValue.getValue() == 0.8f) &&
+                (node->gfxValue.getValue() == 0.6f)) << "SoCacheHint memValue/gfxValue failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoCacheHint memValue/gfxValue failed";
 }
 
 // -----------------------------------------------------------------------
@@ -388,8 +358,7 @@ TEST(NodesMisc, SoCacheHintMemValueGfxValueFieldsRoundTrip)
 
 TEST(NodesMisc, SoTransparencyTypeClassTypeRegistered)
 {
-    bool pass = (SoTransparencyType::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoTransparencyType bad class type";
+    EXPECT_TRUE((SoTransparencyType::getClassTypeId() != SoType::badType())) << "SoTransparencyType bad class type";
 }
 
 TEST(NodesMisc, SoTransparencyTypeValueFieldRoundTrip)
@@ -397,9 +366,8 @@ TEST(NodesMisc, SoTransparencyTypeValueFieldRoundTrip)
     SoTransparencyType * node = new SoTransparencyType;
     node->ref();
     node->value.setValue(SoTransparencyType::BLEND);
-    bool pass = (node->value.getValue() == (int)SoTransparencyType::BLEND);
+    EXPECT_TRUE((node->value.getValue() == (int)SoTransparencyType::BLEND)) << "SoTransparencyType value field round-trip failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoTransparencyType value field round-trip failed";
 }
 
 // -----------------------------------------------------------------------
@@ -408,17 +376,15 @@ TEST(NodesMisc, SoTransparencyTypeValueFieldRoundTrip)
 
 TEST(NodesMisc, SoLocateHighlightClassTypeRegistered)
 {
-    bool pass = (SoLocateHighlight::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoLocateHighlight bad class type";
+    EXPECT_TRUE((SoLocateHighlight::getClassTypeId() != SoType::badType())) << "SoLocateHighlight bad class type";
 }
 
 TEST(NodesMisc, SoLocateHighlightIsOfTypeSoSeparator)
 {
     SoLocateHighlight * node = new SoLocateHighlight;
     node->ref();
-    bool pass = node->isOfType(SoSeparator::getClassTypeId());
+    EXPECT_TRUE(node->isOfType(SoSeparator::getClassTypeId())) << "SoLocateHighlight not derived from SoSeparator";
     node->unref();
-    EXPECT_TRUE(pass) << "SoLocateHighlight not derived from SoSeparator";
 }
 
 // -----------------------------------------------------------------------
@@ -427,8 +393,7 @@ TEST(NodesMisc, SoLocateHighlightIsOfTypeSoSeparator)
 
 TEST(NodesMisc, SoColorIndexClassTypeRegistered)
 {
-    bool pass = (SoColorIndex::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoColorIndex bad class type";
+    EXPECT_TRUE((SoColorIndex::getClassTypeId() != SoType::badType())) << "SoColorIndex bad class type";
 }
 
 TEST(NodesMisc, SoColorIndexIndexFieldSetGetRoundTrip)
@@ -436,7 +401,6 @@ TEST(NodesMisc, SoColorIndexIndexFieldSetGetRoundTrip)
     SoColorIndex * node = new SoColorIndex;
     node->ref();
     node->index.set1Value(0, 5);
-    bool pass = (node->index.getNum() >= 1) && (node->index[0] == 5);
+    EXPECT_TRUE((node->index.getNum() >= 1) && (node->index[0] == 5)) << "SoColorIndex index field round-trip failed";
     node->unref();
-    EXPECT_TRUE(pass) << "SoColorIndex index field round-trip failed";
 }

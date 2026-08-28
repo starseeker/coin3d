@@ -185,6 +185,59 @@ callbacks. A callback may stop generation or recursively generate another
 report without holding an internal report mutex or overwriting another
 thread's report state.
 
+### 14. Callback/configuration registries
+
+Header and field-converter registration, global fields, input search paths,
+markers, shaders, prototypes, image readers, progress callbacks, WWW callbacks,
+and sensor-manager callback pairs are synchronized. Registry callbacks execute
+outside registry locks from a snapshot, permitting reentrant registration.
+Except for `SoContextHandler`, removal does not wait for an invocation already
+in a snapshot. Applications must keep callback code and userdata alive until
+all operations that could have captured them have completed.
+
+Pointer- or reference-returning compatibility APIs that expose mutable global
+state return thread-local snapshots where possible (`SoInput` directories,
+sensor delay timeout, marker bitmaps, debug pointer names, and legacy unlock
+strings). A snapshot is valid until the next corresponding getter on the same
+thread.
+
+### 15. Images, shapes, actions, and calculator parsing
+
+`SbImage` serializes storage replacement, assignment, comparison, and deferred
+loading. Exactly one thread runs a pending synchronous loader while concurrent
+readers wait. An aliased pixel pointer still requires `readLock()` across its
+use if another thread can mutate that image.
+
+Per-shape bounding-box and primitive caches are protected by per-instance
+recursive mutexes, and a separator serializes each complete bounding-box cache
+transaction, so concurrent actions may traverse the same read-only scene
+graph. Internal callers use `SoShape::getBoundingBoxData()` to copy cache data
+while it is protected. The legacy `getBoundingBoxCache()` pointer is borrowed;
+applications using it must prevent concurrent notification or traversal of that
+shape while retaining or dereferencing the pointer. The calculator's generated
+parser is serialized and its error result is thread-local. Packed-color
+conversion and software texture-coordinate generation scratch storage are
+thread-local. GL texture-coordinate callbacks receive the current action's GL
+context directly instead of caching it on shared scene nodes.
+`SoAction::apply()` uses scope-bound cleanup: a C++ exception releases the DB
+read lock, references, temporary state, and path-list bookkeeping before it is
+re-thrown.
+
+### 16. Sensor processing and profiling
+
+Sensor queue insertion/removal and pending queries use the corresponding queue
+mutex. Timer, delay, and immediate processing are mutually serialized, and
+atomic processing flags prevent duplicate reentrant drains. The reschedule
+list and delay reinsert set have their own correct locks; timeout configuration
+uses a synchronized thread-local snapshot getter. Sensor callbacks may still
+run application code, and the same mutable `SoSensor` must not be concurrently
+reconfigured or destroyed while it can trigger.
+
+Profiler collection is compiled in by default but runtime-disabled by default.
+When enabled, each action thread owns its stats and overlay nodes; report
+generation remains stack-local and reentrant. Shared visualization textures
+are synchronized.
+
 ---
 
 ## Historical race audit

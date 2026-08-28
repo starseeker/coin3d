@@ -83,8 +83,8 @@ SoBaseSet * SoBase::PImpl::allbaseobj = NULL; // maps from SoBase * to NULL
 
 SbString * SoBase::PImpl::refwriteprefix = NULL;
 
-SbBool SoBase::PImpl::tracerefs = FALSE;
-uint32_t SoBase::PImpl::writecounter = 0;
+std::atomic<SbBool> SoBase::PImpl::tracerefs{FALSE};
+thread_local uint32_t SoBase::PImpl::writecounter = 0;
 
 std::shared_mutex SoBase::PImpl::base_dict_mutex;
 
@@ -336,8 +336,14 @@ SoBase::PImpl::readBaseInstance(SoInput * in, const SbName & classname,
     // Remove reference counter suffix, if any (i.e. "goldsphere+2"
     // becomes "goldsphere").
     SbString instancename = refname.getString();
+    SbString prefixSnapshot;
+    {
+      const std::shared_lock<std::shared_mutex> lock(
+        SoBase::PImpl::base_dict_mutex);
+      prefixSnapshot = *SoBase::PImpl::refwriteprefix;
+    }
     const char * strp = instancename.getString();
-    const char * occ = strstr(strp, SoBase::PImpl::refwriteprefix->getString());
+    const char * occ = strstr(strp, prefixSnapshot.getString());
 
     if (occ != strp) { // They will be equal if the name is only a refcount.
       const ptrdiff_t offset = occ - strp;

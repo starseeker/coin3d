@@ -39,6 +39,8 @@
 
 #include <Inventor/threads/SbMutex.h>
 
+#include <atomic>
+
 #include <Inventor/system/gl.h>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SoRenderManager.h>
@@ -119,8 +121,8 @@ public:
   std::vector<RenderCBTouple> postRenderCallbacks;
 
   // "private" data
-  static SbBool touchtimer;
-  static SbBool cleanupfunctionset;
+  static std::atomic<SbBool> touchtimer;
+  static std::atomic<SbBool> cleanupfunctionset;
 
   SbMutex mutex;
 };
@@ -146,8 +148,6 @@ public:
   virtual void notify(SoNotList * l);
   static SbBool debug(void);
 
-private:
-  static int debugrootnotifications;
 };
 
 // *************************************************************************

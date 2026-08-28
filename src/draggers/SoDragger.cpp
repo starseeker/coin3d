@@ -203,6 +203,8 @@
 
 #include <Inventor/draggers/SoDragger.h>
 
+#include <mutex>
+
 #include <Inventor/draggers/SoCenterballDragger.h>
 #include <Inventor/draggers/SoDirectionalLightDragger.h>
 #include <Inventor/draggers/SoDragPointDragger.h>
@@ -335,7 +337,6 @@ public:
   SoPath * surrogateownerpath;
   SoPath * surrogatepath;
 
-  SoCallbackAction * cbaction;
   float projectorepsilon;
 };
 
@@ -344,6 +345,7 @@ public:
 SO_KIT_SOURCE(SoDragger);
 
 float SoDragger::minscale = 0.001f;
+static std::mutex sodragger_minscale_mutex;
 
 /*!
   A protected constructor for this abstract superclass for all Coin
@@ -371,7 +373,6 @@ SoDragger::SoDragger(void)
   PRIVATE(this)->activechilddragger = NULL;
   PRIVATE(this)->surrogateownerpath = NULL;
   PRIVATE(this)->surrogatepath = NULL;
-  PRIVATE(this)->cbaction = NULL;
   PRIVATE(this)->didmousemove = FALSE;
   PRIVATE(this)->projectorepsilon = 0.0f;
 }
@@ -390,7 +391,6 @@ SoDragger::~SoDragger()
   if (PRIVATE(this)->surrogatepath)
     PRIVATE(this)->surrogatepath->unref();
   delete PRIVATE(this)->draggercache;
-  delete PRIVATE(this)->cbaction;
 }
 
 // Note: the following documentation for initClass() will also be used
@@ -405,7 +405,7 @@ void
 SoDragger::initClass(void)
 {
   SO_KIT_INTERNAL_INIT_CLASS(SoDragger, SO_FROM_INVENTOR_1);
-  SoDragger::minscale = 0.001f;
+  SoDragger::setMinScale(0.001f);
 
   SoDragger::initClasses();
 
@@ -1071,8 +1071,6 @@ typedef struct {
   SbViewVolume vv;
 } sodragger_vv_data;
 
-static sodragger_vv_data * vvdata = NULL;
-
 static SoCallbackAction::Response
 sodragger_vv_cb(void * userdata, SoCallbackAction * action, const SoNode * node)
 {
@@ -1086,16 +1084,6 @@ sodragger_vv_cb(void * userdata, SoCallbackAction * action, const SoNode * node)
   }
 }
 
-extern "C" {
-
-static void vv_data_cleanup(void)
-{
-  delete vvdata;
-  vvdata = NULL;
-}
-
-} // extern "C"
-
 /*!
   Return the current view volume.
 */
@@ -1107,18 +1095,13 @@ SoDragger::getViewVolume(void)
   // view volume can be found directly. pederb, 2002-10-30
 
   if (PRIVATE(this)->draggercache && PRIVATE(this)->draggercache->path) {
-    if (vvdata == NULL) {
-      vvdata = new sodragger_vv_data;
-      coin_atexit(static_cast<coin_atexit_f *>(vv_data_cleanup), CC_ATEXIT_NORMAL);
-    }
-    if (PRIVATE(this)->cbaction == NULL) {
-      PRIVATE(this)->cbaction = new SoCallbackAction;
-      PRIVATE(this)->cbaction->addPostCallback(SoCamera::getClassTypeId(), sodragger_vv_cb, vvdata);
-      PRIVATE(this)->cbaction->addPostCallback(SoDragger::getClassTypeId(), sodragger_vv_cb, this);
-    }
-    PRIVATE(this)->cbaction->setViewportRegion(PRIVATE(this)->viewport);
-    PRIVATE(this)->cbaction->apply(PRIVATE(this)->draggercache->path);
-    PRIVATE(this)->viewvolume = vvdata->vv;
+    sodragger_vv_data vvdata;
+    SoCallbackAction cbaction;
+    cbaction.addPostCallback(SoCamera::getClassTypeId(), sodragger_vv_cb, &vvdata);
+    cbaction.addPostCallback(SoDragger::getClassTypeId(), sodragger_vv_cb, this);
+    cbaction.setViewportRegion(PRIVATE(this)->viewport);
+    cbaction.apply(PRIVATE(this)->draggercache->path);
+    PRIVATE(this)->viewvolume = vvdata.vv;
   }
   return PRIVATE(this)->viewvolume;
 }
@@ -1253,6 +1236,7 @@ SoDragger::getFrontOnProjector(void) const
 void
 SoDragger::setMinScale(float minscalearg)
 {
+  const std::lock_guard<std::mutex> lock(sodragger_minscale_mutex);
   SoDragger::minscale = minscalearg;
 }
 
@@ -1263,6 +1247,7 @@ SoDragger::setMinScale(float minscalearg)
 float
 SoDragger::getMinScale(void)
 {
+  const std::lock_guard<std::mutex> lock(sodragger_minscale_mutex);
   return SoDragger::minscale;
 }
 
@@ -1355,9 +1340,10 @@ SoDragger::appendScale(const SbMatrix & matrix, const SbVec3f & scale, const SbV
   // otherwise say ``Template deduction failed to find a match for the
   // call to 'SbMax'''.  mortene.
   SbVec3f clampedscale;
-  clampedscale[0] = SbMax(static_cast<float>(scale[0]), SoDragger::minscale);
-  clampedscale[1] = SbMax(static_cast<float>(scale[1]), SoDragger::minscale);
-  clampedscale[2] = SbMax(static_cast<float>(scale[2]), SoDragger::minscale);
+  const float minimumScale = SoDragger::getMinScale();
+  clampedscale[0] = SbMax(static_cast<float>(scale[0]), minimumScale);
+  clampedscale[1] = SbMax(static_cast<float>(scale[1]), minimumScale);
+  clampedscale[2] = SbMax(static_cast<float>(scale[2]), minimumScale);
 
   SbMatrix transform, tmp;
   // Calculate the scaled matrix without doing any testing if the
@@ -1384,16 +1370,16 @@ SoDragger::appendScale(const SbMatrix & matrix, const SbVec3f & scale, const SbV
   // SoDragger::minscale, then the scale value has to be corrected. If
   // no correction is needed, the res matrix is returned without more
   // calculations.
-  if (s[0] < SoDragger::minscale ||
-      s[1] < SoDragger::minscale ||
-      s[2] < SoDragger::minscale) {
+  if (s[0] < minimumScale ||
+      s[1] < minimumScale ||
+      s[2] < minimumScale) {
 
     // Clamp the values of the scale to be SoDragger::minscale or
     // above.
     int i;
     for (i = 0; i < 3; i++) {
-      if (s[i] < SoDragger::minscale) {
-        s[i] = SoDragger::minscale;
+      if (s[i] < minimumScale) {
+        s[i] = minimumScale;
       }
     }
 

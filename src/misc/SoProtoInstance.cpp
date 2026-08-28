@@ -206,6 +206,7 @@ SoProtoInstance::setRootNode(SoNode * root)
 SoNode *
 SoProtoInstance::getRootNode(void)
 {
+  const std::lock_guard<std::mutex> lock(protoinstance_mutex);
   return PRIVATE(this)->root;
 }
 

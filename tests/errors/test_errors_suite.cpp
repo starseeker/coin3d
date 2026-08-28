@@ -72,20 +72,17 @@ static void myErrorCb(const SoError * err, void * data)
 
 TEST(ErrorsSuite, SoErrorGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoError::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoError has bad class type";
+    EXPECT_TRUE((SoError::getClassTypeId() != SoType::badType())) << "SoError has bad class type";
 }
 
 TEST(ErrorsSuite, SoDebugErrorGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoDebugError::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoDebugError has bad class type";
+    EXPECT_TRUE((SoDebugError::getClassTypeId() != SoType::badType())) << "SoDebugError has bad class type";
 }
 
 TEST(ErrorsSuite, SoReadErrorGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoReadError::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoReadError has bad class type";
+    EXPECT_TRUE((SoReadError::getClassTypeId() != SoType::badType())) << "SoReadError has bad class type";
 }
 
 // -----------------------------------------------------------------------
@@ -105,8 +102,7 @@ TEST(ErrorsSuite, SoErrorPostTriggersCustomHandlerAndMessageContainsValue)
     // Restore original handler
     SoError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = cap.fired && (cap.msg.find("42") != std::string::npos);
-    EXPECT_TRUE(pass) << "SoError::post did not fire callback or message missing '42'";
+    EXPECT_TRUE(cap.fired && (cap.msg.find("42") != std::string::npos)) << "SoError::post did not fire callback or message missing '42'";
 }
 
 // -----------------------------------------------------------------------
@@ -124,8 +120,7 @@ TEST(ErrorsSuite, SoDebugErrorPostWarningTriggersCustomHandler)
 
     SoDebugError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = cap.fired;
-    EXPECT_TRUE(pass) << "SoDebugError::postWarning did not fire custom handler";
+    EXPECT_TRUE(cap.fired) << "SoDebugError::postWarning did not fire custom handler";
 }
 
 TEST(ErrorsSuite, SoDebugErrorPostWarningMessageContainsKeyword)
@@ -139,8 +134,7 @@ TEST(ErrorsSuite, SoDebugErrorPostWarningMessageContainsKeyword)
 
     SoDebugError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = cap.fired && (cap.msg.find("hello") != std::string::npos);
-    EXPECT_TRUE(pass) << "SoDebugError::postWarning message missing 'hello'";
+    EXPECT_TRUE(cap.fired && (cap.msg.find("hello") != std::string::npos)) << "SoDebugError::postWarning message missing 'hello'";
 }
 
 // -----------------------------------------------------------------------
@@ -158,8 +152,7 @@ TEST(ErrorsSuite, SoDebugErrorPostInfoTriggersCustomHandler)
 
     SoDebugError::setHandlerCallback(oldCb, nullptr);
 
-    bool pass = cap.fired;
-    EXPECT_TRUE(pass) << "SoDebugError::postInfo did not fire custom handler";
+    EXPECT_TRUE(cap.fired) << "SoDebugError::postInfo did not fire custom handler";
 }
 
 // -----------------------------------------------------------------------
@@ -168,7 +161,6 @@ TEST(ErrorsSuite, SoDebugErrorPostInfoTriggersCustomHandler)
 
 TEST(ErrorsSuite, SoDebugErrorIsSubtypeOfSoError)
 {
-    bool pass = SoDebugError::getClassTypeId().isDerivedFrom(
-                    SoError::getClassTypeId());
-    EXPECT_TRUE(pass) << "SoDebugError should be derived from SoError";
+    EXPECT_TRUE(SoDebugError::getClassTypeId().isDerivedFrom(
+                    SoError::getClassTypeId())) << "SoDebugError should be derived from SoError";
 }

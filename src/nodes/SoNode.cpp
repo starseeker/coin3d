@@ -195,8 +195,11 @@ SbUniqueId is not really a class, just a \c typedef.
 
 #include <string>
 #include <atomic>
+#include <mutex>
 
 #include <Inventor/nodes/SoNode.h>
+
+#include <shared_mutex>
 
 #include "config.h"
 
@@ -330,11 +333,12 @@ SbUniqueId is not really a class, just a \c typedef.
 // *************************************************************************
 
 std::atomic<SbUniqueId> SoNode::nextUniqueId{1};
-int SoNode::nextActionMethodIndex = 0;
+std::atomic<int> SoNode::nextActionMethodIndex{0};
 SoType SoNode::classTypeId STATIC_SOTYPE_INIT;
 
 typedef SbHash<int16_t, uint32_t> Int16ToUInt32Map;
 static Int16ToUInt32Map * compatibility_dict = NULL;
+static std::shared_mutex compatibility_dict_mutex;
 
 static void init_action_methods(void);
 
@@ -526,7 +530,7 @@ SoNode::getActionMethodIndex(const SoType type)
 void
 SoNode::setNextActionMethodIndex(int index)
 {
-  SoNode::nextActionMethodIndex = index;
+  SoNode::nextActionMethodIndex.store(index, std::memory_order_release);
 }
 
 /*!
@@ -538,7 +542,7 @@ SoNode::setNextActionMethodIndex(int index)
 int
 SoNode::getNextActionMethodIndex(void)
 {
-  return SoNode::nextActionMethodIndex;
+  return SoNode::nextActionMethodIndex.load(std::memory_order_acquire);
 }
 
 /*!
@@ -550,7 +554,7 @@ SoNode::getNextActionMethodIndex(void)
 void
 SoNode::incNextActionMethodIndex(void)
 {
-  SoNode::nextActionMethodIndex++;
+  SoNode::nextActionMethodIndex.fetch_add(1, std::memory_order_acq_rel);
 }
 
 /*!
@@ -1510,6 +1514,7 @@ uint32_t
 SoNode::getCompatibilityTypes(const SoType & nodetype)
 {
   assert(compatibility_dict);
+  const std::shared_lock<std::shared_mutex> lock(compatibility_dict_mutex);
   assert(nodetype.isDerivedFrom(SoNode::getClassTypeId()));
 
   uint32_t tmp;
@@ -1530,6 +1535,7 @@ void
 SoNode::setCompatibilityTypes(const SoType & nodetype, const uint32_t bitmask)
 {
   assert(compatibility_dict);
+  const std::unique_lock<std::shared_mutex> lock(compatibility_dict_mutex);
   assert(nodetype.isDerivedFrom(SoNode::getClassTypeId()));
   compatibility_dict->put(nodetype.getKey(), bitmask);
 }
@@ -1540,7 +1546,9 @@ SoNode::setCompatibilityTypes(const SoType & nodetype, const uint32_t bitmask)
 void
 SoNode::cleanupClass(void)
 {
+  const std::unique_lock<std::shared_mutex> lock(compatibility_dict_mutex);
   delete compatibility_dict;
+  compatibility_dict = NULL;
   SoNode::classTypeId STATIC_SOTYPE_INIT;
 }
 

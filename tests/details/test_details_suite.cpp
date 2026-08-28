@@ -66,51 +66,45 @@ using namespace ObolTest;
 
 TEST(DetailsSuite, SoPointDetailGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoPointDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoPointDetail has bad class type";
+    EXPECT_TRUE((SoPointDetail::getClassTypeId() != SoType::badType())) << "SoPointDetail has bad class type";
 }
 
 TEST(DetailsSuite, SoPointDetailConstructAndDefaultIndicesAre0)
 {
     SoPointDetail pd;
     // Coin initialises all indices to 0 by default
-    bool pass = (pd.getCoordinateIndex() == 0) &&
+    EXPECT_TRUE((pd.getCoordinateIndex() == 0) &&
                 (pd.getMaterialIndex()   == 0) &&
                 (pd.getNormalIndex()     == 0) &&
-                (pd.getTextureCoordIndex() == 0);
-    EXPECT_TRUE(pass) << "SoPointDetail default indices should be 0";
+                (pd.getTextureCoordIndex() == 0)) << "SoPointDetail default indices should be 0";
 }
 
 TEST(DetailsSuite, SoPointDetailSetCoordinateIndexGetCoordinateIndex)
 {
     SoPointDetail pd;
     pd.setCoordinateIndex(7);
-    bool pass = (pd.getCoordinateIndex() == 7);
-    EXPECT_TRUE(pass) << "SoPointDetail coordinate index round-trip failed";
+    EXPECT_TRUE((pd.getCoordinateIndex() == 7)) << "SoPointDetail coordinate index round-trip failed";
 }
 
 TEST(DetailsSuite, SoPointDetailSetMaterialIndexGetMaterialIndex)
 {
     SoPointDetail pd;
     pd.setMaterialIndex(3);
-    bool pass = (pd.getMaterialIndex() == 3);
-    EXPECT_TRUE(pass) << "SoPointDetail material index round-trip failed";
+    EXPECT_TRUE((pd.getMaterialIndex() == 3)) << "SoPointDetail material index round-trip failed";
 }
 
 TEST(DetailsSuite, SoPointDetailSetNormalIndexGetNormalIndex)
 {
     SoPointDetail pd;
     pd.setNormalIndex(5);
-    bool pass = (pd.getNormalIndex() == 5);
-    EXPECT_TRUE(pass) << "SoPointDetail normal index round-trip failed";
+    EXPECT_TRUE((pd.getNormalIndex() == 5)) << "SoPointDetail normal index round-trip failed";
 }
 
 TEST(DetailsSuite, SoPointDetailSetTextureCoordIndexGetTextureCoordIndex)
 {
     SoPointDetail pd;
     pd.setTextureCoordIndex(2);
-    bool pass = (pd.getTextureCoordIndex() == 2);
-    EXPECT_TRUE(pass) << "SoPointDetail texture coord index round-trip failed";
+    EXPECT_TRUE((pd.getTextureCoordIndex() == 2)) << "SoPointDetail texture coord index round-trip failed";
 }
 
 TEST(DetailsSuite, SoPointDetailCopyProducesIndependentDuplicate)
@@ -119,14 +113,13 @@ TEST(DetailsSuite, SoPointDetailCopyProducesIndependentDuplicate)
     pd.setCoordinateIndex(10);
     pd.setMaterialIndex(11);
     SoDetail * copied = pd.copy();
-    bool pass = (copied != nullptr);
-    if (pass) {
+    EXPECT_NE(copied, nullptr);
+    if (copied) {
         SoPointDetail * cpd = static_cast<SoPointDetail *>(copied);
-        pass = (cpd->getCoordinateIndex() == 10) &&
-               (cpd->getMaterialIndex()   == 11);
+        EXPECT_EQ(cpd->getCoordinateIndex(), 10);
+        EXPECT_EQ(cpd->getMaterialIndex(), 11);
     }
     delete copied;
-    EXPECT_TRUE(pass) << "SoPointDetail::copy() failed or produced wrong values";
 }
 
 // -----------------------------------------------------------------------
@@ -135,39 +128,34 @@ TEST(DetailsSuite, SoPointDetailCopyProducesIndependentDuplicate)
 
 TEST(DetailsSuite, SoFaceDetailGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoFaceDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoFaceDetail has bad class type";
+    EXPECT_TRUE((SoFaceDetail::getClassTypeId() != SoType::badType())) << "SoFaceDetail has bad class type";
 }
 
 TEST(DetailsSuite, SoFaceDetailConstructDefaultGetNumPoints0)
 {
     SoFaceDetail fd;
-    bool pass = (fd.getNumPoints() == 0);
-    EXPECT_TRUE(pass) << "SoFaceDetail default numPoints should be 0";
+    EXPECT_TRUE((fd.getNumPoints() == 0)) << "SoFaceDetail default numPoints should be 0";
 }
 
 TEST(DetailsSuite, SoFaceDetailSetFaceIndexGetFaceIndexRoundTrip)
 {
     SoFaceDetail fd;
     fd.setFaceIndex(4);
-    bool pass = (fd.getFaceIndex() == 4);
-    EXPECT_TRUE(pass) << "SoFaceDetail face index round-trip failed";
+    EXPECT_TRUE((fd.getFaceIndex() == 4)) << "SoFaceDetail face index round-trip failed";
 }
 
 TEST(DetailsSuite, SoFaceDetailSetPartIndexGetPartIndexRoundTrip)
 {
     SoFaceDetail fd;
     fd.setPartIndex(2);
-    bool pass = (fd.getPartIndex() == 2);
-    EXPECT_TRUE(pass) << "SoFaceDetail part index round-trip failed";
+    EXPECT_TRUE((fd.getPartIndex() == 2)) << "SoFaceDetail part index round-trip failed";
 }
 
 TEST(DetailsSuite, SoFaceDetailSetNumPoints3GetNumPoints3)
 {
     SoFaceDetail fd;
     fd.setNumPoints(3);
-    bool pass = (fd.getNumPoints() == 3);
-    EXPECT_TRUE(pass) << "SoFaceDetail setNumPoints(3) failed";
+    EXPECT_TRUE((fd.getNumPoints() == 3)) << "SoFaceDetail setNumPoints(3) failed";
 }
 
 TEST(DetailsSuite, SoFaceDetailSetPointGetPointRoundTrip)
@@ -181,10 +169,9 @@ TEST(DetailsSuite, SoFaceDetailSetPointGetPointRoundTrip)
     fd.setPoint(1, &pd1);
     const SoPointDetail * got0 = fd.getPoint(0);
     const SoPointDetail * got1 = fd.getPoint(1);
-    bool pass = (got0 != nullptr) && (got1 != nullptr) &&
+    EXPECT_TRUE((got0 != nullptr) && (got1 != nullptr) &&
                 (got0->getCoordinateIndex() == 10) &&
-                (got1->getCoordinateIndex() == 20);
-    EXPECT_TRUE(pass) << "SoFaceDetail setPoint/getPoint round-trip failed";
+                (got1->getCoordinateIndex() == 20)) << "SoFaceDetail setPoint/getPoint round-trip failed";
 }
 
 TEST(DetailsSuite, SoFaceDetailIncFaceIndexIncrementsBy1)
@@ -192,8 +179,7 @@ TEST(DetailsSuite, SoFaceDetailIncFaceIndexIncrementsBy1)
     SoFaceDetail fd;
     fd.setFaceIndex(5);
     fd.incFaceIndex();
-    bool pass = (fd.getFaceIndex() == 6);
-    EXPECT_TRUE(pass) << "SoFaceDetail incFaceIndex should increment by 1";
+    EXPECT_TRUE((fd.getFaceIndex() == 6)) << "SoFaceDetail incFaceIndex should increment by 1";
 }
 
 TEST(DetailsSuite, SoFaceDetailIncPartIndexIncrementsBy1)
@@ -201,8 +187,7 @@ TEST(DetailsSuite, SoFaceDetailIncPartIndexIncrementsBy1)
     SoFaceDetail fd;
     fd.setPartIndex(3);
     fd.incPartIndex();
-    bool pass = (fd.getPartIndex() == 4);
-    EXPECT_TRUE(pass) << "SoFaceDetail incPartIndex should increment by 1";
+    EXPECT_TRUE((fd.getPartIndex() == 4)) << "SoFaceDetail incPartIndex should increment by 1";
 }
 
 TEST(DetailsSuite, SoFaceDetailCopyProducesIndependentDuplicate)
@@ -211,14 +196,13 @@ TEST(DetailsSuite, SoFaceDetailCopyProducesIndependentDuplicate)
     fd.setFaceIndex(7);
     fd.setPartIndex(2);
     SoDetail * copied = fd.copy();
-    bool pass = (copied != nullptr);
-    if (pass) {
+    EXPECT_NE(copied, nullptr);
+    if (copied) {
         SoFaceDetail * cfd = static_cast<SoFaceDetail *>(copied);
-        pass = (cfd->getFaceIndex() == 7) &&
-               (cfd->getPartIndex() == 2);
+        EXPECT_EQ(cfd->getFaceIndex(), 7);
+        EXPECT_EQ(cfd->getPartIndex(), 2);
     }
     delete copied;
-    EXPECT_TRUE(pass) << "SoFaceDetail::copy() failed or produced wrong values";
 }
 
 // -----------------------------------------------------------------------
@@ -227,32 +211,28 @@ TEST(DetailsSuite, SoFaceDetailCopyProducesIndependentDuplicate)
 
 TEST(DetailsSuite, SoLineDetailGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoLineDetail::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoLineDetail has bad class type";
+    EXPECT_TRUE((SoLineDetail::getClassTypeId() != SoType::badType())) << "SoLineDetail has bad class type";
 }
 
 TEST(DetailsSuite, SoLineDetailConstructDefaultIndicesAre0)
 {
     SoLineDetail ld;
     // Default indices should be 0
-    bool pass = (ld.getLineIndex() == 0) && (ld.getPartIndex() == 0);
-    EXPECT_TRUE(pass) << "SoLineDetail default indices should be 0";
+    EXPECT_TRUE((ld.getLineIndex() == 0) && (ld.getPartIndex() == 0)) << "SoLineDetail default indices should be 0";
 }
 
 TEST(DetailsSuite, SoLineDetailSetLineIndexGetLineIndexRoundTrip)
 {
     SoLineDetail ld;
     ld.setLineIndex(8);
-    bool pass = (ld.getLineIndex() == 8);
-    EXPECT_TRUE(pass) << "SoLineDetail line index round-trip failed";
+    EXPECT_TRUE((ld.getLineIndex() == 8)) << "SoLineDetail line index round-trip failed";
 }
 
 TEST(DetailsSuite, SoLineDetailSetPartIndexGetPartIndexRoundTrip)
 {
     SoLineDetail ld;
     ld.setPartIndex(3);
-    bool pass = (ld.getPartIndex() == 3);
-    EXPECT_TRUE(pass) << "SoLineDetail part index round-trip failed";
+    EXPECT_TRUE((ld.getPartIndex() == 3)) << "SoLineDetail part index round-trip failed";
 }
 
 TEST(DetailsSuite, SoLineDetailSetPoint0GetPoint0RoundTrip)
@@ -262,8 +242,7 @@ TEST(DetailsSuite, SoLineDetailSetPoint0GetPoint0RoundTrip)
     pd.setCoordinateIndex(42);
     ld.setPoint0(&pd);
     const SoPointDetail * got = ld.getPoint0();
-    bool pass = (got != nullptr) && (got->getCoordinateIndex() == 42);
-    EXPECT_TRUE(pass) << "SoLineDetail setPoint0/getPoint0 round-trip failed";
+    EXPECT_TRUE((got != nullptr) && (got->getCoordinateIndex() == 42)) << "SoLineDetail setPoint0/getPoint0 round-trip failed";
 }
 
 TEST(DetailsSuite, SoLineDetailSetPoint1GetPoint1RoundTrip)
@@ -273,8 +252,7 @@ TEST(DetailsSuite, SoLineDetailSetPoint1GetPoint1RoundTrip)
     pd.setCoordinateIndex(99);
     ld.setPoint1(&pd);
     const SoPointDetail * got = ld.getPoint1();
-    bool pass = (got != nullptr) && (got->getCoordinateIndex() == 99);
-    EXPECT_TRUE(pass) << "SoLineDetail setPoint1/getPoint1 round-trip failed";
+    EXPECT_TRUE((got != nullptr) && (got->getCoordinateIndex() == 99)) << "SoLineDetail setPoint1/getPoint1 round-trip failed";
 }
 
 TEST(DetailsSuite, SoLineDetailIncLineIndexIncrementsBy1)
@@ -282,8 +260,7 @@ TEST(DetailsSuite, SoLineDetailIncLineIndexIncrementsBy1)
     SoLineDetail ld;
     ld.setLineIndex(2);
     ld.incLineIndex();
-    bool pass = (ld.getLineIndex() == 3);
-    EXPECT_TRUE(pass) << "SoLineDetail incLineIndex should increment by 1";
+    EXPECT_TRUE((ld.getLineIndex() == 3)) << "SoLineDetail incLineIndex should increment by 1";
 }
 
 TEST(DetailsSuite, SoLineDetailIncPartIndexIncrementsBy1)
@@ -291,8 +268,7 @@ TEST(DetailsSuite, SoLineDetailIncPartIndexIncrementsBy1)
     SoLineDetail ld;
     ld.setPartIndex(1);
     ld.incPartIndex();
-    bool pass = (ld.getPartIndex() == 2);
-    EXPECT_TRUE(pass) << "SoLineDetail incPartIndex should increment by 1";
+    EXPECT_TRUE((ld.getPartIndex() == 2)) << "SoLineDetail incPartIndex should increment by 1";
 }
 
 TEST(DetailsSuite, SoLineDetailCopyProducesIndependentDuplicate)
@@ -301,14 +277,13 @@ TEST(DetailsSuite, SoLineDetailCopyProducesIndependentDuplicate)
     ld.setLineIndex(5);
     ld.setPartIndex(1);
     SoDetail * copied = ld.copy();
-    bool pass = (copied != nullptr);
-    if (pass) {
+    EXPECT_NE(copied, nullptr);
+    if (copied) {
         SoLineDetail * cld = static_cast<SoLineDetail *>(copied);
-        pass = (cld->getLineIndex() == 5) &&
-               (cld->getPartIndex() == 1);
+        EXPECT_EQ(cld->getLineIndex(), 5);
+        EXPECT_EQ(cld->getPartIndex(), 1);
     }
     delete copied;
-    EXPECT_TRUE(pass) << "SoLineDetail::copy() failed or produced wrong values";
 }
 
 // -----------------------------------------------------------------------
@@ -345,15 +320,13 @@ TEST(DetailsSuite, SoRayPickActionSoFaceDetailAttachedToPickedIFSPoint)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         const SoDetail * detail = pp->getDetail();
-        if (detail != nullptr) {
-            pass = detail->isOfType(SoFaceDetail::getClassTypeId());
-        }
+        EXPECT_NE(detail, nullptr);
+        if (detail) EXPECT_TRUE(detail->isOfType(SoFaceDetail::getClassTypeId()));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction on SoIndexedFaceSet should return SoFaceDetail";
 }
 
 TEST(DetailsSuite, SoRayPickActionFaceDetailFaceIndex0)
@@ -380,17 +353,18 @@ TEST(DetailsSuite, SoRayPickActionFaceDetailFaceIndex0)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         const SoDetail * d = pp->getDetail();
+        EXPECT_NE(d, nullptr);
+        EXPECT_TRUE(d && d->isOfType(SoFaceDetail::getClassTypeId()));
         if (d && d->isOfType(SoFaceDetail::getClassTypeId())) {
             const SoFaceDetail * fd =
                 static_cast<const SoFaceDetail *>(d);
-            pass = (fd->getFaceIndex() >= 0);
+            EXPECT_GE(fd->getFaceIndex(), 0);
         }
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoFaceDetail from ray pick should have faceIndex >= 0";
 }
 
 TEST(DetailsSuite, SoRayPickActionFaceDetailNumPoints0)
@@ -417,17 +391,18 @@ TEST(DetailsSuite, SoRayPickActionFaceDetailNumPoints0)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         const SoDetail * d = pp->getDetail();
+        EXPECT_NE(d, nullptr);
+        EXPECT_TRUE(d && d->isOfType(SoFaceDetail::getClassTypeId()));
         if (d && d->isOfType(SoFaceDetail::getClassTypeId())) {
             const SoFaceDetail * fd =
                 static_cast<const SoFaceDetail *>(d);
-            pass = (fd->getNumPoints() > 0);
+            EXPECT_GT(fd->getNumPoints(), 0);
         }
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoFaceDetail from ray pick should have numPoints > 0";
 }
 
 // -----------------------------------------------------------------------
@@ -459,13 +434,11 @@ TEST(DetailsSuite, SoRayPickActionSoLineDetailAttachedToPickedILSPoint)
     rpa.apply(root);
 
     const SoPickedPoint * pp = rpa.getPickedPoint();
-    bool pass = false;
+    EXPECT_NE(pp, nullptr);
     if (pp != nullptr) {
         const SoDetail * d = pp->getDetail();
-        if (d != nullptr) {
-            pass = d->isOfType(SoLineDetail::getClassTypeId());
-        }
+        EXPECT_NE(d, nullptr);
+        if (d) EXPECT_TRUE(d->isOfType(SoLineDetail::getClassTypeId()));
     }
     root->unref();
-    EXPECT_TRUE(pass) << "SoRayPickAction on SoIndexedLineSet should return SoLineDetail";
 }

@@ -72,8 +72,7 @@ TEST(FieldsFieldExtras, SoSFFloatSetDirtyTRUEGetDirtyTRUE)
     w->setDirty(TRUE);
     bool dirtyOk = (w->getDirty() == TRUE);
     cube->unref();
-    bool pass = cleanOk && dirtyOk;
-    EXPECT_TRUE(pass) << "SoField getDirty/setDirty round-trip failed";
+    EXPECT_TRUE(cleanOk && dirtyOk) << "SoField getDirty/setDirty round-trip failed";
 }
 
 TEST(FieldsFieldExtras, SoSFFloatSetDirtyFALSEGetDirtyFALSE)
@@ -82,9 +81,8 @@ TEST(FieldsFieldExtras, SoSFFloatSetDirtyFALSEGetDirtyFALSE)
     cube->ref();
     SoField * w = cube->getField(SbName("width"));
     w->setDirty(FALSE);
-    bool pass = (w->getDirty() == FALSE);
+    EXPECT_TRUE((w->getDirty() == FALSE)) << "SoField getDirty(FALSE) failed";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField getDirty(FALSE) failed";
 }
 
 // -----------------------------------------------------------------------
@@ -96,9 +94,8 @@ TEST(FieldsFieldExtras, SoSFFloatIsIgnoredDefaultsToFALSE)
     SoCube * cube = new SoCube;
     cube->ref();
     SoField * w = cube->getField(SbName("width"));
-    bool pass = (w->isIgnored() == FALSE);
+    EXPECT_TRUE((w->isIgnored() == FALSE)) << "SoField::isIgnored should default to FALSE";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField::isIgnored should default to FALSE";
 }
 
 TEST(FieldsFieldExtras, SoSFFloatSetIgnoredTRUEIsIgnoredTRUE)
@@ -107,10 +104,9 @@ TEST(FieldsFieldExtras, SoSFFloatSetIgnoredTRUEIsIgnoredTRUE)
     cube->ref();
     SoField * w = cube->getField(SbName("width"));
     w->setIgnored(TRUE);
-    bool pass = (w->isIgnored() == TRUE);
+    EXPECT_TRUE((w->isIgnored() == TRUE)) << "SoField::setIgnored(TRUE) failed";
     w->setIgnored(FALSE); // restore
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField::setIgnored(TRUE) failed";
 }
 
 TEST(FieldsFieldExtras, SoSFFloatSetIgnoredFALSERestoresToFALSE)
@@ -120,9 +116,8 @@ TEST(FieldsFieldExtras, SoSFFloatSetIgnoredFALSERestoresToFALSE)
     SoField * w = cube->getField(SbName("width"));
     w->setIgnored(TRUE);
     w->setIgnored(FALSE);
-    bool pass = (w->isIgnored() == FALSE);
+    EXPECT_TRUE((w->isIgnored() == FALSE)) << "SoField::setIgnored(FALSE) restore failed";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoField::setIgnored(FALSE) restore failed";
 }
 
 // -----------------------------------------------------------------------
@@ -134,9 +129,8 @@ TEST(FieldsFieldExtras, SoCubeWidthIsDefaultBeforeSetValue)
     SoCube * cube = new SoCube;
     cube->ref();
     // width field default value is 2.0; should be isDefault == TRUE initially
-    bool pass = (cube->width.isDefault() == TRUE);
+    EXPECT_TRUE((cube->width.isDefault() == TRUE)) << "SoCube width should be default initially";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoCube width should be default initially";
 }
 
 TEST(FieldsFieldExtras, SoCubeWidthIsDefaultBecomesFALSEAfterSetValue)
@@ -144,9 +138,8 @@ TEST(FieldsFieldExtras, SoCubeWidthIsDefaultBecomesFALSEAfterSetValue)
     SoCube * cube = new SoCube;
     cube->ref();
     cube->width.setValue(5.0f);
-    bool pass = (cube->width.isDefault() == FALSE);
+    EXPECT_TRUE((cube->width.isDefault() == FALSE)) << "SoCube width should not be default after setValue(5)";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoCube width should not be default after setValue(5)";
 }
 
 // -----------------------------------------------------------------------
@@ -160,9 +153,8 @@ TEST(FieldsFieldExtras, SoCubeGetFieldsReturnsAtLeast3Fields)
     SoFieldList fl;
     int n = cube->getFields(fl);
     // SoCube has width, height, depth (at least 3)
-    bool pass = (n >= 3);
+    EXPECT_TRUE((n >= 3)) << "SoCube should report at least 3 fields";
     cube->unref();
-    EXPECT_TRUE(pass) << "SoCube should report at least 3 fields";
 }
 
 TEST(FieldsFieldExtras, SoCubeGetFieldsListContainsSbNameWidth)
@@ -191,9 +183,8 @@ TEST(FieldsFieldExtras, SoMaterialGetFieldsReturnsAtLeast5Fields)
     mat->ref();
     SoFieldList fl;
     int n = mat->getFields(fl);
-    bool pass = (n >= 5);
+    EXPECT_TRUE((n >= 5)) << "SoMaterial should report at least 5 fields";
     mat->unref();
-    EXPECT_TRUE(pass) << "SoMaterial should report at least 5 fields";
 }
 
 // -----------------------------------------------------------------------
@@ -202,15 +193,13 @@ TEST(FieldsFieldExtras, SoMaterialGetFieldsReturnsAtLeast5Fields)
 
 TEST(FieldsFieldExtras, SoFieldConverterGetClassTypeIdIsNotBadType)
 {
-    bool pass = (SoFieldConverter::getClassTypeId() != SoType::badType());
-    EXPECT_TRUE(pass) << "SoFieldConverter class type should be registered";
+    EXPECT_TRUE((SoFieldConverter::getClassTypeId() != SoType::badType())) << "SoFieldConverter class type should be registered";
 }
 
 TEST(FieldsFieldExtras, SoFieldConverterIsDerivedFromSoEngine)
 {
-    bool pass = SoFieldConverter::getClassTypeId().isDerivedFrom(
-        SoType::fromName(SbName("SoEngine")));
-    EXPECT_TRUE(pass) << "SoFieldConverter should be derived from SoEngine";
+    EXPECT_TRUE(SoFieldConverter::getClassTypeId().isDerivedFrom(
+        SoType::fromName(SbName("SoEngine")))) << "SoFieldConverter should be derived from SoEngine";
 }
 
 // -----------------------------------------------------------------------
@@ -221,25 +210,22 @@ TEST(FieldsFieldExtras, SoCubeWidthIsConnectedReturnsFALSEInitially)
 {
     SoCube * cube = new SoCube;
     cube->ref();
-    bool pass = (cube->width.isConnected() == FALSE);
+    EXPECT_TRUE((cube->width.isConnected() == FALSE)) << "Freshly created SoSFFloat should not be connected";
     cube->unref();
-    EXPECT_TRUE(pass) << "Freshly created SoSFFloat should not be connected";
 }
 
 TEST(FieldsFieldExtras, SoCubeWidthIsConnectedFromFieldReturnsFALSEInitially)
 {
     SoCube * cube = new SoCube;
     cube->ref();
-    bool pass = (cube->width.isConnectedFromField() == FALSE);
+    EXPECT_TRUE((cube->width.isConnectedFromField() == FALSE)) << "Freshly created SoSFFloat should not be connected from field";
     cube->unref();
-    EXPECT_TRUE(pass) << "Freshly created SoSFFloat should not be connected from field";
 }
 
 TEST(FieldsFieldExtras, SoCubeWidthIsConnectedFromEngineReturnsFALSEInitially)
 {
     SoCube * cube = new SoCube;
     cube->ref();
-    bool pass = (cube->width.isConnectedFromEngine() == FALSE);
+    EXPECT_TRUE((cube->width.isConnectedFromEngine() == FALSE)) << "Freshly created SoSFFloat should not be connected from engine";
     cube->unref();
-    EXPECT_TRUE(pass) << "Freshly created SoSFFloat should not be connected from engine";
 }

@@ -178,7 +178,7 @@ protected:
 
   SbUniqueId uniqueId;
   static std::atomic<SbUniqueId> nextUniqueId;
-  static int nextActionMethodIndex;
+  static std::atomic<int> nextActionMethodIndex;
 
 private:
   static SoType classTypeId;

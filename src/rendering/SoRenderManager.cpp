@@ -1694,10 +1694,11 @@ SoRenderManager::getDefaultRedrawPriority(void)
 void
 SoRenderManager::enableRealTimeUpdate(const SbBool flag)
 {
-  SoRenderManagerP::touchtimer = flag;
-  if (!SoRenderManagerP::cleanupfunctionset) {
+  SoRenderManagerP::touchtimer.store(flag, std::memory_order_release);
+  SbBool expected = FALSE;
+  if (SoRenderManagerP::cleanupfunctionset.compare_exchange_strong(
+        expected, TRUE, std::memory_order_acq_rel)) {
     coin_atexit((coin_atexit_f*) SoRenderManagerP::cleanup, CC_ATEXIT_NORMAL);
-    SoRenderManagerP::cleanupfunctionset = TRUE;
   }
 }
 
@@ -1708,7 +1709,7 @@ SoRenderManager::enableRealTimeUpdate(const SbBool flag)
 SbBool
 SoRenderManager::isRealTimeUpdateEnabled(void)
 {
-  return SoRenderManagerP::touchtimer;
+  return SoRenderManagerP::touchtimer.load(std::memory_order_acquire);
 }
 
 

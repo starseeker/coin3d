@@ -77,8 +77,7 @@ TEST(BaseExtras, SbClipQuadVerticesSurviveClipAgainstZ0Plane)
     clip.clip(SbPlane(SbVec3f(0.0f, 0.0f, 1.0f), 0.0f));
 
     int n = clip.getNumVertices();
-    bool pass = (n == 4);
-    EXPECT_TRUE(pass) << "SbClip: all 4 vertices at z=0 should survive z>=0 clip";
+    EXPECT_TRUE((n == 4)) << "SbClip: all 4 vertices at z=0 should survive z>=0 clip";
 }
 
 TEST(BaseExtras, SbClipClipAgainstZ1PlaneRemovesAllZ0Vertices)
@@ -93,8 +92,7 @@ TEST(BaseExtras, SbClipClipAgainstZ1PlaneRemovesAllZ0Vertices)
     clip.clip(SbPlane(SbVec3f(0.0f, 0.0f, 1.0f), 1.0f));
 
     int n = clip.getNumVertices();
-    bool pass = (n == 0);
-    EXPECT_TRUE(pass) << "SbClip: vertices at z=0 should not survive clip against z>=1 plane";
+    EXPECT_TRUE((n == 0)) << "SbClip: vertices at z=0 should not survive clip against z>=1 plane";
 }
 
 TEST(BaseExtras, SbClipPartialClipProducesFewerVertices)
@@ -111,8 +109,7 @@ TEST(BaseExtras, SbClipPartialClipProducesFewerVertices)
 
     int n = clip.getNumVertices();
     // Expect 4 vertices: 2 originals above + 2 intersection points
-    bool pass = (n > 0) && (n <= 4);
-    EXPECT_TRUE(pass) << "SbClip: partial clip should produce 1-4 vertices";
+    EXPECT_TRUE((n > 0) && (n <= 4)) << "SbClip: partial clip should produce 1-4 vertices";
 }
 
 // -----------------------------------------------------------------------
@@ -123,8 +120,7 @@ TEST(BaseExtras, SbXfBox3fConstructFromSbBox3fIsNotEmpty)
 {
     SbBox3f b(SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
     SbXfBox3f xb(b);
-    bool pass = !xb.isEmpty();
-    EXPECT_TRUE(pass) << "SbXfBox3f constructed from SbBox3f should not be empty";
+    EXPECT_TRUE(!xb.isEmpty()) << "SbXfBox3f constructed from SbBox3f should not be empty";
 }
 
 TEST(BaseExtras, SbXfBox3fExtendByPointOutsideBoxGrowsBox)
@@ -134,8 +130,7 @@ TEST(BaseExtras, SbXfBox3fExtendByPointOutsideBoxGrowsBox)
     xb.extendBy(SbVec3f(2.0f, 0.0f, 0.0f));
     // After extension, the projected box should contain (2,0,0)
     SbBox3f proj = xb.project();
-    bool pass = proj.intersect(SbVec3f(2.0f, 0.0f, 0.0f));
-    EXPECT_TRUE(pass) << "SbXfBox3f: extendBy point (2,0,0) should grow box to include it";
+    EXPECT_TRUE(proj.intersect(SbVec3f(2.0f, 0.0f, 0.0f))) << "SbXfBox3f: extendBy point (2,0,0) should grow box to include it";
 }
 
 TEST(BaseExtras, SbXfBox3fIntersectWithOverlappingBoxReturnsTRUE)
@@ -144,8 +139,7 @@ TEST(BaseExtras, SbXfBox3fIntersectWithOverlappingBoxReturnsTRUE)
     SbBox3f b2(SbVec3f( 0.0f,  0.0f,  0.0f), SbVec3f(2.0f, 2.0f, 2.0f));
     SbXfBox3f xb1(b1);
     SbXfBox3f xb2(b2);
-    bool pass = xb1.intersect(xb2);
-    EXPECT_TRUE(pass) << "SbXfBox3f: overlapping boxes should intersect";
+    EXPECT_TRUE(xb1.intersect(xb2)) << "SbXfBox3f: overlapping boxes should intersect";
 }
 
 TEST(BaseExtras, SbXfBox3fTransformWithTranslationShiftsProjectedBox)
@@ -160,8 +154,7 @@ TEST(BaseExtras, SbXfBox3fTransformWithTranslationShiftsProjectedBox)
 
     SbBox3f proj = xb.project();
     SbVec3f center = proj.getCenter();
-    bool pass = (std::fabs(center[0] - 5.0f) < 0.1f);
-    EXPECT_TRUE(pass) << "SbXfBox3f: transform translate should shift projected box center";
+    EXPECT_TRUE((std::fabs(center[0] - 5.0f) < 0.1f)) << "SbXfBox3f: transform translate should shift projected box center";
 }
 
 // -----------------------------------------------------------------------
@@ -172,8 +165,7 @@ TEST(BaseExtras, SbXfBox3dConstructFromSbBox3dIsNotEmpty)
 {
     SbBox3d b(SbVec3d(-1.0, -1.0, -1.0), SbVec3d(1.0, 1.0, 1.0));
     SbXfBox3d xb(b);
-    bool pass = !xb.isEmpty();
-    EXPECT_TRUE(pass) << "SbXfBox3d constructed from SbBox3d should not be empty";
+    EXPECT_TRUE(!xb.isEmpty()) << "SbXfBox3d constructed from SbBox3d should not be empty";
 }
 
 TEST(BaseExtras, SbXfBox3dIntersectWithOverlappingBoxReturnsTRUE)
@@ -182,8 +174,7 @@ TEST(BaseExtras, SbXfBox3dIntersectWithOverlappingBoxReturnsTRUE)
     SbBox3d b2(SbVec3d( 0.0,  0.0,  0.0), SbVec3d(2.0, 2.0, 2.0));
     SbXfBox3d xb1(b1);
     SbXfBox3d xb2(b2);
-    bool pass = xb1.intersect(xb2);
-    EXPECT_TRUE(pass) << "SbXfBox3d: overlapping boxes should intersect";
+    EXPECT_TRUE(xb1.intersect(xb2)) << "SbXfBox3d: overlapping boxes should intersect";
 }
 
 // -----------------------------------------------------------------------
@@ -202,6 +193,5 @@ TEST(BaseExtras, SbTesselatorConvexQuadProducesExactly2Triangles)
     tess.addVertex(SbVec3f(-1.0f,  1.0f, 0.0f), nullptr);
     tess.endPolygon();
 
-    bool pass = (g_triCount == 2);
-    EXPECT_TRUE(pass) << "SbTesselator: convex quad should produce exactly 2 triangles";
+    EXPECT_TRUE((g_triCount == 2)) << "SbTesselator: convex quad should produce exactly 2 triangles";
 }

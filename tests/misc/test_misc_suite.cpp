@@ -71,15 +71,13 @@ using namespace ObolTest;
 TEST(MiscSuite, SoTypeFromNameReturnsValidTypeForSoCube)
 {
     SoType t = SoType::fromName(SbName("SoCube"));
-    bool pass = (t != SoType::badType());
-    EXPECT_TRUE(pass) << "fromName('SoCube') returned badType";
+    EXPECT_TRUE((t != SoType::badType())) << "fromName('SoCube') returned badType";
 }
 
 TEST(MiscSuite, SoTypeFromNameReturnsBadTypeForUnknownName)
 {
     SoType t = SoType::fromName(SbName("NoSuchNodeEver_xyz"));
-    bool pass = (t == SoType::badType());
-    EXPECT_TRUE(pass) << "fromName for unknown should return badType";
+    EXPECT_TRUE((t == SoType::badType())) << "fromName for unknown should return badType";
 }
 
 TEST(MiscSuite, SoTypeGetNameReturnsNonEmptyNameForSoCube)
@@ -87,77 +85,68 @@ TEST(MiscSuite, SoTypeGetNameReturnsNonEmptyNameForSoCube)
     SoType t = SoCube::getClassTypeId();
     SbName name = t.getName();
     // Internal Coin type names omit the 'So' prefix (e.g. "Cube" not "SoCube")
-    bool pass = (name.getLength() > 0);
-    EXPECT_TRUE(pass) << "SoType::getName returned empty name for SoCube";
+    EXPECT_TRUE((name.getLength() > 0)) << "SoType::getName returned empty name for SoCube";
 }
 
 TEST(MiscSuite, SoTypeGetParentOfSoCubeIsSoShapeOrSimilar)
 {
     SoType t = SoCube::getClassTypeId();
     SoType parent = t.getParent();
-    bool pass = (parent != SoType::badType());
-    EXPECT_TRUE(pass) << "SoType::getParent returned badType for SoCube";
+    EXPECT_TRUE((parent != SoType::badType())) << "SoType::getParent returned badType for SoCube";
 }
 
 TEST(MiscSuite, SoTypeIsDerivedFromSoCubeIsDerivedFromSoNode)
 {
     SoType cube = SoCube::getClassTypeId();
     SoType node = SoNode::getClassTypeId();
-    bool pass = cube.isDerivedFrom(node);
-    EXPECT_TRUE(pass) << "SoCube should be derived from SoNode";
+    EXPECT_TRUE(cube.isDerivedFrom(node)) << "SoCube should be derived from SoNode";
 }
 
 TEST(MiscSuite, SoTypeIsDerivedFromSoCubeNOTDerivedFromSoGroup)
 {
     SoType cube  = SoCube::getClassTypeId();
     SoType group = SoGroup::getClassTypeId();
-    bool pass = !cube.isDerivedFrom(group);
-    EXPECT_TRUE(pass) << "SoCube should NOT be derived from SoGroup";
+    EXPECT_TRUE(!cube.isDerivedFrom(group)) << "SoCube should NOT be derived from SoGroup";
 }
 
 TEST(MiscSuite, SoTypeGetAllDerivedFromSoNodeReturnsManyTypes)
 {
     SoTypeList list;
     int n = SoType::getAllDerivedFrom(SoNode::getClassTypeId(), list);
-    bool pass = (n > 10); // There are many node types
-    EXPECT_TRUE(pass) << "getAllDerivedFrom(SoNode) returned too few types";
+    EXPECT_GT(n, 10); // There are many node types
 }
 
 TEST(MiscSuite, SoTypeCanCreateInstanceForSoCubeIsTRUE)
 {
     SoType t = SoCube::getClassTypeId();
-    bool pass = t.canCreateInstance();
-    EXPECT_TRUE(pass) << "SoCube::canCreateInstance should be TRUE";
+    EXPECT_TRUE(t.canCreateInstance());
 }
 
 TEST(MiscSuite, SoTypeCreateInstanceCreatesAnSoCube)
 {
     SoType t = SoCube::getClassTypeId();
     void * raw = t.createInstance();
-    bool pass = (raw != nullptr);
-    if (pass) {
+    EXPECT_NE(raw, nullptr);
+    if (raw != nullptr) {
         SoCube * cube = static_cast<SoCube *>(raw);
         cube->ref();
-        pass = cube->isOfType(SoCube::getClassTypeId());
+        EXPECT_TRUE(cube->isOfType(SoCube::getClassTypeId()));
         cube->unref();
     }
-    EXPECT_TRUE(pass) << "createInstance for SoCube failed";
 }
 
 TEST(MiscSuite, SoTypeOperatorForSameType)
 {
     SoType a = SoCube::getClassTypeId();
     SoType b = SoCube::getClassTypeId();
-    bool pass = (a == b);
-    EXPECT_TRUE(pass) << "SoType operator== failed for same type";
+    EXPECT_TRUE((a == b)) << "SoType operator== failed for same type";
 }
 
 TEST(MiscSuite, SoTypeOperatorForDifferentTypes)
 {
     SoType a = SoCube::getClassTypeId();
     SoType b = SoSphere::getClassTypeId();
-    bool pass = (a != b);
-    EXPECT_TRUE(pass) << "SoType operator!= failed for different types";
+    EXPECT_TRUE((a != b)) << "SoType operator!= failed for different types";
 }
 
 TEST(MiscSuite, SoTypeOperatorGivesConsistentOrdering)
@@ -165,15 +154,13 @@ TEST(MiscSuite, SoTypeOperatorGivesConsistentOrdering)
     SoType a = SoCube::getClassTypeId();
     SoType b = SoSphere::getClassTypeId();
     // One should be less than the other (but both are valid)
-    bool pass = (a < b) || (b < a);
-    EXPECT_TRUE(pass) << "SoType operator< failed (neither a<b nor b<a)";
+    EXPECT_TRUE((a < b) || (b < a)) << "SoType operator< failed (neither a<b nor b<a)";
 }
 
 TEST(MiscSuite, SoTypeGetKeyReturnsNonNegativeForValidType)
 {
     SoType t = SoCube::getClassTypeId();
-    bool pass = (t.getKey() >= 0);
-    EXPECT_TRUE(pass) << "SoType::getKey returned negative for valid type";
+    EXPECT_TRUE((t.getKey() >= 0)) << "SoType::getKey returned negative for valid type";
 }
 
 // =======================================================================
@@ -187,10 +174,9 @@ TEST(MiscSuite, SoPathSetHeadAndGetHead)
     SoPath * path = new SoPath;
     path->ref();
     path->setHead(root);
-    bool pass = (path->getHead() == root);
+    EXPECT_TRUE((path->getHead() == root)) << "SoPath setHead/getHead failed";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath setHead/getHead failed";
 }
 
 TEST(MiscSuite, SoPathAppendNodeAndGetLength)
@@ -203,10 +189,9 @@ TEST(MiscSuite, SoPathAppendNodeAndGetLength)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(cube);
-    bool pass = (path->getLength() == 2) && (path->getTail() == cube);
+    EXPECT_TRUE((path->getLength() == 2) && (path->getTail() == cube)) << "SoPath append(node)/getLength/getTail failed";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath append(node)/getLength/getTail failed";
 }
 
 TEST(MiscSuite, SoPathGetNodeIndexAccessesCorrectNode)
@@ -219,11 +204,10 @@ TEST(MiscSuite, SoPathGetNodeIndexAccessesCorrectNode)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(cube);
-    bool pass = (path->getNode(0) == root) &&
-                (path->getNode(1) == cube);
+    EXPECT_TRUE((path->getNode(0) == root) &&
+                (path->getNode(1) == cube)) << "SoPath getNode(index) failed";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath getNode(index) failed";
 }
 
 TEST(MiscSuite, SoPathGetNodeFromTail0IsGetTail)
@@ -236,10 +220,9 @@ TEST(MiscSuite, SoPathGetNodeFromTail0IsGetTail)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(cube);
-    bool pass = (path->getNodeFromTail(0) == path->getTail());
+    EXPECT_TRUE((path->getNodeFromTail(0) == path->getTail())) << "getNodeFromTail(0) != getTail()";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "getNodeFromTail(0) != getTail()";
 }
 
 TEST(MiscSuite, SoPathTruncateShortensPath)
@@ -253,10 +236,9 @@ TEST(MiscSuite, SoPathTruncateShortensPath)
     path->ref();
     path->append(cube);
     path->truncate(1); // keep only head
-    bool pass = (path->getLength() == 1) && (path->getTail() == root);
+    EXPECT_TRUE((path->getLength() == 1) && (path->getTail() == root)) << "SoPath::truncate failed";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::truncate failed";
 }
 
 TEST(MiscSuite, SoPathContainsNodeReturnsTRUEForNodeInPath)
@@ -269,10 +251,9 @@ TEST(MiscSuite, SoPathContainsNodeReturnsTRUEForNodeInPath)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(cube);
-    bool pass = path->containsNode(cube) && path->containsNode(root);
+    EXPECT_TRUE(path->containsNode(cube) && path->containsNode(root)) << "SoPath::containsNode failed";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::containsNode failed";
 }
 
 TEST(MiscSuite, SoPathContainsNodeReturnsFALSEForNodeNotInPath)
@@ -287,11 +268,10 @@ TEST(MiscSuite, SoPathContainsNodeReturnsFALSEForNodeNotInPath)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(sphere);
-    bool pass = !path->containsNode(cube);
+    EXPECT_TRUE(!path->containsNode(cube)) << "SoPath::containsNode returned TRUE for absent node";
     path->unref();
     root->unref();
     cube->unref();
-    EXPECT_TRUE(pass) << "SoPath::containsNode returned TRUE for absent node";
 }
 
 TEST(MiscSuite, SoPathCopyCreatesANewEqualPath)
@@ -306,11 +286,10 @@ TEST(MiscSuite, SoPathCopyCreatesANewEqualPath)
     path->append(cube);
     SoPath * copy = path->copy();
     copy->ref();
-    bool pass = (*copy == *path) && (copy != path);
+    EXPECT_TRUE((*copy == *path) && (copy != path)) << "SoPath::copy failed";
     copy->unref();
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::copy failed";
 }
 
 TEST(MiscSuite, SoPathFindNodeReturnsCorrectIndex)
@@ -323,10 +302,9 @@ TEST(MiscSuite, SoPathFindNodeReturnsCorrectIndex)
     SoPath * path = new SoPath(root);
     path->ref();
     path->append(cube);
-    bool pass = (path->findNode(root) == 0) && (path->findNode(cube) == 1);
+    EXPECT_TRUE((path->findNode(root) == 0) && (path->findNode(cube) == 1)) << "SoPath::findNode returned wrong index";
     path->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::findNode returned wrong index";
 }
 
 TEST(MiscSuite, SoPathFindForkWithSharedPrefix)
@@ -348,11 +326,10 @@ TEST(MiscSuite, SoPathFindForkWithSharedPrefix)
 
     // Both paths share root (index 0) so fork is at 0
     int forkIdx = p1->findFork(p2);
-    bool pass = (forkIdx == 0);
+    EXPECT_TRUE((forkIdx == 0)) << "SoPath::findFork returned wrong index";
     p1->unref();
     p2->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath::findFork returned wrong index";
 }
 
 TEST(MiscSuite, SoPathOperatorForEqualPaths)
@@ -368,11 +345,10 @@ TEST(MiscSuite, SoPathOperatorForEqualPaths)
     SoPath * p2 = p1->copy();
     p2->ref();
 
-    bool pass = (*p1 == *p2);
+    EXPECT_TRUE((*p1 == *p2)) << "SoPath operator== failed for equal paths";
     p1->unref();
     p2->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath operator== failed for equal paths";
 }
 
 TEST(MiscSuite, SoPathOperatorForDifferentPaths)
@@ -391,11 +367,10 @@ TEST(MiscSuite, SoPathOperatorForDifferentPaths)
     p2->ref();
     p2->append(sph);
 
-    bool pass = (*p1 != *p2);
+    EXPECT_TRUE((*p1 != *p2)) << "SoPath operator!= failed for different paths";
     p1->unref();
     p2->unref();
     root->unref();
-    EXPECT_TRUE(pass) << "SoPath operator!= failed for different paths";
 }
 
 // =======================================================================
@@ -411,9 +386,8 @@ TEST(MiscSuite, SoChildListAppendAndGetLength)
     SoCube * c2 = new SoCube;
     parent->addChild(c1);
     parent->addChild(c2);
-    bool pass = (parent->getNumChildren() == 2);
+    EXPECT_TRUE((parent->getNumChildren() == 2)) << "SoSeparator (SoChildList) append/getLength failed";
     parent->unref();
-    EXPECT_TRUE(pass) << "SoSeparator (SoChildList) append/getLength failed";
 }
 
 TEST(MiscSuite, SoChildListInsertBeforeIndex)
@@ -426,12 +400,11 @@ TEST(MiscSuite, SoChildListInsertBeforeIndex)
     parent->addChild(c1);
     parent->addChild(c2);
     parent->insertChild(s, 1); // insert before c2
-    bool pass = (parent->getNumChildren() == 3) &&
+    EXPECT_TRUE((parent->getNumChildren() == 3) &&
                 (parent->getChild(0) == c1) &&
                 (parent->getChild(1) == s) &&
-                (parent->getChild(2) == c2);
+                (parent->getChild(2) == c2)) << "SoChildList insert at position failed";
     parent->unref();
-    EXPECT_TRUE(pass) << "SoChildList insert at position failed";
 }
 
 TEST(MiscSuite, SoChildListRemoveByIndex)
@@ -445,9 +418,8 @@ TEST(MiscSuite, SoChildListRemoveByIndex)
     parent->addChild(s);
     parent->addChild(c2);
     parent->removeChild(1); // remove s
-    bool pass = (parent->getNumChildren() == 2) &&
+    EXPECT_TRUE((parent->getNumChildren() == 2) &&
                 (parent->getChild(0) == c1) &&
-                (parent->getChild(1) == c2);
+                (parent->getChild(1) == c2)) << "SoChildList remove by index failed";
     parent->unref();
-    EXPECT_TRUE(pass) << "SoChildList remove by index failed";
 }
