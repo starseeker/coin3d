@@ -49,6 +49,7 @@
 #include <cstring>
 #include <cerrno>
 #include <cmath>
+#include <climits>
 #include <limits>
 
 #include "config.h"

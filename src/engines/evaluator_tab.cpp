@@ -305,7 +305,9 @@ typedef enum yysymbol_kind_t yysymbol_kind_t;
 /* On compilers that do not define __PTRDIFF_MAX__ etc., make sure
    <limits.h> and (if available) <stdint.h> are included
    so that the code can choose integer types of a good width.  */
-
+#if defined __cplusplus
+#  include <climits>
+#endif
 #ifndef __PTRDIFF_MAX__
 # include <limits.h> /* INFRINGES ON USER NAME SPACE */
 # if defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
