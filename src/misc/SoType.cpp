@@ -263,6 +263,27 @@ SoType::clean(void)
   std::lock_guard<std::recursive_mutex> dynloadlock(type_dynload_mutex);
   std::unique_lock<std::shared_mutex> lock(type_mutex);
 
+  // A successfully opened extension stays loaded while its registered type
+  // data can expose callbacks into the module.  At type-system teardown the
+  // application is required to be quiescent, so release the module handles
+  // before discarding that data.  Drop type_mutex around foreign unload hooks
+  // in case a module destructor performs a final type-system lookup.
+  SbList<cc_libhandle> modules;
+  if (module_dict != NULL) {
+    for (Name2HandleMap::const_iterator iter = module_dict->const_begin();
+         iter != module_dict->const_end(); ++iter) {
+      modules.append(iter->obj);
+    }
+  }
+  delete module_dict;
+  module_dict = NULL;
+
+  lock.unlock();
+  for (int i = 0; i < modules.getLength(); ++i) {
+    cc_dl_close(modules[i]);
+  }
+  lock.lock();
+
   // clean SoType::typedatalist (first delete structures)
   const int num = SoType::typedatalist->getLength();
   for (int i = 0; i < num; i++) delete (*SoType::typedatalist)[i];
@@ -272,8 +293,6 @@ SoType::clean(void)
   dynload_tries = NULL;
   delete type_dict;
   type_dict = NULL;
-  delete module_dict;
-  module_dict = NULL;
 }
 
 /*!
@@ -665,8 +684,8 @@ SoType::fromName(const SbName name)
     // register one or more factories before throwing or before we discover
     // that it registered a different type.  There is no transactional way to
     // undo arbitrary foreign registration.  Pin every successfully opened
-    // extension for the remainder of the process so registered function
-    // pointers can never refer to an unloaded image.
+    // extension for the lifetime of this type-system generation so registered
+    // function pointers can never refer to an unloaded image.
     {
       std::unique_lock<std::shared_mutex> lock(type_mutex);
       module_dict->put(module.getString(), handle);
