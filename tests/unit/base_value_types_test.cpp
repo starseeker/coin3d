@@ -55,7 +55,7 @@ TEST(BaseStrings, StringNameAndTimeExposeStableValueSemantics)
     EXPECT_EQ(name.getLength(), 6);
     EXPECT_EQ(name, SbName("myNode"));
     EXPECT_NE(name, SbName("other"));
-    EXPECT_FALSE(SbName::empty());
+    EXPECT_TRUE(!SbName::empty());
     EXPECT_TRUE(SbName::isIdentStartChar('A'));
     EXPECT_TRUE(SbName::isIdentChar('_'));
     EXPECT_TRUE(SbName::isIdentChar('0'));

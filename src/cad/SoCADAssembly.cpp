@@ -116,6 +116,8 @@ SO_NODE_SOURCE(SoCADAssembly);
 void
 SoCADAssembly::initClass()
 {
+    if (SoCADAssembly::getClassTypeId() != SoType::badType())
+        return;
     SO_NODE_INIT_CLASS(SoCADAssembly, SoNode, "Node");
     SoCADDetail::initClass();
     SoCADViewState::initClass();
