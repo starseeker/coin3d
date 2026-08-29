@@ -320,6 +320,18 @@ TEST(NodesAnimMisc, SoPackedColorOrderedRGBASetGetRoundTrip)
     node->unref();
 }
 
+TEST(NodesAnimMisc, SoPackedColorTransparencyCacheTracksFieldChanges)
+{
+    SoPackedColor * node = new SoPackedColor;
+    node->ref();
+    EXPECT_FALSE(node->isTransparent());
+    node->orderedRGBA.setValue(0xFF000080);
+    EXPECT_TRUE(node->isTransparent());
+    node->orderedRGBA.setValue(0xFF0000FF);
+    EXPECT_FALSE(node->isTransparent());
+    node->unref();
+}
+
 // -----------------------------------------------------------------------
 // SoMatrixTransform
 // -----------------------------------------------------------------------

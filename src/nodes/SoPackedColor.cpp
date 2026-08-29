@@ -70,6 +70,9 @@
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoVBO.h"
 
+#include <atomic>
+#include <mutex>
+
 
 // *************************************************************************
 
@@ -89,10 +92,16 @@
 
 class SoPackedColorP {
  public:
-  SoPackedColorP() : vbo(NULL) { }
+  enum class TransparencyState : unsigned char {
+    UNKNOWN,
+    OPAQUE,
+    TRANSPARENT
+  };
+
+  SoPackedColorP() : transparency(TransparencyState::UNKNOWN), vbo(NULL) { }
   ~SoPackedColorP() { delete this->vbo; }
-  SbBool transparent;
-  SbBool checktransparent;
+  std::atomic<TransparencyState> transparency;
+  std::mutex transparencymutex;
   SoVBO * vbo;
 };
 
@@ -109,9 +118,6 @@ SoPackedColor::SoPackedColor()
   SO_NODE_INTERNAL_CONSTRUCTOR(SoPackedColor);
 
   SO_NODE_ADD_FIELD(orderedRGBA, (0xccccccff));
-
-  PRIVATE(this)->checktransparent = FALSE;
-  PRIVATE(this)->transparent = FALSE;
 }
 
 /*!
@@ -145,7 +151,7 @@ SoPackedColor::GLRender(SoGLRenderAction * action)
 void
 SoPackedColor::doAction(SoAction * action)
 {
-  (void) this->isTransparent(); // update cached value for transparent
+  const SbBool transparent = this->isTransparent();
 
   SoState * state = action->getState();
   const int num = this->orderedRGBA.getNum();
@@ -155,7 +161,7 @@ SoPackedColor::doAction(SoAction * action)
     SoLazyElement::setPacked(state, this,
                              num,
                              this->orderedRGBA.getValues(0),
-                             PRIVATE(this)->transparent);
+                             transparent);
 
     if (state->isElementEnabled(SoGLVBOElement::getClassStackIndex())) {
       SoBase::staticDataLock();
@@ -221,18 +227,26 @@ SoPackedColor::callback(SoCallbackAction * action)
 SbBool
 SoPackedColor::isTransparent(void)
 {
-  if (PRIVATE(this)->checktransparent) {
-    PRIVATE(this)->checktransparent = FALSE;
-    PRIVATE(this)->transparent = FALSE;
-    int n = this->orderedRGBA.getNum();
-    for (int i = 0; i < n; i++) {
-      if ((this->orderedRGBA[i] & 0xff) != 0xff) {
-        PRIVATE(this)->transparent = TRUE;
-        break;
+  using TransparencyState = SoPackedColorP::TransparencyState;
+  TransparencyState state = PRIVATE(this)->transparency.load(
+    std::memory_order_acquire);
+  if (state == TransparencyState::UNKNOWN) {
+    const std::lock_guard<std::mutex> guard(
+      PRIVATE(this)->transparencymutex);
+    state = PRIVATE(this)->transparency.load(std::memory_order_relaxed);
+    if (state == TransparencyState::UNKNOWN) {
+      state = TransparencyState::OPAQUE;
+      const int n = this->orderedRGBA.getNum();
+      for (int i = 0; i < n; i++) {
+        if ((this->orderedRGBA[i] & 0xff) != 0xff) {
+          state = TransparencyState::TRANSPARENT;
+          break;
+        }
       }
+      PRIVATE(this)->transparency.store(state, std::memory_order_release);
     }
   }
-  return PRIVATE(this)->transparent;
+  return state == TransparencyState::TRANSPARENT;
 }
 
 // Documented in superclass.
@@ -243,7 +257,9 @@ SoPackedColor::notify(SoNotList *list)
 
   SoField *f = list->getLastField();
   if (f == &this->orderedRGBA) {
-    PRIVATE(this)->checktransparent = TRUE;
+    PRIVATE(this)->transparency.store(
+      SoPackedColorP::TransparencyState::UNKNOWN,
+      std::memory_order_release);
   }
   inherited::notify(list);
 }
