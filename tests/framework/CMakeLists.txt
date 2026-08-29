@@ -317,6 +317,11 @@ target_include_directories(obol_integration_tests PRIVATE
 # new software-lane regression test from silently missing native OpenGL.
 include(cmake/ObolPortableRenderSources.cmake)
 
+# Native OpenGL context creation can dominate a large aggregate suite.  The
+# ordinary 30-second unit-test deadline was sized for one test case, not the
+# single-process portable-render corpus registered below.
+set(_obol_render_suite_timeout 120)
+
 function(obol_configure_render_target target)
     target_include_directories(${target} PRIVATE
         ${PROJECT_SOURCE_DIR}/examples/demo_scenes)
@@ -330,6 +335,7 @@ endfunction()
 # remains runtime-controlled through OBOL_TEST_RENDER_BACKEND.
 if(OBOL_USE_SWRAST)
     obol_add_gtest(obol_render_tests "render;osmesa"
+        TIMEOUT ${_obol_render_suite_timeout}
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=swrast"
         ${OBOL_PORTABLE_RENDER_SOURCES})
     obol_configure_render_target(obol_render_tests)
@@ -340,6 +346,7 @@ endif()
 # Exercise native dispatch and GLX with the same portable contracts.
 if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
+        TIMEOUT ${_obol_render_suite_timeout}
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
         SKIP_REGULAR_EXPRESSION
             "system OpenGL (backend is unavailable|has no framebuffer-object support)"
@@ -347,6 +354,7 @@ if(OBOL_USE_SYSTEM_GL AND HAVE_GLX AND UNIX AND NOT APPLE)
     obol_configure_render_target(obol_system_gl_render_tests)
 elseif(OBOL_USE_SYSTEM_GL AND WIN32 AND FLTK_FOUND)
     obol_add_gtest(obol_system_gl_render_tests "render;system-gl"
+        TIMEOUT ${_obol_render_suite_timeout}
         ENVIRONMENT "OBOL_TEST_RENDER_BACKEND=system"
         SKIP_REGULAR_EXPRESSION
             "system OpenGL (backend is unavailable|has no framebuffer-object support)"

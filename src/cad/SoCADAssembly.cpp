@@ -2082,6 +2082,33 @@ SoCADAssembly::lastSubpixelProxyDrawPointCount() const
         impl_->renderer_->lastSubpixelProxyDrawPointCount() : 0u;
 }
 
+Obol::CadAggregateProxyPresentationWork
+SoCADAssembly::lastAggregateProxyPresentationWork() const
+{
+    Obol::CadAggregateProxyPresentationWork work;
+    work.exact = impl_->renderer_ &&
+        impl_->renderer_->lastRenderedWork().exact;
+
+    for (const Obol::internal::CadSubpixelProxyPoint& proxy :
+            impl_->cachedPlan_.subpixelProxyPoints)
+        Obol::internal::cadAccumulateVisibleAggregateProxy(proxy, work);
+
+    if (!impl_->renderer_)
+        return work;
+    const Obol::CadAggregateProxyPresentationWork pressure =
+        impl_->renderer_->lastPressureProxyPresentationWork();
+    const auto add = [](uint64_t left, uint64_t right) {
+        return right > UINT64_MAX - left ? UINT64_MAX : left + right;
+    };
+    work.pointCount = add(work.pointCount, pressure.pointCount);
+    work.axisAlignedBoxCount = add(work.axisAlignedBoxCount,
+        pressure.axisAlignedBoxCount);
+    work.orientedBoxCount = add(work.orientedBoxCount,
+        pressure.orientedBoxCount);
+    work.exact = work.exact && pressure.exact;
+    return work;
+}
+
 size_t
 SoCADAssembly::lastUncollapsedStructuralProxyCount() const
 {
