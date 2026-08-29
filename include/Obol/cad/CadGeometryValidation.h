@@ -48,7 +48,7 @@
 
 namespace Obol {
 
-struct PartGeometry;
+class PartGeometry;
 struct PartGeometryBuilder;
 struct PartUpdate;
 

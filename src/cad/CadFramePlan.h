@@ -59,7 +59,7 @@
 
 namespace Obol {
 
-struct PartGeometry;
+class PartGeometry;
 
 namespace internal {
 
