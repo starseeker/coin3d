@@ -93,12 +93,12 @@
 class SoPackedColorP {
  public:
   enum class TransparencyState : unsigned char {
-    UNKNOWN,
-    OPAQUE,
-    TRANSPARENT
+    Unchecked,
+    AllOpaque,
+    HasTransparency
   };
 
-  SoPackedColorP() : transparency(TransparencyState::UNKNOWN), vbo(NULL) { }
+  SoPackedColorP() : transparency(TransparencyState::Unchecked), vbo(NULL) { }
   ~SoPackedColorP() { delete this->vbo; }
   std::atomic<TransparencyState> transparency;
   std::mutex transparencymutex;
@@ -230,23 +230,23 @@ SoPackedColor::isTransparent(void)
   using TransparencyState = SoPackedColorP::TransparencyState;
   TransparencyState state = PRIVATE(this)->transparency.load(
     std::memory_order_acquire);
-  if (state == TransparencyState::UNKNOWN) {
+  if (state == TransparencyState::Unchecked) {
     const std::lock_guard<std::mutex> guard(
       PRIVATE(this)->transparencymutex);
     state = PRIVATE(this)->transparency.load(std::memory_order_relaxed);
-    if (state == TransparencyState::UNKNOWN) {
-      state = TransparencyState::OPAQUE;
+    if (state == TransparencyState::Unchecked) {
+      state = TransparencyState::AllOpaque;
       const int n = this->orderedRGBA.getNum();
       for (int i = 0; i < n; i++) {
         if ((this->orderedRGBA[i] & 0xff) != 0xff) {
-          state = TransparencyState::TRANSPARENT;
+          state = TransparencyState::HasTransparency;
           break;
         }
       }
       PRIVATE(this)->transparency.store(state, std::memory_order_release);
     }
   }
-  return state == TransparencyState::TRANSPARENT;
+  return state == TransparencyState::HasTransparency;
 }
 
 // Documented in superclass.
@@ -258,7 +258,7 @@ SoPackedColor::notify(SoNotList *list)
   SoField *f = list->getLastField();
   if (f == &this->orderedRGBA) {
     PRIVATE(this)->transparency.store(
-      SoPackedColorP::TransparencyState::UNKNOWN,
+      SoPackedColorP::TransparencyState::Unchecked,
       std::memory_order_release);
   }
   inherited::notify(list);
