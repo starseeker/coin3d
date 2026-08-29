@@ -511,7 +511,7 @@ SoTransformBoxDragger::removeChildDragger(SoDragger * child)
 
 /*! \COININTERNAL */
 void
-SoTransformBoxDragger::invalidateSurroundScaleCB(void *, SoDragger * d)
+SoTransformBoxDragger::invalidateSurroundScaleCB(void * d, SoDragger *)
 {
   SoTransformBoxDragger * thisp = THISP(d);
   SoSurroundScale * surround = SO_CHECK_PART(thisp, "surroundScale", SoSurroundScale);

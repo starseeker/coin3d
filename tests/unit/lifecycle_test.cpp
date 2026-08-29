@@ -3,6 +3,7 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>
+#include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/nodes/SoSeparator.h>
 
 namespace {
@@ -31,6 +32,10 @@ void exercise_initialized_database()
     root->unref();
 }
 
+void unused_context_callback(uint32_t, void *)
+{
+}
+
 } // namespace
 
 TEST(DatabaseLifecycle, SupportsRepeatedInitFinishCyclesWithoutContextManager)
@@ -41,8 +46,13 @@ TEST(DatabaseLifecycle, SupportsRepeatedInitFinishCyclesWithoutContextManager)
         SoDB::init(nullptr);
         EXPECT_EQ(SoDB::getContextManager(), nullptr);
         exercise_initialized_database();
+        SoContextHandler::addContextDestructionCallback(unused_context_callback,
+                                                         &generation);
         SoDB::finish();
         EXPECT_FALSE(SoDB::isInitialized());
+        // Main-thread TLS destructors can perform this same late unregister.
+        SoContextHandler::removeContextDestructionCallback(unused_context_callback,
+                                                            &generation);
     }
 }
 
