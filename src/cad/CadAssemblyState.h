@@ -37,6 +37,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace Obol {
@@ -99,6 +100,30 @@ struct CadSceneDatabase {
     std::unordered_map<Obol::PartId, uint64_t,
         std::hash<Obol::PartId>> partGeneration_;
     uint64_t nextGeneration_ = 1;
+
+    /*
+     * The generic aggregate swap is expressed in terms of move assignment.
+     * MSVC consequently cannot prove that it is non-throwing, despite every
+     * retained container using an always-equal default allocator.  Exchange
+     * the containers directly so complete-scene publication remains a
+     * constant-time, allocation-free commit on every supported STL.
+     */
+    friend void swap(CadSceneDatabase& left,
+                     CadSceneDatabase& right) noexcept
+    {
+        left.parts_.swap(right.parts_);
+        left.instances_.swap(right.instances_);
+        left.instanceIdsByPart_.swap(right.instanceIdsByPart_);
+        left.instancePartSlot_.swap(right.instancePartSlot_);
+        left.selected_.swap(right.selected_);
+        left.hidden_.swap(right.hidden_);
+        left.unpickable_.swap(right.unpickable_);
+        left.pointProxyProtected_.swap(right.pointProxyProtected_);
+        left.progressiveParts_.swap(right.progressiveParts_);
+        left.partGeneration_.swap(right.partGeneration_);
+        using std::swap;
+        swap(left.nextGeneration_, right.nextGeneration_);
+    }
 };
 
 struct CadPickingIndex {

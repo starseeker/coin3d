@@ -361,7 +361,7 @@ public:
 private:
     explicit PartGeometry(PartGeometryBuilder&& builder) noexcept;
 
-    friend CadGeometryAdmission cadAdmitPartGeometry(
+    friend OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
         PartGeometryBuilder geometry);
 };
 

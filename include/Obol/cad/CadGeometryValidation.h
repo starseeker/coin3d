@@ -147,7 +147,7 @@ private:
     std::shared_ptr<const PartGeometry> geometry_;
 
     friend struct CadGeometryAdmission;
-    friend CadGeometryAdmission cadAdmitPartGeometry(
+    friend OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
         PartGeometryBuilder geometry);
 };
 
