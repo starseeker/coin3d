@@ -125,8 +125,8 @@ struct WireRep {
     std::vector<ProgressiveWireCut> progressiveCuts;
     uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
     uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
-    SbVec3f progressiveQuantizationMinimum;
-    SbVec3f progressiveQuantizationMaximum;
+    SbVec3f progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
+    SbVec3f progressiveQuantizationMaximum = SbVec3f(0.0f, 0.0f, 0.0f);
 
     /* A nonzero lineage certifies an append-only segment prefix across
      * immutable generations.  Independent approximations must leave it 0. */
@@ -223,8 +223,8 @@ struct TriMesh {
     std::vector<ProgressiveTriangleCut> progressiveCuts;
     uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
     uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
-    SbVec3f progressiveQuantizationMinimum;
-    SbVec3f progressiveQuantizationMaximum;
+    SbVec3f progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
+    SbVec3f progressiveQuantizationMaximum = SbVec3f(0.0f, 0.0f, 0.0f);
     std::vector<ProgressiveTriangleCluster> progressiveClusters;
     uint16_t progressiveClusterGridResolution = 0;
 
@@ -361,7 +361,7 @@ public:
 private:
     explicit PartGeometry(PartGeometryBuilder&& builder) noexcept;
 
-    friend CadGeometryAdmission cadAdmitPartGeometry(
+    friend OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
         PartGeometryBuilder geometry);
 };
 

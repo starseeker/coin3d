@@ -32,7 +32,7 @@ constexpr size_t CadAggregateProxyBoxTriangleCount = 12u;
 constexpr size_t CadAggregateProxyBoxTrianglePositionCount =
     CadAggregateProxyBoxTriangleCount * 3u;
 
-struct PartGeometry;
+class PartGeometry;
 struct PartGeometryBuilder;
 
 /** Exact camera-local classification shared by CAD scheduling and drawing. */

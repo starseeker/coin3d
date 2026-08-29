@@ -43,6 +43,8 @@ SoCADDetail::~SoCADDetail() = default;
 void
 SoCADDetail::initClass()
 {
+    if (SoCADDetail::getClassTypeId() != SoType::badType())
+        return;
     SO_DETAIL_INIT_CLASS(SoCADDetail, SoDetail);
 }
 
