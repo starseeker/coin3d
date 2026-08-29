@@ -306,19 +306,35 @@ orientedAggregateProxyContract()
     SoOffscreenRenderer renderer(viewport);
     renderer.setComponents(SoOffscreenRenderer::RGB);
     renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-    bool passed = render(renderer, root) &&
+    bool passed = render(renderer, root);
+    const Obol::CadRenderedWork shadedWork =
+        assembly->lastRenderedWork();
+    const Obol::CadAggregateProxyPresentationWork shadedProxies =
+        assembly->lastAggregateProxyPresentationWork();
+    passed = passed &&
         assembly->lastSubpixelProxyCount() == 1u &&
         assembly->lastSubpixelProxyDrawPointCount() == 0u &&
-        assembly->lastRenderedWork().triangleCount ==
+        shadedProxies.exact && shadedProxies.pointCount == 0u &&
+        shadedProxies.axisAlignedBoxCount == 0u &&
+        shadedProxies.orientedBoxCount == 1u &&
+        shadedWork.triangleCount ==
             Obol::CadAggregateProxyBoxTriangleCount &&
-        assembly->lastRenderedWork().lineCount == 0u &&
+        shadedWork.lineCount == 0u &&
         nonBlackPixels(renderer) > 0u;
     setCadDrawMode(root, SoCADViewState::WIREFRAME);
-    passed = passed && render(renderer, root) &&
+    const bool wireRendered = render(renderer, root);
+    const Obol::CadRenderedWork wireWork =
+        assembly->lastRenderedWork();
+    const Obol::CadAggregateProxyPresentationWork wireProxies =
+        assembly->lastAggregateProxyPresentationWork();
+    passed = passed && wireRendered &&
         assembly->lastSubpixelProxyCount() == 1u &&
         assembly->lastSubpixelProxyDrawPointCount() == 0u &&
-        assembly->lastRenderedWork().triangleCount == 0u &&
-        assembly->lastRenderedWork().lineCount ==
+        wireProxies.exact && wireProxies.pointCount == 0u &&
+        wireProxies.axisAlignedBoxCount == 0u &&
+        wireProxies.orientedBoxCount == 1u &&
+        wireWork.triangleCount == 0u &&
+        wireWork.lineCount ==
             Obol::CadAggregateProxyBoxLineCount &&
         nonBlackPixels(renderer) > 0u;
     if (!passed) {
@@ -2478,9 +2494,14 @@ indirectPressureProxyPreservesProjectedExtent()
             assembly->gpuResourceSnapshot();
         const Obol::CadRenderedWork shadedWork =
             assembly->lastRenderedWork();
+        const Obol::CadAggregateProxyPresentationWork shadedProxies =
+            assembly->lastAggregateProxyPresentationWork();
         const size_t shadedPixels = nonBlackPixels(renderer);
         const bool shadedPassed = shaded.atlasAdmissionPressure &&
             shaded.pressureProxyCount == partCount &&
+            shadedProxies.exact && shadedProxies.pointCount == 0u &&
+            shadedProxies.axisAlignedBoxCount == partCount &&
+            shadedProxies.orientedBoxCount == 0u &&
             assembly->lastSubpixelProxyDrawPointCount() == 0u &&
             shadedWork.triangleCount == boxTriangles &&
             shadedWork.lineCount == 0u &&

@@ -43,6 +43,7 @@
  */
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadFrameReport.h>
 #include <Obol/cad/CadProgressive.h>
 #include <Obol/cad/CadProjectedProxy.h>
 #include <Inventor/SbBox3f.h>
@@ -212,6 +213,22 @@ struct CadSubpixelProxyPoint {
     bool boxCornersValid = false;
     bool boxOriented = false;
 };
+
+inline void
+cadAccumulateVisibleAggregateProxy(
+        const CadSubpixelProxyPoint& proxy,
+        Obol::CadAggregateProxyPresentationWork& work)
+{
+    if (proxy.flags & CadInstanceHidden)
+        return;
+    uint64_t *count = &work.pointCount;
+    if (proxy.shape == CadAggregateProxyShape::Box) {
+        count = proxy.boxOriented ? &work.orientedBoxCount :
+            &work.axisAlignedBoxCount;
+    }
+    if (*count != UINT64_MAX)
+        ++*count;
+}
 
 inline SbVec3f
 cadAggregateProxyBoxCorner(const CadSubpixelProxyPoint& proxy,

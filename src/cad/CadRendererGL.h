@@ -232,6 +232,15 @@ public:
         return visible;
     }
 
+    Obol::CadAggregateProxyPresentationWork
+        lastPressureProxyPresentationWork() const {
+        Obol::CadAggregateProxyPresentationWork work;
+        work.exact = lastRenderedWork_.exact;
+        for (const CadSubpixelProxyPoint& proxy : pressureProxyPoints())
+            cadAccumulateVisibleAggregateProxy(proxy, work);
+        return work;
+    }
+
     /**
      * Number of point vertices submitted for the last complete CAD frame.
      *
