@@ -59,7 +59,7 @@
   - The primitive type (EDGE, TRIANGLE, or BOUNDS).
   - Optional primitive index and parameterisation along an edge (u ∈ [0,1]).
 
-  \sa SoCADAssembly, SoDetail, Obol::CadId128
+  \sa SoCADAssembly, SoDetail, Obol::PartId, Obol::InstanceId
 */
 class OBOL_DLL_API SoCADDetail : public SoDetail {
     typedef SoDetail inherited;

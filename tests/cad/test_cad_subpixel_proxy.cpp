@@ -1,9 +1,11 @@
 /* View-local subpixel proxy rendering and hysteresis regression test. */
 
 #include "headless_utils.h"
+#include "cad/CadFramePlan.h"
 
 #include <Obol/cad/CadProjectedProxy.h>
 #include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADViewState.h>
 #include <Obol/cad/CadIds.h>
 
 #include <Inventor/SbViewportRegion.h>
@@ -16,11 +18,64 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
+
+template <typename Result>
+void
+requireCadMutation(const Result& result, const char *operation)
+{
+    if (!result)
+        throw std::runtime_error(std::string("CAD mutation failed: ") +
+            operation);
+}
+
+template <typename Result>
+Result
+requireCadValue(Result result, const char *operation)
+{
+    requireCadMutation(result, operation);
+    return result;
+}
+
+Obol::CadGeometryValidation
+admitAndUpsertPart(SoCADAssembly *assembly, Obol::PartId part,
+    Obol::PartGeometryBuilder geometry)
+{
+    const Obol::CadGeometryAdmission admission =
+        Obol::cadAdmitPartGeometry(std::move(geometry));
+    if (!admission)
+        return admission.validation;
+    return assembly->upsertParts({{part, admission.geometry}});
+}
+
+SoCADViewState *
+cadViewState(SoSeparator *root)
+{
+    if (!root)
+        throw std::invalid_argument("CAD test scene root is null");
+    for (int index = 0; index < root->getNumChildren(); ++index) {
+        SoNode *child = root->getChild(index);
+        if (child && child->isOfType(SoCADViewState::getClassTypeId()))
+            return static_cast<SoCADViewState *>(child);
+    }
+    SoCADViewState *viewState = new SoCADViewState;
+    viewState->viewIdLow.setValue(1);
+    root->addChild(viewState);
+    return viewState;
+}
+
+void
+setCadDrawMode(SoSeparator *root, SoCADViewState::DrawMode mode)
+{
+    cadViewState(root)->drawMode.setValue(mode);
+}
 
 void
 setTestEnvironment(const char *name, const char *value, int overwrite)
@@ -51,6 +106,8 @@ unsetTestEnvironment(const char *name)
 }
 
 Obol::WireRep unitBox();
+bool render(SoOffscreenRenderer& renderer, SoSeparator *root);
+size_t nonBlackPixels(const SoOffscreenRenderer& renderer);
 
 bool
 sharedProjectedProxyContract()
@@ -106,7 +163,7 @@ sharedProjectedProxyContract()
 bool
 degenerateStructuralProxyContract()
 {
-    Obol::PartGeometry geometry;
+    Obol::PartGeometryBuilder geometry;
     geometry.wire = unitBox();
     for (SbVec3f& point : geometry.wire->segmentPoints)
         point[2] = 0.0f;
@@ -124,6 +181,159 @@ degenerateStructuralProxyContract()
             return false;
     }
     return true;
+}
+
+std::array<SbVec3f, 8>
+orientedProxyCorners()
+{
+    constexpr float cosine = 0.8660254038f;
+    constexpr float sine = 0.5f;
+    constexpr float halfLength = 2.0f;
+    constexpr float halfWidth = 0.25f;
+    constexpr float halfHeight = 0.2f;
+    std::array<SbVec3f, 8> corners;
+    for (size_t corner = 0; corner < corners.size(); ++corner) {
+        const float localX = (corner & 1u) ? halfLength : -halfLength;
+        const float localY = (corner & 2u) ? halfWidth : -halfWidth;
+        corners[corner].setValue(
+            cosine * localX - sine * localY,
+            sine * localX + cosine * localY,
+            (corner & 4u) ? halfHeight : -halfHeight);
+    }
+    return corners;
+}
+
+Obol::WireRep
+orientedProxyWire(const std::array<SbVec3f, 8>& corners)
+{
+    Obol::internal::CadSubpixelProxyPoint proxy;
+    proxy.boxCorners = corners;
+    proxy.boxCornersValid = true;
+    Obol::WireRep wire;
+    wire.bounds.makeEmpty();
+    Obol::internal::cadForEachAggregateProxyBoxVertex(
+        proxy, [&wire](const SbVec3f& point) {
+            wire.segmentPoints.push_back(point);
+            wire.bounds.extendBy(point);
+        });
+    return wire;
+}
+
+bool
+orientedAggregateProxyContract()
+{
+    const std::array<SbVec3f, 8> corners = orientedProxyCorners();
+    Obol::PartGeometryBuilder geometry;
+    geometry.wire = orientedProxyWire(corners);
+    Obol::TriMesh shaded;
+    shaded.positions = {
+        corners[0], corners[1], corners[2], corners[4]
+    };
+    shaded.indices = {
+        0u, 2u, 1u,
+        0u, 1u, 3u,
+        0u, 3u, 2u,
+        1u, 2u, 3u
+    };
+    shaded.bounds.makeEmpty();
+    for (const SbVec3f& point : shaded.positions)
+        shaded.bounds.extendBy(point);
+    geometry.shaded = std::move(shaded);
+    geometry.shadedCullBackfaces = false;
+    geometry.aggregateProxyCorners = corners;
+    geometry.subpixelProxyEligible = true;
+
+    const Obol::CadGeometryAdmission admitted =
+        Obol::cadAdmitPartGeometry(geometry);
+    if (!admitted || !admitted.geometry ||
+            !admitted.geometry.get()->aggregateProxyCorners) {
+        std::fprintf(stderr, "oriented aggregate proxy admission failed: %s\n",
+            Obol::cadGeometryErrorName(admitted.validation.error));
+        return false;
+    }
+    SbVec3f admittedCorners[8];
+    if (!Obol::cadPartGeometryProxyCorners(
+            *admitted.geometry.get(), admittedCorners)) {
+        std::fprintf(stderr, "oriented aggregate proxy corners unavailable\n");
+        return false;
+    }
+    for (size_t corner = 0; corner < corners.size(); ++corner)
+        if (!admittedCorners[corner].equals(corners[corner], 1.0e-6f)) {
+            std::fprintf(stderr,
+                "oriented aggregate proxy corner changed during admission\n");
+            return false;
+        }
+
+    Obol::PartGeometryBuilder malformed = geometry;
+    (*malformed.aggregateProxyCorners)[7] += SbVec3f(0.25f, 0.0f, 0.0f);
+    const Obol::CadGeometryAdmission rejected =
+        Obol::cadAdmitPartGeometry(std::move(malformed));
+    if (rejected || rejected.validation.error !=
+            Obol::CadGeometryError::InvalidAggregateProxy) {
+        std::fprintf(stderr,
+            "malformed oriented aggregate proxy had result %s\n",
+            Obol::cadGeometryErrorName(rejected.validation.error));
+        return false;
+    }
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(20.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    cadViewState(root)->pointProxyPixelThreshold.setValue(64.0f);
+    root->addChild(assembly);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("oriented-aggregate-proxy");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "oriented aggregate proxy part");
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::rootInstance();
+    instance.childName = "oriented-aggregate-proxy";
+    instance.localToRoot.setTranslate(SbVec3f(0.5f, -0.25f, 0.0f));
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "oriented aggregate proxy instance");
+
+    const SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root) &&
+        assembly->lastSubpixelProxyCount() == 1u &&
+        assembly->lastSubpixelProxyDrawPointCount() == 0u &&
+        assembly->lastRenderedWork().triangleCount ==
+            Obol::CadAggregateProxyBoxTriangleCount &&
+        assembly->lastRenderedWork().lineCount == 0u &&
+        nonBlackPixels(renderer) > 0u;
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+    passed = passed && render(renderer, root) &&
+        assembly->lastSubpixelProxyCount() == 1u &&
+        assembly->lastSubpixelProxyDrawPointCount() == 0u &&
+        assembly->lastRenderedWork().triangleCount == 0u &&
+        assembly->lastRenderedWork().lineCount ==
+            Obol::CadAggregateProxyBoxLineCount &&
+        nonBlackPixels(renderer) > 0u;
+    if (!passed) {
+        const Obol::CadRenderedWork work = assembly->lastRenderedWork();
+        std::fprintf(stderr,
+            "oriented aggregate proxy render failed "
+            "(logical=%zu points=%zu triangles=%llu lines=%llu pixels=%zu)\n",
+            assembly->lastSubpixelProxyCount(),
+            assembly->lastSubpixelProxyDrawPointCount(),
+            static_cast<unsigned long long>(work.triangleCount),
+            static_cast<unsigned long long>(work.lineCount),
+            nonBlackPixels(renderer));
+    }
+    root->unref();
+    return passed;
 }
 
 void
@@ -243,23 +453,24 @@ softwareSubpixelProxyAggregationContract()
     root->addChild(camera);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     root->addChild(assembly);
 
-    Obol::PartGeometry geometry;
+    Obol::PartGeometryBuilder geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
     geometry.structuralProxy = true;
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("software-subpixel-proxy-part");
-    assembly->upsertPart(part, geometry);
+        Obol::CadIdBuilder::partId("software-subpixel-proxy-part");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "subpixel proxy part");
 
     std::vector<Obol::InstanceUpdate> updates;
     updates.reserve(occurrenceCount);
     for (uint32_t index = 0; index < occurrenceCount; ++index) {
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = "software-subpixel-proxy";
         instance.occurrenceIndex = index;
         instance.lodStructuralProxy = true;
@@ -271,13 +482,14 @@ softwareSubpixelProxyAggregationContract()
                 gridSpacing,
             0.0f));
         Obol::InstanceUpdate update;
-        update.instance = Obol::CadIdBuilder::extendNameOccBool(
+        update.instance = Obol::CadIdBuilder::childInstance(
             instance.parent, instance.childName, instance.occurrenceIndex,
             instance.boolOp);
         update.record = instance;
         updates.push_back(std::move(update));
     }
-    assembly->upsertInstances(updates);
+    requireCadMutation(assembly->upsertInstances(updates),
+        "subpixel proxy instances");
 
     const SbViewportRegion viewport(256, 256);
     SoOffscreenRenderer renderer(viewport);
@@ -384,7 +596,7 @@ normalFreeTwoSidedGlslMatchesFixed()
         root->addChild(light);
 
         SoCADAssembly *assembly = new SoCADAssembly;
-        assembly->drawMode.setValue(SoCADAssembly::SHADED);
+        setCadDrawMode(root, SoCADViewState::SHADED);
         root->addChild(assembly);
 
         /*
@@ -415,22 +627,24 @@ normalFreeTwoSidedGlslMatchesFixed()
         mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
         mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
 
-        Obol::PartGeometry geometry;
+        Obol::PartGeometryBuilder geometry;
         geometry.shaded = std::move(mesh);
         geometry.shadedCullBackfaces = false;
         const Obol::PartId part =
-            Obol::CadIdBuilder::hash128("normal-free-two-sided");
-        assembly->upsertPart(part, geometry);
+            Obol::CadIdBuilder::partId("normal-free-two-sided");
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "retained proxy part");
 
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = "normal-free-two-sided";
         instance.localToRoot.makeIdentity();
         instance.lodCut = 15;
         instance.style.hasColorOverride = true;
         instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        assembly->upsertInstanceAuto(instance);
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "retained proxy instance");
 
         const SbViewportRegion viewport(256, 192);
         SoOffscreenRenderer renderer(viewport);
@@ -492,7 +706,7 @@ indirectProgressiveAtlasGrows()
     root->addChild(new SoDirectionalLight);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     Obol::TriMesh mesh;
@@ -532,14 +746,15 @@ indirectProgressiveAtlasGrows()
         char name[64] = {};
         std::snprintf(name, sizeof(name),
             "progressive-atlas-growth-%03d", i);
-        Obol::PartGeometry geometry;
+        Obol::PartGeometryBuilder geometry;
         geometry.shaded = mesh;
-        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
-        assembly->upsertPart(part, geometry);
+        const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "progressive atlas part");
 
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = name;
         instance.occurrenceIndex = static_cast<uint32_t>(i);
         instance.localToRoot.setTranslate(SbVec3f(
@@ -548,7 +763,8 @@ indirectProgressiveAtlasGrows()
             0.0f));
         instance.lodCut = 0;
         const Obol::InstanceId id =
-            assembly->upsertInstanceAuto(instance);
+            requireCadValue(assembly->upsertInstanceAuto(instance),
+                "progressive atlas instance").instance;
         richCuts.push_back({id, 15});
     }
 
@@ -573,7 +789,8 @@ indirectProgressiveAtlasGrows()
      */
     bool passed = coarseRendered;
     if (passed && coarseTier == 6) {
-        assembly->updateInstanceCuts(richCuts);
+        requireCadMutation(assembly->updateInstanceCuts(richCuts),
+            "progressive atlas cuts");
         const bool richRendered = render(renderer, root);
         const uint64_t richTriangles =
             assembly->lastRenderedTriangleCount();
@@ -631,7 +848,7 @@ indirectProgressiveGenerationAppendsSuffix()
     root->addChild(camera);
     root->addChild(new SoDirectionalLight);
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     constexpr uint32_t triangleCount = 128u;
@@ -674,20 +891,24 @@ indirectProgressiveGenerationAppendsSuffix()
     coarse.progressiveResidentCut = 0;
 
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("progressive-generation-suffix");
-    std::shared_ptr<Obol::PartGeometry> coarseGeometry(
-        new Obol::PartGeometry);
+        Obol::CadIdBuilder::partId("progressive-generation-suffix");
+    std::shared_ptr<Obol::PartGeometryBuilder> coarseGeometry(
+        new Obol::PartGeometryBuilder);
     coarseGeometry->shaded = std::move(coarse);
     coarseGeometry->conservativeBounds = rich.bounds;
-    assembly->upsertSharedParts({{part, coarseGeometry, false}});
+    requireCadMutation(assembly->upsertParts({{part,
+        requireCadValue(Obol::cadAdmitPartGeometry(*coarseGeometry),
+            "progressive suffix admission").geometry, false}}),
+        "progressive suffix part");
 
     Obol::InstanceRecord instance;
     instance.part = part;
-    instance.parent = Obol::CadIdBuilder::Root();
+    instance.parent = Obol::CadIdBuilder::rootInstance();
     instance.childName = "progressive-generation-suffix";
     instance.localToRoot.makeIdentity();
     instance.lodCut = 15;
-    assembly->upsertInstanceAuto(instance);
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "progressive suffix instance");
 
     const SbViewportRegion viewport(192, 192);
     SoOffscreenRenderer renderer(viewport);
@@ -699,12 +920,15 @@ indirectProgressiveGenerationAppendsSuffix()
         assembly->gpuResourceSnapshot();
 
     if (passed && initialTier == 6) {
-        std::shared_ptr<Obol::PartGeometry> richGeometry(
-            new Obol::PartGeometry);
+        std::shared_ptr<Obol::PartGeometryBuilder> richGeometry(
+            new Obol::PartGeometryBuilder);
         richGeometry->shaded = std::move(rich);
         richGeometry->conservativeBounds =
             coarseGeometry->conservativeBounds;
-        assembly->upsertSharedParts({{part, richGeometry, true}});
+        requireCadMutation(assembly->upsertParts({{part,
+            requireCadValue(Obol::cadAdmitPartGeometry(*richGeometry),
+                "rich suffix admission").geometry, true}}),
+            "rich suffix part");
         passed = render(renderer, root);
         const Obol::CadGpuResourceSnapshot richResources =
             assembly->gpuResourceSnapshot();
@@ -771,7 +995,7 @@ ordinaryProgressiveGenerationAppendsSuffix()
     root->addChild(camera);
     root->addChild(new SoDirectionalLight);
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     constexpr uint32_t triangleCount = 128u;
@@ -815,20 +1039,24 @@ ordinaryProgressiveGenerationAppendsSuffix()
     Obol::TriMesh contracted = coarse;
 
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("ordinary-progressive-suffix");
-    std::shared_ptr<Obol::PartGeometry> coarseGeometry(
-        new Obol::PartGeometry);
+        Obol::CadIdBuilder::partId("ordinary-progressive-suffix");
+    std::shared_ptr<Obol::PartGeometryBuilder> coarseGeometry(
+        new Obol::PartGeometryBuilder);
     coarseGeometry->shaded = std::move(coarse);
     coarseGeometry->conservativeBounds = rich.bounds;
-    assembly->upsertSharedParts({{part, coarseGeometry, false}});
+    requireCadMutation(assembly->upsertParts({{part,
+        requireCadValue(Obol::cadAdmitPartGeometry(*coarseGeometry),
+            "ordinary suffix admission").geometry, false}}),
+        "ordinary suffix part");
 
     Obol::InstanceRecord instance;
     instance.part = part;
-    instance.parent = Obol::CadIdBuilder::Root();
+    instance.parent = Obol::CadIdBuilder::rootInstance();
     instance.childName = "ordinary-progressive-suffix";
     instance.localToRoot.makeIdentity();
     instance.lodCut = 15;
-    assembly->upsertInstanceAuto(instance);
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "ordinary suffix instance");
 
     const SbViewportRegion viewport(192, 192);
     SoOffscreenRenderer renderer(viewport);
@@ -839,12 +1067,15 @@ ordinaryProgressiveGenerationAppendsSuffix()
         assembly->gpuResourceSnapshot();
 
     if (passed) {
-        std::shared_ptr<Obol::PartGeometry> richGeometry(
-            new Obol::PartGeometry);
+        std::shared_ptr<Obol::PartGeometryBuilder> richGeometry(
+            new Obol::PartGeometryBuilder);
         richGeometry->shaded = std::move(rich);
         richGeometry->conservativeBounds =
             coarseGeometry->conservativeBounds;
-        assembly->upsertSharedParts({{part, richGeometry, true}});
+        requireCadMutation(assembly->upsertParts({{part,
+            requireCadValue(Obol::cadAdmitPartGeometry(*richGeometry),
+                "ordinary rich admission").geometry, true}}),
+            "ordinary rich part");
         passed = render(renderer, root);
         const Obol::CadGpuResourceSnapshot richResources =
             assembly->gpuResourceSnapshot();
@@ -909,13 +1140,16 @@ ordinaryProgressiveGenerationAppendsSuffix()
                     richResources.ordinaryPartLineageReuseCount));
         }
         if (passed) {
-            std::shared_ptr<Obol::PartGeometry> contractedGeometry(
-                new Obol::PartGeometry);
+            std::shared_ptr<Obol::PartGeometryBuilder> contractedGeometry(
+                new Obol::PartGeometryBuilder);
             contractedGeometry->shaded = std::move(contracted);
             contractedGeometry->conservativeBounds =
                 coarseGeometry->conservativeBounds;
-            assembly->upsertSharedParts(
-                {{part, contractedGeometry, true}});
+            requireCadMutation(assembly->upsertParts({{part,
+                requireCadValue(
+                    Obol::cadAdmitPartGeometry(*contractedGeometry),
+                    "ordinary contraction admission").geometry, true}}),
+                "ordinary contraction part");
             passed = render(renderer, root);
             const Obol::CadGpuResourceSnapshot contractedResources =
                 assembly->gpuResourceSnapshot();
@@ -962,13 +1196,16 @@ ordinaryProgressiveGenerationAppendsSuffix()
                 Obol::TriMesh replacement =
                     *contractedGeometry->shaded;
                 replacement.progressiveLineage = lineage + 1u;
-                std::shared_ptr<Obol::PartGeometry> replacementGeometry(
-                    new Obol::PartGeometry);
+                std::shared_ptr<Obol::PartGeometryBuilder> replacementGeometry(
+                    new Obol::PartGeometryBuilder);
                 replacementGeometry->shaded = std::move(replacement);
                 replacementGeometry->conservativeBounds =
                     contractedGeometry->conservativeBounds;
-                assembly->upsertSharedParts(
-                    {{part, replacementGeometry, true}});
+                requireCadMutation(assembly->upsertParts({{part,
+                    requireCadValue(
+                        Obol::cadAdmitPartGeometry(*replacementGeometry),
+                        "ordinary replacement admission").geometry, true}}),
+                    "ordinary replacement part");
                 passed = render(renderer, root);
                 const Obol::CadGpuResourceSnapshot replacementResources =
                     assembly->gpuResourceSnapshot();
@@ -1035,7 +1272,7 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
     root->addChild(camera);
     root->addChild(new SoDirectionalLight);
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     Obol::TriMesh rich;
@@ -1073,20 +1310,24 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
     coarse.progressiveResidentCut = 0;
 
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("ordinary-zero-lineage-replacement");
-    std::shared_ptr<Obol::PartGeometry> richGeometry(
-        new Obol::PartGeometry);
+        Obol::CadIdBuilder::partId("ordinary-zero-lineage-replacement");
+    std::shared_ptr<Obol::PartGeometryBuilder> richGeometry(
+        new Obol::PartGeometryBuilder);
     richGeometry->shaded = std::move(rich);
     richGeometry->conservativeBounds = richGeometry->shaded->bounds;
-    assembly->upsertSharedParts({{part, richGeometry, false}});
+    requireCadMutation(assembly->upsertParts({{part,
+        requireCadValue(Obol::cadAdmitPartGeometry(*richGeometry),
+            "zero-lineage rich admission").geometry, false}}),
+        "zero-lineage rich part");
 
     Obol::InstanceRecord instance;
     instance.part = part;
-    instance.parent = Obol::CadIdBuilder::Root();
+    instance.parent = Obol::CadIdBuilder::rootInstance();
     instance.childName = "ordinary-zero-lineage-replacement";
     instance.localToRoot.makeIdentity();
     instance.lodCut = 15;
-    assembly->upsertInstanceAuto(instance);
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "zero-lineage instance");
 
     const SbViewportRegion viewport(192, 192);
     SoOffscreenRenderer renderer(viewport);
@@ -1098,12 +1339,15 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
         assembly->gpuResourceSnapshot();
 
     if (passed) {
-        std::shared_ptr<Obol::PartGeometry> coarseGeometry(
-            new Obol::PartGeometry);
+        std::shared_ptr<Obol::PartGeometryBuilder> coarseGeometry(
+            new Obol::PartGeometryBuilder);
         coarseGeometry->shaded = std::move(coarse);
         coarseGeometry->conservativeBounds =
             richGeometry->conservativeBounds;
-        assembly->upsertSharedParts({{part, coarseGeometry, true}});
+        requireCadMutation(assembly->upsertParts({{part,
+            requireCadValue(Obol::cadAdmitPartGeometry(*coarseGeometry),
+                "zero-lineage coarse admission").geometry, true}}),
+            "zero-lineage coarse part");
         passed = render(renderer, root);
         const Obol::CadGpuResourceSnapshot coarseResources =
             assembly->gpuResourceSnapshot();
@@ -1182,6 +1426,407 @@ deadlineAbortPreparation(void *userData)
     return SoGLRenderAction::ABORT;
 }
 
+bool
+flatShadedPlanningResumesAcrossAborts()
+{
+    struct EnvironmentSnapshot {
+        const char *name = nullptr;
+        bool present = false;
+        std::string value;
+    } settings[] = {
+        {"OBOL_CAD_INDIRECT"},
+        {"OBOL_CAD_FLAT_SHADED"}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+    }
+    setTestEnvironment("OBOL_CAD_INDIRECT", "0", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_SHADED", "1", 1);
+    const auto restoreEnvironment = [&]() {
+        for (const EnvironmentSnapshot& setting : settings) {
+            if (setting.present)
+                setTestEnvironment(
+                    setting.name, setting.value.c_str(), 1);
+            else
+                unsetTestEnvironment(setting.name);
+        }
+    };
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    root->addChild(assembly);
+
+    constexpr uint32_t occurrenceCount = 2048u;
+    constexpr uint32_t partCount = 128u;
+    constexpr uint32_t instancesPerPart = occurrenceCount / partCount;
+    Obol::TriMesh mesh;
+    mesh.positions = {
+        SbVec3f(-0.01f, -0.01f, 0.0f),
+        SbVec3f(0.01f, -0.01f, 0.0f),
+        SbVec3f(0.0f, 0.01f, 0.0f)
+    };
+    mesh.indices = {0u, 1u, 2u};
+    mesh.bounds = SbBox3f(
+        SbVec3f(-0.01f, -0.01f, 0.0f),
+        SbVec3f(0.01f, 0.01f, 0.0f));
+
+    for (uint32_t partIndex = 0; partIndex < partCount; ++partIndex) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name),
+            "flat-planning-resume-%03u", partIndex);
+        Obol::PartGeometryBuilder geometry;
+        geometry.shaded = mesh;
+        geometry.shadedCullBackfaces = false;
+        const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "flat planning part");
+        for (uint32_t offset = 0;
+                offset < instancesPerPart; ++offset) {
+            const uint32_t occurrence =
+                partIndex * instancesPerPart + offset;
+            Obol::InstanceRecord instance;
+            instance.part = part;
+            instance.parent = Obol::CadIdBuilder::rootInstance();
+            instance.childName = name;
+            instance.occurrenceIndex = occurrence;
+            instance.localToRoot.setTranslate(SbVec3f(
+                -1.5f + 0.05f * static_cast<float>(occurrence % 64u),
+                -0.75f + 0.05f * static_cast<float>(occurrence / 64u),
+                0.0f));
+            requireCadMutation(assembly->upsertInstanceAuto(instance),
+                "flat planning instance");
+        }
+    }
+
+    SoOffscreenRenderer renderer(SbViewportRegion(192, 192));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    /* Compile and classify the occurrence stream without touching the
+     * shaded executor.  Subsequent abort samples then belong to flat-shaded
+     * preparation, not first-traversal scene setup. */
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+    const bool planWarmed = render(renderer, root);
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    SoGLRenderAction *action = renderer.getGLRenderAction();
+    SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+    void *previousData = nullptr;
+    if (action)
+        action->getAbortCallback(previousCallback, previousData);
+
+    bool passed = planWarmed && action != nullptr;
+    Obol::CadPresentationPreparationTarget target;
+    uint64_t priorCompleted = 0;
+    constexpr size_t interruptedSlices = 3u;
+    constexpr size_t initialPlanningSafePoint = 12u;
+    constexpr size_t resumedPlanningSafePoint = 10u;
+    for (size_t slice = 0; passed && slice < interruptedSlices; ++slice) {
+        DeadlineAbortCounter interrupted;
+        /* The first shaded traversal finishes the already-bounded
+         * occurrence classifier before entering planning.  Later slices
+         * start from its retained result and reach the renderer sooner. */
+        interrupted.abortAt = slice == 0 ?
+            initialPlanningSafePoint : resumedPlanningSafePoint;
+        action->setAbortCallback(deadlineAbortCounter, &interrupted);
+        (void)renderer.render(root);
+        const Obol::CadPresentationPreparationSnapshot snapshot =
+            assembly->presentationPreparationSnapshot();
+        passed = action->hasTerminated() &&
+            interrupted.calls == interrupted.abortAt &&
+            snapshot.target.kind ==
+                Obol::CadPresentationPreparationKind::FlatShadedPlanning &&
+            snapshot.state ==
+                Obol::CadPresentationPreparationState::Preparing &&
+            snapshot.totalUnits == occurrenceCount &&
+            snapshot.completedUnits > priorCompleted &&
+            snapshot.completedUnits < snapshot.totalUnits;
+        if (slice == 0)
+            target = snapshot.target;
+        else
+            passed = passed && snapshot.target == target;
+        priorCompleted = snapshot.completedUnits;
+    }
+    if (action)
+        action->setAbortCallback(previousCallback, previousData);
+    passed = passed && render(renderer, root) &&
+        assembly->lastRenderTier() == 4 &&
+        assembly->lastRenderedTriangleCount() == occurrenceCount;
+    const Obol::CadPresentationPreparationSnapshot completed =
+        assembly->presentationPreparationSnapshot();
+    passed = passed && completed.target.kind ==
+            Obol::CadPresentationPreparationKind::FlatShadedAtlas &&
+        completed.state ==
+            Obol::CadPresentationPreparationState::Complete &&
+        completed.totalUnits == occurrenceCount &&
+        completed.completedUnits == completed.totalUnits;
+    if (!passed) {
+        std::fprintf(stderr,
+            "flat planning did not resume with an immutable certificate "
+            "(tier=%d planning=%llu/%llu final-kind=%u final=%llu/%llu)\n",
+            assembly->lastRenderTier(),
+            static_cast<unsigned long long>(priorCompleted),
+            static_cast<unsigned long long>(occurrenceCount),
+            static_cast<unsigned>(completed.target.kind),
+            static_cast<unsigned long long>(completed.completedUnits),
+            static_cast<unsigned long long>(completed.totalUnits));
+    }
+
+    root->unref();
+    restoreEnvironment();
+    return passed;
+}
+
+bool
+flatShadedAtlasMakesProgressInsideLargeSourceRange()
+{
+    struct EnvironmentSnapshot {
+        const char *name = nullptr;
+        bool present = false;
+        std::string value;
+    } settings[] = {
+        {"OBOL_CAD_INDIRECT"},
+        {"OBOL_CAD_FLAT_SHADED"}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+    }
+    setTestEnvironment("OBOL_CAD_INDIRECT", "0", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_SHADED", "1", 1);
+    const auto restoreEnvironment = [&]() {
+        for (const EnvironmentSnapshot& setting : settings) {
+            if (setting.present)
+                setTestEnvironment(
+                    setting.name, setting.value.c_str(), 1);
+            else
+                unsetTestEnvironment(setting.name);
+        }
+    };
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+    root->addChild(assembly);
+
+    constexpr uint32_t triangleCount = 32u * 1024u;
+    Obol::TriMesh mesh;
+    mesh.positions.reserve(triangleCount * 3u);
+    mesh.indices.reserve(triangleCount * 3u);
+    mesh.bounds.makeEmpty();
+    for (uint32_t triangle = 0; triangle < triangleCount; ++triangle) {
+        const float x = -1.5f +
+            0.012f * static_cast<float>(triangle % 256u);
+        const float y = -0.75f +
+            0.012f * static_cast<float>((triangle / 256u) % 128u);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.008f, y, 0.0f),
+            SbVec3f(x + 0.004f, y + 0.007f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            mesh.indices.push_back(
+                static_cast<uint32_t>(mesh.positions.size()));
+            mesh.positions.push_back(point);
+            mesh.bounds.extendBy(point);
+        }
+    }
+    Obol::PartGeometryBuilder geometry;
+    geometry.shaded = mesh;
+    geometry.shadedCullBackfaces = false;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("flat-large-range");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "flat large-range part");
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::rootInstance();
+    instance.childName = "flat-large-range";
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "flat large-range instance");
+
+    SoOffscreenRenderer renderer(SbViewportRegion(192, 192));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    setCadDrawMode(root, SoCADViewState::HIDDEN_LINE);
+    SoGLRenderAction *action = renderer.getGLRenderAction();
+    SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+    void *previousData = nullptr;
+    if (action)
+        action->getAbortCallback(previousCallback, previousData);
+    else
+        passed = false;
+
+    DeadlineAbortCounter interrupted;
+    constexpr size_t atlasPartialProgressSafePoint = 64u;
+    interrupted.abortAt = atlasPartialProgressSafePoint;
+    if (passed) {
+        action->setAbortCallback(deadlineAbortCounter, &interrupted);
+        (void)renderer.render(root);
+        const Obol::CadPresentationPreparationSnapshot partial =
+            assembly->presentationPreparationSnapshot();
+        passed = action->hasTerminated() &&
+            partial.target.kind ==
+                Obol::CadPresentationPreparationKind::FlatShadedAtlas &&
+            partial.state ==
+                Obol::CadPresentationPreparationState::Preparing &&
+            partial.totalUnits > 1u && partial.completedUnits > 0u &&
+            partial.completedUnits < partial.totalUnits;
+    }
+    if (action)
+        action->setAbortCallback(previousCallback, previousData);
+    passed = passed && render(renderer, root) &&
+        assembly->lastRenderTier() == 3 &&
+        assembly->lastRenderedTriangleCount() == triangleCount;
+    const Obol::CadPresentationPreparationSnapshot completed =
+        assembly->presentationPreparationSnapshot();
+    passed = passed && completed.target.kind ==
+            Obol::CadPresentationPreparationKind::FlatShadedAtlas &&
+        completed.state ==
+            Obol::CadPresentationPreparationState::Complete &&
+        completed.completedUnits == completed.totalUnits;
+    if (!passed) {
+        std::fprintf(stderr,
+            "flat atlas did not commit progress inside a large source "
+            "range (tier=%d abort-calls=%zu state=%u units=%llu/%llu)\n",
+            assembly->lastRenderTier(), interrupted.calls,
+            static_cast<unsigned>(completed.state),
+            static_cast<unsigned long long>(completed.completedUnits),
+            static_cast<unsigned long long>(completed.totalUnits));
+    }
+
+    root->unref();
+    restoreEnvironment();
+    return passed;
+}
+
+bool
+progressiveReplacementTombstoneKeepsActiveIndex()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(8.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh mesh;
+    mesh.positions = {
+        SbVec3f(-0.4f, -0.3f, 0.0f),
+        SbVec3f(0.4f, -0.3f, 0.0f),
+        SbVec3f(0.0f, 0.4f, 0.0f)
+    };
+    mesh.indices = {0u, 1u, 2u};
+    mesh.bounds = SbBox3f(
+        SbVec3f(-0.4f, -0.3f, 0.0f),
+        SbVec3f(0.4f, 0.4f, 0.0f));
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 15;
+    setProgressiveCuts(mesh, 16, 3u, 3u);
+    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+
+    Obol::PartGeometryBuilder geometry;
+    geometry.shaded = mesh;
+    geometry.shadedCullBackfaces = false;
+    const Obol::PartId sharedPart =
+        Obol::CadIdBuilder::partId("tombstone-shared-progressive");
+    const Obol::PartId replacementPart =
+        Obol::CadIdBuilder::partId("tombstone-replacement-progressive");
+    requireCadMutation(admitAndUpsertPart(assembly, sharedPart, geometry),
+        "shared progressive part");
+    requireCadMutation(
+        admitAndUpsertPart(assembly, replacementPart, geometry),
+        "replacement progressive part");
+
+    constexpr size_t occurrenceCount = 4u;
+    std::array<Obol::InstanceId, occurrenceCount> instances;
+    std::array<Obol::InstanceRecord, occurrenceCount> records;
+    for (size_t index = 0; index < occurrenceCount; ++index) {
+        Obol::InstanceRecord& record = records[index];
+        record.part = sharedPart;
+        record.parent = Obol::CadIdBuilder::rootInstance();
+        record.childName = "tombstone-shared-occurrence";
+        record.occurrenceIndex = static_cast<uint32_t>(index);
+        record.lodCut = 0;
+        record.localToRoot.setTranslate(SbVec3f(
+            -2.25f + 1.5f * static_cast<float>(index), 0.0f, 0.0f));
+        instances[index] = requireCadValue(
+            assembly->upsertInstanceAuto(record),
+            "shared progressive instance").instance;
+    }
+
+    SoOffscreenRenderer renderer(SbViewportRegion(192, 192));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    const uint64_t compiledPlans = assembly->framePlanBuildCount();
+
+    /* Rebinding the final shared occurrence cannot reuse its old part slot,
+     * so the sparse path hides that compiled occurrence and appends its
+     * active replacement.  Moving the first peer to another cut then swaps
+     * it with the hidden final tombstone.  The tombstone and replacement
+     * share an InstanceId; this is the exact sequence which previously made
+     * the stale slot overwrite the active ID-to-index mapping. */
+    records.back().part = replacementPart;
+    Obol::InstanceUpdate rebind;
+    rebind.instance = instances.back();
+    rebind.record = records.back();
+    passed = passed && assembly->upsertInstances({rebind});
+
+    Obol::InstanceLodUpdate firstCut;
+    firstCut.instance = instances.front();
+    firstCut.lodCut = 15;
+    passed = passed && assembly->updateInstanceCuts({firstCut});
+    Obol::InstanceLodUpdate replacementCut;
+    replacementCut.instance = instances.back();
+    replacementCut.lodCut = 15;
+    passed = passed && assembly->updateInstanceCuts({replacementCut});
+    passed = passed && render(renderer, root) &&
+        assembly->framePlanBuildCount() == compiledPlans &&
+        assembly->lastRenderedTriangleCount() == occurrenceCount;
+    if (!passed) {
+        std::fprintf(stderr,
+            "progressive replacement tombstone stole the active index "
+            "(plan-builds=%llu/%llu triangles=%llu)\n",
+            static_cast<unsigned long long>(compiledPlans),
+            static_cast<unsigned long long>(
+                assembly->framePlanBuildCount()),
+            static_cast<unsigned long long>(
+                assembly->lastRenderedTriangleCount()));
+    }
+
+    root->unref();
+    return passed;
+}
+
 SoGLRenderAction::AbortCode
 deadlineAbortAssemblyWork(void *userData)
 {
@@ -1211,23 +1856,24 @@ subpixelPreparationReservationCoversBoundedScratch()
     root->addChild(camera);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     root->addChild(assembly);
 
-    Obol::PartGeometry geometry;
+    Obol::PartGeometryBuilder geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
     geometry.structuralProxy = true;
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("bounded-subpixel-preparation");
-    assembly->upsertPart(part, geometry);
+        Obol::CadIdBuilder::partId("bounded-subpixel-preparation");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "flattened wire part");
 
     std::vector<Obol::InstanceUpdate> updates;
     updates.reserve(occurrenceCount);
     for (uint32_t index = 0; index < occurrenceCount; ++index) {
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = "bounded-subpixel-preparation";
         instance.occurrenceIndex = index;
         instance.lodStructuralProxy = true;
@@ -1238,13 +1884,14 @@ subpixelPreparationReservationCoversBoundedScratch()
                 static_cast<float>(occurrenceCount / gridWidth) * 0.5f,
             0.0f));
         Obol::InstanceUpdate update;
-        update.instance = Obol::CadIdBuilder::extendNameOccBool(
+        update.instance = Obol::CadIdBuilder::childInstance(
             instance.parent, instance.childName,
             instance.occurrenceIndex, instance.boolOp);
         update.record = instance;
         updates.push_back(std::move(update));
     }
-    assembly->upsertInstances(updates);
+    requireCadMutation(assembly->upsertInstances(updates),
+        "flattened wire instances");
 
     SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
     renderer.setComponents(SoOffscreenRenderer::RGB);
@@ -1347,27 +1994,29 @@ ordinaryExecutorHonorsAbortSafePoints()
     root->addChild(camera);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     root->addChild(assembly);
 
-    Obol::PartGeometry geometry;
+    Obol::PartGeometryBuilder geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = false;
     geometry.structuralProxy = false;
     const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("deadline-shared-wire-part");
-    assembly->upsertPart(part, geometry);
+        Obol::CadIdBuilder::partId("deadline-shared-wire-part");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "software wire part");
     constexpr uint32_t instanceCount = 4096u;
     for (uint32_t index = 0; index < instanceCount; ++index) {
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = "deadline-shared-wire-instance";
         instance.occurrenceIndex = index;
         instance.localToRoot.setTranslate(SbVec3f(
             -31.5f + static_cast<float>(index % 64u),
             -31.5f + static_cast<float>(index / 64u), 0.0f));
-        assembly->upsertInstanceAuto(instance);
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "software wire instance");
     }
 
     const SbViewportRegion viewport(128, 128);
@@ -1474,7 +2123,7 @@ indirectAtlasValidationResumesAcrossAborts()
     root->addChild(new SoDirectionalLight);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     Obol::TriMesh triangle;
@@ -1495,21 +2144,23 @@ indirectAtlasValidationResumesAcrossAborts()
         char name[64] = {};
         std::snprintf(name, sizeof(name),
             "validation-resume-%04u", index);
-        Obol::PartGeometry geometry;
+        Obol::PartGeometryBuilder geometry;
         geometry.shaded = triangle;
         geometry.subpixelProxyEligible = false;
-        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
-        assembly->upsertPart(part, geometry);
+        const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "atlas pressure part");
 
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = name;
         instance.occurrenceIndex = index;
         instance.localToRoot.setTranslate(SbVec3f(
             -15.5f + static_cast<float>(index % 32u),
             -15.5f + static_cast<float>(index / 32u), 0.0f));
-        assembly->upsertInstanceAuto(instance);
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "atlas pressure instance");
     }
 
     const SbViewportRegion viewport(256, 256);
@@ -1612,7 +2263,7 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
     root->addChild(camera);
     root->addChild(new SoDirectionalLight);
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     root->addChild(assembly);
 
     Obol::TriMesh mesh;
@@ -1652,14 +2303,15 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
         char name[64] = {};
         std::snprintf(name, sizeof(name),
             "progressive-pressure-%03d", index);
-        Obol::PartGeometry geometry;
+        Obol::PartGeometryBuilder geometry;
         geometry.shaded = mesh;
         geometry.subpixelProxyEligible = true;
-        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
-        assembly->upsertPart(part, geometry);
+        const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "coverage pressure part");
         Obol::InstanceRecord instance;
         instance.part = part;
-        instance.parent = Obol::CadIdBuilder::Root();
+        instance.parent = Obol::CadIdBuilder::rootInstance();
         instance.childName = name;
         instance.occurrenceIndex = static_cast<uint32_t>(index);
         instance.localToRoot.setTranslate(SbVec3f(
@@ -1667,7 +2319,8 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
             -35.0f + 7.0f * static_cast<float>(index / 18), 0.0f));
         instance.lodCut = 0;
         const Obol::InstanceId id =
-            assembly->upsertInstanceAuto(instance);
+            requireCadValue(assembly->upsertInstanceAuto(instance),
+                "coverage pressure instance").instance;
         richCuts.push_back({id, 15});
     }
 
@@ -1678,7 +2331,8 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
     bool passed = render(renderer, root);
     const int tier = assembly->lastRenderTier();
     if (passed && tier == 6) {
-        assembly->updateInstanceCuts(richCuts);
+        requireCadMutation(assembly->updateInstanceCuts(richCuts),
+            "coverage pressure cuts");
         passed = render(renderer, root);
         const uint64_t pressuredTriangles =
             assembly->lastRenderedTriangleCount();
@@ -1730,6 +2384,165 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
     return passed;
 }
 
+bool
+indirectPressureProxyPreservesProjectedExtent()
+{
+    constexpr uint32_t partCount = 128u;
+    constexpr uint64_t boxTriangles =
+        partCount * Obol::CadAggregateProxyBoxTriangleCount;
+    constexpr uint64_t boxLines =
+        partCount * Obol::CadAggregateProxyBoxLineCount;
+
+    struct EnvironmentSnapshot {
+        const char *name;
+        bool present;
+        std::string value;
+    } settings[] = {
+        {"OBOL_CAD_INDIRECT", false, std::string()},
+        {"OBOL_CAD_ATLAS_MB", false, std::string()},
+        {"OBOL_CAD_FLAT_SHADED", false, std::string()}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+    }
+    setTestEnvironment("OBOL_CAD_INDIRECT", "1", 1);
+    /* An ordinary atlas page is 16 MiB.  This limit deliberately prevents
+     * even the minimum representation from being admitted. */
+    setTestEnvironment("OBOL_CAD_ATLAS_MB", "1", 1);
+    setTestEnvironment("OBOL_CAD_FLAT_SHADED", "0", 1);
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(24.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh tetrahedron;
+    tetrahedron.positions = {
+        SbVec3f(-0.5f, -0.5f, -0.5f),
+        SbVec3f( 0.5f, -0.5f, -0.5f),
+        SbVec3f( 0.0f,  0.5f, -0.5f),
+        SbVec3f( 0.0f,  0.0f,  0.5f)
+    };
+    tetrahedron.indices = {
+        0u, 2u, 1u,
+        0u, 1u, 3u,
+        1u, 2u, 3u,
+        2u, 0u, 3u
+    };
+    tetrahedron.bounds = SbBox3f(
+        SbVec3f(-0.5f, -0.5f, -0.5f),
+        SbVec3f( 0.5f,  0.5f,  0.5f));
+
+    for (uint32_t index = 0; index < partCount; ++index) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name),
+            "pressure-proxy-%03u", index);
+        Obol::PartGeometryBuilder geometry;
+        geometry.shaded = tetrahedron;
+        geometry.shadedCullBackfaces = false;
+        geometry.subpixelProxyEligible = true;
+        const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "pressure proxy part");
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::rootInstance();
+        instance.childName = name;
+        instance.occurrenceIndex = index;
+        instance.localToRoot.setTranslate(SbVec3f(
+            -15.0f + 2.0f * static_cast<float>(index % 16u),
+            -7.0f + 2.0f * static_cast<float>(index / 16u), 0.0f));
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "pressure proxy instance");
+    }
+
+    const SbViewportRegion viewport(384, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    if (passed && assembly->lastRenderTier() == 6) {
+        const Obol::CadGpuResourceSnapshot shaded =
+            assembly->gpuResourceSnapshot();
+        const Obol::CadRenderedWork shadedWork =
+            assembly->lastRenderedWork();
+        const size_t shadedPixels = nonBlackPixels(renderer);
+        const bool shadedPassed = shaded.atlasAdmissionPressure &&
+            shaded.pressureProxyCount == partCount &&
+            assembly->lastSubpixelProxyDrawPointCount() == 0u &&
+            shadedWork.triangleCount == boxTriangles &&
+            shadedWork.lineCount == 0u &&
+            shadedPixels > 0u;
+
+        setCadDrawMode(root, SoCADViewState::SHADED_WITH_EDGES);
+        const bool edgedRendered = render(renderer, root);
+        const Obol::CadRenderedWork edgedWork =
+            assembly->lastRenderedWork();
+        const bool edgedPassed = edgedRendered &&
+            assembly->gpuResourceSnapshot().pressureProxyCount == partCount &&
+            assembly->lastSubpixelProxyDrawPointCount() == 0u &&
+            edgedWork.triangleCount == boxTriangles &&
+            edgedWork.lineCount == boxLines;
+
+        camera->height.setValue(1024.0f);
+        setCadDrawMode(root, SoCADViewState::SHADED);
+        const bool pointRendered = render(renderer, root);
+        const Obol::CadRenderedWork pointWork =
+            assembly->lastRenderedWork();
+        const Obol::CadGpuResourceSnapshot pointSnapshot =
+            assembly->gpuResourceSnapshot();
+        /* Once every occurrence is genuinely point-sized, ordinary
+         * view-local aggregation precedes atlas admission.  The pressure
+         * fallback therefore has no remaining occurrences to replace. */
+        const bool pointPassed = pointRendered &&
+            pointSnapshot.pressureProxyCount == 0u &&
+            assembly->lastSubpixelProxyDrawPointCount() == partCount &&
+            pointWork.triangleCount == 0u && pointWork.lineCount == 0u;
+        passed = shadedPassed && edgedPassed && pointPassed;
+
+        if (!passed) {
+            std::fprintf(stderr,
+                "atlas-pressure proxy extent contract failed "
+                "(pressure=%zu shaded=%llu/%llu edged=%llu/%llu "
+                "points=%zu point-work=%llu/%llu "
+                "stage=%d/%d/%d point-render=%d point-pressure=%zu "
+                "pixels=%zu)\n",
+                shaded.pressureProxyCount,
+                static_cast<unsigned long long>(shadedWork.triangleCount),
+                static_cast<unsigned long long>(shadedWork.lineCount),
+                static_cast<unsigned long long>(edgedWork.triangleCount),
+                static_cast<unsigned long long>(edgedWork.lineCount),
+                assembly->lastSubpixelProxyDrawPointCount(),
+                static_cast<unsigned long long>(pointWork.triangleCount),
+                static_cast<unsigned long long>(pointWork.lineCount),
+                shadedPassed ? 1 : 0, edgedPassed ? 1 : 0,
+                pointPassed ? 1 : 0, pointRendered ? 1 : 0,
+                pointSnapshot.pressureProxyCount, shadedPixels);
+        }
+    }
+
+    root->unref();
+    for (const EnvironmentSnapshot& setting : settings) {
+        if (setting.present)
+            setTestEnvironment(setting.name, setting.value.c_str(), 1);
+        else
+            unsetTestEnvironment(setting.name);
+    }
+    return passed;
+}
+
 } // namespace
 
 int
@@ -1744,45 +2557,71 @@ runCadSubpixelProxyLifecycleContract()
     root->addChild(camera);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     root->addChild(assembly);
 
-    Obol::PartGeometry geometry;
+    Obol::PartGeometryBuilder geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
     geometry.structuralProxy = true;
-    const Obol::PartId part = Obol::CadIdBuilder::hash128("subpixel-proxy");
-    assembly->upsertPart(part, geometry);
+    const Obol::PartId part = Obol::CadIdBuilder::partId("subpixel-proxy");
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "proxy lifecycle part");
 
     Obol::InstanceRecord instance;
     instance.part = part;
-    instance.parent = Obol::CadIdBuilder::Root();
+    instance.parent = Obol::CadIdBuilder::rootInstance();
     instance.childName = "proxy";
     instance.localToRoot.makeIdentity();
     instance.lodStructuralProxy = true;
     instance.style.hasColorOverride = true;
     instance.style.color = SbColor4f(1.0f, 0.0f, 0.0f, 1.0f);
     const Obol::InstanceId proxyInstance =
-        assembly->upsertInstanceAuto(instance);
+        requireCadValue(assembly->upsertInstanceAuto(instance),
+            "proxy lifecycle instance").instance;
 
-    // An incorrectly tagged payload must not collapse.  It still has twelve
-    // segments, but one endpoint introduces a ninth unique corner so it is
-    // not the canonical conservative proxy representation.
-    Obol::PartGeometry malformed = geometry;
+    // An incorrectly bounded payload must not collapse: doing so could hide
+    // visible geometry outside the point proxy's projected extent.
+    Obol::PartGeometryBuilder malformed = geometry;
     malformed.wire->segmentPoints[0].setValue(-0.75f, -0.5f, -0.5f);
     const Obol::PartId malformedPart =
-        Obol::CadIdBuilder::hash128("malformed-subpixel-proxy");
-    assembly->upsertPart(malformedPart, malformed);
+        Obol::CadIdBuilder::partId("malformed-subpixel-proxy");
+    const Obol::CadGeometryValidation malformedResult =
+        admitAndUpsertPart(assembly, malformedPart, malformed);
+    if (malformedResult)
+        throw std::runtime_error("malformed CAD geometry was accepted");
+    if (malformedResult.error !=
+            Obol::CadGeometryError::NonConservativeBounds)
+        throw std::runtime_error("malformed CAD geometry had wrong error");
     instance.part = malformedPart;
     instance.childName = "malformed-proxy";
     instance.occurrenceIndex = 1;
-    assembly->upsertInstanceAuto(instance);
+    requireCadMutation(assembly->upsertInstanceAuto(instance),
+        "malformed-part reference instance");
 
     const SbViewportRegion viewport(256, 256);
     SoOffscreenRenderer renderer(viewport);
     renderer.setComponents(SoOffscreenRenderer::RGB);
     renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
 
+    /* A coalesced occurrence which still covers a recognizable screen area
+     * must retain its extent.  It remains one logical aggregate and one
+     * batched line stream; it is not converted into twelve scene draw calls. */
+    cadViewState(root)->pointProxyPixelThreshold.setValue(64.0f);
+    camera->height.setValue(20.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->lastSubpixelProxyDrawPointCount() != 0u ||
+            assembly->lastRenderedWork().lineCount != 12u ||
+            assembly->lastRenderedWork().positionCount != 24u ||
+            nonBlackPixels(renderer) == 0u) {
+        std::fprintf(stderr,
+            "screen-significant aggregate did not use one batched box\n");
+        root->unref();
+        return 1;
+    }
+
+    cadViewState(root)->pointProxyPixelThreshold.setValue(1.0f);
     camera->height.setValue(1000.0f);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
         nonBlackPixels(renderer) == 0u) {
@@ -1799,10 +2638,47 @@ runCadSubpixelProxyLifecycleContract()
         root->unref();
         return 1;
     }
-    /* Structural fallbacks are wire boxes regardless of the requested final
-     * mesh mode.  A shaded cold view must aggregate a subpixel box directly,
+    /* A point which grows past the hard five-pixel ceiling must become a box
+     * immediately.  Anti-flicker hysteresis is permitted only when shrinking
+     * a box back to a point. */
+    cadViewState(root)->pointProxyPixelThreshold.setValue(64.0f);
+    camera->height.setValue(45.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->lastSubpixelProxyDrawPointCount() != 0u ||
+            assembly->lastRenderedWork().lineCount !=
+                Obol::CadAggregateProxyBoxLineCount) {
+        std::fprintf(stderr,
+            "aggregate point exceeded the hard five-pixel ceiling\n");
+        root->unref();
+        return 1;
+    }
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    if (!render(renderer, root)) {
+        std::fprintf(stderr,
+            "shaded aggregate proxy frame did not render\n");
+        root->unref();
+        return 1;
+    }
+    const Obol::CadStructuralProxyPresentationWork shadedProxyWork =
+        assembly->lastStructuralProxyPresentationWork();
+    if (assembly->lastRenderedWork().lineCount != 0u ||
+            assembly->lastRenderedWork().triangleCount !=
+                Obol::CadAggregateProxyBoxTriangleCount ||
+            !shadedProxyWork.exact ||
+            shadedProxyWork.aggregatePointCount != 0u ||
+            shadedProxyWork.aggregateBoxCount != 1u ||
+            shadedProxyWork.retainedWireBoxCount != 0u ||
+            nonBlackPixels(renderer) == 0u) {
+        std::fprintf(stderr,
+            "shaded aggregate proxy was not rendered as a solid box\n");
+        root->unref();
+        return 1;
+    }
+    cadViewState(root)->pointProxyPixelThreshold.setValue(1.0f);
+    camera->height.setValue(1000.0f);
+    /* A shaded cold view must aggregate a subpixel replacement directly,
      * rather than loading a shaded mesh merely to reach the same point. */
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
             nonBlackPixels(renderer) == 0u) {
         std::fprintf(stderr,
@@ -1810,7 +2686,18 @@ runCadSubpixelProxyLifecycleContract()
         root->unref();
         return 1;
     }
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    const Obol::CadStructuralProxyPresentationWork pointProxyWork =
+        assembly->lastStructuralProxyPresentationWork();
+    if (!pointProxyWork.exact ||
+            pointProxyWork.aggregatePointCount != 1u ||
+            pointProxyWork.aggregateBoxCount != 0u ||
+            pointProxyWork.retainedWireBoxCount != 0u) {
+        std::fprintf(stderr,
+            "structural aggregate point work report was not exact\n");
+        root->unref();
+        return 1;
+    }
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
         std::fprintf(stderr,
             "wire structural fallback did not survive draw-mode restore\n");
@@ -1818,7 +2705,7 @@ runCadSubpixelProxyLifecycleContract()
         return 1;
     }
     camera->height.setValue(320.0f);
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    setCadDrawMode(root, SoCADViewState::SHADED);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
         std::fprintf(stderr,
             "pixel-sized shaded structural fallback used mesh hysteresis\n");
@@ -1826,7 +2713,7 @@ runCadSubpixelProxyLifecycleContract()
         return 1;
     }
     camera->height.setValue(1000.0f);
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
         std::fprintf(stderr,
             "structural fallback did not restore after boundary test\n");
@@ -1960,14 +2847,14 @@ runCadSubpixelProxyLifecycleContract()
     // enter the aggregate batch at a larger screen-error threshold.  Returning
     // to the pixel-exact threshold must restore its ordinary representation
     // without a geometry update.
-    assembly->pointProxyPixelThreshold.setValue(2.0f);
+    cadViewState(root)->pointProxyPixelThreshold.setValue(2.0f);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
         std::fprintf(stderr,
             "interactive point threshold did not aggregate retained proxy\n");
         root->unref();
         return 1;
     }
-    assembly->pointProxyPixelThreshold.setValue(1.0f);
+    cadViewState(root)->pointProxyPixelThreshold.setValue(1.0f);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 0u) {
         std::fprintf(stderr,
             "pixel-exact point threshold did not restore retained proxy\n");
@@ -1981,7 +2868,7 @@ runCadSubpixelProxyLifecycleContract()
      * channel changes, so a near view promotes the mesh without an update or
      * reload.
      */
-    Obol::PartGeometry shadedSubpixel;
+    Obol::PartGeometryBuilder shadedSubpixel;
     Obol::TriMesh shadedMesh;
     shadedMesh.positions = {
         SbVec3f(-0.5f, -0.5f, 0.0f),
@@ -1996,16 +2883,19 @@ runCadSubpixelProxyLifecycleContract()
     shadedSubpixel.shaded = std::move(shadedMesh);
     shadedSubpixel.subpixelProxyEligible = true;
     const Obol::PartId shadedSubpixelPart =
-        Obol::CadIdBuilder::hash128("shaded-subpixel");
-    assembly->upsertPart(shadedSubpixelPart, shadedSubpixel);
+        Obol::CadIdBuilder::partId("shaded-subpixel");
+    requireCadMutation(
+        admitAndUpsertPart(assembly, shadedSubpixelPart, shadedSubpixel),
+        "shaded subpixel part");
     Obol::InstanceRecord shadedInstance;
     shadedInstance.part = shadedSubpixelPart;
-    shadedInstance.parent = Obol::CadIdBuilder::Root();
+    shadedInstance.parent = Obol::CadIdBuilder::rootInstance();
     shadedInstance.childName = "shaded-subpixel";
     shadedInstance.localToRoot.makeIdentity();
     const Obol::InstanceId shadedSubpixelInstance =
-        assembly->upsertInstanceAuto(shadedInstance);
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+        requireCadValue(assembly->upsertInstanceAuto(shadedInstance),
+            "shaded subpixel instance").instance;
+    setCadDrawMode(root, SoCADViewState::SHADED);
     camera->height.setValue(1000.0f);
     if (!render(renderer, root) ||
             assembly->lastSubpixelProxyCount() != 2u) {
@@ -2052,9 +2942,9 @@ runCadSubpixelProxyLifecycleContract()
      * it with the ordinary per-part renderer so batching cannot silently
      * change authored coordinates or occurrence placement.
      */
-    assembly->drawMode.setValue(SoCADAssembly::SHADED_WITH_EDGES);
+    setCadDrawMode(root, SoCADViewState::SHADED_WITH_EDGES);
     for (int i = 0; i < 144; ++i) {
-        Obol::PartGeometry box;
+        Obol::PartGeometryBuilder box;
         box.wire = unitBox();
         box.subpixelProxyEligible = true;
         box.structuralProxy = true;
@@ -2070,12 +2960,13 @@ runCadSubpixelProxyLifecycleContract()
         }
         char partName[64] = {};
         std::snprintf(partName, sizeof(partName), "distinct-proxy-%03d", i);
-        const Obol::PartId boxPart = Obol::CadIdBuilder::hash128(partName);
-        assembly->upsertPart(boxPart, box);
+        const Obol::PartId boxPart = Obol::CadIdBuilder::partId(partName);
+        requireCadMutation(admitAndUpsertPart(assembly, boxPart, box),
+            "streamed box part");
 
         Obol::InstanceRecord boxInstance;
         boxInstance.part = boxPart;
-        boxInstance.parent = Obol::CadIdBuilder::Root();
+        boxInstance.parent = Obol::CadIdBuilder::rootInstance();
         boxInstance.childName = partName;
         boxInstance.occurrenceIndex = static_cast<uint32_t>(i + 2);
         boxInstance.lodStructuralProxy = true;
@@ -2087,10 +2978,11 @@ runCadSubpixelProxyLifecycleContract()
             (i & 1) ? 1.0f : 0.2f,
             (i & 2) ? 0.8f : 0.25f,
             (i & 4) ? 0.9f : 0.3f, 1.0f);
-        assembly->upsertInstanceAuto(boxInstance);
+        requireCadMutation(assembly->upsertInstanceAuto(boxInstance),
+            "streamed box instance");
     }
 
-    Obol::PartGeometry progressiveGeometry;
+    Obol::PartGeometryBuilder progressiveGeometry;
     Obol::TriMesh triangle;
     triangle.positions = {
         SbVec3f(-1.5f, -1.0f, -0.25f),
@@ -2110,14 +3002,17 @@ runCadSubpixelProxyLifecycleContract()
     triangle.progressiveQuantizationMaximum = triangle.bounds.getMax();
     progressiveGeometry.shaded = std::move(triangle);
     const Obol::PartId progressivePart =
-        Obol::CadIdBuilder::hash128("mixed-progressive-triangle");
-    assembly->upsertPart(progressivePart, progressiveGeometry);
+        Obol::CadIdBuilder::partId("mixed-progressive-triangle");
+    requireCadMutation(
+        admitAndUpsertPart(assembly, progressivePart, progressiveGeometry),
+        "streamed progressive part");
     Obol::InstanceRecord progressiveInstance;
     progressiveInstance.part = progressivePart;
-    progressiveInstance.parent = Obol::CadIdBuilder::Root();
+    progressiveInstance.parent = Obol::CadIdBuilder::rootInstance();
     progressiveInstance.childName = "mixed-progressive-triangle";
     progressiveInstance.localToRoot.makeIdentity();
-    assembly->upsertInstanceAuto(progressiveInstance);
+    requireCadMutation(assembly->upsertInstanceAuto(progressiveInstance),
+        "streamed progressive instance");
 
     camera->height.setValue(70.0f);
     setTestEnvironment("OBOL_CAD_FLAT_WIRE", "0", 1);
@@ -2173,7 +3068,8 @@ runCadSubpixelProxyLifecycleContract()
     Obol::InstanceStyleUpdate selectedStyleUpdate;
     selectedStyleUpdate.instance = proxyInstance;
     selectedStyleUpdate.style = selectedStyle;
-    assembly->updateInstanceStyles({selectedStyleUpdate});
+    requireCadMutation(assembly->updateInstanceStyles({selectedStyleUpdate}),
+        "streamed selected style");
     assembly->setSelectedInstances({proxyInstance});
     if (!render(renderer, root) ||
             assembly->selectedInstanceCount() != 1u ||
@@ -2199,22 +3095,24 @@ runCadSubpixelProxyLifecycleContract()
      * rebind, not arbitrary assembly topology: adding the unreferenced mesh
      * and rebinding the unique occurrence must retain the compiled plan.
      */
-    Obol::PartGeometry rebindBox;
+    Obol::PartGeometryBuilder rebindBox;
     rebindBox.wire = unitBox();
     rebindBox.subpixelProxyEligible = true;
     rebindBox.structuralProxy = true;
     const Obol::PartId rebindBoxPart =
-        Obol::CadIdBuilder::hash128("stream-rebind-box");
-    assembly->upsertPart(rebindBoxPart, rebindBox);
+        Obol::CadIdBuilder::partId("stream-rebind-box");
+    requireCadMutation(admitAndUpsertPart(assembly, rebindBoxPart, rebindBox),
+        "rebind box part");
     Obol::InstanceRecord rebindRecord;
     rebindRecord.part = rebindBoxPart;
-    rebindRecord.parent = Obol::CadIdBuilder::Root();
+    rebindRecord.parent = Obol::CadIdBuilder::rootInstance();
     rebindRecord.childName = "stream-rebind";
     rebindRecord.occurrenceIndex = 9001;
     rebindRecord.lodStructuralProxy = true;
     rebindRecord.localToRoot.setTranslate(SbVec3f(0.0f, 20.0f, 0.0f));
     const Obol::InstanceId rebindInstance =
-        assembly->upsertInstanceAuto(rebindRecord);
+        requireCadValue(assembly->upsertInstanceAuto(rebindRecord),
+            "rebind instance").instance;
     if (!render(renderer, root)) {
         std::fprintf(stderr, "stream rebind setup did not render\n");
         root->unref();
@@ -2224,14 +3122,17 @@ runCadSubpixelProxyLifecycleContract()
     const size_t rebindPlanInstances =
         assembly->framePlanInstanceRecordCount();
     const Obol::PartId rebindMeshPart =
-        Obol::CadIdBuilder::hash128("stream-rebind-mesh");
-    assembly->upsertPart(rebindMeshPart, progressiveGeometry);
+        Obol::CadIdBuilder::partId("stream-rebind-mesh");
+    requireCadMutation(
+        admitAndUpsertPart(assembly, rebindMeshPart, progressiveGeometry),
+        "rebind mesh part");
     rebindRecord.part = rebindMeshPart;
     rebindRecord.lodStructuralProxy = false;
     Obol::InstanceUpdate rebindUpdate;
     rebindUpdate.instance = rebindInstance;
     rebindUpdate.record = rebindRecord;
-    assembly->upsertInstances({rebindUpdate});
+    requireCadMutation(assembly->upsertInstances({rebindUpdate}),
+        "part rebind");
     if (!render(renderer, root) ||
             assembly->framePlanBuildCount() != rebindPlanBuilds ||
             assembly->framePlanInstanceRecordCount() !=
@@ -2251,8 +3152,9 @@ runCadSubpixelProxyLifecycleContract()
      * 256-512 occurrence publication.
      */
     const Obol::PartId mixedRebindBoxPart =
-        Obol::CadIdBuilder::hash128("mixed-wave-rebind-box");
-    assembly->upsertPart(mixedRebindBoxPart, rebindBox);
+        Obol::CadIdBuilder::partId("mixed-wave-rebind-box");
+    requireCadMutation(admitAndUpsertPart(assembly, mixedRebindBoxPart, rebindBox),
+        "mixed rebind box part");
     Obol::InstanceRecord mixedRebindRecord = rebindRecord;
     mixedRebindRecord.part = mixedRebindBoxPart;
     mixedRebindRecord.childName = "mixed-wave-rebind";
@@ -2261,7 +3163,8 @@ runCadSubpixelProxyLifecycleContract()
     mixedRebindRecord.localToRoot.setTranslate(
         SbVec3f(-8.0f, 20.0f, 0.0f));
     const Obol::InstanceId mixedRebindInstance =
-        assembly->upsertInstanceAuto(mixedRebindRecord);
+        requireCadValue(assembly->upsertInstanceAuto(mixedRebindRecord),
+            "mixed rebind instance").instance;
 
     Obol::InstanceRecord mixedCutRecord = progressiveInstance;
     mixedCutRecord.childName = "mixed-wave-cut";
@@ -2270,7 +3173,8 @@ runCadSubpixelProxyLifecycleContract()
     mixedCutRecord.localToRoot.setTranslate(
         SbVec3f(8.0f, 20.0f, 0.0f));
     const Obol::InstanceId mixedCutInstance =
-        assembly->upsertInstanceAuto(mixedCutRecord);
+        requireCadValue(assembly->upsertInstanceAuto(mixedCutRecord),
+            "mixed cut instance").instance;
     if (!render(renderer, root)) {
         std::fprintf(stderr, "mixed rebind/cut setup did not render\n");
         root->unref();
@@ -2282,8 +3186,10 @@ runCadSubpixelProxyLifecycleContract()
         assembly->framePlanInstanceRecordCount();
 
     const Obol::PartId mixedRebindMeshPart =
-        Obol::CadIdBuilder::hash128("mixed-wave-rebind-mesh");
-    assembly->upsertPart(mixedRebindMeshPart, progressiveGeometry);
+        Obol::CadIdBuilder::partId("mixed-wave-rebind-mesh");
+    requireCadMutation(
+        admitAndUpsertPart(assembly, mixedRebindMeshPart, progressiveGeometry),
+        "mixed rebind mesh part");
     mixedRebindRecord.part = mixedRebindMeshPart;
     mixedRebindRecord.lodStructuralProxy = false;
     Obol::InstanceUpdate mixedRebindUpdate;
@@ -2293,7 +3199,9 @@ runCadSubpixelProxyLifecycleContract()
     Obol::InstanceUpdate mixedCutUpdate;
     mixedCutUpdate.instance = mixedCutInstance;
     mixedCutUpdate.record = mixedCutRecord;
-    assembly->upsertInstances({mixedRebindUpdate, mixedCutUpdate});
+    requireCadMutation(
+        assembly->upsertInstances({mixedRebindUpdate, mixedCutUpdate}),
+        "mixed rebind instances");
     const std::optional<Obol::InstanceRecord> retainedMixedRebind =
         assembly->getInstanceRecord(mixedRebindInstance);
     const std::optional<Obol::InstanceRecord> retainedMixedCut =
@@ -2335,8 +3243,9 @@ runCadSubpixelProxyLifecycleContract()
      * internally tombstoned and redirected to its mesh tail record.
      */
     const Obol::PartId sharedBoxPart =
-        Obol::CadIdBuilder::hash128("stream-shared-box");
-    assembly->upsertPart(sharedBoxPart, rebindBox);
+        Obol::CadIdBuilder::partId("stream-shared-box");
+    requireCadMutation(admitAndUpsertPart(assembly, sharedBoxPart, rebindBox),
+        "shared box part");
     Obol::InstanceRecord sharedBoxA = rebindRecord;
     sharedBoxA.part = sharedBoxPart;
     sharedBoxA.lodStructuralProxy = true;
@@ -2344,13 +3253,15 @@ runCadSubpixelProxyLifecycleContract()
     sharedBoxA.occurrenceIndex = 9002;
     sharedBoxA.localToRoot.setTranslate(SbVec3f(-4.0f, 24.0f, 0.0f));
     const Obol::InstanceId sharedBoxAId =
-        assembly->upsertInstanceAuto(sharedBoxA);
+        requireCadValue(assembly->upsertInstanceAuto(sharedBoxA),
+            "shared box instance A").instance;
     Obol::InstanceRecord sharedBoxB = sharedBoxA;
     sharedBoxB.childName = "stream-shared-box-b";
     sharedBoxB.occurrenceIndex = 9003;
     sharedBoxB.localToRoot.setTranslate(SbVec3f(4.0f, 24.0f, 0.0f));
     const Obol::InstanceId sharedBoxBId =
-        assembly->upsertInstanceAuto(sharedBoxB);
+        requireCadValue(assembly->upsertInstanceAuto(sharedBoxB),
+            "shared box instance B").instance;
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
                 sharedProxyBaseline + 2u) {
@@ -2409,6 +3320,36 @@ runCadSubpixelProxyLifecycleContract()
         root->unref();
         return 1;
     }
+    const std::array<float,
+        Obol::CadStructuralProxyProjectionHistogram::BucketCount>
+        structuralBucketLimits = {1.0f, 2.0f, 4.0f, 8.0f,
+            16.0f, 32.0f, 64.0f};
+    for (size_t bucket = 0; bucket < structuralBucketLimits.size();
+            ++bucket) {
+        const std::vector<Obol::InstanceId> above =
+            assembly->lastStructuralProxyInstancesAbovePixels(
+                structuralBucketLimits[bucket]);
+        const uint64_t expected = sharedProjection.visibleCount -
+            sharedProjection.cumulativeCount[bucket];
+        bool sortedUnique = true;
+        for (size_t instance = 1; instance < above.size(); ++instance) {
+            const Obol::InstanceId &previous = above[instance - 1];
+            const Obol::InstanceId &current = above[instance];
+            sortedUnique = sortedUnique &&
+                (previous.w0 < current.w0 ||
+                 (previous.w0 == current.w0 && previous.w1 < current.w1));
+        }
+        if (above.size() != expected || !sortedUnique) {
+            std::fprintf(stderr,
+                "structural projected-size frontier mismatch "
+                "limit=%.0f expected=%llu actual=%zu sorted=%d\n",
+                structuralBucketLimits[bucket],
+                static_cast<unsigned long long>(expected), above.size(),
+                sortedUnique ? 1 : 0);
+            root->unref();
+            return 1;
+        }
+    }
     const uint64_t mixedStreamPlanBuilds =
         assembly->framePlanBuildCount();
     assembly->setHiddenInstances({sharedBoxAId});
@@ -2450,7 +3391,8 @@ runCadSubpixelProxyLifecycleContract()
     offscreenBox.localToRoot.setTranslate(
         SbVec3f(100000.0f, 24.0f, 0.0f));
     const Obol::InstanceId offscreenBoxId =
-        assembly->upsertInstanceAuto(offscreenBox);
+        requireCadValue(assembly->upsertInstanceAuto(offscreenBox),
+            "offscreen box instance").instance;
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
                 sharedProxyBaseline + 2u ||
@@ -2485,13 +3427,15 @@ runCadSubpixelProxyLifecycleContract()
     newStreamed.occurrenceIndex = 9004;
     newStreamed.localToRoot.setTranslate(SbVec3f(0.0f, 28.0f, 0.0f));
     const Obol::InstanceId newStreamedId =
-        Obol::CadIdBuilder::extendNameOccBool(
+        Obol::CadIdBuilder::childInstance(
             newStreamed.parent, newStreamed.childName,
             newStreamed.occurrenceIndex, newStreamed.boolOp);
     Obol::InstanceUpdate newStreamedUpdate;
     newStreamedUpdate.instance = newStreamedId;
     newStreamedUpdate.record = newStreamed;
-    assembly->upsertInstances({promotedUpdate, newStreamedUpdate});
+    requireCadMutation(
+        assembly->upsertInstances({promotedUpdate, newStreamedUpdate}),
+        "promoted streamed instances");
     if (!render(renderer, root) ||
             assembly->framePlanBuildCount() != mixedStreamPlanBuilds ||
             assembly->lastUncollapsedStructuralProxyCount() !=
@@ -2540,7 +3484,7 @@ runCadSubpixelProxyLifecycleContract()
             30.0f, 0.0f));
         Obol::InstanceUpdate lateBoxUpdate;
         lateBoxUpdate.instance =
-            Obol::CadIdBuilder::extendNameOccBool(
+            Obol::CadIdBuilder::childInstance(
                 lateBox.parent, lateBox.childName,
                 lateBox.occurrenceIndex, lateBox.boolOp);
         lateBoxUpdate.record = lateBox;
@@ -2556,13 +3500,13 @@ runCadSubpixelProxyLifecycleContract()
             34.0f, 0.0f));
         Obol::InstanceUpdate lateMeshUpdate;
         lateMeshUpdate.instance =
-            Obol::CadIdBuilder::extendNameOccBool(
+            Obol::CadIdBuilder::childInstance(
                 lateMesh.parent, lateMesh.childName,
                 lateMesh.occurrenceIndex, lateMesh.boolOp);
         lateMeshUpdate.record = lateMesh;
 
-        assembly->upsertInstances(
-            {lateMeshUpdate, lateBoxUpdate});
+        requireCadMutation(assembly->upsertInstances(
+            {lateMeshUpdate, lateBoxUpdate}), "late streamed instances");
         if (!render(renderer, root) ||
                 assembly->framePlanBuildCount() !=
                     mixedStreamPlanBuilds ||
@@ -2583,8 +3527,9 @@ runCadSubpixelProxyLifecycleContract()
     for (int i = 0; i < 3; ++i) {
         char name[64] = {};
         std::snprintf(name, sizeof(name), "bulk-remove-part-%d", i);
-        const Obol::PartId id = Obol::CadIdBuilder::hash128(name);
-        assembly->upsertPart(id, geometry);
+        const Obol::PartId id = Obol::CadIdBuilder::partId(name);
+        requireCadMutation(admitAndUpsertPart(assembly, id, geometry),
+            "stream compaction part");
         removalParts.push_back(id);
     }
     const size_t beforeBulkRemove = assembly->partCount();
@@ -2613,8 +3558,8 @@ runCadSubpixelProxyLifecycleContract()
     }
     const uint64_t beforeClassification =
         assembly->renderPreparationSerial();
-    const float threshold = assembly->pointProxyPixelThreshold.getValue();
-    assembly->pointProxyPixelThreshold.setValue(
+    const float threshold = cadViewState(root)->pointProxyPixelThreshold.getValue();
+    cadViewState(root)->pointProxyPixelThreshold.setValue(
         threshold < 64.0f ? threshold + 1.0f : threshold - 1.0f);
     if (!observedSteadyReplay || !render(renderer, root) ||
             assembly->renderPreparationSerial() == beforeClassification) {
@@ -2652,6 +3597,11 @@ TEST_F(CadSubpixelProxyContracts, ProjectedProxyClassificationHandlesClipEdges)
 TEST_F(CadSubpixelProxyContracts, DegenerateStructuralProxyKeepsItsPlane)
 {
     EXPECT_TRUE(degenerateStructuralProxyContract());
+}
+
+TEST_F(CadSubpixelProxyContracts, OrientedAggregateProxyIsRetainedAndRendered)
+{
+    EXPECT_TRUE(orientedAggregateProxyContract());
 }
 
 TEST_F(CadSubpixelProxyContracts, SoftwareAggregationPreservesLogicalCoverage)
@@ -2704,7 +3654,27 @@ TEST_F(CadSubpixelProxyContracts, IndirectAtlasPreservesCoverageUnderPressure)
     EXPECT_TRUE(indirectProgressiveAtlasPreservesCoverageUnderPressure());
 }
 
+TEST_F(CadSubpixelProxyContracts, IndirectPressureProxyPreservesProjectedExtent)
+{
+    EXPECT_TRUE(indirectPressureProxyPreservesProjectedExtent());
+}
+
 TEST_F(CadSubpixelProxyContracts, PreparationReservationCoversBoundedScratch)
 {
     EXPECT_TRUE(subpixelPreparationReservationCoversBoundedScratch());
+}
+
+TEST_F(CadSubpixelProxyContracts, FlatShadedPlanningResumesAcrossAborts)
+{
+    EXPECT_TRUE(flatShadedPlanningResumesAcrossAborts());
+}
+
+TEST_F(CadSubpixelProxyContracts, FlatShadedAtlasMakesProgressInsideLargeSourceRange)
+{
+    EXPECT_TRUE(flatShadedAtlasMakesProgressInsideLargeSourceRange());
+}
+
+TEST_F(CadSubpixelProxyContracts, ProgressiveReplacementTombstoneKeepsActiveIndex)
+{
+    EXPECT_TRUE(progressiveReplacementTombstoneKeepsActiveIndex());
 }

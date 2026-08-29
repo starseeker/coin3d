@@ -75,6 +75,9 @@ GLuint CadRendererGL::linkProgram(const SoGLContext* glue, GLuint vs, GLuint fs)
         glue->glBindAttribLocationARB(prog, 1,
                                       reinterpret_cast<OBOL_GLchar*>(
                                           const_cast<char*>("a_color")));
+        glue->glBindAttribLocationARB(prog, 2,
+                                      reinterpret_cast<OBOL_GLchar*>(
+                                          const_cast<char*>("a_proxyColor")));
         glue->glBindAttribLocationARB(prog, kInstTransformLoc,
                                       reinterpret_cast<OBOL_GLchar*>(
                                           const_cast<char*>("a_instTransform")));
@@ -189,6 +192,19 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
         glue->glDeleteObjectARB(vs);
         glue->glDeleteObjectARB(fs);
         if (!shaders_.proxyPoint) return false;
+    }
+    {
+        GLuint vs = compileShader(glue, GL_VERTEX_SHADER_ARB, kProxyShadedVS1);
+        GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kShadedFS1);
+        if (!vs || !fs) {
+            if (vs) glue->glDeleteObjectARB(vs);
+            if (fs) glue->glDeleteObjectARB(fs);
+            return false;
+        }
+        shaders_.proxyShaded = linkProgram(glue, vs, fs);
+        glue->glDeleteObjectARB(vs);
+        glue->glDeleteObjectARB(fs);
+        if (!shaders_.proxyShaded) return false;
     }
     {
         GLuint vs = compileShader(glue, GL_VERTEX_SHADER_ARB, kShadedVS1);

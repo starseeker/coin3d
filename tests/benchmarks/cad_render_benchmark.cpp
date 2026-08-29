@@ -207,20 +207,27 @@ static SoSeparator *buildCADScene(int grid)
 
     SoCADViewState *viewState = new SoCADViewState;
     viewState->viewIdLow.setValue(1);
+    viewState->drawMode.setValue(SoCADViewState::WIREFRAME);
     root->addChild(viewState);
 
     SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
     root->addChild(assembly);
 
     // Register one part: the unit wireframe box
-    Obol::PartId unitBoxPartId = Obol::CadIdBuilder::hash128("unit_box");
-    Obol::PartGeometry geom;
+    Obol::PartId unitBoxPartId = Obol::CadIdBuilder::partId("unit_box");
+    Obol::PartGeometryBuilder geom;
     geom.wire = buildBoxWire();
-    assembly->upsertParts({{unitBoxPartId, std::move(geom)}});
+    Obol::CadGeometryAdmission admission =
+        Obol::cadAdmitPartGeometry(std::move(geom));
+    if (!admission || !assembly->upsertParts(
+            {{unitBoxPartId, admission.geometry}})) {
+        std::fprintf(stderr, "CAD benchmark part publication failed\n");
+        root->unref();
+        return nullptr;
+    }
 
     // Create grid^3 instances with per-instance transforms
-    Obol::InstanceId rootId = Obol::CadIdBuilder::Root();
+    Obol::InstanceId rootId = Obol::CadIdBuilder::rootInstance();
     int instanceIdx = 0;
     std::vector<Obol::InstanceRecord> records;
     records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
@@ -248,7 +255,11 @@ static SoSeparator *buildCADScene(int grid)
             }
         }
     }
-    assembly->upsertInstancesAuto(records);
+    if (!assembly->upsertInstancesAuto(records)) {
+        std::fprintf(stderr, "CAD benchmark instance publication failed\n");
+        root->unref();
+        return nullptr;
+    }
 
     // Frame camera the same way as the SG scene
     SbViewportRegion vp(W, H);
@@ -381,6 +392,11 @@ int main(int argc, char **argv)
 
     auto t4 = Clock::now();
     SoSeparator *cadRoot = buildCADScene(grid);
+    if (!cadRoot) {
+        std::fprintf(stderr, "FAIL: CAD benchmark scene construction failed\n");
+        sgRoot->unref();
+        return 1;
+    }
     auto t5 = Clock::now();
     double cadBuildMs = Ms(t5 - t4).count();
     printf("  build:  %.1f ms\n", cadBuildMs);
@@ -580,6 +596,14 @@ int main(int argc, char **argv)
     printf("\n--- Orthographic: CAD assembly approach ---\n");
 
     SoSeparator *cadOrthoRoot = buildCADScene(grid);
+    if (!cadOrthoRoot) {
+        std::fprintf(stderr,
+            "FAIL: orthographic CAD scene construction failed\n");
+        sgRoot->unref();
+        cadRoot->unref();
+        sgOrthoRoot->unref();
+        return 1;
+    }
     swapToOrthoCamera(cadOrthoRoot);
 
     SbViewportRegion vpCADO(W, H);

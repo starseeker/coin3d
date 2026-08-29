@@ -33,6 +33,7 @@ extern const char * const kWireVS1;
 extern const char * const kWirePopVS1;
 extern const char * const kWireFS1;
 extern const char * const kProxyPointVS1;
+extern const char * const kProxyShadedVS1;
 extern const char * const kShadedVS1;
 extern const char * const kShadedPopVS1;
 extern const char * const kShadedFaceVS1;

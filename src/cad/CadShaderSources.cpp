@@ -59,7 +59,7 @@ const char * const kWireFS1 =
     "}\n";
 
 // View-local proxy points carry their own per-occurrence colour so thousands
-// of differently coloured AABB/OBB replacements remain one draw call.
+// of differently coloured aggregate replacements remain one draw call.
 const char * const kProxyPointVS1 =
     "attribute vec3 a_pos;\n"
     "attribute vec4 a_color;\n"
@@ -68,6 +68,25 @@ const char * const kProxyPointVS1 =
     "void main() {\n"
     "    gl_Position = u_viewProj * vec4(a_pos, 1.0);\n"
     "    v_color = a_color;\n"
+    "}\n";
+
+// Solid aggregate proxies use explicit box-face normals and per-proxy colour.
+// A distinct colour attribute avoids aliasing the normal stream at location 1.
+const char * const kProxyShadedVS1 =
+    "attribute vec3 a_pos;\n"
+    "attribute vec3 a_norm;\n"
+    "attribute vec4 a_proxyColor;\n"
+    "uniform mat4 u_viewProj;\n"
+    "uniform int u_hasNorm;\n"
+    "varying vec3 v_norm;\n"
+    "varying vec3 v_worldPos;\n"
+    "varying vec4 v_color;\n"
+    "void main() {\n"
+    "    vec4 wp = vec4(a_pos, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
+    "    v_norm = a_norm;\n"
+    "    v_color = a_proxyColor;\n"
     "}\n";
 
 // Shaded pass: multi-light (directional/point/spot) in world space

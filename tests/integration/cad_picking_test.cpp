@@ -20,6 +20,7 @@ using Obol::CadIdBuilder;
 using Obol::InstanceId;
 using Obol::PartId;
 using Obol::PartGeometry;
+using Obol::PartGeometryBuilder;
 using Obol::PointRep;
 using Obol::ProgressiveTriangleCluster;
 using Obol::ProgressiveTriangleCut;
@@ -30,6 +31,19 @@ using Obol::picking::CadPartEdgeBVH;
 using Obol::picking::CadPartTriBVH;
 using Obol::picking::CadPickQuery;
 using Obol::picking::CadPickResult;
+
+std::shared_ptr<const PartGeometry>
+admitGeometry(PartGeometryBuilder geometry)
+{
+    Obol::CadGeometryAdmission admission =
+        Obol::cadAdmitPartGeometry(std::move(geometry));
+    if (!admission) {
+        ADD_FAILURE() << "test geometry admission failed: "
+                      << Obol::cadGeometryErrorName(admission.validation.error);
+        return {};
+    }
+    return admission.geometry.shared();
+}
 
 WireRep makeCubeWireframe()
 {
@@ -84,11 +98,13 @@ TEST(CadPicking, InstanceBvhQueriesOnlyIntersectedInstances)
     first_bounds.setBounds(SbVec3f(0, 0, 0), SbVec3f(1, 1, 1));
     SbBox3f second_bounds;
     second_bounds.setBounds(SbVec3f(5, 5, 5), SbVec3f(6, 6, 6));
-    const InstanceId first = CadIdBuilder::hash128("first-instance");
+    const InstanceId first = CadIdBuilder::instanceId("first-instance");
     bvh.build({
-        makeEntry(CadIdBuilder::hash128("first-part"), first, first_bounds, identity),
-        makeEntry(CadIdBuilder::hash128("second-part"),
-                  CadIdBuilder::hash128("second-instance"), second_bounds, identity),
+        makeEntry(CadIdBuilder::partId("first-part"), first,
+                  first_bounds, identity),
+        makeEntry(CadIdBuilder::partId("second-part"),
+                  CadIdBuilder::instanceId("second-instance"),
+                  second_bounds, identity),
     });
 
     const auto hit = bvh.query(
@@ -124,19 +140,19 @@ TEST(CadPicking, EdgeBvhReturnsOnlySegmentsInsideTolerance)
 
 TEST(CadPicking, EdgeAndBoundsPicksRetainStableInstanceIdentity)
 {
-    const PartId cube_part = CadIdBuilder::hash128("cube-part");
-    const PartId pyramid_part = CadIdBuilder::hash128("pyramid-part");
-    const InstanceId cube = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::Root(), "cube", 0, 0);
-    const InstanceId pyramid = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::Root(), "pyramid", 0, 0);
-    PartGeometry cube_geometry;
+    const PartId cube_part = CadIdBuilder::partId("cube-part");
+    const PartId pyramid_part = CadIdBuilder::partId("pyramid-part");
+    const InstanceId cube = CadIdBuilder::childInstance(
+        CadIdBuilder::rootInstance(), "cube", 0, 0);
+    const InstanceId pyramid = CadIdBuilder::childInstance(
+        CadIdBuilder::rootInstance(), "pyramid", 0, 0);
+    PartGeometryBuilder cube_geometry;
     cube_geometry.wire = makeCubeWireframe();
-    PartGeometry pyramid_geometry;
+    PartGeometryBuilder pyramid_geometry;
     pyramid_geometry.shaded = makePyramid();
     std::unordered_map<PartId, std::shared_ptr<const PartGeometry>> parts;
-    parts.emplace(cube_part, std::make_shared<const PartGeometry>(cube_geometry));
-    parts.emplace(pyramid_part, std::make_shared<const PartGeometry>(pyramid_geometry));
+    parts.emplace(cube_part, admitGeometry(std::move(cube_geometry)));
+    parts.emplace(pyramid_part, admitGeometry(std::move(pyramid_geometry)));
 
     SbMatrix identity;
     identity.makeIdentity();
@@ -191,9 +207,9 @@ TEST(CadPicking, TriangleBvhHandlesHitMissAndBehindRay)
 
 TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
 {
-    const PartId part = CadIdBuilder::hash128("adaptive-part");
-    const InstanceId instance = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::Root(), "adaptive", 0, 0);
+    const PartId part = CadIdBuilder::partId("adaptive-part");
+    const InstanceId instance = CadIdBuilder::childInstance(
+        CadIdBuilder::rootInstance(), "adaptive", 0, 0);
     TriMesh mesh;
     mesh.positions = {
         {-1, -1, 0}, {1, -1, 0}, {0, 1, 0},
@@ -211,16 +227,18 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     mesh.progressiveResidentCut = 2;
     ProgressiveTriangleCluster first;
     first.bounds.setBounds(SbVec3f(-1, -1, 0), SbVec3f(1, 1, 0));
+    first.residentCut = 2;
     first.ranges.push_back({0, 3, 0});
     ProgressiveTriangleCluster second;
     second.bounds.setBounds(SbVec3f(9, -1, 0), SbVec3f(11, 1, 0));
+    second.residentCut = 2;
     second.ranges.push_back({3, 3, 2});
     mesh.progressiveClusters = {first, second};
 
-    PartGeometry geometry;
+    PartGeometryBuilder geometry;
     geometry.shaded = mesh;
     std::unordered_map<PartId, std::shared_ptr<const PartGeometry>> parts;
-    parts.emplace(part, std::make_shared<const PartGeometry>(geometry));
+    parts.emplace(part, admitGeometry(std::move(geometry)));
     SbMatrix identity;
     identity.makeIdentity();
     auto entry = makeEntry(part, instance, mesh.bounds, identity);
@@ -240,17 +258,17 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
 
 TEST(CadPicking, PointPicksApplyTransformsAndPreserveProducerIds)
 {
-    const PartId part = CadIdBuilder::hash128("point-part");
-    const InstanceId instance = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::Root(), "points", 0, 0);
+    const PartId part = CadIdBuilder::partId("point-part");
+    const InstanceId instance = CadIdBuilder::childInstance(
+        CadIdBuilder::rootInstance(), "points", 0, 0);
     PointRep points;
     points.positions = {{-1, 0, 0}, {2, 0, 0}};
     points.pointIds = {17, 23};
     points.bounds.setBounds(SbVec3f(-1, 0, 0), SbVec3f(2, 0, 0));
-    PartGeometry geometry;
+    PartGeometryBuilder geometry;
     geometry.points = points;
     std::unordered_map<PartId, std::shared_ptr<const PartGeometry>> parts;
-    parts.emplace(part, std::make_shared<const PartGeometry>(geometry));
+    parts.emplace(part, admitGeometry(std::move(geometry)));
 
     SbMatrix transform;
     transform.setTranslate(SbVec3f(4, 3, 0));

@@ -42,6 +42,9 @@
 #include <Inventor/actions/SoAction.h>
 #include <Inventor/misc/SoState.h>
 
+#include <algorithm>
+#include <cmath>
+
 SO_ELEMENT_SOURCE(SoCADViewStateElement);
 
 void
@@ -66,9 +69,7 @@ SoCADViewStateElement::matches(const SoElement *element) const
 {
     const SoCADViewStateElement *other =
         static_cast<const SoCADViewStateElement *>(element);
-    return this->viewState_.viewId == other->viewState_.viewId &&
-        this->viewState_.softwareWireMode ==
-            other->viewState_.softwareWireMode;
+    return this->viewState_ == other->viewState_;
 }
 
 SoElement *
@@ -128,7 +129,30 @@ SoCADViewState::SoCADViewState(void)
 
     SO_NODE_ADD_FIELD(viewIdHigh, (0));
     SO_NODE_ADD_FIELD(viewIdLow, (0));
+    SO_NODE_ADD_FIELD(drawMode, (WIREFRAME));
+    SO_NODE_ADD_FIELD(pickMode, (PICK_AUTO));
+    SO_NODE_ADD_FIELD(edgePickTolerancePixels,
+        (Obol::CadDefaultEdgePickTolerancePixels));
+    SO_NODE_ADD_FIELD(wireframeOcclusion, (FALSE));
+    SO_NODE_ADD_FIELD(progressiveCutCeiling, (-1));
+    SO_NODE_ADD_FIELD(progressiveCutNextFraction, (0.0f));
+    SO_NODE_ADD_FIELD(pointProxyPixelThreshold,
+        (Obol::CadMinimumPointProxyPixels));
+    SO_NODE_ADD_FIELD(cameraMotionFrameReuse, (FALSE));
     SO_NODE_ADD_FIELD(softwareWireMode, (SOFTWARE_WIRE_INHERIT));
+
+    SO_NODE_DEFINE_ENUM_VALUE(DrawMode, SHADED);
+    SO_NODE_DEFINE_ENUM_VALUE(DrawMode, WIREFRAME);
+    SO_NODE_DEFINE_ENUM_VALUE(DrawMode, SHADED_WITH_EDGES);
+    SO_NODE_DEFINE_ENUM_VALUE(DrawMode, HIDDEN_LINE);
+    SO_NODE_SET_SF_ENUM_TYPE(drawMode, DrawMode);
+
+    SO_NODE_DEFINE_ENUM_VALUE(PickMode, PICK_AUTO);
+    SO_NODE_DEFINE_ENUM_VALUE(PickMode, PICK_EDGE);
+    SO_NODE_DEFINE_ENUM_VALUE(PickMode, PICK_TRIANGLE);
+    SO_NODE_DEFINE_ENUM_VALUE(PickMode, PICK_BOUNDS);
+    SO_NODE_DEFINE_ENUM_VALUE(PickMode, PICK_HYBRID);
+    SO_NODE_SET_SF_ENUM_TYPE(pickMode, PickMode);
 
     SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_INHERIT);
     SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_AUTO);
@@ -174,6 +198,71 @@ SoCADViewState::doAction(SoAction *action)
                 break;
         }
     }
+    if (!this->drawMode.isIgnored()) {
+        switch (this->drawMode.getValue()) {
+            case SHADED:
+                viewState.drawMode = Obol::CadDrawMode::Shaded;
+                break;
+            case SHADED_WITH_EDGES:
+                viewState.drawMode = Obol::CadDrawMode::ShadedWithEdges;
+                break;
+            case HIDDEN_LINE:
+                viewState.drawMode = Obol::CadDrawMode::HiddenLine;
+                break;
+            default:
+                viewState.drawMode = Obol::CadDrawMode::Wireframe;
+                break;
+        }
+    }
+    if (!this->pickMode.isIgnored()) {
+        switch (this->pickMode.getValue()) {
+            case PICK_EDGE:
+                viewState.pickMode = Obol::CadPickMode::Edge;
+                break;
+            case PICK_TRIANGLE:
+                viewState.pickMode = Obol::CadPickMode::Triangle;
+                break;
+            case PICK_BOUNDS:
+                viewState.pickMode = Obol::CadPickMode::Bounds;
+                break;
+            case PICK_HYBRID:
+                viewState.pickMode = Obol::CadPickMode::Hybrid;
+                break;
+            default:
+                viewState.pickMode = Obol::CadPickMode::Automatic;
+                break;
+        }
+    }
+    if (!this->edgePickTolerancePixels.isIgnored()) {
+        const float tolerance = this->edgePickTolerancePixels.getValue();
+        viewState.edgePickTolerancePixels =
+            std::isfinite(tolerance) && tolerance >= 0.0f ?
+                tolerance : Obol::CadDefaultEdgePickTolerancePixels;
+    }
+    if (!this->wireframeOcclusion.isIgnored())
+        viewState.wireframeOcclusion =
+            this->wireframeOcclusion.getValue() != FALSE;
+    if (!this->progressiveCutCeiling.isIgnored()) {
+        const int ceiling = this->progressiveCutCeiling.getValue();
+        viewState.progressiveCutCeiling = ceiling < 0 ? -1 :
+            std::min(ceiling,
+                static_cast<int>(Obol::ProgressiveCutUnspecified) - 1);
+    }
+    if (!this->progressiveCutNextFraction.isIgnored()) {
+        const float fraction = this->progressiveCutNextFraction.getValue();
+        viewState.progressiveCutNextFraction = std::isfinite(fraction) ?
+            std::max(0.0f, std::min(1.0f, fraction)) : 0.0f;
+    }
+    if (!this->pointProxyPixelThreshold.isIgnored()) {
+        const float pixels = this->pointProxyPixelThreshold.getValue();
+        viewState.pointProxyPixelThreshold = std::isfinite(pixels) ?
+            std::max(Obol::CadMinimumPointProxyPixels,
+                std::min(Obol::CadMaximumPointProxyPixels, pixels)) :
+            Obol::CadMinimumPointProxyPixels;
+    }
+    if (!this->cameraMotionFrameReuse.isIgnored())
+        viewState.cameraMotionFrameReuse =
+            this->cameraMotionFrameReuse.getValue() != FALSE;
 
     SoCADViewStateElement::set(state, viewState);
 }

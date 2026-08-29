@@ -41,7 +41,10 @@
 #include <Obol/cad/CadViewState.h>
 
 #include <Inventor/elements/SoSubElement.h>
+#include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFEnum.h>
+#include <Inventor/fields/SoSFFloat.h>
+#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoSFUInt32.h>
 #include <Inventor/nodes/SoSubNode.h>
 
@@ -75,9 +78,11 @@ private:
 /**
  * @brief Node that supplies view-local CAD policy to later CAD nodes.
  *
- * Place one of these in a view-specific branch before shared CAD assembly
- * nodes. The shared assembly data remains immutable across views; the
- * traversal state carries presentation policy that does not alter geometry.
+ * Place one of these in a view-specific branch before that view's CAD
+ * presentation nodes.  Independent presentations may retain the same
+ * immutable PartGeometry objects, but each SoCADAssembly owns camera-local
+ * preparation and completed-frame evidence and therefore belongs to one
+ * presentation branch.
  */
 class OBOL_DLL_API SoCADViewState : public SoNode {
     typedef SoNode inherited;
@@ -85,6 +90,21 @@ class OBOL_DLL_API SoCADViewState : public SoNode {
     SO_NODE_HEADER(SoCADViewState);
 
 public:
+    enum DrawMode {
+        SHADED = 0,
+        WIREFRAME = 1,
+        SHADED_WITH_EDGES = 2,
+        HIDDEN_LINE = 3
+    };
+
+    enum PickMode {
+        PICK_AUTO = 0,
+        PICK_EDGE = 1,
+        PICK_TRIANGLE = 2,
+        PICK_BOUNDS = 3,
+        PICK_HYBRID = 4
+    };
+
     enum SoftwareWireMode {
         SOFTWARE_WIRE_INHERIT = -1,
         SOFTWARE_WIRE_AUTO = 0,
@@ -97,6 +117,14 @@ public:
 
     SoSFUInt32 viewIdHigh;
     SoSFUInt32 viewIdLow;
+    SoSFEnum   drawMode;
+    SoSFEnum   pickMode;
+    SoSFFloat  edgePickTolerancePixels;
+    SoSFBool   wireframeOcclusion;
+    SoSFInt32  progressiveCutCeiling;
+    SoSFFloat  progressiveCutNextFraction;
+    SoSFFloat  pointProxyPixelThreshold;
+    SoSFBool   cameraMotionFrameReuse;
     SoSFEnum   softwareWireMode;
 
     virtual SbBool affectsState(void) const override;

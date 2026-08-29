@@ -85,46 +85,57 @@ CadIdBuilder::fnv1a128_update(uint64_t& hi, uint64_t& lo, uint8_t byte) noexcept
     hi = new_hi;
 }
 
-CadId128
-CadIdBuilder::hash128(const uint8_t* bytes, size_t length) noexcept
+void
+CadIdBuilder::hashWords(const uint8_t* bytes, size_t length,
+                        uint64_t& hi, uint64_t& lo) noexcept
 {
-    uint64_t hi = kFNV128_OffsetBasisHi;
-    uint64_t lo = kFNV128_OffsetBasisLo;
+    hi = kFNV128_OffsetBasisHi;
+    lo = kFNV128_OffsetBasisLo;
     for (size_t i = 0; i < length; ++i) {
         fnv1a128_update(hi, lo, bytes[i]);
     }
-    CadId128 id;
-    id.w0 = hi;
-    id.w1 = lo;
+}
+
+PartId
+CadIdBuilder::partId(const uint8_t* bytes, size_t length) noexcept
+{
+    PartId id;
+    hashWords(bytes, length, id.w0, id.w1);
     return id;
 }
 
-CadId128
-CadIdBuilder::extend(CadId128 parent, const uint8_t* stepBytes, size_t length) noexcept
+InstanceId
+CadIdBuilder::instanceId(const uint8_t* bytes, size_t length) noexcept
 {
-    // Start from the parent's state rather than the FNV offset basis.
-    // This chains parent → child deterministically.
+    InstanceId id;
+    hashWords(bytes, length, id.w0, id.w1);
+    return id;
+}
+
+InstanceId
+CadIdBuilder::extendInstance(InstanceId parent,
+                             const uint8_t* stepBytes,
+                             size_t length) noexcept
+{
     uint64_t hi = parent.w0;
     uint64_t lo = parent.w1;
-    // Guard against a zero parent (root): use offset basis instead
-    if (hi == 0 && lo == 0) {
+    if (!parent.isValid()) {
         hi = kFNV128_OffsetBasisHi;
         lo = kFNV128_OffsetBasisLo;
     }
-    for (size_t i = 0; i < length; ++i) {
+    for (size_t i = 0; i < length; ++i)
         fnv1a128_update(hi, lo, stepBytes[i]);
-    }
-    CadId128 id;
+    InstanceId id;
     id.w0 = hi;
     id.w1 = lo;
     return id;
 }
 
-CadId128
-CadIdBuilder::extendNameOccBool(CadId128     parent,
-                                const std::string& childName,
-                                uint32_t     occurrenceIndex,
-                                uint8_t      boolOp) noexcept
+InstanceId
+CadIdBuilder::childInstance(InstanceId parent,
+                            const std::string& childName,
+                            uint32_t occurrenceIndex,
+                            uint8_t boolOp) noexcept
 {
     // Pack step data: name bytes + NUL separator + occurrence (4 bytes LE) + boolOp
     // Using a fixed-format encoding ensures determinism independent of endianness.
@@ -146,7 +157,7 @@ CadIdBuilder::extendNameOccBool(CadId128     parent,
     buf[pos++] = static_cast<uint8_t>((occurrenceIndex >> 24) & 0xFF);
     buf[pos++] = boolOp;
 
-    CadId128 result = extend(parent, buf, pos);
+    const InstanceId result = extendInstance(parent, buf, pos);
     if (buf != stack_buf) {
         delete[] buf;
     }

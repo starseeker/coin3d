@@ -44,6 +44,7 @@
 
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadProgressive.h>
+#include <Obol/cad/CadProjectedProxy.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
@@ -159,6 +160,7 @@ struct CadPartBinding {
     uint64_t generation = 0;
     bool subpixelProxyEligible = false;
     bool structuralProxy = false;
+    bool subpixelProxyOriented = false;
     std::array<SbVec3f, 8> subpixelProxyCorners = {};
 };
 
@@ -186,16 +188,90 @@ struct CadDrawItem {
     int       baseVertex     = 0; ///< Base vertex for indexed drawing
 };
 
+enum class CadAggregateProxyShape : uint8_t {
+    Point = 0u,
+    Box = 1u
+};
+
 /**
- * A view-local point replacing one eligible wire proxy for this frame.
- * Positions are world-space, so the batch has no per-instance transform.
+ * A view-local aggregate replacing one eligible occurrence for this frame.
+ * Positions and bounds are world-space, so the batch has no per-instance
+ * transform.  A point is used only for a genuinely tiny footprint; a larger
+ * aggregate preserves its conservative extent as a box rendered according to
+ * the active draw mode.
  */
 struct CadSubpixelProxyPoint {
     SbVec3f position;
+    SbVec3f boundsMinimum;
+    SbVec3f boundsMaximum;
+    std::array<SbVec3f, 8> boxCorners = {};
     std::array<uint8_t, 4> rgba = {204, 204, 204, 255};
     InstanceId instanceId;
     uint32_t flags = 0;
+    CadAggregateProxyShape shape = CadAggregateProxyShape::Point;
+    bool boxCornersValid = false;
+    bool boxOriented = false;
 };
+
+inline SbVec3f
+cadAggregateProxyBoxCorner(const CadSubpixelProxyPoint& proxy,
+                           unsigned int corner)
+{
+    if (proxy.boxCornersValid)
+        return proxy.boxCorners[corner & 7u];
+    return SbVec3f(
+        (corner & 1u) ? proxy.boundsMaximum[0] : proxy.boundsMinimum[0],
+        (corner & 2u) ? proxy.boundsMaximum[1] : proxy.boundsMinimum[1],
+        (corner & 4u) ? proxy.boundsMaximum[2] : proxy.boundsMinimum[2]);
+}
+
+template <typename Append>
+inline void
+cadForEachAggregateProxyBoxVertex(const CadSubpixelProxyPoint& proxy,
+                                  Append append)
+{
+    static constexpr std::array<unsigned int,
+        Obol::CadAggregateProxyBoxPositionCount> edgeCorners = {{
+            0, 1, 2, 3, 4, 5, 6, 7,
+            0, 2, 1, 3, 4, 6, 5, 7,
+            0, 4, 1, 5, 2, 6, 3, 7
+        }};
+    for (const unsigned int corner : edgeCorners)
+        append(cadAggregateProxyBoxCorner(proxy, corner));
+}
+
+template <typename Append>
+inline void
+cadForEachAggregateProxyBoxTriangleVertex(
+    const CadSubpixelProxyPoint& proxy, Append append)
+{
+    struct Face {
+        std::array<unsigned int, 6> corners;
+    };
+    static const std::array<Face, 6> faces = {{
+        {{{0, 4, 6, 0, 6, 2}}},
+        {{{1, 3, 7, 1, 7, 5}}},
+        {{{0, 1, 5, 0, 5, 4}}},
+        {{{2, 6, 7, 2, 7, 3}}},
+        {{{0, 2, 3, 0, 3, 1}}},
+        {{{4, 5, 7, 4, 7, 6}}}
+    }};
+    for (const Face& face : faces) {
+        const SbVec3f a = cadAggregateProxyBoxCorner(
+            proxy, face.corners[0]);
+        const SbVec3f b = cadAggregateProxyBoxCorner(
+            proxy, face.corners[1]);
+        const SbVec3f c = cadAggregateProxyBoxCorner(
+            proxy, face.corners[2]);
+        SbVec3f normal = (b - a).cross(c - a);
+        if (normal.sqrLength() > 0.0f)
+            normal.normalize();
+        else
+            normal.setValue(0.0f, 0.0f, 1.0f);
+        for (const unsigned int corner : face.corners)
+            append(cadAggregateProxyBoxCorner(proxy, corner), normal);
+    }
+}
 
 /**
  * One non-consuming batch of in-place instance attribute changes.

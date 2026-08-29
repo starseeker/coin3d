@@ -81,31 +81,64 @@ Register the node type once at application start:
 SoCADAssembly::initClass();   // also registers CAD detail and view-state types
 ```
 
-### Adding parts
+### Publishing parts and instances
+
+Geometry validation belongs at the producer boundary.  The presentation
+thread then applies one checked sparse transaction, so a rejected style, cut,
+part, or instance cannot expose a partially updated scene:
+
+`PartGeometryBuilder` is the mutable producer form.  Admission validates it
+and privately constructs a const `PartGeometry` snapshot; clients cannot
+construct or modify the renderer-visible type.  Move a completed builder to
+transfer large arrays without copying.  An intentional lvalue admission makes
+an independent snapshot, so later builder edits cannot change live geometry.
 
 ```cpp
 using namespace Obol;
 
-// Create a wire-only part (no tessellation needed)
+// Create a wire-only part (no tessellation needed).
+PartGeometryBuilder builder;
 WireRep wire;
 WirePolyline poly;
 poly.points = { SbVec3f(0,0,0), SbVec3f(1,0,0), SbVec3f(1,1,0) };
 wire.polylines.push_back(poly);
 wire.bounds.setBounds(SbVec3f(0,0,0), SbVec3f(1,1,0));
+builder.wire = std::move(wire);
 
-PartGeometry geom;
-geom.wire = std::move(wire);
+const CadGeometryAdmission admitted = cadAdmitPartGeometry(std::move(builder));
+if (!admitted) {
+    // Report cadGeometryErrorName(admitted.validation.error).
+    return;
+}
 
-PartId pid = CadIdBuilder::hash128("my_part_name");
-assembly->upsertPart(pid, geom);
+const PartId pid = CadIdBuilder::partId("my_part_name");
+const InstanceId iid = CadIdBuilder::childInstance(
+    CadIdBuilder::rootInstance(), "wheel", 0, 0);
+
+InstanceRecord rec;
+rec.part = pid;
+rec.localToRoot.makeIdentity();
+rec.style.hasColorOverride = true;
+rec.style.color = SbColor4f(1, 0.5f, 0, 1);
+
+CadSceneMutation mutation;
+mutation.parts.push_back({pid, admitted.geometry});
+mutation.instances.push_back({iid, rec});
+const CadSceneMutationResult published =
+    assembly->applySceneMutation(mutation);
+if (!published) {
+    // Report cadSceneMutationDomainName(published.domain) and the
+    // corresponding geometry or scene validation.
+    return;
+}
 ```
 
 ### Adding a view policy
 
-`SoCADAssembly` stores shared geometry and instances. Non-geometric per-view
-presentation policy is supplied by an `SoCADViewState` node earlier in the
-same traversal branch. Progressive cuts are producer-authored per instance;
-the CAD node does not derive them from its camera:
+`SoCADAssembly` is one view's retained presentation. Non-geometric per-view
+policy is supplied by an `SoCADViewState` node earlier in that traversal
+branch. Progressive cuts are producer-authored per instance; the CAD node
+does not derive them from its camera:
 
 ```cpp
 SoCADViewState* view = new SoCADViewState;
@@ -115,52 +148,66 @@ root->addChild(view);
 root->addChild(assembly);
 ```
 
-Multiple views can traverse the same shared assembly with different
-`SoCADViewState` values.
+Do not traverse one assembly from independent views.  An assembly owns
+camera-local classifiers, preparation cursors, renderer resources, and the
+last completed-frame report.  Admit an immutable geometry snapshot once and
+copy its `ValidatedPartGeometry` token into each view-local transaction.  This
+duplicates lightweight presentation records, not mesh arrays.
 
-### Adding instances
+### Sparse transactions and complete replacement
+
+Use one sparse transaction for progressive publication, edits, semantic
+updates, and removals.  Validation is side-effect free and proportional to the
+delta; `applySceneMutation()` opens one nested-safe update window only after
+the complete delta is known to be valid:
 
 ```cpp
-InstanceRecord rec;
-rec.part        = pid;
-rec.parent      = CadIdBuilder::Root();
-rec.childName   = "wheel";
-rec.occurrenceIndex = 0;
-rec.boolOp      = 0;  // union
-rec.localToRoot.makeIdentity();
-rec.style.hasColorOverride = true;
-rec.style.color = SbColor4f(1, 0.5f, 0, 1);
+Obol::CadSceneMutation mutation;
+mutation.parts = { ... };             // admitted immutable geometry
+mutation.instances = { ... };
+mutation.styles = { ... };
+mutation.cuts = { ... };
+mutation.removedInstances = { ... };
+mutation.removedParts = { ... };
 
-InstanceId iid = assembly->upsertInstanceAuto(rec);
+const Obol::CadSceneMutationResult changed =
+    assembly->applySceneMutation(mutation);
+if (!changed)
+    return;
 ```
 
-### Batch updates (performance)
-
-Use the bulk APIs when loading or regenerating scene data. They mark the
-assembly dirty once and recompute affected instance bounds as a batch:
+For a complete rebuild, admit immutable geometry on its producer workers and
+use the checked replacement operation.  It validates both complete domains
+before changing the last valid presentation.  Candidate allocation is also
+completed before publication; `ResourceUnavailable` therefore leaves the
+preceding scene live just like a validation rejection:
 
 ```cpp
 std::vector<Obol::PartUpdate> parts = { ... };
-std::vector<Obol::InstanceRecord> instances = { ... };
+std::vector<Obol::InstanceUpdate> instances = { ... };
 
-assembly->upsertParts(parts);
-std::vector<Obol::InstanceId> ids = assembly->upsertInstancesAuto(instances);
+const Obol::CadSceneReplacementResult replaced =
+    assembly->replaceScene(parts, instances);
+if (!replaced) {
+    // The preceding scene is still live.  Inspect replaced.error and the
+    // corresponding validation, or report ResourceUnavailable.
+    return;
+}
 ```
 
-For a complete rebuild, use `clear()` inside the same update window:
+`replaceScene()` removes the preceding hidden/selected/unpickable sets along
+with its parts, instances, retained progressive prefixes, BVHs, and cached
+frame plans.  `clear()` remains available for intentionally emptying an
+assembly; clients must not compose it with several checked insert operations
+to emulate a replacement.
 
-```cpp
-assembly->beginUpdate();
-assembly->clear();
-assembly->upsertParts(parts);
-assembly->upsertInstances(instances);
-assembly->endUpdate();
-```
-
-`clear()` removes parts, instances, hidden/selected/unpickable sets, retained
-progressive prefixes, BVHs, and cached frame plans. It is intended for owners that rebuild an
-assembly from an external source of truth rather than editing the existing
-packet incrementally.
+Sparse publication is deliberately proportional to the mutation rather than
+the retained scene population.  Validation and application-owned staging are
+atomic, but `applySceneMutation()` does not clone the complete retained scene
+to provide recovery from process-wide allocator exhaustion during its
+mechanical commit.  Producers must keep sparse journals bounded and reserve a
+known streaming population with `reserveStreamingCapacity()` before sustained
+publication.
 
 ### Fast transform edits
 
@@ -168,8 +215,10 @@ Interactive tools (draggers, manipulators) should use the fast-path APIs
 to avoid rebuilding the entire frame plan:
 
 ```cpp
-assembly->updateInstanceTransform(iid, newMatrix);   // O(1) + BVH refit
-assembly->updateInstanceStyle(iid, newStyle);        // O(1), no BVH rebuild
+if (!assembly->updateInstanceTransform(iid, newMatrix))
+    return;
+if (!assembly->updateInstanceStyle(iid, newStyle))
+    return;
 ```
 
 ### Querying instance data (for on-demand node materialisation)
@@ -187,8 +236,8 @@ if (rec) {
 }
 ```
 
-When the user confirms the edit, call `assembly->upsertInstance(iid, updatedRec)`
-and clear the hidden set to return to aggregate rendering.
+When the user confirms the edit, publish the updated record in a
+`CadSceneMutation` and clear the hidden set to return to aggregate rendering.
 
 ### Visibility and pickability sets
 
@@ -212,13 +261,14 @@ editing and per-primitive state are the usual promotion triggers.
 
 ---
 
-## Render modes (drawMode field)
+## Render modes (`SoCADViewState::drawMode`)
 
 | Value                | Wire polylines | Triangles | Depth-only triangles |
 |----------------------|:--------------:|:---------:|:--------------------:|
 | `WIREFRAME`          | ✓              | –         | optional (see below) |
 | `SHADED`             | –              | ✓         | –                    |
 | `SHADED_WITH_EDGES`  | ✓              | ✓         | –                    |
+| `HIDDEN_LINE`        | ✓              | –         | ✓                    |
 
 ### Wireframe occlusion
 
@@ -229,7 +279,7 @@ the CAD surfaces even in wireframe mode.
 
 ---
 
-## Pick modes (pickMode field)
+## Pick modes (`SoCADViewState::pickMode`)
 
 | Value           | Algorithm                                                       |
 |-----------------|-----------------------------------------------------------------|
@@ -242,7 +292,7 @@ the CAD surfaces even in wireframe mode.
 Picking returns an `SoCADDetail` attached to `SoPickedPoint`.
 
 Edge-pick tolerance is specified in screen-space pixels via the
-`edgePickTolerancePx` field.  The renderer converts it to a world-space
+`edgePickTolerancePixels` field.  The renderer converts it to a world-space
 tolerance based on the current view volume and viewport, so it remains
 visually consistent across zoom levels.
 
@@ -301,15 +351,15 @@ that should be composited after the main CAD pass.
 ### Instance IDs (no stable GUID available)
 
 When your CAD system has no per-node GUID (e.g. BRL-CAD comb trees), use
-`CadIdBuilder::extendNameOccBool` to derive deterministic IDs from the
+`CadIdBuilder::childInstance` to derive deterministic IDs from the
 traversal path:
 
 ```cpp
 using namespace Obol;
-InstanceId root  = CadIdBuilder::Root();
-InstanceId car   = CadIdBuilder::extendNameOccBool(root,  "car",    0, 0);
-InstanceId wheel = CadIdBuilder::extendNameOccBool(car,   "wheel",  0, 0); // FL
-InstanceId bolt  = CadIdBuilder::extendNameOccBool(wheel, "bolt",   2, 0); // 3rd bolt
+InstanceId root  = CadIdBuilder::rootInstance();
+InstanceId car   = CadIdBuilder::childInstance(root,  "car",    0, 0);
+InstanceId wheel = CadIdBuilder::childInstance(car,   "wheel",  0, 0); // FL
+InstanceId bolt  = CadIdBuilder::childInstance(wheel, "bolt",   2, 0); // 3rd bolt
 ```
 
 The same traversal order always produces the same InstanceId.  Different
@@ -318,8 +368,8 @@ occurrence indices or sibling orders produce different IDs.
 ### Part IDs
 
 ```cpp
-PartId pid = CadIdBuilder::hash128("my_solid_name");  // from a string key
-PartId pid2 = CadIdBuilder::hash128(keyBytes, keyLen); // from raw bytes
+PartId pid = CadIdBuilder::partId("my_solid_name");  // from a string key
+PartId pid2 = CadIdBuilder::partId(keyBytes, keyLen); // from raw bytes
 ```
 
 ### Caveats
@@ -343,12 +393,13 @@ ordered vector of independently drawable cuts, quantization bounds, and the
 minimum/resident cut interval.  Each cut records its cumulative primitive
 count and its own per-axis quantization precision; no precision or population
 rule is inferred from the cut ordinal.  `InstanceRecord::lodCut` selects one
-active cut and `updateInstanceCuts()` changes only those selections.
+active cut and `CadSceneMutation::cuts` changes only those selections.
 
 The CAD node deliberately does not inspect camera distance, projected size, or
 selection to choose a cut, and it never builds a second hierarchy. A view
-owner may therefore share one resident part between views while assigning a
-different active cut to each occurrence. Shaded rendering, wire rendering,
+owner may therefore share one immutable resident geometry snapshot between
+view-local assemblies while assigning a different active cut to each view's
+occurrence record. Shaded rendering, wire rendering,
 hidden-line depth, and picking all clamp to the same producer-authored prefix
 and snap retained exact coordinates with the same quantization rule.
 
@@ -393,8 +444,6 @@ styles, selection, or draw mode change.
   Thick-line rendering requires geometry shaders or triangle-based lines.
 * **Transparency**: no alpha-sorting is implemented.  Semi-transparent CAD
   parts may render with incorrect blending.
-* **Wireframe occlusion**: the `wireframeOcclusion` field is exposed but the
-  depth-only triangle prepass is not yet implemented.
 * **ID stability across reloads**: without stable per-node GUIDs,
   InstanceIds may change if the traversal order changes.
 * **Analytic curves**: wireframe geometry is stored as polylines.  Analytic
@@ -407,12 +456,27 @@ styles, selection, or draw mode change.
 | Path | Description |
 |------|-------------|
 | `include/Obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
+| `include/Obol/cad/CadGeometry.h`   | Immutable retained geometry       |
+| `include/Obol/cad/CadSceneRecords.h` | Part and occurrence mutations    |
+| `include/Obol/cad/CadSceneMutation.h` | Atomic sparse scene transaction |
+| `include/Obol/cad/CadSceneReplacement.h` | Atomic replacement result    |
+| `include/Obol/cad/CadSceneValidation.h` | Pure scene-record validation  |
 | `include/Obol/cad/SoCADAssembly.h` | Main assembly node API            |
 | `include/Obol/cad/SoCADDetail.h`   | Pick-result detail class          |
 | `include/Obol/cad/SoCADViewState.h`| Per-view CAD render policy node   |
 | `include/Obol/render/DepthPolicy.h`| Depth policy enum                 |
 | `src/cad/CadIds.cpp`               | FNV-1a 128-bit hash implementation|
-| `src/cad/SoCADAssembly.cpp`        | Node render/pick/bbox actions     |
+| `src/cad/SoCADAssembly.cpp`        | Coin node, mutation, picking, and action surface |
+| `src/cad/CadAssemblyImpl.h`        | Private retained-state seam       |
+| `src/cad/CadAssemblyPlan.cpp`      | Retained frame-plan/cache maintenance |
+| `src/cad/CadAssemblyClassification.cpp` | Camera-local subpixel classification |
+| `src/cad/CadSceneMutation.cpp`     | Sparse transaction diagnostics   |
+| `src/cad/CadSceneValidation.cpp`   | Pure scene-record validation      |
+| `src/cad/CadRendererGL.cpp`        | Renderer selection and state boundary |
+| `src/cad/CadRendererGLFlat.cpp`    | Flattened batch execution         |
+| `src/cad/CadRendererGLIndirect.cpp`| Indirect command execution        |
+| `src/cad/CadRendererGLInstanced.cpp`| Instanced command execution      |
+| `src/cad/CadRendererGLExecutors.cpp`| Retained/direct execution        |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |
 | `src/cad/SoCADViewState.cpp`       | View-state element and node        |
 | `src/cad/CadFramePlan.h`           | Internal frame plan structs       |
