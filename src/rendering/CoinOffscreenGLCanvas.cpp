@@ -592,12 +592,22 @@ CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr) const
   if (this->max_tile_size_cached) return this->max_tile_size;
   this->max_tile_size_cached = TRUE;
 
-  unsigned int width, height;
-  SoGLContext_context_max_dimensions(mgr, &width, &height);
+  unsigned int width = 0;
+  unsigned int height = 0;
+
+  // Prefer the per-instance backend's declared limits.  In a dual-GL build
+  // the legacy probe below is compiled against system OpenGL, so invoking it
+  // while an OSMesa context is current can call the wrong GL implementation
+  // (and faults in opengl32 on Windows).  Managers that do not know their
+  // limits retain the traditional probe as a fallback.
+  if (mgr) mgr->maxOffscreenDimensions(width, height);
+  if (width == 0 || height == 0) {
+    SoGLContext_context_max_dimensions(mgr, &width, &height);
+  }
 
   if (CoinOffscreenGLCanvas::debug()) {
     SoDebugError::postInfo("CoinOffscreenGLCanvas::getMaxTileSize",
-                           "SoGLContext_context_max_dimensions()==[%u, %u]",
+                           "maximum offscreen dimensions==[%u, %u]",
                            width, height);
   }
 

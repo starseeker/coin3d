@@ -51,6 +51,8 @@ struct GoldenScene {
     bool gradient = false;
     bool swrast_reference = true;
     RenderKind render_kind = RenderKind::Scene;
+    double rms_tolerance = 15.0;
+    std::size_t minimum_non_background_pixels = 0;
 };
 
 void PrintTo(const GoldenScene & scene, std::ostream * output)
@@ -161,6 +163,10 @@ void compareSceneToReference(const GoldenScene & golden)
         ASSERT_TRUE(fixture.render(scene.root()));
         rendered_pixels = fixture.pixels();
     }
+    if (golden.minimum_non_background_pixels > 0) {
+        EXPECT_GE(fixture.nonBackgroundPixels(),
+                  golden.minimum_non_background_pixels);
+    }
 
     std::string error;
     const std::string path =
@@ -196,7 +202,8 @@ void compareSceneToReference(const GoldenScene & golden)
     // are not meaningful across drivers: a one-value background rounding
     // difference can touch the full image, so RMS is the visual gate.
     const ObolTestSupport::ImageTolerance tolerance{
-        static_cast<std::size_t>(actual.width) * actual.height, 255, 15.0
+        static_cast<std::size_t>(actual.width) * actual.height, 255,
+        golden.rms_tolerance
     };
     const bool within_tolerance =
         ObolTestSupport::isWithinTolerance(comparison, tolerance);
@@ -248,8 +255,12 @@ void compareSceneToReference(const GoldenScene & golden)
 }
 
 const std::array<GoldenScene, 36> retained_scenes{{
+    // WGL's texture interpolation produces the same checkerboard contract as
+    // the software reference with small per-channel differences.  Keep its
+    // allowance local to this driver-sensitive scene.
     {"AlphaTest", ObolTest::Scenes::createAlphaTest,
-     "render_alpha_test_control.png", 256, 256},
+     "render_alpha_test_control.png", 256, 256,
+     SbColor(0.0f, 0.0f, 0.0f), false, true, RenderKind::Scene, 18.0},
     {"Arb8EditCycle", ObolTest::Scenes::createArb8EditCycle,
      "render_arb8_edit_cycle_control.png", 800, 600,
      SbColor(0.12f, 0.12f, 0.14f)},
@@ -289,8 +300,13 @@ const std::array<GoldenScene, 36> retained_scenes{{
      "render_indexed_line_set_control.png", 256, 256},
     {"IosevkaText2", ObolTest::Scenes::createIosevkaText2,
      "render_iosevka_text2_control.png", 800, 600},
+    // Windows TTC triangulation differs modestly from the retained reference,
+    // while both GL backends agree.  Retain a foreground-area contract as an
+    // independent guard against an empty render when using the larger RMS.
     {"IosevkaText3", ObolTest::Scenes::createIosevkaText3,
-     "render_iosevka_text3_control.png", 800, 600},
+     "render_iosevka_text3_control.png", 800, 600,
+     SbColor(0.0f, 0.0f, 0.0f), false, true, RenderKind::Scene, 21.0,
+     15000u},
     {"Lighting", ObolTest::Scenes::createLighting,
      "render_lighting_control.png", 800, 600},
     {"Lod", ObolTest::Scenes::createLOD,
