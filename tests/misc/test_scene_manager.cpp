@@ -219,7 +219,8 @@ TEST(MiscSceneManager, SoSceneManagerSetGLRenderActionGetGLRenderActionRoundTrip
     mgr->setGLRenderAction(ra);
     EXPECT_TRUE((mgr->getGLRenderAction() == ra)) << "SoSceneManager setGLRenderAction round-trip failed";
     delete mgr;
-    // The manager takes ownership; do NOT delete ra separately
+    // The caller retains ownership of an explicitly supplied action.
+    delete ra;
 }
 
 // -----------------------------------------------------------------------

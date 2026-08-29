@@ -110,6 +110,7 @@ TEST(NodesSelectionNodes, SoSelectionSelectIsSelectedGetNumSelected)
     EXPECT_TRUE(sel->isSelected(cube) &&
                 (sel->getNumSelected() == 1)) << "SoSelection select/isSelected/getNumSelected failed";
 
+    sel->deselectAll();
     root->unref();
 }
 
@@ -180,6 +181,7 @@ TEST(NodesSelectionNodes, SoSelectionAddSelectionCallbackFiresOnSelect)
 
     // Callback fires synchronously
     EXPECT_TRUE((g_selectionCount == 1)) << "SoSelection addSelectionCallback did not fire";
+    sel->deselectAll();
     sel->unref();
 }
 

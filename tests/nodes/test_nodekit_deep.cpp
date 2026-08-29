@@ -195,4 +195,5 @@ TEST(NodesNodekitDeep, SoShapeKitWriteReadRoundTripReturnsNonNullRoot)
         }
     }
     EXPECT_NE(readRoot, nullptr);
+    std::free(buf);
 }

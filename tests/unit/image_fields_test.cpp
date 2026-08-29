@@ -29,7 +29,9 @@ std::string write_image_field(const SoSFImage & image)
     void * buffer = nullptr;
     size_t size = 0;
     if (!output.getBuffer(buffer, size)) return {};
-    return std::string(static_cast<const char *>(buffer), size);
+    const std::string result(static_cast<const char *>(buffer), size);
+    std::free(buffer);
+    return result;
 }
 
 template <typename Integer>
@@ -43,7 +45,9 @@ std::string write_binary_integer(const Integer value)
     void * buffer = nullptr;
     size_t size = 0;
     if (!output.getBuffer(buffer, size)) return {};
-    return std::string(static_cast<const char *>(buffer), size);
+    const std::string result(static_cast<const char *>(buffer), size);
+    std::free(buffer);
+    return result;
 }
 
 } // namespace

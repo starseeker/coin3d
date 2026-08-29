@@ -61,7 +61,7 @@ struct SbGlyph2D {
   int character;
   int refcount;
   
-  SbGlyph2D() : bitmap(nullptr), character(0), refcount(1) {}
+  SbGlyph2D() : bitmap(nullptr), character(0), refcount(0) {}
   ~SbGlyph2D() { 
     // Note: bitmap is owned by SbFont, don't delete
   }
@@ -84,7 +84,7 @@ struct SbGlyph3D {
   
   SbGlyph3D() : vertices(nullptr), face_indices(nullptr), edge_indices(nullptr),
                 edge_connectivity(nullptr), num_vertices(0), num_face_indices(0),
-                num_edge_indices(0), num_edges(0), width(0.0f), character(0), refcount(1) {}
+                num_edge_indices(0), num_edges(0), width(0.0f), character(0), refcount(0) {}
   ~SbGlyph3D() {
     // Note: data is owned by SbFont, don't delete
   }

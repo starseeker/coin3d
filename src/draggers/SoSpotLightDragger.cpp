@@ -231,7 +231,7 @@ SoSpotLightDragger::SoSpotLightDragger(void)
 
   SoDragger *pdragger = SO_GET_ANY_PART(this, "translator", SoDragPointDragger);
   assert(pdragger);
-  SoDragger *sdragger = SO_GET_ANY_PART(this, "rotator", SoDragPointDragger);
+  SoDragger *sdragger = SO_GET_ANY_PART(this, "rotator", SoRotateSphericalDragger);
   assert(sdragger);
   (void)pdragger; // suppress unused variable warning in release builds
   (void)sdragger; // suppress unused variable warning in release builds

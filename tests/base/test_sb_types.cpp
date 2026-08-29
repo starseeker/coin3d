@@ -260,6 +260,15 @@ TEST(BaseSbTypes, SbByteBufferPushOntoEmpty)
     SbByteBuffer content("foo");
     empty.push(content);
     EXPECT_TRUE((empty.size() == content.size())) << "SbByteBuffer push onto empty gave wrong size";
+    EXPECT_TRUE((empty == content)) << "SbByteBuffer push onto empty gave wrong contents";
+
+    SbByteBuffer appendedEmpty;
+    content.push(appendedEmpty);
+    EXPECT_STREQ(content.constData(), "foo");
+
+    SbByteBuffer bothEmpty;
+    bothEmpty.push(appendedEmpty);
+    EXPECT_TRUE(bothEmpty.empty());
 }
 
 // -----------------------------------------------------------------------

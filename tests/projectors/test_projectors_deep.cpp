@@ -122,9 +122,9 @@ TEST(ProjectorsDeep, SbSphereSheetProjectorCopyReturnsNonNull)
 {
     SbViewVolume vv = makeViewVolume();
     SbSphereSheetProjector proj(SbSphere(SbVec3f(0, 0, 0), 1.0f));
-    SbProjector * copy = proj.copy();
+    auto * copy = static_cast<SbSphereSheetProjector *>(proj.copy());
     EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
-    (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
+    delete copy;
 }
 
 // -----------------------------------------------------------------------
@@ -151,9 +151,9 @@ TEST(ProjectorsDeep, SbSpherePlaneProjectorCopyReturnsNonNull)
 {
     SbViewVolume vv = makeViewVolume();
     SbSpherePlaneProjector proj;
-    SbProjector * copy = proj.copy();
+    auto * copy = static_cast<SbSpherePlaneProjector *>(proj.copy());
     EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
-    (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
+    delete copy;
 }
 
 // -----------------------------------------------------------------------
@@ -204,9 +204,9 @@ TEST(ProjectorsDeep, SbCylinderSheetProjectorCopyReturnsNonNull)
 {
     SbViewVolume vv = makeViewVolume();
     SbCylinderSheetProjector proj;
-    SbProjector * copy = proj.copy();
+    auto * copy = static_cast<SbCylinderSheetProjector *>(proj.copy());
     EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
-    (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
+    delete copy;
 }
 
 // -----------------------------------------------------------------------
@@ -233,7 +233,7 @@ TEST(ProjectorsDeep, SbCylinderPlaneProjectorCopyReturnsNonNull)
 {
     SbViewVolume vv = makeViewVolume();
     SbCylinderPlaneProjector proj;
-    SbProjector * copy = proj.copy();
+    auto * copy = static_cast<SbCylinderPlaneProjector *>(proj.copy());
     EXPECT_TRUE((copy != nullptr)) << "copy() returned null";
-    (void)copy; // copy() result: destructor is protected, cannot delete via base ptr
+    delete copy;
 }
