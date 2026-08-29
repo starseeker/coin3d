@@ -11,6 +11,7 @@
 #define OBOL_CAD_SOFTWARE_WIRE_H
 
 #include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadViewState.h>
 #include "CadFramePlan.h"
 
 #include <vector>
@@ -25,7 +26,8 @@ struct CadSoftwareWireRenderResult {
 
 CadSoftwareWireRenderResult cadRenderSoftwareWire(
     const Obol::internal::CadFramePlan& plan,
-    const SoCADAssembly& assembly, SoState *state,
+    const SoCADAssembly& assembly, const Obol::CadViewState& viewState,
+    SoState *state,
     const SbMatrix& viewProj,
     const std::vector<Obol::internal::CadSubpixelProxyPoint>&
         subpixelProxyPoints);

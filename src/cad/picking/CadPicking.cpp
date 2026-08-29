@@ -464,8 +464,8 @@ CadPickQuery::pickEdge(
         const Obol::WireRep& wire = *geom.wire;
         CadPartEdgeBVH progressiveBvh;
         const CadPartEdgeBVH *edgeBvh = nullptr;
-        if (wire.derivesTriangleEdges() && wire.triangleEdges) {
-            const Obol::TriMesh& mesh = *wire.triangleEdges;
+        if (const Obol::TriMesh *triangleEdges = wire.triangleEdges()) {
+            const Obol::TriMesh& mesh = *triangleEdges;
             const uint8_t level = mesh.isProgressive() ? progressiveCut(
                 std::min(entry->lodCut, lodCeiling),
                 mesh.progressiveMinimumCut,

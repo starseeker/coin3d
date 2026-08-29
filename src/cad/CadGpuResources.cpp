@@ -1500,9 +1500,13 @@ CadGpuResources::resourceSnapshot() const noexcept
             static_cast<size_t>(flatShaded_.capacityVertexCount) *
                 6u * sizeof(float) : 0);
     const auto proxyBytes = [](const CadSubpixelProxyGpu& proxy) {
-        return proxy.capacityCount > 0 ?
+        const size_t vertexBytes = proxy.capacityCount > 0 ?
             static_cast<size_t>(proxy.capacityCount) *
                 (3u * sizeof(float) + 4u * sizeof(uint8_t)) : 0;
+        const size_t normalBytes = proxy.normalCapacityCount > 0 ?
+            static_cast<size_t>(proxy.normalCapacityCount) *
+                3u * sizeof(float) : 0;
+        return cadSaturatingAdd(vertexBytes, normalBytes);
     };
     batchBytes = cadSaturatingAdd(batchBytes,
         proxyBytes(subpixelProxyPoints_));
@@ -3128,21 +3132,34 @@ void CadGpuResources::releaseStandaloneTriangles(const SoGLContext *glue)
     }
 }
 
-void CadGpuResources::uploadSubpixelProxyPoints(
+void CadGpuResources::uploadSubpixelProxyBatch(
         uint64_t revision,
         const std::vector<float>& positions,
+        const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
+        size_t pointCount,
+        size_t lineVertexCount,
         const SoGLContext *glue,
         const CadGLCaps& caps)
 {
+    const size_t vertexCount = positions.size() / 3u;
     if (!glue || positions.empty() || positions.size() % 3 != 0 ||
-            colors.size() != (positions.size() / 3) * 4)
+            colors.size() != vertexCount * 4u ||
+            vertexCount >
+                static_cast<size_t>(
+                    std::numeric_limits<GLsizei>::max()) ||
+            pointCount > vertexCount ||
+            lineVertexCount > vertexCount - pointCount ||
+            normals.size() !=
+                (vertexCount - pointCount - lineVertexCount) * 3u)
         return;
 
     if (!subpixelProxyPoints_.posBuf)
         glue->glGenBuffers(1, &subpixelProxyPoints_.posBuf);
     if (!subpixelProxyPoints_.colorBuf)
         glue->glGenBuffers(1, &subpixelProxyPoints_.colorBuf);
+    if (!normals.empty() && !subpixelProxyPoints_.normBuf)
+        glue->glGenBuffers(1, &subpixelProxyPoints_.normBuf);
 
     const GLsizei count =
         static_cast<GLsizei>(positions.size() / 3);
@@ -3167,6 +3184,18 @@ void CadGpuResources::uploadSubpixelProxyPoints(
             nullptr, GL_DYNAMIC_DRAW);
         subpixelProxyPoints_.capacityCount = capacity;
     }
+    const GLsizei normalCount = static_cast<GLsizei>(normals.size() / 3u);
+    if (subpixelProxyPoints_.normalCapacityCount < normalCount) {
+        GLsizei capacity = std::max<GLsizei>(normalCount, 256);
+        if (normalCount <= std::numeric_limits<GLsizei>::max() / 2)
+            capacity = std::max(capacity, normalCount * 2);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.normBuf);
+        glue->glBufferData(
+            GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+            nullptr, GL_DYNAMIC_DRAW);
+        subpixelProxyPoints_.normalCapacityCount = capacity;
+    }
     glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.posBuf);
     glue->glBufferSubData(
         GL_ARRAY_BUFFER, 0,
@@ -3179,6 +3208,13 @@ void CadGpuResources::uploadSubpixelProxyPoints(
         static_cast<GLsizeiptr>(
             colors.size() * sizeof(uint8_t)),
         colors.data());
+    if (!normals.empty()) {
+        glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.normBuf);
+        glue->glBufferSubData(
+            GL_ARRAY_BUFFER, 0,
+            static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+            normals.data());
+    }
 
     /* Proxy membership changes during view motion, which makes this path a
      * frequent compositor boundary.  Keep both streams in an Obol-owned VAO
@@ -3201,20 +3237,32 @@ void CadGpuResources::uploadSubpixelProxyPoints(
 
     subpixelProxyPoints_.revision = revision;
     subpixelProxyPoints_.count = count;
+    subpixelProxyPoints_.pointCount = static_cast<GLsizei>(pointCount);
+    subpixelProxyPoints_.lineVertexCount =
+        static_cast<GLsizei>(lineVertexCount);
+    subpixelProxyPoints_.triangleVertexCount = normalCount;
 }
 
-void CadGpuResources::uploadPressureProxyPoints(
+void CadGpuResources::uploadPressureProxyBatch(
         uint64_t revision,
         const std::vector<float>& positions,
+        const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
+        size_t pointCount,
+        size_t lineVertexCount,
         const SoGLContext *glue,
         const CadGLCaps& caps)
 {
+    const size_t vertexCount = positions.size() / 3u;
     if (!glue || positions.empty() || positions.size() % 3 != 0 ||
-            colors.size() != (positions.size() / 3) * 4 ||
-            positions.size() / 3 >
+            colors.size() != vertexCount * 4u ||
+            vertexCount >
                 static_cast<size_t>(
-                    std::numeric_limits<GLsizei>::max()))
+                    std::numeric_limits<GLsizei>::max()) ||
+            pointCount > vertexCount ||
+            lineVertexCount > vertexCount - pointCount ||
+            normals.size() !=
+                (vertexCount - pointCount - lineVertexCount) * 3u)
         return;
 
     const GLsizei count =
@@ -3223,6 +3271,8 @@ void CadGpuResources::uploadPressureProxyPoints(
         glue->glGenBuffers(1, &pressureProxyPoints_.posBuf);
     if (!pressureProxyPoints_.colorBuf)
         glue->glGenBuffers(1, &pressureProxyPoints_.colorBuf);
+    if (!normals.empty() && !pressureProxyPoints_.normBuf)
+        glue->glGenBuffers(1, &pressureProxyPoints_.normBuf);
 
     if (pressureProxyPoints_.capacityCount < count) {
         const GLsizei minimumReserve = 4096;
@@ -3245,6 +3295,18 @@ void CadGpuResources::uploadPressureProxyPoints(
             nullptr, GL_DYNAMIC_DRAW);
         pressureProxyPoints_.capacityCount = capacity;
     }
+    const GLsizei normalCount = static_cast<GLsizei>(normals.size() / 3u);
+    if (pressureProxyPoints_.normalCapacityCount < normalCount) {
+        GLsizei capacity = std::max<GLsizei>(normalCount, 256);
+        if (normalCount <= std::numeric_limits<GLsizei>::max() / 2)
+            capacity = std::max(capacity, normalCount * 2);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, pressureProxyPoints_.normBuf);
+        glue->glBufferData(
+            GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+            nullptr, GL_DYNAMIC_DRAW);
+        pressureProxyPoints_.normalCapacityCount = capacity;
+    }
 
     glue->glBindBuffer(
         GL_ARRAY_BUFFER, pressureProxyPoints_.posBuf);
@@ -3260,6 +3322,13 @@ void CadGpuResources::uploadPressureProxyPoints(
         static_cast<GLsizeiptr>(
             colors.size() * sizeof(uint8_t)),
         colors.data());
+    if (!normals.empty()) {
+        glue->glBindBuffer(GL_ARRAY_BUFFER, pressureProxyPoints_.normBuf);
+        glue->glBufferSubData(
+            GL_ARRAY_BUFFER, 0,
+            static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+            normals.data());
+    }
 
     if (!pressureProxyPoints_.vao && caps.hasVAO &&
             glue->glGenVertexArrays) {
@@ -3283,6 +3352,10 @@ void CadGpuResources::uploadPressureProxyPoints(
 
     pressureProxyPoints_.revision = revision;
     pressureProxyPoints_.count = count;
+    pressureProxyPoints_.pointCount = static_cast<GLsizei>(pointCount);
+    pressureProxyPoints_.lineVertexCount =
+        static_cast<GLsizei>(lineVertexCount);
+    pressureProxyPoints_.triangleVertexCount = normalCount;
 }
 
 bool CadGpuResources::appendPressureProxyPoints(
@@ -3332,6 +3405,9 @@ bool CadGpuResources::appendPressureProxyPoints(
 
     pressureProxyPoints_.revision = revision;
     pressureProxyPoints_.count += appended;
+    pressureProxyPoints_.pointCount = pressureProxyPoints_.count;
+    pressureProxyPoints_.lineVertexCount = 0;
+    pressureProxyPoints_.triangleVertexCount = 0;
     return true;
 }
 
@@ -3488,12 +3564,16 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             glue->glDeleteBuffers(1, &subpixelProxyPoints_.posBuf);
         if (subpixelProxyPoints_.colorBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &subpixelProxyPoints_.colorBuf);
+        if (subpixelProxyPoints_.normBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &subpixelProxyPoints_.normBuf);
         if (subpixelProxyPoints_.vao && glue->glDeleteVertexArrays)
             glue->glDeleteVertexArrays(1, &subpixelProxyPoints_.vao);
         if (pressureProxyPoints_.posBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &pressureProxyPoints_.posBuf);
         if (pressureProxyPoints_.colorBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &pressureProxyPoints_.colorBuf);
+        if (pressureProxyPoints_.normBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &pressureProxyPoints_.normBuf);
         if (pressureProxyPoints_.vao && glue->glDeleteVertexArrays)
             glue->glDeleteVertexArrays(1, &pressureProxyPoints_.vao);
         /*

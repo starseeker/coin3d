@@ -14,9 +14,26 @@
 
 #include <Inventor/basic.h>
 
+#include <cstddef>
+
 namespace Obol {
 
+/**
+ * Largest projected extent which remains legible as one raster point.
+ * Larger aggregate proxies retain their bounds until mesh admission.
+ */
+constexpr float CadMaximumPointProxyExtentPixels = 5.0f;
+
+/** Physical batch work needed to preserve an aggregate proxy as an AABB. */
+constexpr size_t CadAggregateProxyBoxLineCount = 12u;
+constexpr size_t CadAggregateProxyBoxPositionCount =
+    CadAggregateProxyBoxLineCount * 2u;
+constexpr size_t CadAggregateProxyBoxTriangleCount = 12u;
+constexpr size_t CadAggregateProxyBoxTrianglePositionCount =
+    CadAggregateProxyBoxTriangleCount * 3u;
+
 struct PartGeometry;
+struct PartGeometryBuilder;
 
 /** Exact camera-local classification shared by CAD scheduling and drawing. */
 struct CadProjectedProxy {
@@ -43,6 +60,10 @@ OBOL_DLL_API CadProjectedProxy classifyCadProjectedProxy(
 /** Return the exact conservative corners SoCADAssembly point-classifies. */
 OBOL_DLL_API bool cadPartGeometryProxyCorners(
     const PartGeometry& geometry, SbVec3f corners[8]);
+
+/** Builder overload used to validate a snapshot before admission. */
+OBOL_DLL_API bool cadPartGeometryProxyCorners(
+    const PartGeometryBuilder& geometry, SbVec3f corners[8]);
 
 } // namespace Obol
 

@@ -236,6 +236,32 @@ cadSoftwarePoint(unsigned char *pixels, unsigned int width,
     cadSoftwarePutPixel(pixels, width, height, x, y, point.rgba);
 }
 
+static void
+cadSoftwareProxyBox(unsigned char *pixels, unsigned int width,
+                    unsigned int height, const SbVec2s& origin,
+                    const SbVec2s& size, const SbMatrix& viewProj,
+                    const Obol::internal::CadSubpixelProxyPoint& proxy)
+{
+    if (proxy.flags & Obol::internal::CadInstanceHidden)
+        return;
+    Obol::internal::CadVisibleInstance style;
+    style.rgba = proxy.rgba;
+    style.flags = proxy.flags;
+    SbVec3f edgeStart;
+    bool haveEdgeStart = false;
+    Obol::internal::cadForEachAggregateProxyBoxVertex(
+        proxy, [&](const SbVec3f& vertex) {
+            if (!haveEdgeStart) {
+                edgeStart = vertex;
+                haveEdgeStart = true;
+                return;
+            }
+            cadSoftwareSegment(pixels, width, height, origin, size, viewProj,
+                edgeStart, vertex, style);
+            haveEdgeStart = false;
+        });
+}
+
 static float
 cadSoftwareSnapCoordinate(float value, float minimum, float maximum,
                           uint8_t bits)
@@ -330,14 +356,16 @@ cadSoftwareWorkAdd(uint64_t left, uint64_t right)
 
 CadSoftwareWireRenderResult
 cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
-                      const SoCADAssembly& assembly, SoState *state,
+                      const SoCADAssembly& assembly,
+                      const Obol::CadViewState& viewState,
+                      SoState *state,
                       const SbMatrix& viewProj,
                       const std::vector<Obol::internal::CadSubpixelProxyPoint>&
                           subpixelProxyPoints)
 {
     CadSoftwareWireRenderResult result;
     if (plan.wireItems.empty() || !plan.shadedItems.empty() ||
-            assembly.wireframeOcclusion.getValue())
+            viewState.wireframeOcclusion)
         return result;
     SoDB::ContextManager *manager = SoContextManagerElement::get(state);
     unsigned char *pixels = nullptr;
@@ -373,8 +401,8 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             model.setValue(instance.transform.data());
             SbMatrix transform = model;
             transform.multRight(viewProj);
-            uint8_t level = assembly.effectiveProgressiveCut(
-                item.rep.part, instance.lodCut);
+            uint8_t level = Obol::cadEffectiveProgressiveCut(
+                viewState, item.rep.part, instance.lodCut);
             if (wire.isProgressive()) {
                 if (level == Obol::ProgressiveCutUnspecified)
                     level = wire.progressiveResidentCut;
@@ -400,8 +428,8 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
                     }
                 }
             }
-            if (wire.derivesTriangleEdges() && wire.triangleEdges) {
-                const Obol::TriMesh& mesh = *wire.triangleEdges;
+            if (const Obol::TriMesh *triangleEdges = wire.triangleEdges()) {
+                const Obol::TriMesh& mesh = *triangleEdges;
                 const size_t activePositionCount = mesh.isProgressive() ?
                     mesh.positionCountAtCut(level) : mesh.positions.size();
                 if (wire.triangleEdgeSegmentCount != mesh.indices.size() ||
@@ -524,16 +552,36 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
         }
     }
     uint64_t submittedProxyPoints = 0;
+    uint64_t submittedProxyLines = 0;
     for (const auto& point : subpixelProxyPoints) {
-        cadSoftwarePoint(pixels, width, height, origin, size, viewProj, point);
-        if (!(point.flags & Obol::internal::CadInstanceHidden))
+        if (point.shape ==
+                Obol::internal::CadAggregateProxyShape::Box) {
+            cadSoftwareProxyBox(
+                pixels, width, height, origin, size, viewProj, point);
+            if (!(point.flags & Obol::internal::CadInstanceHidden))
+                submittedProxyLines = cadSoftwareWorkAdd(
+                    submittedProxyLines,
+                    Obol::CadAggregateProxyBoxLineCount);
+        } else {
+            cadSoftwarePoint(
+                pixels, width, height, origin, size, viewProj, point);
+        }
+        if (point.shape ==
+                    Obol::internal::CadAggregateProxyShape::Point &&
+                !(point.flags & Obol::internal::CadInstanceHidden))
             submittedProxyPoints = cadSoftwareWorkAdd(
                 submittedProxyPoints, 1);
     }
-    /* These points are submitted by one aggregate raster channel.  Record
-     * their vertex work, but do not manufacture per-occurrence draw cost. */
+    /* These primitives are submitted by one aggregate raster channel.
+     * Record their vertex work, but do not manufacture per-occurrence draw
+     * cost. */
     result.work.positionCount = cadSoftwareWorkAdd(
-        result.work.positionCount, submittedProxyPoints);
+        result.work.positionCount, cadSoftwareWorkAdd(
+            submittedProxyPoints,
+            submittedProxyLines > UINT64_MAX / 2 ? UINT64_MAX :
+                submittedProxyLines * 2));
+    result.work.lineCount = cadSoftwareWorkAdd(
+        result.work.lineCount, submittedProxyLines);
     result.subpixelProxyDrawPointCount = submittedProxyPoints >
         static_cast<uint64_t>((std::numeric_limits<size_t>::max)()) ?
         (std::numeric_limits<size_t>::max)() :

@@ -6,7 +6,7 @@
 \**************************************************************************/
 
 #include <Obol/cad/CadProjectedProxy.h>
-#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadGeometry.h>
 
 #include <algorithm>
 #include <cmath>
@@ -45,12 +45,18 @@ planeValue(const ClipPoint& point, int plane)
 
 } // namespace
 
+template <typename Geometry>
 bool
-Obol::cadPartGeometryProxyCorners(const Obol::PartGeometry& geometry,
-                                  SbVec3f corners[8])
+partGeometryProxyCorners(const Geometry& geometry, SbVec3f corners[8])
 {
     if (!corners)
         return false;
+
+    if (geometry.aggregateProxyCorners) {
+        std::copy(geometry.aggregateProxyCorners->begin(),
+            geometry.aggregateProxyCorners->end(), corners);
+        return true;
+    }
 
     SbBox3f bounds;
     bounds.makeEmpty();
@@ -61,6 +67,8 @@ Obol::cadPartGeometryProxyCorners(const Obol::PartGeometry& geometry,
         bounds.extendBy(geometry.shaded->bounds);
     if (geometry.points && !geometry.points->bounds.isEmpty())
         bounds.extendBy(geometry.points->bounds);
+    if (geometry.wire && !geometry.wire->bounds.isEmpty())
+        bounds.extendBy(geometry.wire->bounds);
     if (!bounds.isEmpty()) {
         const SbVec3f minimum = bounds.getMin();
         const SbVec3f maximum = bounds.getMax();
@@ -111,6 +119,20 @@ Obol::cadPartGeometryProxyCorners(const Obol::PartGeometry& geometry,
                     y ? maximum[1] : minimum[1],
                     z ? maximum[2] : minimum[2]);
     return true;
+}
+
+bool
+Obol::cadPartGeometryProxyCorners(const Obol::PartGeometry& geometry,
+                                  SbVec3f corners[8])
+{
+    return partGeometryProxyCorners(geometry, corners);
+}
+
+bool
+Obol::cadPartGeometryProxyCorners(
+    const Obol::PartGeometryBuilder& geometry, SbVec3f corners[8])
+{
+    return partGeometryProxyCorners(geometry, corners);
 }
 
 Obol::CadProjectedProxy

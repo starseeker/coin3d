@@ -122,6 +122,7 @@ public:
      */
     void render(const CadFramePlan& plan,
                 const SoCADAssembly& assembly,
+                const Obol::CadViewState& viewState,
                 SoGLRenderAction*    action,
                 const SoGLContext*   glue,
                 const SbMatrix&      viewProj,
@@ -272,6 +273,19 @@ public:
     void setAmbientLight(float red, float green, float blue, float intensity);
 
 private:
+    /**
+     * View policy is traversal input, never retained assembly state.  The
+     * scoped pointer exists only while render() is on the stack so the many
+     * executor helpers cannot accidentally consume policy from a preceding
+     * view or frame.
+     */
+    const Obol::CadViewState *activeViewState_ = nullptr;
+    const Obol::CadViewState& activeViewState() const;
+    uint8_t effectiveProgressiveCut(uint8_t requested) const;
+    uint8_t effectiveProgressiveCut(
+        Obol::PartId part, uint8_t requested) const;
+    uint8_t maximumEffectiveProgressiveCut(uint8_t requested) const;
+
     /*
      * Coin's abort callback is normally sampled only between scene nodes.
      * One SoCADAssembly can represent tens of thousands of occurrences, so
@@ -385,6 +399,7 @@ private:
         GLuint wire    = 0; ///< Wire-pass shader (no lighting)
         GLuint wirePop = 0; ///< Wire-pass shader with branchless PoP snapping
         GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
+        GLuint proxyShaded = 0; ///< Batched shaded aggregate-box shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
         GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
         GLuint shadedDirectionalNorm = 0; ///< One-directional-light shader with vertex normals
@@ -418,9 +433,11 @@ private:
                       const std::unordered_map<PartId, uint64_t,
                                                std::hash<PartId>>& partGenMap);
 
-    void renderSubpixelProxyPoints(const CadFramePlan& plan,
-                                   const SoGLContext* glue,
-                                   const SbMatrix& viewProj);
+    void renderAggregateProxies(const CadFramePlan& plan,
+                                const SoGLContext* glue,
+                                const SbMatrix& viewProj,
+                                const SbMatrix& viewMatrix,
+                                const SbMatrix& projectionMatrix);
 
     const std::vector<CadSubpixelProxyPoint>&
     presentationSubpixelProxyPoints(const CadFramePlan& plan,
@@ -669,18 +686,74 @@ private:
     IndirectPreparedFrame indirectPrepared_;
     IndirectPreparationState indirectPreparation_;
 
+    struct FlatShadedOccurrence {
+        uint32_t partIndex = 0;
+        size_t visibleIndex = 0;
+        CadFlatShadedRangeKey rangeKey;
+        size_t firstIndex = 0;
+        size_t indexCount = 0;
+        uint8_t cut = Obol::ProgressiveCutUnspecified;
+        uint64_t styleKey = 0;
+        bool cullBackfaces = false;
+        bool twoSidedLighting = true;
+    };
+
+    /**
+     * Resumable occurrence planning for the software flat-shaded atlas.
+     *
+     * Records contain only indices into one exact CadFramePlan.  Retaining
+     * mesh or instance pointers across render calls would couple this state
+     * to the address of an otherwise replaceable plan snapshot.  Adaptive
+     * cluster and range cursors make every finite preparation slice useful,
+     * including a single large mesh whose spatial pages cannot be scanned
+     * within one host deadline.
+     */
+    struct FlatShadedPlanningState {
+        bool valid = false;
+        bool complete = false;
+        Obol::CadPresentationPreparationTarget target;
+        size_t itemCursor = 0;
+        uint64_t itemUnitsPerInstance = 0;
+        uint32_t instanceOffset = 0;
+        size_t clusterCursor = 0;
+        size_t rangeCursor = 0;
+        bool instanceActive = false;
+        size_t instanceOccurrenceBegin = 0;
+        uint8_t instanceCut = Obol::ProgressiveCutUnspecified;
+        uint64_t instanceGeometryToken = 0;
+        SbMatrix instanceModel;
+        uint64_t totalUnits = 0;
+        uint64_t completedUnits = 0;
+        size_t currentVertexCount = 0;
+        size_t futureRangeVertexCount = 0;
+        size_t semanticOccurrenceCount = 0;
+        bool hasProgressiveOccurrence = false;
+        bool uniformStyle = true;
+        uint64_t firstStyleKey = 0;
+        std::vector<FlatShadedOccurrence> occurrences;
+    };
+
+    enum class FlatShadedPlanningResult : uint8_t {
+        Interrupted = 0,
+        Complete,
+        Failed
+    };
+
+    FlatShadedPlanningState flatShadedPlanning_;
+
+    FlatShadedPlanningResult planFlatShadedOccurrences(
+        const CadFramePlan& plan,
+        const SoGLContext *glue,
+        const SbMatrix& viewProj,
+        size_t maxVertexCount,
+        size_t& deadlineWork);
+
     Obol::CadPresentationPreparationTarget preparationTarget(
         Obol::CadPresentationPreparationKind kind,
         uint32_t contextId, uint64_t planRevision,
         uint64_t geometryRevision, int progressiveCutCeiling,
         float progressiveCutNextFraction,
         const SbMatrix& viewProjection);
-    bool preparationTargetMatches(
-        Obol::CadPresentationPreparationKind kind,
-        uint32_t contextId, uint64_t planRevision,
-        uint64_t geometryRevision, int progressiveCutCeiling,
-        float progressiveCutNextFraction,
-        const SbMatrix& viewProjection) const;
     void publishPreparation(
         const Obol::CadPresentationPreparationTarget& target,
         Obol::CadPresentationPreparationState state,
@@ -689,32 +762,26 @@ private:
 
     bool renderIndirectShaded(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue,
         const SbMatrix& viewProj,
         const SbViewVolume& viewVolume);
     bool replayIndirectShaded(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue,
         const SbMatrix& viewProj,
         const SbViewVolume& viewVolume);
     bool patchIndirectPreparedCuts(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue);
     bool patchIndirectPreparedAppend(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue,
         const SbMatrix& viewProj);
     bool patchIndirectPreparedGeometry(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue);
     bool patchIndirectPreparedCeiling(
         const CadFramePlan& plan,
-        const SoCADAssembly& assembly,
         const SoGLContext *glue);
     bool submitIndirectPrepared(
         const SoGLContext *glue,
@@ -734,12 +801,10 @@ private:
                          bool drawShaded);
 
     bool renderFlatWire(const CadFramePlan& plan,
-                        const SoCADAssembly& assembly,
                         const SoGLContext* glue,
                         const SbMatrix& viewProj);
 
     bool renderFlatShaded(const CadFramePlan& plan,
-                          const SoCADAssembly& assembly,
                           const SoGLContext* glue,
                           const SbMatrix& viewProj,
                           const SbMatrix& viewMatrix,

@@ -1,15 +1,15 @@
 /**
  * @file test_cad_ids.cpp
- * @brief Unit tests for Obol::CadIdBuilder and Obol::CadId128.
+ * @brief Unit tests for Obol's domain-safe CAD identifiers.
  *
  * Tests:
  *  1. Same traversal path produces identical InstanceId
  *  2. Different occurrence index under same parent gives different IDs
  *  3. Order changes change IDs
  *  4. Root sentinel is all-zeros
- *  5. hash128 of same bytes is deterministic
- *  6. hash128 of different bytes produces different IDs
- *  7. std::hash<CadId128> compiles and gives consistent values
+ *  5. stable-key hashing is deterministic and domain separated by type
+ *  6. different bytes produce different IDs
+ *  7. std::hash supports both identifier domains
  *
  * No BRL-CAD dependency.  No GL context required.
  */
@@ -20,16 +20,23 @@
 
 #include <unordered_map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace {
 
-using Obol::CadId128;
 using Obol::CadIdBuilder;
+using Obol::InstanceId;
+using Obol::PartId;
+
+static_assert(!std::is_convertible<PartId, InstanceId>::value,
+    "part IDs must not enter the instance-ID domain");
+static_assert(!std::is_convertible<InstanceId, PartId>::value,
+    "instance IDs must not enter the part-ID domain");
 
 TEST(CadIds, RootIsTheInvalidZeroSentinel)
 {
-    const CadId128 root = CadIdBuilder::Root();
+    const InstanceId root = CadIdBuilder::rootInstance();
     EXPECT_EQ(root.w0, 0u);
     EXPECT_EQ(root.w1, 0u);
     EXPECT_FALSE(root.isValid());
@@ -37,35 +44,36 @@ TEST(CadIds, RootIsTheInvalidZeroSentinel)
 
 TEST(CadIds, HashingIsDeterministicAndDistinguishesKeys)
 {
-    const CadId128 wheel = CadIdBuilder::hash128(std::string("wheel"));
-    EXPECT_EQ(wheel, CadIdBuilder::hash128(std::string("wheel")));
-    EXPECT_NE(wheel, CadIdBuilder::hash128(std::string("bolt")));
+    const PartId wheel = CadIdBuilder::partId(std::string("wheel"));
+    EXPECT_EQ(wheel, CadIdBuilder::partId(std::string("wheel")));
+    EXPECT_NE(wheel, CadIdBuilder::partId(std::string("bolt")));
     EXPECT_TRUE(wheel.isValid());
 }
 
 TEST(CadIds, ExtendingAPathPreservesOccurrenceAndBooleanIdentity)
 {
-    const CadId128 root = CadIdBuilder::Root();
-    const CadId128 wheel = CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0);
+    const InstanceId root = CadIdBuilder::rootInstance();
+    const InstanceId wheel = CadIdBuilder::childInstance(root, "wheel", 0, 0);
 
-    EXPECT_EQ(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0));
-    EXPECT_NE(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 1, 0));
-    EXPECT_NE(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 0, 1));
+    EXPECT_EQ(wheel, CadIdBuilder::childInstance(root, "wheel", 0, 0));
+    EXPECT_NE(wheel, CadIdBuilder::childInstance(root, "wheel", 1, 0));
+    EXPECT_NE(wheel, CadIdBuilder::childInstance(root, "wheel", 0, 1));
 }
 
 TEST(CadIds, TraversalOrderAndDeepPathsAreDeterministic)
 {
-    const CadId128 root = CadIdBuilder::Root();
-    const CadId128 ab = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::extendNameOccBool(root, "A", 0, 0), "B", 0, 0);
-    const CadId128 ba = CadIdBuilder::extendNameOccBool(
-        CadIdBuilder::extendNameOccBool(root, "B", 0, 0), "A", 0, 0);
+    const InstanceId root = CadIdBuilder::rootInstance();
+    const InstanceId ab = CadIdBuilder::childInstance(
+        CadIdBuilder::childInstance(root, "A", 0, 0), "B", 0, 0);
+    const InstanceId ba = CadIdBuilder::childInstance(
+        CadIdBuilder::childInstance(root, "B", 0, 0), "A", 0, 0);
     EXPECT_NE(ab, ba);
 
     const std::vector<std::string> path = {"vehicle", "chassis", "axle", "bolt"};
     const auto make_path = [&path] {
-        CadId128 id = CadIdBuilder::Root();
-        for (const auto & name : path) id = CadIdBuilder::extendNameOccBool(id, name, 0, 0);
+        InstanceId id = CadIdBuilder::rootInstance();
+        for (const auto& name : path)
+            id = CadIdBuilder::childInstance(id, name, 0, 0);
         return id;
     };
     EXPECT_EQ(make_path(), make_path());
@@ -73,12 +81,12 @@ TEST(CadIds, TraversalOrderAndDeepPathsAreDeterministic)
 
 TEST(CadIds, StandardHashSupportsAssociativeContainers)
 {
-    const CadId128 first = CadIdBuilder::hash128(std::string("key1"));
-    const CadId128 second = CadIdBuilder::hash128(std::string("key2"));
-    std::hash<CadId128> hasher;
+    const PartId first = CadIdBuilder::partId(std::string("key1"));
+    const PartId second = CadIdBuilder::partId(std::string("key2"));
+    std::hash<PartId> hasher;
     EXPECT_EQ(hasher(first), hasher(first));
 
-    std::unordered_map<CadId128, int> values;
+    std::unordered_map<PartId, int> values;
     values.emplace(first, 42);
     values.emplace(second, 99);
     EXPECT_EQ(values.at(first), 42);

@@ -4,6 +4,7 @@
  */
 
 #include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadViewState.h>
 
 #include <gtest/gtest.h>
 
@@ -11,7 +12,17 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/sensors/SoNodeSensor.h>
 
+#include <limits>
+#include <memory>
 #include <string>
+#include <type_traits>
+
+static_assert(std::is_default_constructible<Obol::PartGeometryBuilder>::value,
+    "CAD producers need a mutable geometry builder");
+static_assert(!std::is_default_constructible<Obol::PartGeometry>::value,
+    "renderer-visible geometry must enter through admission");
+static_assert(!std::is_copy_constructible<Obol::PartGeometry>::value,
+    "admitted geometry snapshots must not regain mutable aliases");
 
 namespace {
 
@@ -20,6 +31,31 @@ nodeChanged(void *data, SoSensor *)
 {
     unsigned int *changeCount = static_cast<unsigned int *>(data);
     ++(*changeCount);
+}
+
+TEST(CadInstanceRecords, AdmissionCopiesLvalueBuildersIntoImmutableStorage)
+{
+    Obol::PartGeometryBuilder builder;
+    builder.shaded.emplace();
+    builder.shaded->positions = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f)
+    };
+    builder.shaded->indices = {0, 1, 2};
+    builder.shaded->bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f));
+
+    const Obol::CadGeometryAdmission admitted =
+        Obol::cadAdmitPartGeometry(builder);
+    ASSERT_TRUE(admitted);
+    builder.shaded->positions.front() = SbVec3f(9.0f, 9.0f, 9.0f);
+    builder.shaded->indices.front() = 2;
+
+    ASSERT_TRUE(admitted.geometry.shared()->shaded.has_value());
+    EXPECT_EQ(admitted.geometry.shared()->shaded->positions.front(),
+        SbVec3f(0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(admitted.geometry.shared()->shaded->indices.front(), 0u);
 }
 
 static bool
@@ -38,6 +74,17 @@ sameRecord(const Obol::InstanceRecord &a, const Obol::InstanceRecord &b)
         a.style.color == b.style.color && a.style.lineWidth == b.style.lineWidth;
 }
 
+static Obol::CadGeometryValidation
+admitAndUpsertPart(SoCADAssembly *assembly, Obol::PartId part,
+    Obol::PartGeometryBuilder geometry)
+{
+    const Obol::CadGeometryAdmission admission =
+        Obol::cadAdmitPartGeometry(std::move(geometry));
+    if (!admission)
+        return admission.validation;
+    return assembly->upsertParts({{part, admission.geometry}});
+}
+
 TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 {
     SoCADAssembly::initClass();
@@ -46,8 +93,8 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     assembly->ref();
 
     Obol::InstanceRecord first;
-    first.part = Obol::CadIdBuilder::hash128("shared-part");
-    first.parent = Obol::CadIdBuilder::hash128("parent");
+    first.part = Obol::CadIdBuilder::partId("shared-part");
+    first.parent = Obol::CadIdBuilder::instanceId("parent");
     first.childName = "wheel";
     first.occurrenceIndex = 0;
     first.boolOp = 0;
@@ -56,7 +103,10 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     first.style.lineWidth = 2.5f;
     first.localToRoot.setTranslate(SbVec3f(1.0f, 2.0f, 3.0f));
 
-    const Obol::InstanceId firstId = assembly->upsertInstanceAuto(first);
+    const Obol::CadInstanceUpdateResult firstInsert =
+        assembly->upsertInstanceAuto(first);
+    ASSERT_TRUE(firstInsert);
+    const Obol::InstanceId firstId = firstInsert.instance;
     std::optional<Obol::InstanceRecord> stored =
         assembly->getInstanceRecord(firstId);
     ASSERT_TRUE(stored.has_value());
@@ -64,8 +114,10 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 
     Obol::InstanceRecord duplicate = first;
     duplicate.occurrenceIndex = 1;
-    const Obol::InstanceId duplicateId =
+    const Obol::CadInstanceUpdateResult duplicateInsert =
         assembly->upsertInstanceAuto(duplicate);
+    ASSERT_TRUE(duplicateInsert);
+    const Obol::InstanceId duplicateId = duplicateInsert.instance;
     stored = assembly->getInstanceRecord(duplicateId);
     ASSERT_TRUE(stored.has_value());
     EXPECT_NE(duplicateId, firstId);
@@ -73,7 +125,10 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 
     Obol::InstanceRecord subtract = first;
     subtract.boolOp = 1;
-    const Obol::InstanceId subtractId = assembly->upsertInstanceAuto(subtract);
+    const Obol::CadInstanceUpdateResult subtractInsert =
+        assembly->upsertInstanceAuto(subtract);
+    ASSERT_TRUE(subtractInsert);
+    const Obol::InstanceId subtractId = subtractInsert.instance;
     stored = assembly->getInstanceRecord(subtractId);
     ASSERT_TRUE(stored.has_value());
     EXPECT_NE(subtractId, firstId);
@@ -81,7 +136,7 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 
     SbMatrix moved;
     moved.setTranslate(SbVec3f(4.0f, 5.0f, 6.0f));
-    assembly->updateInstanceTransform(duplicateId, moved);
+    ASSERT_TRUE(assembly->updateInstanceTransform(duplicateId, moved));
     stored = assembly->getInstanceRecord(duplicateId);
     ASSERT_TRUE(stored.has_value());
     EXPECT_EQ(stored->parent, duplicate.parent);
@@ -92,7 +147,7 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 
     Obol::InstanceStyle restyled = duplicate.style;
     restyled.lineWidth = 7.0f;
-    assembly->updateInstanceStyle(duplicateId, restyled);
+    ASSERT_TRUE(assembly->updateInstanceStyle(duplicateId, restyled));
     stored = assembly->getInstanceRecord(duplicateId);
     ASSERT_TRUE(stored.has_value());
     EXPECT_EQ(stored->occurrenceIndex, duplicate.occurrenceIndex);
@@ -103,16 +158,17 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     intersection.childName = "overlap";
     intersection.boolOp = 2;
     const Obol::InstanceId intersectionId =
-        Obol::CadIdBuilder::hash128("external-intersection-id");
+        Obol::CadIdBuilder::instanceId("external-intersection-id");
     Obol::InstanceUpdate update;
     update.instance = intersectionId;
     update.record = intersection;
-    assembly->upsertInstances(std::vector<Obol::InstanceUpdate>(1, update));
+    ASSERT_TRUE(assembly->upsertInstances(
+        std::vector<Obol::InstanceUpdate>(1, update)));
     stored = assembly->getInstanceRecord(intersectionId);
     ASSERT_TRUE(stored.has_value());
     EXPECT_TRUE(sameRecord(*stored, intersection));
 
-    Obol::PartGeometry shaded;
+    Obol::PartGeometryBuilder shaded;
     Obol::TriMesh triangle;
     triangle.positions = {SbVec3f(0.0f, 0.0f, 0.0f),
                           SbVec3f(1.0f, 0.0f, 0.0f),
@@ -121,7 +177,7 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     triangle.bounds.setBounds(SbVec3f(0.0f, 0.0f, 0.0f),
                               SbVec3f(1.0f, 1.0f, 0.0f));
     shaded.shaded = std::move(triangle);
-    assembly->upsertPart(first.part, shaded);
+    ASSERT_TRUE(admitAndUpsertPart(assembly, first.part, shaded));
     EXPECT_FALSE(assembly->hasProgressivePartLod());
 
     shaded.shaded->progressiveMinimumCut = 0;
@@ -131,19 +187,20 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
         cut.indexCount = 3;
         cut.positionCount = 3;
     }
-    assembly->upsertPart(first.part, shaded);
+    ASSERT_TRUE(admitAndUpsertPart(assembly, first.part, shaded));
     EXPECT_TRUE(assembly->hasProgressivePartLod());
 
-    assembly->progressiveCutCeiling = 5;
-    assembly->progressiveCutNextFraction = 0.5f;
+    Obol::CadViewState viewState;
+    viewState.progressiveCutCeiling = 5;
+    viewState.progressiveCutNextFraction = 0.5f;
     size_t promotedParts = 0;
     for (size_t i = 0; i < 128; ++i) {
-        const Obol::PartId part = Obol::CadIdBuilder::hash128(
+        const Obol::PartId part = Obol::CadIdBuilder::partId(
             std::string("fractional-part-") + std::to_string(i));
         const uint8_t firstCut =
-            assembly->effectiveProgressiveCut(part, 10);
+            Obol::cadEffectiveProgressiveCut(viewState, part, 10);
         const uint8_t repeatedCut =
-            assembly->effectiveProgressiveCut(part, 10);
+            Obol::cadEffectiveProgressiveCut(viewState, part, 10);
         if (firstCut == 6)
             ++promotedParts;
         if (firstCut != repeatedCut || (firstCut != 5 && firstCut != 6)) {
@@ -153,39 +210,43 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     }
     EXPECT_GT(promotedParts, 32u);
     EXPECT_LT(promotedParts, 96u);
-    assembly->progressiveCutNextFraction = 0.0f;
-    EXPECT_EQ(assembly->effectiveProgressiveCut(first.part, 10), 5);
-    assembly->progressiveCutNextFraction = 1.0f;
-    EXPECT_EQ(assembly->effectiveProgressiveCut(first.part, 10), 6);
-    EXPECT_EQ(assembly->maximumEffectiveProgressiveCut(10), 6);
-    assembly->progressiveCutCeiling = -1;
-    assembly->progressiveCutNextFraction = 0.0f;
+    viewState.progressiveCutNextFraction = 0.0f;
+    EXPECT_EQ(Obol::cadEffectiveProgressiveCut(
+        viewState, first.part, 10), 5);
+    viewState.progressiveCutNextFraction = 1.0f;
+    EXPECT_EQ(Obol::cadEffectiveProgressiveCut(
+        viewState, first.part, 10), 6);
+    EXPECT_EQ(Obol::cadMaximumEffectiveProgressiveCut(
+        viewState, 10), 6);
 
     unsigned int changeCount = 0;
     SoNodeSensor changeSensor(nodeChanged, &changeCount);
     changeSensor.setPriority(0);
     changeSensor.attach(assembly);
-    const std::shared_ptr<const Obol::PartGeometry> immutableGeometry =
-        std::make_shared<const Obol::PartGeometry>(shaded);
-    Obol::SharedPartUpdate sharedUpdate;
+    Obol::PartUpdate sharedUpdate;
     sharedUpdate.part = first.part;
-    sharedUpdate.geometry = immutableGeometry;
-    assembly->upsertSharedParts({sharedUpdate});
+    const Obol::CadGeometryAdmission sharedAdmission =
+        Obol::cadAdmitPartGeometry(shaded);
+    ASSERT_TRUE(sharedAdmission);
+    sharedUpdate.geometry = sharedAdmission.geometry;
+    ASSERT_TRUE(assembly->upsertParts({sharedUpdate}));
     const unsigned int firstPublicationChanges = changeCount;
-    assembly->upsertSharedParts({sharedUpdate});
+    ASSERT_TRUE(assembly->upsertParts({sharedUpdate}));
     EXPECT_GT(firstPublicationChanges, 0u);
     EXPECT_EQ(changeCount, firstPublicationChanges);
     changeSensor.detach();
 
-    assembly->upsertPart(first.part, Obol::PartGeometry());
+    ASSERT_TRUE(admitAndUpsertPart(
+        assembly, first.part, Obol::PartGeometryBuilder()));
     EXPECT_FALSE(assembly->hasProgressivePartLod());
 
     SoCADAssembly *emptyBoundsAssembly = new SoCADAssembly;
     emptyBoundsAssembly->ref();
     Obol::InstanceRecord emptyRecord;
-    emptyRecord.part = Obol::CadIdBuilder::hash128("empty-bounds-part");
-    emptyBoundsAssembly->upsertPart(emptyRecord.part, Obol::PartGeometry());
-    emptyBoundsAssembly->upsertInstanceAuto(emptyRecord);
+    emptyRecord.part = Obol::CadIdBuilder::partId("empty-bounds-part");
+    ASSERT_TRUE(admitAndUpsertPart(emptyBoundsAssembly,
+        emptyRecord.part, Obol::PartGeometryBuilder()));
+    ASSERT_TRUE(emptyBoundsAssembly->upsertInstanceAuto(emptyRecord));
     SoGetBoundingBoxAction emptyBoundsAction(SbViewportRegion(64, 64));
     emptyBoundsAction.apply(emptyBoundsAssembly);
     EXPECT_TRUE(emptyBoundsAction.getBoundingBox().isEmpty());
@@ -193,18 +254,18 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
 
     SoCADAssembly *conservativeBoundsAssembly = new SoCADAssembly;
     conservativeBoundsAssembly->ref();
-    Obol::PartGeometry boundedPlaceholder;
+    Obol::PartGeometryBuilder boundedPlaceholder;
     SbBox3f conservativeBounds;
     conservativeBounds.setBounds(SbVec3f(-2.0f, -3.0f, -4.0f),
                                  SbVec3f( 5.0f,  7.0f, 11.0f));
     boundedPlaceholder.conservativeBounds = conservativeBounds;
     Obol::InstanceRecord boundedRecord;
     boundedRecord.part =
-        Obol::CadIdBuilder::hash128("conservative-bounds-part");
+        Obol::CadIdBuilder::partId("conservative-bounds-part");
     boundedRecord.localToRoot.setTranslate(SbVec3f(10.0f, 20.0f, 30.0f));
-    conservativeBoundsAssembly->upsertPart(
-        boundedRecord.part, boundedPlaceholder);
-    conservativeBoundsAssembly->upsertInstanceAuto(boundedRecord);
+    ASSERT_TRUE(admitAndUpsertPart(conservativeBoundsAssembly,
+        boundedRecord.part, boundedPlaceholder));
+    ASSERT_TRUE(conservativeBoundsAssembly->upsertInstanceAuto(boundedRecord));
     SoGetBoundingBoxAction conservativeBoundsAction(SbViewportRegion(64, 64));
     conservativeBoundsAction.apply(conservativeBoundsAssembly);
     const SbBox3f transformedBounds =
@@ -229,6 +290,389 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     EXPECT_EQ(progressiveWire.segmentCountAtCut(0), 2u);
     EXPECT_EQ(progressiveWire.segmentFirstAtCut(63), 4u);
     EXPECT_EQ(progressiveWire.segmentCountAtCut(63), 2u);
+
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, RejectsMalformedGeometryAtomically)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    Obol::PartGeometryBuilder invalidGeometry;
+    Obol::TriMesh invalidMesh;
+    invalidMesh.positions = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f)
+    };
+    invalidMesh.bounds.setBounds(SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 1.0f, 0.0f));
+    invalidMesh.indices = {0, 1, 7};
+    invalidGeometry.shaded = invalidMesh;
+
+    const Obol::PartId invalidPart =
+        Obol::CadIdBuilder::partId("invalid-index-part");
+    Obol::CadGeometryValidation result =
+        admitAndUpsertPart(assembly, invalidPart, invalidGeometry);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidVertexIndex);
+    EXPECT_EQ(result.elementIndex, 2u);
+    EXPECT_EQ(assembly->partCount(), 0u);
+
+    Obol::PartGeometryBuilder validGeometry = invalidGeometry;
+    validGeometry.shaded->indices[2] = 2;
+    const Obol::PartId validPart =
+        Obol::CadIdBuilder::partId("valid-part");
+
+    Obol::PartGeometryBuilder invalidProgression = validGeometry;
+    invalidProgression.shaded->progressiveMinimumCut = 0;
+    invalidProgression.shaded->progressiveResidentCut = 1;
+    invalidProgression.shaded->progressiveCuts.resize(2);
+    invalidProgression.shaded->progressiveCuts[0].indexCount = 3;
+    invalidProgression.shaded->progressiveCuts[0].positionCount = 3;
+    invalidProgression.shaded->progressiveCuts[1].indexCount = 0;
+    invalidProgression.shaded->progressiveCuts[1].positionCount = 0;
+    result = admitAndUpsertPart(assembly, validPart, invalidProgression);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidProgressiveOrder);
+    EXPECT_EQ(assembly->partCount(), 0u);
+
+    Obol::PartGeometryBuilder progressiveWireGeometry;
+    Obol::WireRep certifiedWire;
+    certifiedWire.bounds = SbBox3f(SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(2.0f, 1.0f, 0.0f));
+    certifiedWire.segmentPoints = {
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f), SbVec3f(2.0f, 1.0f, 0.0f)
+    };
+    certifiedWire.progressiveMinimumCut = 0;
+    certifiedWire.progressiveResidentCut = 1;
+    certifiedWire.progressiveCuts.resize(2);
+    certifiedWire.progressiveCuts[0].segmentCount = 1;
+    certifiedWire.progressiveCuts[0].maximumNormalizedError = 0.25f;
+    certifiedWire.progressiveCuts[1].segmentCount = 2;
+    certifiedWire.progressiveCuts[1].maximumNormalizedError = 0.0f;
+    progressiveWireGeometry.wire = certifiedWire;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(progressiveWireGeometry));
+
+    progressiveWireGeometry.wire->progressiveCuts[1]
+        .maximumNormalizedError = 0.5f;
+    result = Obol::cadValidatePartGeometry(progressiveWireGeometry);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidProgressiveOrder);
+
+    progressiveWireGeometry.wire->progressiveCuts[0]
+        .maximumNormalizedError = 0.25f;
+    progressiveWireGeometry.wire->progressiveCuts[1]
+        .maximumNormalizedError = -1.0f;
+    result = Obol::cadValidatePartGeometry(progressiveWireGeometry);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidProgressiveOrder);
+
+    result = admitAndUpsertPart(assembly, validPart, validGeometry);
+    EXPECT_TRUE(result.valid());
+    EXPECT_EQ(assembly->partCount(), 1u);
+
+    /* A whole-scene structural overview stays visible in shaded mode but is
+     * intentionally not collapsed to a point.  Those are independent
+     * presentation properties. */
+    Obol::PartGeometryBuilder structuralOverview;
+    structuralOverview.structuralProxy = true;
+    structuralOverview.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(structuralOverview));
+
+    Obol::PartGeometryBuilder invalidSubpixelProxy;
+    invalidSubpixelProxy.subpixelProxyEligible = true;
+    result = Obol::cadValidatePartGeometry(invalidSubpixelProxy);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidSubpixelProxy);
+
+    Obol::PartGeometryBuilder wireSubpixelProxy;
+    wireSubpixelProxy.subpixelProxyEligible = true;
+    Obol::WireRep proxyWire;
+    proxyWire.bounds = SbBox3f(SbVec3f(-2.0f, -1.0f, 0.0f),
+        SbVec3f(2.0f, 1.0f, 0.0f));
+    proxyWire.polylines.push_back({
+        {SbVec3f(-2.0f, 0.0f, 0.0f), SbVec3f(2.0f, 0.0f, 0.0f)}, 0});
+    wireSubpixelProxy.wire = std::move(proxyWire);
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(wireSubpixelProxy));
+
+    Obol::PartUpdate nullUpdate;
+    nullUpdate.part = invalidPart;
+    result = assembly->upsertParts({nullUpdate});
+    EXPECT_EQ(result.error, Obol::CadGeometryError::NullGeometry);
+    EXPECT_EQ(assembly->partCount(), 1u);
+
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, RejectsMalformedSceneMutationsAtomically)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    const Obol::PartId part = Obol::CadIdBuilder::partId("scene-part");
+    Obol::InstanceRecord valid;
+    valid.part = part;
+    valid.parent = Obol::CadIdBuilder::rootInstance();
+    valid.childName = "valid";
+
+    Obol::InstanceRecord invalid = valid;
+    invalid.childName = "invalid";
+    invalid.localToRoot[1][2] =
+        (std::numeric_limits<float>::quiet_NaN)();
+
+    Obol::InstanceUpdate validUpdate;
+    validUpdate.instance = Obol::CadIdBuilder::instanceId("valid-instance");
+    validUpdate.record = valid;
+    Obol::InstanceUpdate invalidUpdate;
+    invalidUpdate.instance =
+        Obol::CadIdBuilder::instanceId("invalid-instance");
+    invalidUpdate.record = invalid;
+
+    Obol::CadSceneValidation validation =
+        assembly->upsertInstances({validUpdate, invalidUpdate});
+    EXPECT_EQ(validation.error, Obol::CadSceneError::NonFiniteTransform);
+    EXPECT_EQ(validation.updateIndex, 1u);
+    EXPECT_EQ(assembly->instanceCount(), 0u);
+
+    validation = assembly->upsertInstance(validUpdate.instance, valid);
+    ASSERT_TRUE(validation);
+    const std::optional<Obol::InstanceRecord> before =
+        assembly->getInstanceRecord(validUpdate.instance);
+    ASSERT_TRUE(before.has_value());
+
+    validation = assembly->updateInstanceTransform(
+        validUpdate.instance, invalid.localToRoot);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::NonFiniteTransform);
+    const std::optional<Obol::InstanceRecord> afterTransform =
+        assembly->getInstanceRecord(validUpdate.instance);
+    ASSERT_TRUE(afterTransform.has_value());
+    EXPECT_EQ(afterTransform->localToRoot, before->localToRoot);
+
+    Obol::InstanceStyle invalidStyle = valid.style;
+    invalidStyle.lineWidth = 0.0f;
+    validation = assembly->updateInstanceStyle(
+        validUpdate.instance, invalidStyle);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::InvalidStyle);
+    const std::optional<Obol::InstanceRecord> afterStyle =
+        assembly->getInstanceRecord(validUpdate.instance);
+    ASSERT_TRUE(afterStyle.has_value());
+    EXPECT_EQ(afterStyle->style.lineWidth, before->style.lineWidth);
+
+    Obol::InstanceStyleUpdate validStyleUpdate;
+    validStyleUpdate.instance = validUpdate.instance;
+    validStyleUpdate.style = valid.style;
+    Obol::InstanceStyleUpdate missingStyleUpdate = validStyleUpdate;
+    missingStyleUpdate.instance =
+        Obol::CadIdBuilder::instanceId("missing-instance");
+    validation = assembly->updateInstanceStyles(
+        {validStyleUpdate, missingStyleUpdate});
+    EXPECT_EQ(validation.error, Obol::CadSceneError::MissingInstance);
+    EXPECT_EQ(validation.updateIndex, 1u);
+
+    Obol::InstanceLodUpdate missingCut;
+    missingCut.instance = missingStyleUpdate.instance;
+    validation = assembly->updateInstanceCuts({missingCut});
+    EXPECT_EQ(validation.error, Obol::CadSceneError::MissingInstance);
+    EXPECT_EQ(validation.updateIndex, 0u);
+
+    invalid.part = Obol::PartId();
+    const Obol::CadInstanceUpdateResult invalidAuto =
+        assembly->upsertInstanceAuto(invalid);
+    EXPECT_EQ(invalidAuto.validation.error,
+        Obol::CadSceneError::NonFiniteTransform);
+    EXPECT_FALSE(invalidAuto.instance.isValid());
+    EXPECT_EQ(assembly->instanceCount(), 1u);
+
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, BatchScopesNestAndPurePreflightDoesNotMutate)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.setPriority(0);
+    changeSensor.attach(assembly);
+
+    Obol::PartGeometryBuilder geometry;
+    geometry.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("batch-scope-part");
+    {
+        auto outer = assembly->batchUpdate();
+        auto inner = assembly->batchUpdate();
+        ASSERT_TRUE(admitAndUpsertPart(assembly, part, geometry));
+        inner.finish();
+        EXPECT_EQ(changeCount, 0u);
+        outer.finish();
+        EXPECT_GT(changeCount, 0u);
+    }
+    const unsigned int committedChanges = changeCount;
+
+    Obol::PartGeometryBuilder malformed = geometry;
+    Obol::TriMesh mesh;
+    mesh.positions = {SbVec3f(0.0f, 0.0f, 0.0f)};
+    mesh.indices = {0, 0, 4};
+    mesh.bounds.setBounds(mesh.positions.front(), mesh.positions.front());
+    malformed.shaded = std::move(mesh);
+    const Obol::CadGeometryValidation preflight =
+        Obol::cadValidatePartGeometry(malformed);
+    EXPECT_EQ(preflight.error, Obol::CadGeometryError::InvalidVertexIndex);
+    EXPECT_EQ(assembly->partCount(), 1u);
+    EXPECT_EQ(changeCount, committedChanges);
+
+    changeSensor.detach();
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, CompleteReplacementRejectsBeforeClearingLiveScene)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.setPriority(0);
+    changeSensor.attach(assembly);
+
+    Obol::PartGeometryBuilder geometry;
+    geometry.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const auto admitted = Obol::cadAdmitPartGeometry(geometry);
+    ASSERT_TRUE(admitted);
+
+    const Obol::PartId firstPart =
+        Obol::CadIdBuilder::partId("replacement-first-part");
+    const Obol::InstanceId firstInstance =
+        Obol::CadIdBuilder::instanceId("replacement-first-instance");
+    Obol::InstanceRecord firstRecord;
+    firstRecord.part = firstPart;
+    const Obol::CadSceneReplacementResult first = assembly->replaceScene(
+        {{firstPart, admitted.geometry, false}},
+        {{firstInstance, firstRecord}});
+    ASSERT_TRUE(first);
+    EXPECT_GT(changeCount, 0u);
+    EXPECT_EQ(assembly->partCount(), 1u);
+    EXPECT_EQ(assembly->instanceCount(), 1u);
+    const unsigned int committedChanges = changeCount;
+
+    Obol::InstanceRecord malformedRecord = firstRecord;
+    malformedRecord.part = Obol::PartId();
+    const Obol::CadSceneReplacementResult rejected = assembly->replaceScene(
+        {{Obol::CadIdBuilder::partId("replacement-second-part"),
+          admitted.geometry, false}},
+        {{Obol::CadIdBuilder::instanceId("replacement-second-instance"),
+          malformedRecord}});
+    EXPECT_EQ(rejected.error,
+        Obol::CadSceneReplacementError::Instances);
+    EXPECT_EQ(rejected.instances.error, Obol::CadSceneError::InvalidPartId);
+    EXPECT_EQ(assembly->partCount(), 1u);
+    EXPECT_EQ(assembly->instanceCount(), 1u);
+    EXPECT_TRUE(assembly->getInstanceRecord(firstInstance).has_value());
+    EXPECT_EQ(changeCount, committedChanges);
+    EXPECT_STREQ(Obol::cadSceneReplacementErrorName(
+        Obol::CadSceneReplacementError::ResourceUnavailable),
+        "resource-unavailable");
+
+    changeSensor.detach();
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, SparseMutationRejectsBeforeChangingLiveScene)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    Obol::PartGeometryBuilder geometry;
+    geometry.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const auto admitted = Obol::cadAdmitPartGeometry(std::move(geometry));
+    ASSERT_TRUE(admitted);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("sparse-rejected-part");
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("sparse-rejected-instance");
+    Obol::InstanceRecord record;
+    record.part = part;
+
+    Obol::CadSceneMutation mutation;
+    mutation.parts.push_back({part, admitted.geometry, false});
+    mutation.instances.push_back({instance, record});
+    mutation.styles.push_back({
+        Obol::CadIdBuilder::instanceId("missing-style-target"),
+        Obol::InstanceStyle()});
+
+    const Obol::CadSceneMutationResult rejected =
+        assembly->applySceneMutation(mutation);
+    EXPECT_EQ(rejected.domain, Obol::CadSceneMutationDomain::Styles);
+    EXPECT_EQ(rejected.scene.error, Obol::CadSceneError::MissingInstance);
+    EXPECT_EQ(assembly->partCount(), 0u);
+    EXPECT_EQ(assembly->instanceCount(), 0u);
+
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, SparseMutationCommitsOneValidatedDelta)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    Obol::PartGeometryBuilder geometry;
+    geometry.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const auto admitted = Obol::cadAdmitPartGeometry(std::move(geometry));
+    ASSERT_TRUE(admitted);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("sparse-committed-part");
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("sparse-committed-instance");
+    Obol::InstanceRecord record;
+    record.part = part;
+    Obol::InstanceStyle style;
+    style.hasColorOverride = true;
+    style.color = SbColor4f(0.2f, 0.3f, 0.4f, 1.0f);
+
+    Obol::CadSceneMutation mutation;
+    mutation.parts.push_back({part, admitted.geometry, false});
+    mutation.instances.push_back({instance, record});
+    mutation.styles.push_back({instance, style});
+    mutation.cuts.push_back({instance, 3u});
+
+    const Obol::CadSceneMutationResult committed =
+        assembly->applySceneMutation(mutation);
+    ASSERT_TRUE(committed);
+    ASSERT_EQ(assembly->partCount(), 1u);
+    ASSERT_EQ(assembly->instanceCount(), 1u);
+    const std::optional<Obol::InstanceRecord> stored =
+        assembly->getInstanceRecord(instance);
+    ASSERT_TRUE(stored.has_value());
+    EXPECT_EQ(stored->lodCut, 3u);
+    EXPECT_TRUE(stored->style.hasColorOverride);
+    EXPECT_EQ(stored->style.color, style.color);
+
+    Obol::CadSceneMutation conflict;
+    conflict.instances.push_back({instance, record});
+    conflict.removedInstances.push_back(instance);
+    const Obol::CadSceneMutationResult rejected =
+        assembly->applySceneMutation(conflict);
+    EXPECT_EQ(rejected.domain,
+        Obol::CadSceneMutationDomain::RemovedInstances);
+    EXPECT_TRUE(assembly->getInstanceRecord(instance).has_value());
 
     assembly->unref();
 }

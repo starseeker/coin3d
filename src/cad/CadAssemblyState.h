@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -98,8 +99,6 @@ struct CadSceneDatabase {
     std::unordered_map<Obol::PartId, uint64_t,
         std::hash<Obol::PartId>> partGeneration_;
     uint64_t nextGeneration_ = 1;
-    bool inUpdate_ = false;
-    size_t streamingOccurrenceCapacityHint_ = 0;
 };
 
 struct CadPickingIndex {
@@ -160,7 +159,24 @@ struct CadPlanCache {
     uint64_t geometryRevision_ = 0;
     bool planDirty_ = true;
     bool geometryDirty_ = true;
-    int cachedDM_ = -1;
+    std::optional<Obol::CadDrawMode> cachedDrawMode_;
+
+    int cachedDrawModeDiagnostic() const noexcept
+    {
+        return cachedDrawMode_ ? static_cast<int>(*cachedDrawMode_) : -1;
+    }
+
+    bool cachedDrawModeHasWire() const noexcept
+    {
+        return cachedDrawMode_ &&
+            Obol::cadDrawModeHasWire(*cachedDrawMode_);
+    }
+
+    bool cachedDrawModeHasShaded() const noexcept
+    {
+        return cachedDrawMode_ &&
+            Obol::cadDrawModeHasShaded(*cachedDrawMode_);
+    }
     const char *planDirtyReason_ = "initial";
     uint64_t framePlanBuildCount_ = 0;
     uint64_t progressivePlanPatchFailureCount_ = 0;
@@ -178,6 +194,7 @@ struct CadSubpixelClassifier {
     uint64_t nextSubpixelProxyInputRevision_ = 1;
     uint64_t subpixelProxyStateInputRevision_ = 0;
     uint64_t subpixelProxyViewInputRevision_ = 0;
+    uint64_t subpixelProxyViewId_ = 0;
     SbMatrix subpixelProxyViewProj_;
     SbVec2s subpixelProxyViewportSize_ = SbVec2s(0, 0);
     float subpixelProxyPixelThreshold_ = 1.0f;
@@ -216,6 +233,7 @@ struct CadSubpixelClassifier {
     bool subpixelProxyBuildActive_ = false;
     uint64_t subpixelProxyBuildInputRevision_ = 0;
     uint64_t subpixelProxyBuildAppendRevision_ = 0;
+    uint64_t subpixelProxyBuildViewId_ = 0;
     SbMatrix subpixelProxyBuildViewProj_;
     SbVec2s subpixelProxyBuildViewportSize_ = SbVec2s(0, 0);
     float subpixelProxyBuildPixelThreshold_ = 1.0f;

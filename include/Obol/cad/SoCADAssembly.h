@@ -52,44 +52,55 @@
  *
  * ### Usage example
  * @code
+ *   SoCADViewState* view = new SoCADViewState;
+ *   view->drawMode = SoCADViewState::WIREFRAME;
  *   SoCADAssembly* asm = new SoCADAssembly;
- *   asm->drawMode = SoCADAssembly::WIREFRAME;
  *
- *   // Add a part with wire geometry
- *   Obol::PartId pid = Obol::CadIdBuilder::hash128("wheel");
- *   Obol::PartGeometry geom;
+ *   // Admit immutable geometry before the owner-thread transaction.
+ *   Obol::PartId pid = Obol::CadIdBuilder::partId("wheel");
+ *   Obol::PartGeometryBuilder geom;
  *   geom.wire = Obol::WireRep{ ... };
- *   asm->upsertPart(pid, geom);
+ *   Obol::CadGeometryAdmission admitted = Obol::cadAdmitPartGeometry(
+ *       std::move(geom));
+ *   if (!admitted) { ... }
  *
  *   // Add an instance
  *   Obol::InstanceRecord rec;
  *   rec.part   = pid;
- *   rec.parent = Obol::CadIdBuilder::Root();
+ *   rec.parent = Obol::CadIdBuilder::rootInstance();
  *   rec.localToRoot.makeIdentity();
- *   Obol::InstanceId iid = asm->upsertInstanceAuto(rec);
+ *   const Obol::InstanceId iid = Obol::CadIdBuilder::childInstance(
+ *       rec.parent, "wheel", 0, 0);
+ *   Obol::CadSceneMutation mutation;
+ *   mutation.parts.push_back({pid, admitted.geometry});
+ *   mutation.instances.push_back({iid, rec});
+ *   if (!asm->applySceneMutation(mutation)) { ... }
  *
+ *   root->addChild(view);
  *   root->addChild(asm);
  * @endcode
  */
 
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoNode.h>
-#include <Inventor/fields/SoSFEnum.h>
-#include <Inventor/fields/SoSFBool.h>
-#include <Inventor/fields/SoSFFloat.h>
-#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbVec3f.h>
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadGeometry.h>
+#include <Obol/cad/CadFrameReport.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
 #include <Obol/cad/CadPresentationPreparation.h>
 #include <Obol/cad/CadProgressive.h>
+#include <Obol/cad/CadSceneRecords.h>
+#include <Obol/cad/CadSceneMutation.h>
+#include <Obol/cad/CadSceneReplacement.h>
+#include <Obol/cad/CadSceneValidation.h>
+#include <Obol/cad/CadViewState.h>
 
 #include <vector>
-#include <array>
 #include <unordered_set>
 #include <algorithm>
 #include <optional>
@@ -99,555 +110,6 @@
 #include <string>
 
 class SoDetail;
-
-namespace Obol {
-
-struct TriMesh;
-
-/** One independently drawable prefix of a progressive wire stream. */
-struct ProgressiveWireCut {
-    uint32_t segmentFirst = 0;
-    uint32_t segmentCount = 0;
-    ProgressiveQuantization quantization;
-};
-
-/** One independently drawable prefix of a progressive triangle stream. */
-struct ProgressiveTriangleCut {
-    uint32_t indexCount = 0;
-    uint32_t positionCount = 0;
-    ProgressiveQuantization quantization;
-};
-
-/** One contiguous triangle-list range introduced by a progressive cut. */
-struct ProgressiveTriangleClusterRange {
-    uint32_t firstIndex = 0;
-    uint32_t indexCount = 0;
-    uint8_t activationCut = ProgressiveCutUnspecified;
-};
-
-/**
- * Private spatial subresource of one logical triangle part.
- *
- * Clusters do not have CAD identity, transforms, styles, selection, or scene
- * hierarchy.  They only let a renderer cull and submit bounded portions of a
- * very large leaf while preserving one PartId.  A page may be replaced by a
- * richer range at the append-only stream tail; retired bytes remain
- * unreferenced until producer compaction.  Ranges are triangle aligned and
- * refer to @ref TriMesh::indices.
- */
-struct ProgressiveTriangleCluster {
-    SbBox3f bounds;
-    std::vector<ProgressiveTriangleClusterRange> ranges;
-    /** Richest logical cut drawable from this page's resident arrays. */
-    uint8_t residentCut = ProgressiveCutUnspecified;
-};
-
-/** One activation-ordered segment range within a private wire subresource. */
-struct ProgressiveWireClusterRange {
-    uint32_t firstSegment = 0;
-    uint32_t segmentCount = 0;
-    uint8_t activationCut = ProgressiveCutUnspecified;
-};
-
-/**
- * Private spatial subresource of one logical wire part.
- *
- * Like ProgressiveTriangleCluster, this record has no CAD identity of its
- * own.  It only describes independently resident/cullable ranges in the
- * parent part's retained segment stream.
- */
-struct ProgressiveWireCluster {
-    SbBox3f bounds;
-    std::vector<ProgressiveWireClusterRange> ranges;
-    /** Richest logical cut drawable from this page's resident arrays. */
-    uint8_t residentCut = ProgressiveCutUnspecified;
-};
-
-/**
- * Logical work submitted by one completed CAD render.
- *
- * Counts describe the work submitted at the active progressive cut, rather
- * than richer resident geometry which may remain behind a renderer-side LoD
- * ceiling.  @c occurrenceCount covers ordinary per-instance submissions;
- * occurrences replaced by the aggregate subpixel channel contribute one to
- * @c positionCount but deliberately do not acquire per-instance draw cost.
- * Consumers can therefore translate this record into their calibrated cost
- * model without guessing from retained triangle ratios.
- */
-struct CadRenderedWork {
-    uint64_t triangleCount = 0;
-    uint64_t lineCount = 0;
-    uint64_t positionCount = 0;
-    uint64_t normalCount = 0;
-    uint64_t occurrenceCount = 0;
-    bool exact = false;
-};
-
-/**
- * Exact camera-local distribution of unresolved structural LoD proxies.
- *
- * The cumulative buckets count otherwise collapsible, fully contained
- * structural occurrences whose larger projected screen extent is at or below
- * 1, 2, 4, 8, 16, 32, and 64 pixels respectively.  @c visibleCount also
- * includes partly clipped, selected/protected, and larger occurrences which
- * cannot currently use the aggregate point channel.  The renderer computes
- * this beside its authoritative frustum/subpixel classification, allowing a
- * loader to choose a useful initial aggregation threshold without repeating
- * an O(scene-size) projection pass or first loading geometry that the final
- * presentation will not draw.
- */
-struct CadStructuralProxyProjectionHistogram {
-    static constexpr size_t BucketCount = 7;
-
-    std::array<uint64_t, BucketCount> cumulativeCount = {};
-    uint64_t visibleCount = 0;
-    uint64_t revision = 0;
-    bool exact = false;
-};
-
-// ---------------------------------------------------------------------------
-// Geometry primitives ingested via the SoCADAssembly API
-// ---------------------------------------------------------------------------
-
-/**
- * @brief A single polyline of 3-D points in part-local space.
- *
- * Polylines represent feature edges (e.g. boundary edges of a CSG solid)
- * without requiring surface tessellation.
- */
-struct WirePolyline {
-    /** Polyline vertices in part-local coordinates. */
-    std::vector<SbVec3f> points;
-
-    /**
-     * Optional per-polyline stable edge ID within this part.
-     * Set to 0 if no stable edge identity is available.
-     */
-    uint32_t edgeId = 0;
-};
-
-/**
- * @brief Collection of line geometry representing the wireframe of a part.
- */
-struct WireRep {
-    /**
-     * Flat segment endpoint list in part-local coordinates.
-     *
-     * Each consecutive pair (segmentPoints[2i], segmentPoints[2i+1])
-     * defines one independent line segment.  This is the preferred storage
-     * for CAD wire data that is naturally segment-oriented.
-     */
-    std::vector<SbVec3f> segmentPoints;
-
-    /**
-     * Optional zero-copy triangle-edge source.
-     *
-     * Tessellated CAD meshes should not duplicate every indexed triangle as
-     * six independent endpoint positions merely to support wireframe draw.
-     * This alias keeps the immutable triangle owner alive and asks the
-     * renderer and picker to treat each triangle boundary as three wire
-     * segments.  It is mutually exclusive with @c segmentPoints and
-     * @c polylines.  Progressive cut and cluster metadata below use segment
-     * units; one triangle index corresponds to one derived edge segment.
-     */
-    std::shared_ptr<const TriMesh> triangleEdges;
-
-    /** Resident derived edge count.  Equal to triangleEdges->indices.size()
-     * when @c triangleEdges is present; stored explicitly so the ordinary
-     * wire cut API remains usable before TriMesh's complete definition. */
-    size_t triangleEdgeSegmentCount = 0;
-
-    /**
-     * Optional stable ID per flat segment.  When present, segmentIds[i]
-     * identifies the segment defined by segmentPoints[2i..2i+1].
-     */
-    std::vector<uint32_t> segmentIds;
-
-    /** Return the number of complete flat segments. */
-    size_t segmentCount() const noexcept {
-        return triangleEdges ? triangleEdgeSegmentCount :
-            segmentPoints.size() / 2;
-    }
-
-    bool derivesTriangleEdges() const noexcept {
-        return static_cast<bool>(triangleEdges);
-    }
-
-    /** Polyline storage for curves or callers that need connected strips. */
-    std::vector<WirePolyline> polylines;
-
-    /** Tight axis-aligned bounding box enclosing all wire geometry. */
-    SbBox3f bounds;
-
-    /**
-     * Ordered, independently drawable cuts.  Prefix producers normally
-     * leave segmentFirst zero.  Native curve producers may pack independent
-     * approximations and describe each range without rebuilding the part.
-     */
-    std::vector<ProgressiveWireCut> progressiveCuts;
-    uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
-    uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
-    SbVec3f progressiveQuantizationMinimum;
-    SbVec3f progressiveQuantizationMaximum;
-
-    /**
-     * Producer-certified identity of one append-only flat-segment stream.
-     *
-     * A nonzero value promises that later immutable WireRep records carrying
-     * the same token retain every preceding segmentPoints value as an exact
-     * prefix.  Renderers may preserve that GPU prefix and upload only the
-     * newly resident suffix.  Independent per-cut curve approximations and
-     * other non-prefix representations must leave this value zero.
-     */
-    uint64_t progressiveLineage = 0;
-
-    /** Optional spatial pages in segmentPoints.  A zero grid resolution
-     * identifies adaptive producer pages with independent active ranges; a
-     * non-zero value identifies a uniform cube layout. */
-    std::vector<ProgressiveWireCluster> progressiveClusters;
-    uint16_t progressiveClusterGridResolution = 0;
-
-    bool isProgressive() const noexcept {
-        return !progressiveCuts.empty() &&
-            progressiveCuts.size() <= ProgressiveCutLimit &&
-            progressiveMinimumCut < progressiveCuts.size() &&
-            progressiveResidentCut >= progressiveMinimumCut &&
-            progressiveResidentCut < progressiveCuts.size();
-    }
-
-    bool hasProgressiveClusters() const noexcept {
-        const size_t side = progressiveClusterGridResolution;
-        return isProgressive() && !progressiveClusters.empty() &&
-            (side == 0 || (side > 1 && side <= 64 &&
-             progressiveClusters.size() <= side * side * side));
-    }
-
-    bool hasAdaptiveProgressiveClusters() const noexcept {
-        return hasProgressiveClusters() &&
-            progressiveClusterGridResolution == 0;
-    }
-
-    size_t segmentCountAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return segmentCount();
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        const size_t first = (std::min<size_t>)(
-            progressiveCuts[cut].segmentFirst, segmentCount());
-        return (std::min<size_t>)(progressiveCuts[cut].segmentCount,
-                                  segmentCount() - first);
-    }
-
-    size_t segmentFirstAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return 0;
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        return (std::min<size_t>)(progressiveCuts[cut].segmentFirst,
-                                  segmentCount());
-    }
-
-    ProgressiveQuantization quantizationAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return ProgressiveQuantization();
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        return progressiveCuts[cut].quantization;
-    }
-};
-
-/**
- * @brief Optional shaded triangle mesh for a part.
- *
- * normals may be empty; in that case flat normals are computed at render time.
- * When present, normals has one entry per position and is addressed by the
- * same triangle indices as positions.
- */
-struct TriMesh {
-    std::vector<SbVec3f>  positions;
-    std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
-    std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
-    SbBox3f               bounds;
-    /** Producer cut schedule.  Adaptive pages select ranges rather than the
-     * global indexCount prefix. */
-    std::vector<ProgressiveTriangleCut> progressiveCuts;
-    uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
-    uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
-    SbVec3f progressiveQuantizationMinimum;
-    SbVec3f progressiveQuantizationMaximum;
-
-    /**
-     * Optional deterministic spatial partition of the progressive index
-     * stream.  A nonzero grid resolution describes gridResolution^3 cells in
-     * x-major order.  Zero describes an arbitrary producer-defined page list;
-     * each live page selects its independent activation ranges.  Every
-     * cluster bound conservatively encloses its currently resident triangles.
-     */
-    std::vector<ProgressiveTriangleCluster> progressiveClusters;
-    uint16_t progressiveClusterGridResolution = 0;
-
-    /**
-     * Producer-certified identity of one append-only progressive stream.
-     *
-     * A nonzero value promises that every later immutable PartGeometry with
-     * the same token preserves all position, normal, and index values in its
-     * preceding cumulative prefix.  Renderers may therefore retain an
-     * already uploaded prefix across PartGeometry generation changes and
-     * upload only the newly resident suffix.  Zero makes no such promise and
-     * retains the conservative full-replacement behavior.
-     *
-     * Producers must allocate a different token whenever topology, authored
-     * values, vertex splitting, activation order, progressive cut tables,
-     * or the quantization domain changes.  The token is process-local
-     * identity, not serialized asset or cache identity.
-     */
-    uint64_t progressiveLineage = 0;
-
-    bool isProgressive() const noexcept {
-        return !progressiveCuts.empty() &&
-            progressiveCuts.size() <= ProgressiveCutLimit &&
-            progressiveMinimumCut < progressiveCuts.size() &&
-            progressiveResidentCut >= progressiveMinimumCut &&
-            progressiveResidentCut < progressiveCuts.size();
-    }
-
-    bool hasProgressiveClusters() const noexcept {
-        const size_t side = progressiveClusterGridResolution;
-        /* A zero side marks deterministic adaptive pages.  Uniform-grid
-         * producers may omit empty cells; bounds and ranges make occupied
-         * records self-describing without dense placeholder objects. */
-        return isProgressive() && !progressiveClusters.empty() &&
-            (side == 0 || (side > 1 && side <= 64 &&
-             progressiveClusters.size() <= side * side * side));
-    }
-
-
-    /** Adaptive pages use independent active ranges rather than one global
-     * cumulative index prefix. */
-    bool hasAdaptiveProgressiveClusters() const noexcept {
-        return hasProgressiveClusters() &&
-            progressiveClusterGridResolution == 0;
-    }
-
-    size_t indexCountAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return indices.size();
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        return std::min<size_t>(progressiveCuts[cut].indexCount,
-                                indices.size());
-    }
-
-    size_t positionCountAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return positions.size();
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        return std::min<size_t>(progressiveCuts[cut].positionCount,
-                                positions.size());
-    }
-
-    ProgressiveQuantization quantizationAtCut(uint8_t cut) const noexcept {
-        if (!isProgressive()) return ProgressiveQuantization();
-        cut = (std::max)(progressiveMinimumCut,
-                       (std::min)(progressiveResidentCut, cut));
-        return progressiveCuts[cut].quantization;
-    }
-};
-
-/**
- * @brief Collection of point primitives representing a part.
- *
- * Optional attribute arrays are either empty or parallel to @c positions.
- * Scales are model-space characteristic radii used by bounds and export;
- * interactive raster size remains an instance presentation property.
- */
-struct PointRep {
-    std::vector<SbVec3f> positions;
-    std::vector<uint32_t> pointIds;
-    std::vector<uint8_t> colorValid;
-    std::vector<SbColor> colors;
-    std::vector<uint8_t> scaleValid;
-    std::vector<float> scales;
-    std::vector<uint8_t> normalValid;
-    std::vector<SbVec3f> normals;
-    SbBox3f bounds;
-};
-
-/**
- * @brief Combined geometry payload for a single part.
- *
- * Any channel may be absent:
- * - @c points : needed for point rendering and point picking.
- * - @c wire : needed for wireframe rendering and edge picking.
- * - @c shaded : needed for shaded rendering and triangle picking.
- *
- * A part with neither channel is non-renderable but still participates in
- * hierarchy / bounds queries.
- */
-struct PartGeometry {
-    std::optional<PointRep> points; ///< Point primitives and optional attributes
-    std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
-    std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
-
-    /**
-     * Optional producer-supplied local-space extent for geometry which is not
-     * yet renderable, or whose retained channels are only a partial
-     * presentation of the source.  When present, this bound is combined with
-     * all channel bounds and therefore must conservatively enclose the source
-     * represented by this part.
-     *
-     * An empty part without this value has empty bounds.  SoCADAssembly never
-     * invents placeholder geometry at the origin.
-     */
-    std::optional<SbBox3f> conservativeBounds;
-
-    /**
-     * The shaded triangles form a verified closed, manifold, consistently
-     * oriented surface whose exterior winding has been normalized to
-     * counter-clockwise.  The renderer may cull back faces only when this
-     * guarantee is true and the occurrence transform preserves orientation.
-     *
-     * This is deliberately producer-supplied rather than inferred by the
-     * renderer: validating topology belongs in geometry preparation and may
-     * be persisted with an LoD asset.  Open, unoriented, transparent, or
-     * otherwise unverified meshes must leave this false.
-     */
-    bool shadedCullBackfaces = false;
-
-    /**
-     * This presentation may be replaced by one depth-tested point when its
-     * complete producer-validated bounds are subpixel.  The immutable
-     * geometry remains available for bounds queries, picking, and immediate
-     * promotion when the view makes it significant again.  Producers should
-     * enable this for conservative LoD boxes and retained view-LoD meshes,
-     * not for arbitrary annotations whose authored strokes must remain
-     * individually visible.
-     */
-    bool subpixelProxyEligible = false;
-
-    /**
-     * This geometry is a temporary structural AABB/OBB presentation rather
-     * than authored wire geometry or a retained mesh LoD.  Producers must
-     * set this explicitly: channel shape alone is not enough to distinguish
-     * a box from a legitimate wire-only mesh.  The renderer uses the marker
-     * only for presentation accounting and diagnostics; subpixel aggregation
-     * remains controlled independently by @c subpixelProxyEligible.
-     */
-    bool structuralProxy = false;
-
-};
-
-// ---------------------------------------------------------------------------
-// Per-instance data
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Visual style overrides applied to a single instance.
- */
-struct InstanceStyle {
-    bool     hasColorOverride = false;
-    SbColor4f color           = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
-    float    lineWidth        = 1.0f;
-    uint16_t linePattern      = 0xffffu;
-    uint16_t linePatternFactor = 1u;
-};
-
-/**
- * @brief Full record describing an instance in the assembly.
- *
- * When no stable per-node GUID is available (the common case in BRL-CAD
- * comb trees), the InstanceId is generated deterministically from
- * (parent, childName, occurrenceIndex, boolOp) via CadIdBuilder.
- */
-struct InstanceRecord {
-    PartId        part;
-    SbMatrix      localToRoot;    ///< Transform placing the part at its world position
-
-    // --- ID generation inputs (ignored when using upsertInstance) ---
-    InstanceId    parent;          ///< Parent InstanceId (Root() at top level)
-    std::string   childName;       ///< Name string from the comb tree node
-    uint32_t      occurrenceIndex = 0; ///< Sibling disambiguator (0-based)
-    uint8_t       boolOp          = 0; ///< Boolean operation (0=union,1=sub,2=inter)
-    /** Per-occurrence retained PoP draw cut; unspecified selects richest resident. */
-    uint8_t       lodCut        = ProgressiveCutUnspecified;
-
-    /**
-     * The current part is a temporary structural fallback for this
-     * occurrence's unresolved LoD representation.  This is deliberately an
-     * occurrence property rather than a PartGeometry property: authored
-     * boxes, whole-target extents, and unresolved leaves may share identical
-     * immutable arrays while carrying different convergence obligations.
-     */
-    bool          lodStructuralProxy = false;
-
-    InstanceStyle style;
-};
-
-/**
- * @brief Bulk part update record.
- */
-struct PartUpdate {
-    PartId       part;
-    PartGeometry geometry;
-};
-
-/** Bulk update retaining immutable geometry owned by the producer. */
-struct SharedPartUpdate {
-    PartId part;
-    std::shared_ptr<const PartGeometry> geometry;
-    /**
-     * Producer hint for immutable-generation replacement.  When both the
-     * preceding and replacement geometry have exactly the same conservative
-     * local bounds, SoCADAssembly may retain occurrence world bounds and the
-     * instance BVH instead of revisiting every instance of this part.  The
-     * assembly validates the invariant and falls back to ordinary bounds
-     * recomputation if it is not satisfied.
-     */
-    bool preservesBounds = false;
-};
-
-/**
- * @brief Bulk instance update record.
- */
-struct InstanceUpdate {
-    InstanceId     instance;
-    InstanceRecord record;
-};
-
-struct InstanceLodUpdate {
-    InstanceId instance;
-    uint8_t lodCut = ProgressiveCutUnspecified;
-};
-
-/**
- * @brief Bulk presentation-only instance update record.
- */
-struct InstanceStyleUpdate {
-    InstanceId    instance;
-    InstanceStyle style;
-};
-
-/**
- * @brief Domain-neutral pick hit record produced by SoCADAssembly.
- *
- * Applications that need richer pick details can subclass SoCADAssembly and
- * override createPickDetail() to translate this stable CAD hit identity into
- * application-specific detail data.
- */
-struct CadPickDetailRecord {
-    enum PrimitiveKind {
-        EDGE     = 0,
-        TRIANGLE = 1,
-        BOUNDS   = 2,
-        POINT    = 3,
-    };
-
-    InstanceId    instance;
-    PartId        part;
-    SbVec3f       point         = SbVec3f(0.0f, 0.0f, 0.0f);
-    PrimitiveKind primitiveKind = BOUNDS;
-    uint32_t      primIndex0    = 0;
-    uint32_t      primIndex1    = 0;
-    float         u             = 0.0f;
-};
-
-} // namespace Obol
 
 // ---------------------------------------------------------------------------
 // SoCADAssembly node
@@ -674,61 +136,31 @@ class OBOL_DLL_API SoCADAssembly : public SoNode {
     SO_NODE_HEADER(SoCADAssembly);
 
 public:
-    // -----------------------------------------------------------------------
-    // Inventor-style fields
-    // -----------------------------------------------------------------------
+    /**
+     * Move-only update window returned by batchUpdate().
+     *
+     * Destruction completes the batch, including every early-return path.
+     * Nested windows are supported and notify the scene only when the
+     * outermost window closes.
+     */
+    class OBOL_DLL_API UpdateScope {
+    public:
+        UpdateScope(UpdateScope&& other) noexcept;
+        UpdateScope& operator=(UpdateScope&& other) noexcept;
+        ~UpdateScope();
 
-    /** Rendering mode. */
-    enum DrawMode {
-        SHADED           = 0,  ///< Shaded triangles only
-        WIREFRAME        = 1,  ///< Wireframe segments/polylines only
-        SHADED_WITH_EDGES = 2, ///< Shaded triangles + wire overlay
-        HIDDEN_LINE      = 3,  ///< Triangle depth prepass + visible wire edges
+        UpdateScope(const UpdateScope&) = delete;
+        UpdateScope& operator=(const UpdateScope&) = delete;
+
+        void finish() noexcept;
+
+    private:
+        explicit UpdateScope(SoCADAssembly *assembly) noexcept;
+
+        SoCADAssembly *assembly_ = nullptr;
+
+        friend class SoCADAssembly;
     };
-
-    /** Picking mode. */
-    enum PickMode {
-        PICK_AUTO     = 0, ///< Automatically select based on drawMode
-        PICK_EDGE     = 1, ///< Always use edge/wire picking
-        PICK_TRIANGLE = 2, ///< Always use triangle picking
-        PICK_BOUNDS   = 3, ///< Use bounding-box proxy only
-        PICK_HYBRID   = 4, ///< Try triangles; fall back to edges then bounds
-    };
-
-    SoSFEnum  drawMode;             ///< Default: WIREFRAME
-    SoSFEnum  pickMode;             ///< Default: PICK_AUTO
-    SoSFFloat edgePickTolerancePx;  ///< Screen-space edge pick tolerance (pixels)
-    SoSFBool  wireframeOcclusion;   ///< Run depth-only triangle pass in wireframe mode
-    /** Interactive render-only PoP ceiling, or -1 when disabled.
-     *
-     * This does not mutate producer-authored per-instance cuts or rebuild the
-     * frame plan.  It lets a view controller shed already-retained draw work
-     * in O(1) at interaction start while its precise per-instance allocator
-     * catches up. */
-    SoSFInt32 progressiveCutCeiling;
-    /** Fraction of progressive instances promoted one cut above the ceiling.
-     *
-     * A stable retained frame can use this to spend capacity between two
-     * discrete scene-wide PoP populations.  Promotion is deterministic for
-     * an instance id, so unchanged frames never shimmer.  Zero preserves the
-     * ordinary whole-cut ceiling used for interactive backoff. */
-    SoSFFloat progressiveCutNextFraction;
-    /** Screen-space size below which eligible occurrences enter one point
-     * batch.  The default 1 px is pixel-exact; an interactive controller may
-     * temporarily raise it to its measured screen-error tolerance.  Geometry
-     * and instance records remain retained and are restored in place when the
-     * threshold returns to 1 px. */
-    SoSFFloat pointProxyPixelThreshold;
-    /** Reuse the last camera-dependent submission during interactive camera
-     * motion.
-     *
-     * This is a presentation hint, not a visibility contract.  The renderer
-     * Callers must clear it for the first quiet frame or when a coverage pass
-     * discovers missing newly visible geometry.  During zoom the retained cut
-     * may temporarily overdraw or omit newly exposed peripheral occurrences,
-     * but it provides an immediate coherent frame while view admission
-     * catches up. */
-    SoSFBool cameraMotionFrameReuse;
 
     // -----------------------------------------------------------------------
     // Class registration
@@ -741,11 +173,8 @@ public:
     // Update framing (optional; batch multiple inserts for efficiency)
     // -----------------------------------------------------------------------
 
-    /** Begin a batch update.  Defers internal rebuilds until endUpdate(). */
-    void beginUpdate();
-
-    /** End a batch update and rebuild acceleration structures as needed. */
-    void endUpdate();
+    /** Defer scene notification until the returned scope is completed. */
+    UpdateScope batchUpdate();
 
     /**
      * Reserve retained and streamed presentation storage for a known
@@ -761,27 +190,52 @@ public:
     /** Remove all parts, instances, selection and hidden-state records. */
     void clear();
 
-    // -----------------------------------------------------------------------
-    // Part library
-    // -----------------------------------------------------------------------
-
     /**
-     * Insert or replace the geometry for a part.
-     * @param pid  Stable part identifier (use CadIdBuilder::hash128 to create).
-     * @param geom Part geometry (wire and/or shaded).
-     */
-    void upsertPart(Obol::PartId pid, const Obol::PartGeometry& geom);
-
-    /**
-     * Insert or replace many parts as one dirty operation.
+     * Replace all retained parts and occurrences as one checked operation.
      *
-     * This avoids per-part scene notifications and recomputes bounds for
-     * affected instances once after all geometry updates have landed.
+     * Both complete batches are validated before the preceding scene is
+     * changed.  A rejection therefore leaves the assembly untouched.  Use
+     * this operation for source-of-truth rebuilds; use the sparse mutation
+     * transaction below for progressive publication and editing.
      */
-    void upsertParts(const std::vector<Obol::PartUpdate>& updates);
+    [[nodiscard]] Obol::CadSceneReplacementResult replaceScene(
+        const std::vector<Obol::PartUpdate>& parts,
+        const std::vector<Obol::InstanceUpdate>& instances);
 
-    /** Retain producer-owned immutable part geometry without copying it. */
-    void upsertSharedParts(const std::vector<Obol::SharedPartUpdate>& updates);
+    /**
+     * Validate a sparse transaction against the current retained scene.
+     * This function has no side effects and performs work proportional to the
+     * mutation, not to the retained scene population.
+     */
+    [[nodiscard]] Obol::CadSceneMutationResult validateSceneMutation(
+        const Obol::CadSceneMutation& mutation) const;
+
+    /**
+     * Validate and apply a sparse transaction under one update window.
+     * Validation rejection leaves the preceding scene unchanged.
+     */
+    [[nodiscard]] Obol::CadSceneMutationResult applySceneMutation(
+        const Obol::CadSceneMutation& mutation);
+
+    // -----------------------------------------------------------------------
+    // Narrow convenience operations
+    // -----------------------------------------------------------------------
+
+    /**
+     * The operations below are useful for isolated single-domain changes and
+     * interactive fast paths.  When correctness depends on two or more
+     * records changing together, use applySceneMutation() instead of composing
+     * these calls: an independently rejected call intentionally does not roll
+     * back a preceding successful one.
+     */
+
+    /**
+     * Retain producer-owned immutable part geometry without copying it.
+     * Shared geometry must first be admitted with cadAdmitPartGeometry(); the
+     * presentation update itself performs no array-sized validation work.
+     */
+    Obol::CadGeometryValidation upsertParts(
+        const std::vector<Obol::PartUpdate>& updates);
 
     /**
      * Remove a part.  Any instances referencing this part become non-renderable
@@ -808,46 +262,52 @@ public:
      * Insert or update an instance, generating its InstanceId automatically
      * from (parent, childName, occurrenceIndex, boolOp) in @p rec.
      *
-     * @return The generated InstanceId (stable within the session as long as
-     *         the same traversal path is used).
+     * @return Validation and the generated stable identifier.  The identifier
+     *         is invalid when validation fails.
      */
-    Obol::InstanceId upsertInstanceAuto(const Obol::InstanceRecord& rec);
+    Obol::CadInstanceUpdateResult upsertInstanceAuto(
+        const Obol::InstanceRecord& rec);
 
     /**
      * Insert or update an instance with an explicitly-supplied InstanceId.
      * Use this when you already have a stable external identifier.
      */
-    void upsertInstance(Obol::InstanceId iid, const Obol::InstanceRecord& rec);
+    Obol::CadSceneValidation upsertInstance(
+        Obol::InstanceId iid, const Obol::InstanceRecord& rec);
 
     /**
      * Insert or update many automatically-identified instances.
      *
-     * @return Generated InstanceIds, in the same order as @p records.
+     * @return Validation and generated identifiers in record order.  The
+     *         identifier vector is empty when validation fails.
      */
-    std::vector<Obol::InstanceId> upsertInstancesAuto(
+    Obol::CadInstanceBatchResult upsertInstancesAuto(
         const std::vector<Obol::InstanceRecord>& records);
 
     /**
      * Insert or update many explicitly-identified instances as one dirty
      * operation.
      */
-    void upsertInstances(const std::vector<Obol::InstanceUpdate>& updates);
+    Obol::CadSceneValidation upsertInstances(
+        const std::vector<Obol::InstanceUpdate>& updates);
 
     /** Update only retained progressive draw cuts. */
-    void updateInstanceCuts(
+    Obol::CadSceneValidation updateInstanceCuts(
         const std::vector<Obol::InstanceLodUpdate>& updates);
 
     /** Remove an instance.  No-op if @p iid is not in the database. */
     void removeInstance(Obol::InstanceId iid);
 
     /** Fast path: update only the transform for an existing instance. */
-    void updateInstanceTransform(Obol::InstanceId iid, const SbMatrix& localToRoot);
+    Obol::CadSceneValidation updateInstanceTransform(
+        Obol::InstanceId iid, const SbMatrix& localToRoot);
 
     /** Fast path: update only the visual style for an existing instance. */
-    void updateInstanceStyle(Obol::InstanceId iid, const Obol::InstanceStyle& style);
+    Obol::CadSceneValidation updateInstanceStyle(
+        Obol::InstanceId iid, const Obol::InstanceStyle& style);
 
     /** Update many visual styles without rebuilding bounds or the pick BVH. */
-    void updateInstanceStyles(
+    Obol::CadSceneValidation updateInstanceStyles(
         const std::vector<Obol::InstanceStyleUpdate>& updates);
 
     /** Replace the selection highlight set. */
@@ -906,19 +366,6 @@ public:
 
     /** True when any retained part contains producer-authored PoP prefixes. */
     bool hasProgressivePartLod() const;
-
-    /** Apply the render-only progressive ceiling to one requested cut. */
-    uint8_t effectiveProgressiveCut(uint8_t requested) const;
-
-    /** Apply the render-only ceiling and deterministic fractional promotion
-     * for one retained part.  All instances of shared geometry consequently
-     * use one coherent cut. */
-    uint8_t effectiveProgressiveCut(
-        Obol::PartId part, uint8_t requested) const;
-
-    /** Richest cut any instance may request under the current render-only
-     * ceiling.  Upload/allocation planning uses this conservative bound. */
-    uint8_t maximumEffectiveProgressiveCut(uint8_t requested) const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.
@@ -1019,7 +466,8 @@ public:
     Obol::CadPresentationPreparationSnapshot
         presentationPreparationSnapshot() const;
 
-    /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
+    /** Number of logical occurrences represented by aggregate points or
+     * boxes in the last completed frame. */
     size_t lastSubpixelProxyCount() const;
 
     /**
@@ -1047,11 +495,35 @@ public:
     std::vector<Obol::InstanceId>
         lastUncollapsedStructuralProxyInstances() const;
 
+    /** Stable instance identities for visible structural fallbacks whose
+     * cached projected extent may exceed @p pixels.  The result is derived
+     * from the same exact camera classification as
+     * lastStructuralProxyProjectionHistogram() and is conservative between
+     * its power-of-two bucket boundaries.  Clients may preload this sparse
+     * set before lowering a point-proxy threshold, avoiding a box flash. */
+    std::vector<Obol::InstanceId>
+        lastStructuralProxyInstancesAbovePixels(float pixels) const;
+
     /** Camera-local projected-size census paired with the last complete
      * structural-proxy classification.  Bucket limits are documented by
      * CadStructuralProxyProjectionHistogram. */
     Obol::CadStructuralProxyProjectionHistogram
         lastStructuralProxyProjectionHistogram() const;
+
+    /**
+     * Exact physical presentation work for unresolved structural LoD
+     * occurrences in the last complete camera classification.  Aggregate
+     * points and boxes are emitted by the renderer's shared proxy batches;
+     * retained wire boxes are the larger fallbacks still using their normal
+     * part presentation.  Authored structural geometry is excluded.
+     */
+    Obol::CadStructuralProxyPresentationWork
+        lastStructuralProxyPresentationWork() const;
+
+    /** Exact logical point/AABB/OBB aggregate census for the last completed
+     * frame, including ordinary view-local and atlas-pressure replacements. */
+    Obol::CadAggregateProxyPresentationWork
+        lastAggregateProxyPresentationWork() const;
 
     /** Revision of the last camera-dependent subpixel proxy presentation. */
     uint64_t lastSubpixelProxyRevision() const;
@@ -1090,6 +562,9 @@ protected:
     void getPrimitiveCount(SoGetPrimitiveCountAction* action) override;
 
 private:
+    void beginUpdate();
+    void endUpdate();
+
     std::unique_ptr<SoCADAssemblyImpl> impl_;
 };
 

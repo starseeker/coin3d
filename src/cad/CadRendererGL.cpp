@@ -455,6 +455,7 @@ struct SharedCadShaders {
     GLuint wire = 0;
     GLuint wirePop = 0;
     GLuint proxyPoint = 0;
+    GLuint proxyShaded = 0;
     GLuint shaded = 0;
     GLuint shadedPop = 0;
     GLuint shadedDirectionalNorm = 0;
@@ -488,6 +489,8 @@ releaseSharedCadShaders(uint32_t contextId, void *)
         if (programs.wire) glue->glDeleteObjectARB(programs.wire);
         if (programs.wirePop) glue->glDeleteObjectARB(programs.wirePop);
         if (programs.proxyPoint) glue->glDeleteObjectARB(programs.proxyPoint);
+        if (programs.proxyShaded)
+            glue->glDeleteObjectARB(programs.proxyShaded);
         if (programs.shaded) glue->glDeleteObjectARB(programs.shaded);
         if (programs.shadedPop) glue->glDeleteObjectARB(programs.shadedPop);
         if (programs.shadedDirectionalNorm)
@@ -826,6 +829,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             shaders_.wire = found->second.wire;
             shaders_.wirePop = found->second.wirePop;
             shaders_.proxyPoint = found->second.proxyPoint;
+            shaders_.proxyShaded = found->second.proxyShaded;
             shaders_.shaded = found->second.shaded;
             shaders_.shadedPop = found->second.shadedPop;
             shaders_.shadedDirectionalNorm =
@@ -855,6 +859,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             programs.wire = shaders_.wire;
             programs.wirePop = shaders_.wirePop;
             programs.proxyPoint = shaders_.proxyPoint;
+            programs.proxyShaded = shaders_.proxyShaded;
             programs.shaded = shaders_.shaded;
             programs.shadedPop = shaders_.shadedPop;
             programs.shadedDirectionalNorm =
@@ -894,6 +899,35 @@ void CadRendererGL::noteRenderPreparation(const char *reason)
             reason ? reason : "unknown");
 }
 
+const Obol::CadViewState&
+CadRendererGL::activeViewState() const
+{
+    assert(activeViewState_ != nullptr);
+    return *activeViewState_;
+}
+
+uint8_t
+CadRendererGL::effectiveProgressiveCut(uint8_t requested) const
+{
+    return Obol::cadEffectiveProgressiveCut(
+        activeViewState(), requested);
+}
+
+uint8_t
+CadRendererGL::effectiveProgressiveCut(
+        Obol::PartId part, uint8_t requested) const
+{
+    return Obol::cadEffectiveProgressiveCut(
+        activeViewState(), part, requested);
+}
+
+uint8_t
+CadRendererGL::maximumEffectiveProgressiveCut(uint8_t requested) const
+{
+    return Obol::cadMaximumEffectiveProgressiveCut(
+        activeViewState(), requested);
+}
+
 Obol::CadPresentationPreparationTarget
 CadRendererGL::preparationTarget(
         Obol::CadPresentationPreparationKind kind,
@@ -904,6 +938,7 @@ CadRendererGL::preparationTarget(
 {
     Obol::CadPresentationPreparationTarget target;
     target.kind = kind;
+    target.viewId = activeViewState().viewId;
     target.contextId = contextId;
     target.planRevision = planRevision;
     target.geometryRevision = geometryRevision;
@@ -926,38 +961,6 @@ CadRendererGL::preparationTarget(
     if (!nextPreparationRevision_)
         nextPreparationRevision_ = 1;
     return target;
-}
-
-bool
-CadRendererGL::preparationTargetMatches(
-        Obol::CadPresentationPreparationKind kind,
-        uint32_t contextId, uint64_t planRevision,
-        uint64_t geometryRevision, int progressiveCutCeiling,
-        float progressiveCutNextFraction,
-        const SbMatrix& viewProjection) const
-{
-    if (!presentationPreparation_.hasTarget())
-        return false;
-    const Obol::CadPresentationPreparationTarget& target =
-        presentationPreparation_.target;
-    if (target.kind != kind || target.contextId != contextId ||
-            target.planRevision != planRevision ||
-            target.geometryRevision != geometryRevision ||
-            target.progressiveCutCeiling != progressiveCutCeiling)
-        return false;
-    uint32_t fractionBits = 0;
-    std::memcpy(&fractionBits, &progressiveCutNextFraction,
-        sizeof(fractionBits));
-    if (target.progressiveCutNextFractionBits != fractionBits)
-        return false;
-    for (size_t i = 0; i < target.viewProjectionBits.size(); ++i) {
-        uint32_t matrixBits = 0;
-        std::memcpy(&matrixBits, viewProjection[0] + i,
-            sizeof(matrixBits));
-        if (target.viewProjectionBits[i] != matrixBits)
-            return false;
-    }
-    return true;
 }
 
 void
@@ -1034,7 +1037,7 @@ void CadRendererGL::ensurePartUploaded(
 
     const Obol::TriMesh *derivedWireMesh =
         geom->wire.has_value() && geom->wire->derivesTriangleEdges() ?
-            geom->wire->triangleEdges.get() : nullptr;
+            geom->wire->triangleEdges() : nullptr;
     const Obol::TriMesh *shadedMesh = geom->shaded.has_value() ?
         &*geom->shaded : nullptr;
     if (geom->wire.has_value()) {
@@ -1232,13 +1235,13 @@ void CadRendererGL::ensurePartUploaded(
         }
     } else if (geom->wire.has_value() &&
             geom->wire->derivesTriangleEdges() &&
-            geom->wire->triangleEdges && caps_.isSoftwareRenderer) {
+            caps_.isSoftwareRenderer) {
         /* Mesa's software triangle setup is materially slower than its line
          * rasterizer.  Reuse the immutable mesh positions and derive only a
          * compact GL_LINES index stream (two uint32 values per edge).  This
          * avoids six copied SbVec3f endpoints per triangle while preserving
          * the software backend's proven line path. */
-        const Obol::TriMesh& mesh = *geom->wire->triangleEdges;
+        const Obol::TriMesh& mesh = *geom->wire->triangleEdges();
         wireSegIdx.resize(requiredDerivedWireIndexCount);
         for (size_t index = 0;
                 index + 2 < requiredDerivedIndexCount; index += 3) {
@@ -1428,12 +1431,13 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
 }
 
 static uint8_t maximumRequestedCut(
-        const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
+        const CadFramePlan& plan, const Obol::CadViewState& viewState,
+        PartId part)
 {
     const auto found = plan.partPresentation.find(part);
     return found != plan.partPresentation.end() ?
-        assembly.maximumEffectiveProgressiveCut(
-            found->second.maximumRequestedCut) :
+        Obol::cadMaximumEffectiveProgressiveCut(
+            viewState, found->second.maximumRequestedCut) :
         Obol::ProgressiveCutUnspecified;
 }
 
@@ -1661,11 +1665,13 @@ CadRendererGL::presentationSubpixelProxyPoints(
         const SbMatrix& viewProj)
 {
     /*
-     * A single GL point stream is already efficient on a hardware driver,
+     * One batched aggregate stream is already efficient on a hardware driver,
      * where preserving one representative per visible occurrence gives the
      * best visual density.  In fixed-function software GL, however, each
-     * point still crosses the software transform/raster path.  Bound that
-     * work by keeping one deterministic representative per small screen bin.
+     * point or box still crosses the software transform/raster path.  Bound
+     * that work by keeping one deterministic representative per small screen
+     * bin.  At equal selection/style priority a box wins over a point, so the
+     * bounded stream preserves a recognizable extent where one is available.
      *
      * The source stream is intentionally left unchanged: it remains the
      * exact per-occurrence presentation record used by coverage accounting,
@@ -1733,6 +1739,9 @@ CadRendererGL::presentationSubpixelProxyPoints(
             priority |= 4u;
         return priority;
     };
+    const auto shapePriority = [](const CadSubpixelProxyPoint& point) {
+        return point.shape == CadAggregateProxyShape::Box ? 1u : 0u;
+    };
     const auto stableBefore = [](const InstanceId& left,
                                  const InstanceId& right) {
         return left.w0 != right.w0 ? left.w0 < right.w0 :
@@ -1789,11 +1798,15 @@ CadRendererGL::presentationSubpixelProxyPoints(
             softwareBinnedSubpixelProxyPoints_[index];
         const uint32_t candidatePriority = visualPriority(point);
         const uint32_t currentPriority = visualPriority(current);
+        const uint32_t candidateShapePriority = shapePriority(point);
+        const uint32_t currentShapePriority = shapePriority(current);
         if (candidatePriority > currentPriority ||
                 (candidatePriority == currentPriority &&
-                 (depth < depthByBin[index] ||
-                  (depth == depthByBin[index] && stableBefore(
-                      point.instanceId, current.instanceId))))) {
+                 (candidateShapePriority > currentShapePriority ||
+                  (candidateShapePriority == currentShapePriority &&
+                   (depth < depthByBin[index] ||
+                    (depth == depthByBin[index] && stableBefore(
+                        point.instanceId, current.instanceId))))))) {
             softwareBinnedSubpixelProxyPoints_[index] = point;
             depthByBin[index] = depth;
         }
@@ -1822,9 +1835,10 @@ CadRendererGL::subpixelProxyPresentationPoints(
     return presentationSubpixelProxyPoints(plan, glue, viewProj);
 }
 
-void CadRendererGL::renderSubpixelProxyPoints(
+void CadRendererGL::renderAggregateProxies(
         const CadFramePlan& plan, const SoGLContext* glue,
-        const SbMatrix& viewProj)
+        const SbMatrix& viewProj, const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix)
 {
     const std::vector<CadSubpixelProxyPoint>& planPoints =
         presentationSubpixelProxyPoints(plan, glue, viewProj);
@@ -1833,6 +1847,14 @@ void CadRendererGL::renderSubpixelProxyPoints(
     const auto pointVisible = [](const CadSubpixelProxyPoint& point) {
         return !(point.flags & CadInstanceHidden);
     };
+    const auto rasterPoint = [&](const CadSubpixelProxyPoint& point) {
+        return pointVisible(point) &&
+            point.shape == CadAggregateProxyShape::Point;
+    };
+    const auto rasterBox = [&](const CadSubpixelProxyPoint& point) {
+        return pointVisible(point) &&
+            point.shape == CadAggregateProxyShape::Box;
+    };
     const bool includePlan = std::any_of(
         planPoints.begin(), planPoints.end(), pointVisible);
     const bool includePressure = std::any_of(
@@ -1840,14 +1862,19 @@ void CadRendererGL::renderSubpixelProxyPoints(
     if (!includePlan && !includePressure)
         return;
     lastSubpixelProxyDrawPointCount_ = static_cast<size_t>(std::count_if(
-        planPoints.begin(), planPoints.end(), pointVisible)) +
+        planPoints.begin(), planPoints.end(), rasterPoint)) +
         static_cast<size_t>(std::count_if(
-            pressurePoints.begin(), pressurePoints.end(), pointVisible));
+            pressurePoints.begin(), pressurePoints.end(), rasterPoint));
+
+    const Obol::CadDrawMode drawMode = activeViewState().drawMode;
+    const bool drawBoxLines = Obol::cadDrawModeHasWire(drawMode);
+    const bool drawBoxFaces = Obol::cadDrawModeHasShaded(drawMode);
 
     const bool useVbo = caps_.canUseVbo();
     const bool fixedFunction =
         (caps_.isSoftwareRenderer && !softwareGlslRequested()) ||
-        !shaders_.proxyPoint || !useVbo;
+        !shaders_.proxyPoint || (drawBoxFaces && !shaders_.proxyShaded) ||
+        !useVbo;
     GLfloat savedPointSize = 1.0f;
     glue->glGetFloatv(GL_POINT_SIZE, &savedPointSize);
     glue->glPointSize(1.0f);
@@ -1855,39 +1882,110 @@ void CadRendererGL::renderSubpixelProxyPoints(
     if (!useVbo) {
         glue->glMatrixMode(GL_PROJECTION);
         glue->glPushMatrix();
-        glue->glLoadIdentity();
+        glue->glLoadMatrixf(projectionMatrix[0]);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPushMatrix();
-        glue->glLoadMatrixf(viewProj[0]);
+        glue->glLoadMatrixf(viewMatrix[0]);
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        const GLboolean wasColorMaterial =
+            glue->glIsEnabled(GL_COLOR_MATERIAL);
+        GLint wasTwoSidedLighting = GL_FALSE;
+        GLint savedShadeModel = GL_SMOOTH;
+        glue->glGetIntegerv(
+            GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
+        glue->glGetIntegerv(GL_SHADE_MODEL, &savedShadeModel);
         glue->glDisable(GL_LIGHTING);
         glue->glBegin(GL_POINTS);
         uint64_t submittedPoints = 0;
-        for (const CadSubpixelProxyPoint& point : planPoints) {
-            if (!pointVisible(point))
-                continue;
-            glue->glColor4ub(point.rgba[0], point.rgba[1], point.rgba[2],
-                             point.rgba[3]);
-            glue->glVertex3f(point.position[0], point.position[1],
-                             point.position[2]);
-            submittedPoints = cadSaturatingWorkAdd(submittedPoints, 1);
-        }
-        for (const CadSubpixelProxyPoint& point : pressurePoints) {
-            if (!pointVisible(point))
-                continue;
-            glue->glColor4ub(point.rgba[0], point.rgba[1], point.rgba[2],
-                             point.rgba[3]);
-            glue->glVertex3f(point.position[0], point.position[1],
-                             point.position[2]);
-            submittedPoints = cadSaturatingWorkAdd(submittedPoints, 1);
+        const std::vector<CadSubpixelProxyPoint> *proxyStreams[] = {
+            &planPoints, &pressurePoints
+        };
+        for (const auto *stream : proxyStreams) {
+            for (const CadSubpixelProxyPoint& point : *stream) {
+                if (!rasterPoint(point))
+                    continue;
+                glue->glColor4ub(
+                    point.rgba[0], point.rgba[1], point.rgba[2],
+                    point.rgba[3]);
+                glue->glVertex3f(
+                    point.position[0], point.position[1], point.position[2]);
+                submittedPoints = cadSaturatingWorkAdd(submittedPoints, 1);
+            }
         }
         glue->glEnd();
-        /* Aggregate proxies are one batched point stream, not retained CAD
+        uint64_t submittedLineVertices = 0;
+        if (drawBoxLines) {
+            glue->glBegin(GL_LINES);
+            for (const auto *stream : proxyStreams) {
+                for (const CadSubpixelProxyPoint& point : *stream) {
+                    if (!rasterBox(point))
+                        continue;
+                    glue->glColor4ub(
+                        point.rgba[0], point.rgba[1], point.rgba[2],
+                        point.rgba[3]);
+                    cadForEachAggregateProxyBoxVertex(
+                        point, [&](const SbVec3f& vertex) {
+                        glue->glVertex3f(vertex[0], vertex[1], vertex[2]);
+                        submittedLineVertices = cadSaturatingWorkAdd(
+                            submittedLineVertices, 1);
+                    });
+                }
+            }
+            glue->glEnd();
+        }
+        uint64_t submittedTriangleVertices = 0;
+        if (drawBoxFaces) {
+            uploadFixedLights(glue);
+            /* Every box triangle has one face normal and one instance color.
+             * Flat shading is therefore visually identical while avoiding
+             * smooth-fragment interpolation in software GL. */
+            glue->glShadeModel(GL_FLAT);
+            glue->glEnable(GL_LIGHTING);
+            glue->glEnable(GL_COLOR_MATERIAL);
+            glue->glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+            glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+            glue->glBegin(GL_TRIANGLES);
+            for (const auto *stream : proxyStreams) {
+                for (const CadSubpixelProxyPoint& point : *stream) {
+                    if (!rasterBox(point))
+                        continue;
+                    glue->glColor4ub(
+                        point.rgba[0], point.rgba[1], point.rgba[2],
+                        point.rgba[3]);
+                    cadForEachAggregateProxyBoxTriangleVertex(
+                        point,
+                        [&](const SbVec3f& vertex, const SbVec3f& normal) {
+                        glue->glNormal3f(normal[0], normal[1], normal[2]);
+                        glue->glVertex3f(vertex[0], vertex[1], vertex[2]);
+                        submittedTriangleVertices = cadSaturatingWorkAdd(
+                            submittedTriangleVertices, 1);
+                    });
+                }
+            }
+            glue->glEnd();
+        }
+        /* Aggregate proxies are one batched primitive stream, not retained CAD
          * occurrences with per-instance draw overhead.  Count their vertex
          * work while deliberately leaving occurrenceCount unchanged. */
         lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
-            lastRenderedWork_.positionCount, submittedPoints);
+            lastRenderedWork_.positionCount,
+            cadSaturatingWorkAdd(submittedPoints,
+                cadSaturatingWorkAdd(submittedLineVertices,
+                    submittedTriangleVertices)));
+        lastRenderedWork_.lineCount = cadSaturatingWorkAdd(
+            lastRenderedWork_.lineCount, submittedLineVertices / 2u);
+        lastRenderedWork_.triangleCount = cadSaturatingWorkAdd(
+            lastRenderedWork_.triangleCount,
+            submittedTriangleVertices / 3u);
+        lastRenderedTriangleCount_ = cadSaturatingWorkAdd(
+            lastRenderedTriangleCount_, submittedTriangleVertices / 3u);
+        if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
+        else glue->glDisable(GL_COLOR_MATERIAL);
+        glue->glLightModeli(
+            GL_LIGHT_MODEL_TWO_SIDE, wasTwoSidedLighting);
+        glue->glShadeModel(savedShadeModel);
         if (wasLighting) glue->glEnable(GL_LIGHTING);
+        else glue->glDisable(GL_LIGHTING);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPopMatrix();
         glue->glMatrixMode(GL_PROJECTION);
@@ -1901,20 +1999,56 @@ void CadRendererGL::renderSubpixelProxyPoints(
         [&](const std::vector<CadSubpixelProxyPoint>& points,
             size_t begin, size_t end,
             std::vector<float>& positions,
-            std::vector<uint8_t>& colors) {
+            std::vector<float>& normals,
+            std::vector<uint8_t>& colors,
+            size_t& packedPointCount,
+            size_t& packedLineVertexCount) {
         begin = std::min(begin, points.size());
         end = std::min(end, points.size());
         positions.clear();
+        normals.clear();
         colors.clear();
-        positions.reserve((end - begin) * 3u);
-        colors.reserve((end - begin) * 4u);
+        packedPointCount = 0;
+        packedLineVertexCount = 0;
+        const size_t recordCount = end - begin;
+        positions.reserve(recordCount * 3u);
+        colors.reserve(recordCount * 4u);
         for (size_t i = begin; i < end; ++i) {
             const CadSubpixelProxyPoint& point = points[i];
-            if (!pointVisible(point))
+            if (!rasterPoint(point))
                 continue;
             appendPackedPoint(positions, point.position);
             colors.insert(
                 colors.end(), point.rgba.begin(), point.rgba.end());
+            ++packedPointCount;
+        }
+        if (drawBoxLines) {
+            for (size_t i = begin; i < end; ++i) {
+                const CadSubpixelProxyPoint& point = points[i];
+                if (!rasterBox(point))
+                    continue;
+                cadForEachAggregateProxyBoxVertex(
+                    point, [&](const SbVec3f& vertex) {
+                    appendPackedPoint(positions, vertex);
+                    colors.insert(colors.end(), point.rgba.begin(),
+                        point.rgba.end());
+                    ++packedLineVertexCount;
+                });
+            }
+        }
+        if (drawBoxFaces) {
+            for (size_t i = begin; i < end; ++i) {
+                const CadSubpixelProxyPoint& point = points[i];
+                if (!rasterBox(point))
+                    continue;
+                cadForEachAggregateProxyBoxTriangleVertex(
+                    point, [&](const SbVec3f& vertex, const SbVec3f& normal) {
+                    appendPackedPoint(positions, vertex);
+                    appendPackedPoint(normals, normal);
+                    colors.insert(colors.end(), point.rgba.begin(),
+                        point.rgba.end());
+                });
+            }
         }
     };
 
@@ -1928,33 +2062,54 @@ void CadRendererGL::renderSubpixelProxyPoints(
     planUploadRevision ^= plan.instanceAttributeRevision +
         UINT64_C(0x9e3779b97f4a7c15) +
         (planUploadRevision << 6) + (planUploadRevision >> 2);
+    planUploadRevision ^= static_cast<uint64_t>(drawMode) +
+        UINT64_C(0x9e3779b97f4a7c15) +
+        (planUploadRevision << 6) + (planUploadRevision >> 2);
     if (caps_.isSoftwareRenderer && softwareBinnedSubpixelValid_)
         planUploadRevision ^= softwareBinnedSubpixelPresentationRevision_ +
             UINT64_C(0x9e3779b97f4a7c15) +
             (planUploadRevision << 6) + (planUploadRevision >> 2);
     if (!planUploadRevision)
         planUploadRevision = 1;
+    const auto modeSpecificRevision = [drawMode](uint64_t revision) {
+        revision ^= static_cast<uint64_t>(drawMode) +
+            UINT64_C(0x9e3779b97f4a7c15) +
+            (revision << 6) + (revision >> 2);
+        return revision ? revision : UINT64_C(1);
+    };
+    const uint64_t pressureUploadRevision =
+        modeSpecificRevision(pressureProxyRevision_);
 
     const CadSubpixelProxyGpu& cachedPlan =
         gpuRes_->subpixelProxyPoints();
     if (includePlan &&
             (cachedPlan.revision != planUploadRevision ||
-             !cachedPlan.posBuf || !cachedPlan.colorBuf)) {
+             !cachedPlan.posBuf || !cachedPlan.colorBuf ||
+             (drawBoxFaces && !cachedPlan.normBuf))) {
         std::vector<float> positions;
+        std::vector<float> normals;
         std::vector<uint8_t> colors;
-        packPointRange(planPoints, 0, planPoints.size(), positions, colors);
+        size_t packedPointCount = 0;
+        size_t packedLineVertexCount = 0;
+        packPointRange(planPoints, 0, planPoints.size(), positions, normals,
+            colors, packedPointCount, packedLineVertexCount);
         if (!positions.empty())
-            gpuRes_->uploadSubpixelProxyPoints(
-                planUploadRevision, positions, colors, glue, caps_);
+            gpuRes_->uploadSubpixelProxyBatch(
+                planUploadRevision, positions, normals, colors,
+                packedPointCount, packedLineVertexCount, glue, caps_);
     }
 
     const CadSubpixelProxyGpu& cachedPressure =
         gpuRes_->pressureProxyPoints();
     if (includePressure &&
-            (cachedPressure.revision != pressureProxyRevision_ ||
-             !cachedPressure.posBuf || !cachedPressure.colorBuf)) {
+            (cachedPressure.revision != pressureUploadRevision ||
+             !cachedPressure.posBuf || !cachedPressure.colorBuf ||
+             (drawBoxFaces && !cachedPressure.normBuf))) {
         std::vector<float> positions;
+        std::vector<float> normals;
         std::vector<uint8_t> colors;
+        size_t packedPointCount = 0;
+        size_t packedLineVertexCount = 0;
         bool appended = false;
         if (pressureProxyAppendOnly_ &&
                 pressureProxyAppendBegin_ <= pressurePoints.size() &&
@@ -1962,13 +2117,15 @@ void CadRendererGL::renderSubpixelProxyPoints(
                     static_cast<size_t>(
                         std::numeric_limits<GLsizei>::max()) &&
                 cachedPressure.revision ==
-                    pressureProxyAppendBaseRevision_ &&
+                    modeSpecificRevision(
+                        pressureProxyAppendBaseRevision_) &&
                 cachedPressure.count ==
                     static_cast<GLsizei>(
                         pressureProxyAppendBegin_)) {
             packPointRange(
                 pressurePoints, pressureProxyAppendBegin_,
-                pressurePoints.size(), positions, colors);
+                pressurePoints.size(), positions, normals, colors,
+                packedPointCount, packedLineVertexCount);
             /*
              * A hidden tail would make packed GPU slots diverge from source
              * slots, so conservatively refresh the complete stream in that
@@ -1978,22 +2135,24 @@ void CadRendererGL::renderSubpixelProxyPoints(
                     pressurePoints.size() -
                         pressureProxyAppendBegin_) {
                 appended = gpuRes_->appendPressureProxyPoints(
-                    pressureProxyAppendBaseRevision_,
-                    pressureProxyRevision_,
+                    modeSpecificRevision(
+                        pressureProxyAppendBaseRevision_),
+                    pressureUploadRevision,
                     positions, colors, glue);
             }
         }
         if (!appended) {
             packPointRange(
                 pressurePoints, 0, pressurePoints.size(),
-                positions, colors);
+                positions, normals, colors, packedPointCount,
+                packedLineVertexCount);
             if (!positions.empty())
-                gpuRes_->uploadPressureProxyPoints(
-                    pressureProxyRevision_,
-                    positions, colors, glue, caps_);
+                gpuRes_->uploadPressureProxyBatch(
+                    pressureUploadRevision, positions, normals, colors,
+                    packedPointCount, packedLineVertexCount, glue, caps_);
         }
         if (gpuRes_->pressureProxyPoints().revision ==
-                pressureProxyRevision_)
+                pressureUploadRevision)
             pressureProxyAppendOnly_ = false;
     }
 
@@ -2017,11 +2176,18 @@ void CadRendererGL::renderSubpixelProxyPoints(
     if (fixedFunction) {
         glue->glMatrixMode(GL_PROJECTION);
         glue->glPushMatrix();
-        glue->glLoadIdentity();
+        glue->glLoadMatrixf(projectionMatrix[0]);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPushMatrix();
-        glue->glLoadMatrixf(viewProj[0]);
+        glue->glLoadMatrixf(viewMatrix[0]);
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        const GLboolean wasColorMaterial =
+            glue->glIsEnabled(GL_COLOR_MATERIAL);
+        GLint wasTwoSidedLighting = GL_FALSE;
+        GLint savedShadeModel = GL_SMOOTH;
+        glue->glGetIntegerv(
+            GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
+        glue->glGetIntegerv(GL_SHADE_MODEL, &savedShadeModel);
         glue->glDisable(GL_LIGHTING);
         configureFixedClientArrays(glue, false, true);
         for (size_t i = 0; i < streamCount; ++i) {
@@ -2032,15 +2198,66 @@ void CadRendererGL::renderSubpixelProxyPoints(
             glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.colorBuf);
             glue->glColorPointer(
                 4, GL_UNSIGNED_BYTE, 4 * sizeof(uint8_t), nullptr);
-            glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+            if (gpu.pointCount > 0)
+                glue->glDrawArrays(GL_POINTS, 0, gpu.pointCount);
+            if (gpu.lineVertexCount > 0)
+                glue->glDrawArrays(
+                    GL_LINES, gpu.pointCount, gpu.lineVertexCount);
+            if (gpu.triangleVertexCount > 0 && gpu.normBuf) {
+                const GLsizei triangleFirst =
+                    gpu.pointCount + gpu.lineVertexCount;
+                uploadFixedLights(glue);
+                glue->glEnable(GL_LIGHTING);
+                glue->glEnable(GL_COLOR_MATERIAL);
+                glue->glColorMaterial(
+                    GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+                glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+                glue->glShadeModel(GL_FLAT);
+                configureFixedClientArrays(glue, true, true);
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.posBuf);
+                glue->glVertexPointer(
+                    3, GL_FLOAT, 3 * sizeof(float),
+                    reinterpret_cast<const void *>(
+                        static_cast<uintptr_t>(triangleFirst) *
+                        3u * sizeof(float)));
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.normBuf);
+                glue->glNormalPointer(
+                    GL_FLOAT, 3 * sizeof(float), nullptr);
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.colorBuf);
+                glue->glColorPointer(
+                    4, GL_UNSIGNED_BYTE, 4 * sizeof(uint8_t),
+                    reinterpret_cast<const void *>(
+                        static_cast<uintptr_t>(triangleFirst) *
+                        4u * sizeof(uint8_t)));
+                glue->glDrawArrays(
+                    GL_TRIANGLES, 0, gpu.triangleVertexCount);
+                glue->glDisable(GL_LIGHTING);
+                configureFixedClientArrays(glue, false, true);
+            }
             lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
                 lastRenderedWork_.positionCount,
                 static_cast<uint64_t>(gpu.count));
+            lastRenderedWork_.lineCount = cadSaturatingWorkAdd(
+                lastRenderedWork_.lineCount,
+                static_cast<uint64_t>(gpu.lineVertexCount / 2));
+            lastRenderedWork_.triangleCount = cadSaturatingWorkAdd(
+                lastRenderedWork_.triangleCount,
+                static_cast<uint64_t>(gpu.triangleVertexCount / 3));
+            lastRenderedTriangleCount_ = cadSaturatingWorkAdd(
+                lastRenderedTriangleCount_,
+                static_cast<uint64_t>(gpu.triangleVertexCount / 3));
         }
+        glue->glDisableClientState(GL_NORMAL_ARRAY);
         glue->glDisableClientState(GL_COLOR_ARRAY);
         glue->glDisableClientState(GL_VERTEX_ARRAY);
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
+        else glue->glDisable(GL_COLOR_MATERIAL);
+        glue->glLightModeli(
+            GL_LIGHT_MODEL_TWO_SIDE, wasTwoSidedLighting);
+        glue->glShadeModel(savedShadeModel);
         if (wasLighting) glue->glEnable(GL_LIGHTING);
+        else glue->glDisable(GL_LIGHTING);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPopMatrix();
         glue->glMatrixMode(GL_PROJECTION);
@@ -2067,10 +2284,17 @@ void CadRendererGL::renderSubpixelProxyPoints(
                     4 * sizeof(uint8_t), nullptr);
                 glue->glEnableVertexAttribArrayARB(1);
             }
-            glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+            if (gpu.pointCount > 0)
+                glue->glDrawArrays(GL_POINTS, 0, gpu.pointCount);
+            if (gpu.lineVertexCount > 0)
+                glue->glDrawArrays(
+                    GL_LINES, gpu.pointCount, gpu.lineVertexCount);
             lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
                 lastRenderedWork_.positionCount,
                 static_cast<uint64_t>(gpu.count));
+            lastRenderedWork_.lineCount = cadSaturatingWorkAdd(
+                lastRenderedWork_.lineCount,
+                static_cast<uint64_t>(gpu.lineVertexCount / 2));
             if (gpu.vao && glue->glBindVertexArray) {
                 glue->glBindVertexArray(0);
             } else {
@@ -2080,6 +2304,59 @@ void CadRendererGL::renderSubpixelProxyPoints(
             }
         }
         glue->glUseProgramObjectARB(0);
+        if (drawBoxFaces) {
+            glue->glUseProgramObjectARB(shaders_.proxyShaded);
+            const GLint shadedViewProjection =
+                glue->glGetUniformLocationARB(
+                    shaders_.proxyShaded, "u_viewProj");
+            glue->glUniformMatrix4fvARB(
+                shadedViewProjection, 1, GL_FALSE, viewProj[0]);
+            glue->glUniform1iARB(
+                glue->glGetUniformLocationARB(
+                    shaders_.proxyShaded, "u_hasNorm"), 1);
+            uploadLights(glue, shaders_.proxyShaded);
+            uploadAmbientLight(glue, shaders_.proxyShaded);
+            for (size_t i = 0; i < streamCount; ++i) {
+                const CadSubpixelProxyGpu& gpu = *streams[i];
+                if (gpu.triangleVertexCount <= 0 || !gpu.normBuf)
+                    continue;
+                const GLsizei triangleFirst =
+                    gpu.pointCount + gpu.lineVertexCount;
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.posBuf);
+                glue->glVertexAttribPointerARB(
+                    0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
+                    reinterpret_cast<const void *>(
+                        static_cast<uintptr_t>(triangleFirst) *
+                        3u * sizeof(float)));
+                glue->glEnableVertexAttribArrayARB(0);
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.normBuf);
+                glue->glVertexAttribPointerARB(
+                    1, 3, GL_FLOAT, GL_FALSE,
+                    3 * sizeof(float), nullptr);
+                glue->glEnableVertexAttribArrayARB(1);
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.colorBuf);
+                glue->glVertexAttribPointerARB(
+                    2, 4, GL_UNSIGNED_BYTE, GL_TRUE,
+                    4 * sizeof(uint8_t),
+                    reinterpret_cast<const void *>(
+                        static_cast<uintptr_t>(triangleFirst) *
+                        4u * sizeof(uint8_t)));
+                glue->glEnableVertexAttribArrayARB(2);
+                glue->glDrawArrays(
+                    GL_TRIANGLES, 0, gpu.triangleVertexCount);
+                lastRenderedWork_.triangleCount = cadSaturatingWorkAdd(
+                    lastRenderedWork_.triangleCount,
+                    static_cast<uint64_t>(gpu.triangleVertexCount / 3));
+                lastRenderedTriangleCount_ = cadSaturatingWorkAdd(
+                    lastRenderedTriangleCount_,
+                    static_cast<uint64_t>(gpu.triangleVertexCount / 3));
+                glue->glDisableVertexAttribArrayARB(2);
+                glue->glDisableVertexAttribArrayARB(1);
+                glue->glDisableVertexAttribArrayARB(0);
+            }
+            glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glue->glUseProgramObjectARB(0);
+        }
     }
     glue->glPointSize(savedPointSize);
 }
@@ -2122,6 +2399,7 @@ void CadRendererGL::completeDirectSoftwareWireFrame(
 void CadRendererGL::render(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
+        const Obol::CadViewState& viewState,
         SoGLRenderAction*    action,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
@@ -2133,6 +2411,13 @@ void CadRendererGL::render(
                                  std::hash<PartId>>& partGenMap)
 {
     activeRenderInterrupted_ = false;
+    const Obol::CadViewState *previousViewState = activeViewState_;
+    activeViewState_ = &viewState;
+    struct RestoreActiveViewState {
+        const Obol::CadViewState *&slot;
+        const Obol::CadViewState *previous;
+        ~RestoreActiveViewState() { slot = previous; }
+    } restoreActiveViewState{activeViewState_, previousViewState};
     SoGLRenderAction *previousAction = activeRenderAction_;
     activeRenderAction_ = action;
     struct RestoreActiveRenderAction {
@@ -2153,6 +2438,7 @@ void CadRendererGL::render(
     lastRenderedTriangleCount_ = 0;
     lastSubpixelProxyDrawPointCount_ = 0;
     lastRenderedWork_ = Obol::CadRenderedWork();
+    lastRenderedWork_.viewState = viewState;
     lastRenderUsedPreparedReplay_ = false;
     atlasAdmissionPressure_ = false;
     if (!gpuRes_ || gpuContextId_ != glue->contextid ||
@@ -2177,6 +2463,7 @@ void CadRendererGL::render(
         /* Empty is a complete presentation, not an interrupted one.  Hosts
          * use the exact bit to decide whether an offscreen buffer may replace
          * the preceding completed frame. */
+        lastRenderedWork_.viewState = viewState;
         lastRenderedWork_.exact = true;
         lastRenderTier_ = 0;
         publishResourceSnapshot();
@@ -2184,7 +2471,7 @@ void CadRendererGL::render(
     }
     CadGpuTimerGuard gpuTimer(
         gpuRes_, glue, &lastRenderedTriangleCount_,
-        assembly.pointProxyPixelThreshold.getValue());
+        viewState.pointProxyPixelThreshold);
     CadGLStateValidationGuard validateState(
         glue, configuration.validateGlState,
         caps_.compatibilityProfile, caps_.hasVBO,
@@ -2200,6 +2487,7 @@ void CadRendererGL::render(
         gpuRes_->endProgressiveFrame(glue);
         frameResourcesOpen = false;
         if (publish) {
+            lastRenderedWork_.viewState = viewState;
             lastRenderedWork_.exact = true;
             publishResourceSnapshot();
         }
@@ -2233,7 +2521,7 @@ void CadRendererGL::render(
     const bool canUseFlatShaded = caps_.isSoftwareRenderer ?
         caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.shaded);
     const bool hiddenLine =
-        assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE;
+        viewState.drawMode == Obol::CadDrawMode::HiddenLine;
     const bool retainedProgressive = assembly.hasProgressivePartLod();
     bool adaptiveShadedRanges = false;
     for (const CadDrawItem& item : plan.shadedItems) {
@@ -2288,7 +2576,7 @@ void CadRendererGL::render(
             item.rep.type == CadRepType::WireSegments;
     }
     if (!forceFixedClipPlanes &&
-            assembly.drawMode.getValue() == SoCADAssembly::WIREFRAME &&
+            viewState.drawMode == Obol::CadDrawMode::Wireframe &&
             indexedTriangleWire) {
         if (!renderIndexedTriangleWire(plan, assembly, glue, viewProj,
                 viewMatrix, projectionMatrix)) {
@@ -2299,7 +2587,8 @@ void CadRendererGL::render(
             return;
         if (!explicitWire) {
             lastRenderTier_ = 1;
-            renderSubpixelProxyPoints(plan, glue, viewProj);
+            renderAggregateProxies(
+                plan, glue, viewProj, viewMatrix, projectionMatrix);
             if (finishInterruptedFrame())
                 return;
             finishFrameResources(true);
@@ -2317,7 +2606,7 @@ void CadRendererGL::render(
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
             const bool depthRendered = renderFlatShaded(
-                plan, assembly, glue, viewProj, viewMatrix, projectionMatrix,
+                plan, glue, viewProj, viewMatrix, projectionMatrix,
                 true);
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -2329,12 +2618,13 @@ void CadRendererGL::render(
             if (finishInterruptedFrame())
                 return;
             const bool explicitWireRendered = plan.wireItems.empty() ||
-                renderFlatWire(plan, assembly, glue, viewProj);
+                renderFlatWire(plan, glue, viewProj);
             if (finishInterruptedFrame())
                 return;
             if (triangleEdgesRendered && explicitWireRendered) {
                 lastRenderTier_ = 3;
-                renderSubpixelProxyPoints(plan, glue, viewProj);
+                renderAggregateProxies(
+                    plan, glue, viewProj, viewMatrix, projectionMatrix);
                 finishFrameResources(true);
                 return;
             }
@@ -2354,7 +2644,8 @@ void CadRendererGL::render(
             uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
             ensurePartUploaded(
                 repKey.part, assembly, gen,
-                maximumRequestedCut(plan, assembly, repKey.part), glue);
+                maximumRequestedCut(
+                    plan, activeViewState(), repKey.part), glue);
         }
         SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
         SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
@@ -2400,7 +2691,8 @@ void CadRendererGL::render(
         }
         if (finishInterruptedFrame())
             return;
-        renderSubpixelProxyPoints(plan, glue, viewProj);
+        renderAggregateProxies(
+            plan, glue, viewProj, viewMatrix, projectionMatrix);
         if (finishInterruptedFrame())
             return;
         finishFrameResources(true);
@@ -2440,7 +2732,7 @@ void CadRendererGL::render(
         !adaptiveShadedRanges && indirectEnabled &&
         plan.shadedItems.size() >= 128 &&
         renderIndirectShaded(
-            plan, assembly, glue, viewProj, viewVolume);
+            plan, glue, viewProj, viewVolume);
     if (finishInterruptedFrame()) {
         if (!indirectPolygonOffsetWasEnabled)
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
@@ -2469,7 +2761,7 @@ void CadRendererGL::render(
             wireRendered = !adaptiveWireRanges &&
                 flatWireEnabled && preferFlatWire &&
                 canUseFlatWire &&
-                renderFlatWire(plan, assembly, glue, viewProj);
+                renderFlatWire(plan, glue, viewProj);
             if (finishInterruptedFrame())
                 return;
         }
@@ -2488,7 +2780,7 @@ void CadRendererGL::render(
                     generation == partGenMap.end() ?
                         0 : generation->second,
                     maximumRequestedCut(
-                        plan, assembly, repKey.part),
+                        plan, activeViewState(), repKey.part),
                     glue);
             }
             if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
@@ -2516,7 +2808,8 @@ void CadRendererGL::render(
         const auto wireCompleted = renderTimingEnabled ?
             RenderClock::now() : RenderClock::time_point();
         lastRenderTier_ = 6;
-        renderSubpixelProxyPoints(plan, glue, viewProj);
+        renderAggregateProxies(
+            plan, glue, viewProj, viewMatrix, projectionMatrix);
         if (finishInterruptedFrame())
             return;
         finishFrameResources(true);
@@ -2561,7 +2854,7 @@ void CadRendererGL::render(
             SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
         }
         flatShadedRendered = renderFlatShaded(
-            plan, assembly, glue, viewProj, viewMatrix, projectionMatrix,
+            plan, glue, viewProj, viewMatrix, projectionMatrix,
             false);
         if (!polygonOffsetWasEnabled)
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
@@ -2570,12 +2863,13 @@ void CadRendererGL::render(
     }
     if (flatShadedRendered) {
         const bool flatWireCompleted = plan.wireItems.empty() ||
-            renderFlatWire(plan, assembly, glue, viewProj);
+            renderFlatWire(plan, glue, viewProj);
         if (finishInterruptedFrame())
             return;
         if (flatWireCompleted) {
             lastRenderTier_ = 4;
-            renderSubpixelProxyPoints(plan, glue, viewProj);
+            renderAggregateProxies(
+                plan, glue, viewProj, viewMatrix, projectionMatrix);
             if (finishInterruptedFrame())
                 return;
             finishFrameResources(true);
@@ -2613,7 +2907,7 @@ void CadRendererGL::render(
     const bool flatWireRendered = !forceFixedClipPlanes &&
         !adaptiveWireRanges && flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
-        renderFlatWire(plan, assembly, glue, viewProj);
+        renderFlatWire(plan, glue, viewProj);
     if (finishInterruptedFrame())
         return;
 
@@ -2630,7 +2924,8 @@ void CadRendererGL::render(
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
         ensurePartUploaded(
             repKey.part, assembly, gen,
-            maximumRequestedCut(plan, assembly, repKey.part), glue);
+            maximumRequestedCut(
+                plan, activeViewState(), repKey.part), glue);
     }
 
     /* Keep shaded polygons fractionally behind wire geometry.  A wire source
@@ -2681,7 +2976,8 @@ void CadRendererGL::render(
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
     if (finishInterruptedFrame())
         return;
-    renderSubpixelProxyPoints(plan, glue, viewProj);
+    renderAggregateProxies(
+        plan, glue, viewProj, viewMatrix, projectionMatrix);
     if (finishInterruptedFrame())
         return;
     finishFrameResources(true);

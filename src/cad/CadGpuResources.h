@@ -268,14 +268,19 @@ struct CadFlatShadedGpu {
                        CadFlatShadedRangeKeyHash> ranges;
 };
 
-/** Dynamic world-space vertex/color buffers for one frame's proxy points. */
+/** Dynamic world-space buffers for one frame's aggregate proxy batch. */
 struct CadSubpixelProxyGpu {
     GLuint posBuf = 0;
+    GLuint normBuf = 0;
     GLuint colorBuf = 0;
     GLuint vao = 0;
     uint64_t revision = 0;
     GLsizei count = 0;
+    GLsizei pointCount = 0;
+    GLsizei lineVertexCount = 0;
+    GLsizei triangleVertexCount = 0;
     GLsizei capacityCount = 0;
+    GLsizei normalCapacityCount = 0;
 };
 
 /**
@@ -588,16 +593,22 @@ public:
 
     const CadFlatShadedGpu& flatShaded() const { return flatShaded_; }
 
-    void uploadSubpixelProxyPoints(uint64_t revision,
+    void uploadSubpixelProxyBatch(uint64_t revision,
                                    const std::vector<float>& positions,
+                                   const std::vector<float>& normals,
                                    const std::vector<uint8_t>& colors,
+                                   size_t pointCount,
+                                   size_t lineVertexCount,
                                    const SoGLContext *glue,
                                    const CadGLCaps& caps);
 
-    void uploadPressureProxyPoints(
+    void uploadPressureProxyBatch(
         uint64_t revision,
         const std::vector<float>& positions,
+        const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
+        size_t pointCount,
+        size_t lineVertexCount,
         const SoGLContext *glue,
         const CadGLCaps& caps);
 

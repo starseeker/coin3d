@@ -333,8 +333,17 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
     // Register part geometries
     std::vector<Obol::PartUpdate> partUpdates;
     partUpdates.reserve(5);
+    const auto admitPart = [&partUpdates](Obol::PartId part,
+            Obol::PartGeometryBuilder geometry) {
+        Obol::CadGeometryAdmission admission =
+            Obol::cadAdmitPartGeometry(std::move(geometry));
+        if (!admission)
+            return false;
+        partUpdates.push_back({part, admission.geometry});
+        return true;
+    };
     {
-        Obol::PartGeometry geom;
+        Obol::PartGeometryBuilder geom;
         MeshData ico3 = buildIcosphere(3);
         Obol::TriMesh tm;
         tm.positions = ico3.positions;
@@ -342,11 +351,11 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.indices   = ico3.indices;
         tm.bounds    = ico3.bounds;
         geom.shaded  = tm;
-        s_pidPrecision = Obol::CadIdBuilder::hash128("precision_part");
-        partUpdates.push_back({s_pidPrecision, std::move(geom)});
+        s_pidPrecision = Obol::CadIdBuilder::partId("precision_part");
+        if (!admitPart(s_pidPrecision, std::move(geom))) return 0;
     }
     {
-        Obol::PartGeometry geom;
+        Obol::PartGeometryBuilder geom;
         MeshData ico2 = buildIcosphere(2);
         Obol::TriMesh tm;
         tm.positions = ico2.positions;
@@ -354,11 +363,11 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.indices   = ico2.indices;
         tm.bounds    = ico2.bounds;
         geom.shaded  = tm;
-        s_pidStandard = Obol::CadIdBuilder::hash128("standard_part");
-        partUpdates.push_back({s_pidStandard, std::move(geom)});
+        s_pidStandard = Obol::CadIdBuilder::partId("standard_part");
+        if (!admitPart(s_pidStandard, std::move(geom))) return 0;
     }
     {
-        Obol::PartGeometry geom;
+        Obol::PartGeometryBuilder geom;
         MeshData ico1 = buildIcosphere(1);
         Obol::TriMesh tm;
         tm.positions = ico1.positions;
@@ -366,11 +375,11 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.indices   = ico1.indices;
         tm.bounds    = ico1.bounds;
         geom.shaded  = tm;
-        s_pidDetail = Obol::CadIdBuilder::hash128("detail_part");
-        partUpdates.push_back({s_pidDetail, std::move(geom)});
+        s_pidDetail = Obol::CadIdBuilder::partId("detail_part");
+        if (!admitPart(s_pidDetail, std::move(geom))) return 0;
     }
     {
-        Obol::PartGeometry geom;
+        Obol::PartGeometryBuilder geom;
         MeshData ico0 = buildIcosphere(0);
         Obol::TriMesh tm;
         tm.positions = ico0.positions;
@@ -378,11 +387,11 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.indices   = ico0.indices;
         tm.bounds    = ico0.bounds;
         geom.shaded  = tm;
-        s_pidFastener = Obol::CadIdBuilder::hash128("fastener_part");
-        partUpdates.push_back({s_pidFastener, std::move(geom)});
+        s_pidFastener = Obol::CadIdBuilder::partId("fastener_part");
+        if (!admitPart(s_pidFastener, std::move(geom))) return 0;
     }
     {
-        Obol::PartGeometry geom;
+        Obol::PartGeometryBuilder geom;
         // Panel: wide flat box representing a structural skin panel
         MeshData box = buildBoxMesh(1.8f, 0.15f, 1.8f);
         Obol::TriMesh tm;
@@ -393,10 +402,11 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         geom.shaded  = tm;
         // Feature-edge wire overlay for the panel
         geom.wire    = buildBoxWire(1.8f);
-        s_pidPanel   = Obol::CadIdBuilder::hash128("panel_part");
-        partUpdates.push_back({s_pidPanel, std::move(geom)});
+        s_pidPanel   = Obol::CadIdBuilder::partId("panel_part");
+        if (!admitPart(s_pidPanel, std::move(geom))) return 0;
     }
-    asm_->upsertParts(partUpdates);
+    Obol::CadSceneMutation mutation;
+    mutation.parts = std::move(partUpdates);
 
     // Color palette for visual variety
     static const SbColor4f PALETTE[] = {
@@ -411,10 +421,9 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
     };
     static constexpr int NPALETTE = static_cast<int>(sizeof(PALETTE)/sizeof(PALETTE[0]));
 
-    Obol::InstanceId rootId = Obol::CadIdBuilder::Root();
+    Obol::InstanceId rootId = Obol::CadIdBuilder::rootInstance();
     int instIdx = 0;
-    std::vector<Obol::InstanceRecord> instanceRecords;
-    instanceRecords.reserve(
+    mutation.instances.reserve(
         static_cast<size_t>(S) * static_cast<size_t>(S) *
         static_cast<size_t>(S) * PARTS_PER_CELL);
 
@@ -457,7 +466,10 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
 
                     rec.style.hasColorOverride = true;
                     rec.style.color            = color;
-                    instanceRecords.push_back(std::move(rec));
+                    const Obol::InstanceId instance =
+                        Obol::CadIdBuilder::childInstance(rootId, name,
+                            static_cast<uint32_t>(instIdx), 0);
+                    mutation.instances.push_back({instance, std::move(rec)});
                     ++instIdx;
                 };
 
@@ -503,7 +515,20 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         }
     }
 
-    asm_->upsertInstancesAuto(instanceRecords);
+    const Obol::CadSceneMutationResult result =
+        asm_->applySceneMutation(mutation);
+    if (!result) {
+        std::fprintf(stderr, "CAD scene publication failed: %s",
+            Obol::cadSceneMutationDomainName(result.domain));
+        if (result.domain == Obol::CadSceneMutationDomain::Parts)
+            std::fprintf(stderr, "/%s\n",
+                Obol::cadGeometryErrorName(result.geometry.error));
+        else
+            std::fprintf(stderr, "/%s (update %zu)\n",
+                Obol::cadSceneErrorName(result.scene.error),
+                result.scene.updateIndex);
+        return 0;
+    }
 
     return instIdx;
 }
@@ -541,12 +566,12 @@ static AssemblyState buildLargeScene(int targetInstances, int width, int height)
     /* ---- Per-view CAD render policy ---- */
     SoCADViewState* viewState = new SoCADViewState;
     viewState->viewIdLow.setValue(1);
+    viewState->drawMode.setValue(SoCADViewState::SHADED);
     root->addChild(viewState);
     st.viewState = viewState;
 
     /* ---- SoCADAssembly ---- */
     SoCADAssembly* asm_ = new SoCADAssembly;
-    asm_->drawMode.setValue(SoCADAssembly::SHADED);
     root->addChild(asm_);
     st.assembly = asm_;
 
@@ -858,10 +883,10 @@ static bool s_perspectiveCamera = true;  // true=perspective, false=orthographic
 static const char* const DRAW_MODE_NAMES[] = {
     "Wireframe", "Shaded", "Shaded+Edges"
 };
-static const SoCADAssembly::DrawMode DRAW_MODES[] = {
-    SoCADAssembly::WIREFRAME,
-    SoCADAssembly::SHADED,
-    SoCADAssembly::SHADED_WITH_EDGES,
+static const SoCADViewState::DrawMode DRAW_MODES[] = {
+    SoCADViewState::WIREFRAME,
+    SoCADViewState::SHADED,
+    SoCADViewState::SHADED_WITH_EDGES,
 };
 
 /* Target instance counts for the Scale button */
@@ -1001,8 +1026,8 @@ public:
 
         if (s_asm.root) s_asm.root->unref();
         s_asm = buildLargeScene(SCALE_LEVELS[s_scaleLevelIdx], pw, ph);
-        if (s_asm.assembly)
-            s_asm.assembly->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
+        if (s_asm.viewState)
+            s_asm.viewState->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
         // Restore chosen projection type after rebuild
         if (!s_perspectiveCamera)
             switchCameraType(false);
@@ -1030,8 +1055,8 @@ private:
     {
         auto* self = static_cast<LargeAssemblyWindow*>(data);
         s_drawModeIdx = (s_drawModeIdx + 1) % 3;
-        if (s_asm.assembly)
-            s_asm.assembly->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
+        if (s_asm.viewState)
+            s_asm.viewState->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
 
         static const char* btnLabels[] = {
             "Mode: Wireframe", "Mode: Shaded", "Mode: Shd+Edges"

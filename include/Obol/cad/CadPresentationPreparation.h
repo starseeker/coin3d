@@ -17,6 +17,7 @@ namespace Obol {
 enum class CadPresentationPreparationKind : uint8_t {
     NoPreparation = 0,
     SubpixelClassification,
+    FlatShadedPlanning,
     FlatShadedAtlas,
     RetainedIndirect
 };
@@ -41,6 +42,7 @@ struct CadPresentationPreparationTarget {
     CadPresentationPreparationKind kind =
         CadPresentationPreparationKind::NoPreparation;
     uint64_t obligationRevision = 0;
+    uint64_t viewId = 0;
     uint32_t contextId = 0;
     uint64_t planRevision = 0;
     uint64_t geometryRevision = 0;
@@ -57,6 +59,7 @@ struct CadPresentationPreparationTarget {
     {
         return kind == other.kind &&
             obligationRevision == other.obligationRevision &&
+            viewId == other.viewId &&
             contextId == other.contextId &&
             planRevision == other.planRevision &&
             geometryRevision == other.geometryRevision &&
