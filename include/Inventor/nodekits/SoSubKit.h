@@ -138,15 +138,14 @@ PRIVATE_KIT_SOURCE(_class_)
 
 
 #define SO_KIT_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_kit_constructor_lock; \
   do { \
-    SO_NODE_CONSTRUCTOR(_class_); \
-    SoBase::staticDataLock(); \
+    SO_NODE_CONSTRUCTOR_NOLOCK(_class_); \
     if (_class_::classcatalog == NULL) { \
       SoType mytype = SoType::fromName(SO__QUOTE(_class_)); \
       _class_::classcatalog = (*_class_::parentcatalogptr)->clone(mytype); \
       SbAtexitStaticInternal(_class_::atexit_cleanupkit); \
     } \
-    SoBase::staticDataUnlock(); \
   } WHILE_0
 
 

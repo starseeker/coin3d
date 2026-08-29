@@ -62,7 +62,7 @@
 
 #include <Inventor/elements/SoOverrideElement.h>
 #include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/misc/SoState.h>
@@ -150,7 +150,7 @@ public:
       }
     }
 
-    SoFullPath * path;
+    SoPath * path;
   };
 
   static CurrentHighlight & currentHighlight(void) {
@@ -163,8 +163,8 @@ public:
 
   static SbBool isHighlighted(const SoLocateHighlight * node) {
     const CurrentHighlight & current = SoLocateHighlightP::currentHighlight();
-    return current.path && current.path->getLength() &&
-           current.path->getTail() == node;
+    return current.path && current.path->getFullLength() &&
+           current.path->getNode(current.path->getFullLength() - 1) == node;
   }
 
   static void atexit_cleanup(void) {
@@ -257,7 +257,7 @@ SoLocateHighlight::handleEvent(SoHandleEventAction * action)
           SoLocateHighlight::turnoffcurrent(action);
           SoLocateHighlightP::CurrentHighlight & current =
             SoLocateHighlightP::currentHighlight();
-          current.path = (SoFullPath*) action->getCurPath()->copy();
+          current.path = action->getCurPath()->copy();
           current.path->ref();
           this->touch(); // force scene redraw
           this->redrawHighlighted(action, TRUE);

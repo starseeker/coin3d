@@ -34,8 +34,16 @@ struct ImageTolerance {
 std::optional<RgbImage> loadRgbPng(const std::string & path,
                                    std::string * error = nullptr);
 
+/** Save a valid RGB image as PNG.  Intended for failure artifacts. */
+bool saveRgbPng(const RgbImage & image, const std::string & path,
+                std::string * error = nullptr);
+
 /** Compare identically sized RGB images without applying an implicit tolerance. */
 ImageComparison compareRgb(const RgbImage & actual, const RgbImage & expected);
+
+/** Build an RGB image containing the absolute per-channel error. */
+std::optional<RgbImage> absoluteDifferenceRgb(const RgbImage & actual,
+                                              const RgbImage & expected);
 
 /** Return true only when all requested error limits are met. */
 bool isWithinTolerance(const ImageComparison & comparison,

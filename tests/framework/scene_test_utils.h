@@ -3,7 +3,9 @@
 
 #include "render_fixture.h"
 
+#include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/SoPath.h>
 
 namespace ObolTestSupport {
 
@@ -46,6 +48,20 @@ template <typename SceneFactory>
 OwnedScene makeScene(SceneFactory factory, const RenderFixture & fixture)
 {
     return OwnedScene(factory(fixture.width(), fixture.height()));
+}
+
+/** Find the first node of NodeType in root, including derived node types. */
+template <typename NodeType>
+NodeType * findFirstNode(SoNode * root)
+{
+    if (!root) return nullptr;
+
+    SoSearchAction search;
+    search.setType(NodeType::getClassTypeId());
+    search.setInterest(SoSearchAction::FIRST);
+    search.apply(root);
+    SoPath * path = search.getPath();
+    return path ? static_cast<NodeType *>(path->getTail()) : nullptr;
 }
 
 } // namespace ObolTestSupport

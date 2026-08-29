@@ -186,8 +186,8 @@ SoDirectionalLightManip::getDragger(void) const
 SbBool
 SoDirectionalLightManip::replaceNode(SoPath * path)
 {
-  SoFullPath * fullpath = (SoFullPath *)path;
-  SoNode * fulltail = fullpath->getTail();
+  if (!path || path->getFullLength() == 0) return FALSE;
+  SoNode * fulltail = path->getNode(path->getFullLength() - 1);
   if (!fulltail->isOfType(SoDirectionalLight::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",
@@ -196,14 +196,14 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
     return FALSE;
   }
   // NodeKit functionality removed - handle direct node manipulation only
-  if (fullpath->getLength() < 2) {
+  if (path->getFullLength() < 2) {
 #if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",
                        "Path is too short");
 #endif // debug
     return FALSE;
   }
-  SoNode * parent = fullpath->getNodeFromTail(1);
+  SoNode * parent = path->getNode(path->getFullLength() - 2);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",

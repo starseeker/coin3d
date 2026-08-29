@@ -52,7 +52,7 @@
 
 #include "glue/glp.h"
 #include <Inventor/SbImage.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
@@ -500,8 +500,8 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
   if (index < 0 || index >= this->coinstate.numdiffuse) {
     static SoOnceFlag warning;
     if (warning.first()) {
-      const SoFullPath * path = static_cast<const SoFullPath*>(this->state->getAction()->getCurPath());
-      SoNode * tail = path->getTail();
+      const SoPath * path = this->state->getAction()->getCurPath();
+      SoNode * tail = path->getNode(path->getFullLength() - 1);
       SbName name = tail->getName();
       SoDebugError::postWarning("SoGLLazyElement::sendDiffuseByIndex",
                                 "index %d out of bounds [0, %d] in node %p: %s "

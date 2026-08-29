@@ -36,16 +36,14 @@
 
   \ingroup coin_general
 
-  SoPath allows only access from the head node to the first node with
-  hidden children, but not any further.
-
-  Since the SoFullPath is derived from SoPath and contains no private
-  data, you can cast SoPath instances to the SoFullPath type.  This
-  will allow you to examine hidden children.
-
-  (Actually, you are not supposed to allocate instances of this class
-  at all. It is only available as an "extended interface" into the
-  superclass SoPath.)
+  SoPath's visible-length and tail convenience methods stop at the first
+  node with hidden children. SoPath nevertheless exposes type-safe
+  complete-path access through
+  SoPath::getFullLength(), SoPath::getNode(), and SoPath::getIndex().
+  Do not downcast an ordinary SoPath to SoFullPath: although the two
+  classes have historically had the same data layout, such a downcast
+  is undefined C++ behavior unless the object is actually an
+  SoFullPath (or a subclass such as SoTempPath).
 */
 
 /*!

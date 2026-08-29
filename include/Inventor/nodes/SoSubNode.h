@@ -190,10 +190,12 @@ _class_::createInstance(void * /*ctx*/) \
 
 // FIXME: document. 20000103 mortene.
 #define SO_NODE_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_node_constructor_lock; \
   do { \
-    SoBase::staticDataLock(); \
     SO_NODE_CONSTRUCTOR_NOLOCK(_class_); \
-    SoBase::staticDataUnlock(); \
+    /* Later instances can proceed concurrently once the first constructor */ \
+    /* has published the complete per-class field and enum metadata. */ \
+    if (!SO_NODE_IS_FIRST_INSTANCE()) obol_node_constructor_lock.release(); \
   } WHILE_0
 
 // *************************************************************************

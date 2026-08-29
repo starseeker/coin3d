@@ -523,6 +523,7 @@
 */
 
 #include <Inventor/nodekits/SoBaseKit.h>
+#include <Inventor/SoNodeKitPath.h>
 
 #include <cstdlib>
 #include <climits>
@@ -565,7 +566,7 @@ public:
   // indices into this array.
   SbList<SoSFNode*> instancelist;
 
-  void addKitDetail(SoFullPath * path, SoPickedPoint * pp);
+  void addKitDetail(SoPath * path, SoPickedPoint * pp);
   void createWriteData(void);
   void testParentWrite(void);
 
@@ -712,13 +713,15 @@ SoBaseKit::getPartString(const SoBase * part)
     return SbString();
   }
   else if (part->isOfType(SoPath::getClassTypeId())) {
-    const SoFullPath * path = static_cast<const SoFullPath*>(part);
+    const SoPath * path = static_cast<const SoPath *>(part);
     int pathidx = path->findNode(this);
     if (pathidx < 0) return SbString();
     SoBaseKit * kit = this;
     SbString partname;
     int parentnum = 0;
-    SoNode * tail = path->getTail();
+    const int pathlength = path->getFullLength();
+    if (pathlength == 0) return SbString();
+    SoNode * tail = path->getNode(pathlength - 1);
     SoNode * node = kit;
     while (node != tail) {
       node = path->getNode(++pathidx);
@@ -739,7 +742,7 @@ SoBaseKit::getPartString(const SoBase * part)
         assert(catalog->isLeaf(partnum));
         SoNodeKitListPart * list = (SoNodeKitListPart *)node;
         pathidx += 2; // // skip container node
-        if (pathidx >= path->getLength()) {
+        if (pathidx >= path->getFullLength()) {
 #if OBOL_DEBUG
           SoDebugError::postWarning("SoBaseKit::getPartString",
                                     "Path too short");
@@ -1067,7 +1070,7 @@ SoBaseKit::rayPick(SoRayPickAction * action)
   const int n = pplist.getLength();
   for (int i = 0; i < n; i++) {
     SoPickedPoint * pp = pplist[i];
-    SoFullPath * path = (SoFullPath*) pp->getPath();
+    SoPath * path = pp->getPath();
     if (path->containsNode(this) && pp->getDetail(this) == NULL) {
       PRIVATE(this)->addKitDetail(path, pp);
     }
@@ -1784,14 +1787,21 @@ SoBaseKit::createPathToAnyPart(const SbName & partname, SbBool makeifneeded,
                                SbBool leafcheck, SbBool publiccheck,
                                const SoPath * pathtoextend)
 {
-  SoFullPath * path;
+  SoNodeKitPath * kitpath = new SoNodeKitPath(
+    pathtoextend ? pathtoextend->getFullLength() : 4);
+  SoPath * path = static_cast<SoPath *>(kitpath);
   if (pathtoextend) {
-    path = (SoFullPath *)pathtoextend->copy();
+    *path = *pathtoextend;
     path->ref();
     // pop off nodes beyond this kit node
-    if (path->containsNode(this)) while (path->getTail() != this && path->getLength()) path->pop();
-    else if (path->getLength()) {
-      SoNode * node = path->getTail();
+    if (path->containsNode(this)) {
+      while (path->getFullLength() &&
+             path->getNode(path->getFullLength() - 1) != this) {
+        path->pop();
+      }
+    }
+    else if (path->getFullLength()) {
+      SoNode * node = path->getNode(path->getFullLength() - 1);
       if (!node->getChildren() || node->getChildren()->find(this) < 0) {
 #if OBOL_DEBUG
         SoDebugError::postWarning("SoBaseKit::createPathToAnyPart",
@@ -1804,7 +1814,7 @@ SoBaseKit::createPathToAnyPart(const SbName & partname, SbBool makeifneeded,
     }
   }
   else {
-    path = (SoFullPath *)new SoPath(this);
+    path->setHead(this);
     path->ref();
   }
 
@@ -1858,7 +1868,7 @@ SoBaseKit::createPathToAnyPart(const SbName & partname, SbBool makeifneeded,
         }
       }
       path->unrefNoDelete();
-      return (SoNodeKitPath *)path;
+      return kitpath;
     }
   }
   path->unref();
@@ -2603,13 +2613,13 @@ SoBaseKitP::setParts(SbList <SoNode*> partlist, const SbBool leafparts)
 // contain this kit.
 //
 void
-SoBaseKitP::addKitDetail(SoFullPath * path, SoPickedPoint * pp)
+SoBaseKitP::addKitDetail(SoPath * path, SoPickedPoint * pp)
 {
   const SoNodekitCatalog * catalog = this->kit->getNodekitCatalog();
 
   assert(path->findNode(this->kit) >= 0);
 
-  const int n = path->getLength();
+  const int n = path->getFullLength();
   for (int i = path->findNode(this->kit) + 1; i < n; i++) {
     SoNode * node = path->getNode(i);
     int idx = this->kit->findNodeInThisKit(node, -1);
@@ -2622,7 +2632,7 @@ SoBaseKitP::addKitDetail(SoFullPath * path, SoPickedPoint * pp)
       // path extends into the children. Supply index in partname
       // if this is the case.
       if (node->isOfType(SoNodeKitListPart::getClassTypeId()) &&
-          path->getLength() >= i + 2) {
+          path->getFullLength() >= i + 2) {
         SbString str;
         str.sprintf("%s[%d]",
                     partname.getString(),

@@ -334,8 +334,8 @@ SoClipPlaneManip::setValue(const SbBox3f & box, const SbVec3f & planenormal, flo
 SbBool
 SoClipPlaneManip::replaceNode(SoPath * path)
 {
-  SoFullPath *fullpath = (SoFullPath*)path;
-  SoNode *fulltail = fullpath->getTail();
+  if (!path || path->getFullLength() == 0) return FALSE;
+  SoNode *fulltail = path->getNode(path->getFullLength() - 1);
   if (!fulltail->isOfType(SoClipPlane::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
@@ -345,7 +345,15 @@ SoClipPlaneManip::replaceNode(SoPath * path)
   }
   SoNode *tail = path->getTail();
   if (tail->isOfType(SoBaseKit::getClassTypeId())) {
-    SoBaseKit *kit = (SoBaseKit*) ((SoNodeKitPath*)path)->getTail();
+    SoBaseKit *kit = nullptr;
+    for (int i = path->getFullLength() - 1; i >= 0; --i) {
+      SoNode *node = path->getNode(i);
+      if (node->isOfType(SoBaseKit::getClassTypeId())) {
+        kit = static_cast<SoBaseKit *>(node);
+        break;
+      }
+    }
+    assert(kit);
     SbString partname = kit->getPartString(path);
     if (partname != "") {
       SoClipPlane *oldpart = (SoClipPlane*) kit->getPart(partname, TRUE);
@@ -362,14 +370,14 @@ SoClipPlaneManip::replaceNode(SoPath * path)
       }
     }
   }
-  if (fullpath->getLength() < 2) {
+  if (path->getFullLength() < 2) {
 #if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
                        "Path is too short");
 #endif // debug
     return FALSE;
   }
-  SoNode *parent = fullpath->getNodeFromTail(1);
+  SoNode *parent = path->getNode(path->getFullLength() - 2);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
 #if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
@@ -488,8 +496,8 @@ SoClipPlaneManip::handleEvent(SoHandleEventAction * action)
       SO_KEY_PRESS_EVENT(event, RIGHT_CONTROL)) {
     const SoPickedPoint * pp = action->getPickedPoint();
     if (pp) {
-      SoFullPath * path = (SoFullPath *)pp->getPath();
-      for (int i = 0; i < path->getLength(); i++) {
+      const SoPath * path = pp->getPath();
+      for (int i = 0; i < path->getFullLength(); i++) {
         SoNode * node = path->getNode(i);
         if (node->isOfType(SoDragPointDragger::getClassTypeId())) {
           this->currAxis--;

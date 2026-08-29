@@ -168,10 +168,10 @@
 
     SoPathList & pl = sa.getPaths();
     for (int i = 0; i < pl.getLength(); i++) {
-      SoFullPath * p = (SoFullPath*) pl[i];
-        if (p->getTail()->isOfType(type)) {
-          SoGroup * g = (SoGroup*) p->getNodeFromTail(1);
-          g->removeChild(p->getIndexFromTail(0));
+      SoPath * p = pl[i];
+        if (p->getNode(p->getFullLength() - 1)->isOfType(type)) {
+          SoGroup * g = (SoGroup*) p->getNode(p->getFullLength() - 2);
+          g->removeChild(p->getIndex(p->getFullLength() - 1));
         }
       }
     sa.reset();
@@ -327,9 +327,9 @@ class SoReorganizeActionP {
                               const SoPrimitiveVertex * v2);
 
   SbBool initShape(SoCallbackAction * action);
-  void replaceNode(SoFullPath * path);
-  void replaceIfs(SoFullPath * path);
-  void replaceIls(SoFullPath * path);
+  void replaceNode(SoPath * path);
+  void replaceIfs(SoPath * path);
+  void replaceIls(SoPath * path);
 
   SoVertexProperty * createVertexProperty(const SbBool forlines);
 };
@@ -460,7 +460,7 @@ void
 SoReorganizeAction::apply(SoPath * path)
 {
   PRIVATE(this)->cbaction.apply(path);
-  PRIVATE(this)->replaceNode(static_cast<SoFullPath *>(path));
+  PRIVATE(this)->replaceNode(path);
 }
 
 void
@@ -627,7 +627,7 @@ SoReorganizeActionP::initShape(SoCallbackAction * action)
 }
 
 void
-SoReorganizeActionP::replaceNode(SoFullPath * path)
+SoReorganizeActionP::replaceNode(SoPath * path)
 {
   if (this->pvcache == NULL) return;
   this->pvcache->fit(); // needed to do optimize-sort of data
@@ -700,9 +700,9 @@ SoReorganizeActionP::createVertexProperty(const SbBool forlines)
 }
 
 void
-SoReorganizeActionP::replaceIfs(SoFullPath * path)
+SoReorganizeActionP::replaceIfs(SoPath * path)
 {
-  SoNode * parent = path->getNodeFromTail(1);
+  SoNode * parent = path->getNode(path->getFullLength() - 2);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
     return;
   }
@@ -729,7 +729,7 @@ SoReorganizeActionP::replaceIfs(SoFullPath * path)
   }
   ifs->coordIndex.finishEditing();
 
-  int idx = path->getIndexFromTail(0);
+  int idx = path->getIndex(path->getFullLength() - 1);
   path->pop();
   SoGroup * g = coin_assert_cast<SoGroup *>(parent);
   g->replaceChild(idx, ifs);
@@ -738,9 +738,9 @@ SoReorganizeActionP::replaceIfs(SoFullPath * path)
 }
 
 void
-SoReorganizeActionP::replaceIls(SoFullPath * path)
+SoReorganizeActionP::replaceIls(SoPath * path)
 {
-  SoNode * parent = path->getNodeFromTail(1);
+  SoNode * parent = path->getNode(path->getFullLength() - 2);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
     return;
   }
@@ -765,7 +765,7 @@ SoReorganizeActionP::replaceIls(SoFullPath * path)
   }
   ils->coordIndex.finishEditing();
 
-  int idx = path->getIndexFromTail(0);
+  int idx = path->getIndex(path->getFullLength() - 1);
   path->pop();
   SoGroup * g = coin_assert_cast<SoGroup *>(parent);
   g->replaceChild(idx, ils);

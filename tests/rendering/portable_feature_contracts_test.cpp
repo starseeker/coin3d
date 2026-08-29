@@ -73,6 +73,9 @@ TEST(PortableFeatureContracts, IndexedShapesAndMaterialBindingsRender)
     auto * material = new SoMaterial;
     material->diffuseColor.set1Value(0, SbColor(0.9f, 0.1f, 0.1f));
     material->diffuseColor.set1Value(1, SbColor(0.1f, 0.8f, 0.2f));
+    material->diffuseColor.set1Value(2, SbColor(0.1f, 0.2f, 0.9f));
+    material->diffuseColor.set1Value(3, SbColor(0.9f, 0.8f, 0.1f));
+    material->diffuseColor.set1Value(4, SbColor(0.7f, 0.2f, 0.8f));
     root->addChild(material);
     auto * binding = new SoMaterialBinding;
     binding->value.setValue(SoMaterialBinding::PER_VERTEX_INDEXED);
@@ -88,8 +91,9 @@ TEST(PortableFeatureContracts, IndexedShapesAndMaterialBindingsRender)
 
     auto * faces = new SoIndexedFaceSet;
     const int face_indices[] = {0, 1, 2, -1, 1, 4, 3, -1};
+    const int material_indices[] = {0, 1, 0, -1, 1, 0, 1, -1};
     faces->coordIndex.setValues(0, 8, face_indices);
-    faces->materialIndex.setValues(0, 8, face_indices);
+    faces->materialIndex.setValues(0, 8, material_indices);
     root->addChild(faces);
 
     auto * style = new SoDrawStyle;

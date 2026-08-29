@@ -20,11 +20,16 @@
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <filesystem>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #ifndef OBOL_CONTROL_IMAGES_DIR
 #error OBOL_CONTROL_IMAGES_DIR must identify the retained rendering references
+#endif
+#ifndef OBOL_TEST_OUTPUT_DIR
+#error OBOL_TEST_OUTPUT_DIR must identify the rendering artifact directory
 #endif
 
 namespace {
@@ -46,7 +51,15 @@ struct GoldenScene {
     bool gradient = false;
     bool swrast_reference = true;
     RenderKind render_kind = RenderKind::Scene;
+    double rms_tolerance = 15.0;
+    std::size_t minimum_non_background_pixels = 0;
 };
+
+void PrintTo(const GoldenScene & scene, std::ostream * output)
+{
+    *output << scene.name << " (" << scene.width << 'x' << scene.height
+            << ", reference=" << scene.filename << ')';
+}
 
 bool renderQuadViewportLod(ObolTestSupport::RenderFixture & fixture,
                            std::vector<unsigned char> & pixels)
@@ -150,6 +163,10 @@ void compareSceneToReference(const GoldenScene & golden)
         ASSERT_TRUE(fixture.render(scene.root()));
         rendered_pixels = fixture.pixels();
     }
+    if (golden.minimum_non_background_pixels > 0) {
+        EXPECT_GE(fixture.nonBackgroundPixels(),
+                  golden.minimum_non_background_pixels);
+    }
 
     std::string error;
     const std::string path =
@@ -177,22 +194,73 @@ void compareSceneToReference(const GoldenScene & golden)
 
     const ObolTestSupport::ImageComparison comparison =
         ObolTestSupport::compareRgb(actual, *expected);
-    // Retained references were produced by system GLX. Permit normal driver
+    // Retained references represent the shared canonical scene factories,
+    // not the duplicate scene setup formerly embedded in standalone tests.
+    // Permit normal driver
     // rasterization variation while still rejecting structural, material,
     // camera, texture, and lighting regressions. Exact differing-pixel counts
     // are not meaningful across drivers: a one-value background rounding
     // difference can touch the full image, so RMS is the visual gate.
     const ObolTestSupport::ImageTolerance tolerance{
-        static_cast<std::size_t>(actual.width) * actual.height, 255, 15.0
+        static_cast<std::size_t>(actual.width) * actual.height, 255,
+        golden.rms_tolerance
     };
-    EXPECT_TRUE(ObolTestSupport::isWithinTolerance(comparison, tolerance))
-        << fixture.backendName() << ": "
-        << ObolTestSupport::describeComparison(comparison);
+    const bool within_tolerance =
+        ObolTestSupport::isWithinTolerance(comparison, tolerance);
+
+    std::ostringstream diagnostic;
+    diagnostic << fixture.backendName() << ": "
+               << ObolTestSupport::describeComparison(comparison)
+               << "\nReference image: " << path;
+    if (!within_tolerance) {
+        const std::filesystem::path output_directory(OBOL_TEST_OUTPUT_DIR);
+        std::error_code directory_error;
+        std::filesystem::create_directories(output_directory, directory_error);
+        if (directory_error) {
+            diagnostic << "\nCould not create artifact directory '"
+                       << output_directory.string() << "': "
+                       << directory_error.message();
+        }
+        else {
+            const std::string stem =
+                (output_directory / (std::string("visual_") + golden.name)).string();
+            const std::string actual_path = stem + "_actual.png";
+            std::string artifact_error;
+            if (ObolTestSupport::saveRgbPng(actual, actual_path,
+                                            &artifact_error)) {
+                diagnostic << "\nActual image: " << actual_path;
+            }
+            else {
+                diagnostic << "\nActual image write failed: " << artifact_error;
+            }
+
+            const auto difference =
+                ObolTestSupport::absoluteDifferenceRgb(actual, *expected);
+            if (difference) {
+                const std::string difference_path = stem + "_difference.png";
+                artifact_error.clear();
+                if (ObolTestSupport::saveRgbPng(
+                        *difference, difference_path, &artifact_error)) {
+                    diagnostic << "\nDifference image: " << difference_path;
+                }
+                else {
+                    diagnostic << "\nDifference image write failed: "
+                               << artifact_error;
+                }
+            }
+        }
+    }
+
+    EXPECT_TRUE(within_tolerance) << diagnostic.str();
 }
 
 const std::array<GoldenScene, 36> retained_scenes{{
+    // WGL's texture interpolation produces the same checkerboard contract as
+    // the software reference with small per-channel differences.  Keep its
+    // allowance local to this driver-sensitive scene.
     {"AlphaTest", ObolTest::Scenes::createAlphaTest,
-     "render_alpha_test_control.png", 256, 256},
+     "render_alpha_test_control.png", 256, 256,
+     SbColor(0.0f, 0.0f, 0.0f), false, true, RenderKind::Scene, 18.0},
     {"Arb8EditCycle", ObolTest::Scenes::createArb8EditCycle,
      "render_arb8_edit_cycle_control.png", 800, 600,
      SbColor(0.12f, 0.12f, 0.14f)},
@@ -232,8 +300,13 @@ const std::array<GoldenScene, 36> retained_scenes{{
      "render_indexed_line_set_control.png", 256, 256},
     {"IosevkaText2", ObolTest::Scenes::createIosevkaText2,
      "render_iosevka_text2_control.png", 800, 600},
+    // Windows TTC triangulation differs modestly from the retained reference,
+    // while both GL backends agree.  Retain a foreground-area contract as an
+    // independent guard against an empty render when using the larger RMS.
     {"IosevkaText3", ObolTest::Scenes::createIosevkaText3,
-     "render_iosevka_text3_control.png", 800, 600},
+     "render_iosevka_text3_control.png", 800, 600,
+     SbColor(0.0f, 0.0f, 0.0f), false, true, RenderKind::Scene, 21.0,
+     15000u},
     {"Lighting", ObolTest::Scenes::createLighting,
      "render_lighting_control.png", 800, 600},
     {"Lod", ObolTest::Scenes::createLOD,

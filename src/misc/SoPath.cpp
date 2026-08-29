@@ -49,8 +49,7 @@
   the first node in the path that doesn't inherit SoGroup, and
   getLength() returns the number of nodes down to this node.
 
-  If you need the actual path length, or the actual tail node, you
-  need to cast the path to SoFullPath.
+  If you need the actual path length, use getFullLength() and getNode().
 */
 
 // *************************************************************************
@@ -88,16 +87,12 @@
 // *************************************************************************
 
 #if OBOL_DEBUG && 0 // Convenience function for dumping the SoPath during debugging.
-#include <Inventor/SoFullPath.h>
-
 static void
 sopath_dump(SoPath * p)
 {
-  SoFullPath * path = (SoFullPath *)p;
-
-  (void)fprintf(stderr, "(path %p, len %d)  ", path, path->getLength());
-  for (int i=0; i < path->getLength(); i++) {
-    SoNode * n = path->getNodeFromTail(i);
+  (void)fprintf(stderr, "(path %p, len %d)  ", p, p->getFullLength());
+  for (int i=0; i < p->getFullLength(); i++) {
+    SoNode * n = p->getNode(p->getFullLength() - 1 - i);
     (void)fprintf(stderr, "%p (%s), ",
                   n, n->getTypeId().getName().getString());
   }
@@ -391,14 +386,11 @@ SoPath::append(SoNode * const node, const int index)
   method only considers group nodes without hidden children (nodes
   inheriting SoGroup) when finding the tail.
 
-  If you want to find the real tail node (also below node kits
-  with hidden children), you have to use
-  SoFullPath::getTail(). You don't have to create an SoFullPath
-  instance to do this, just cast the SoPath instance to SoFullPath
-  before getting the tail node:
+  To find the real tail node below nodekit hidden children, use the complete
+  path length with getNode():
 
   \code
-  SoNode * tail = static_cast<SoFullPath*>(path)->getTail();
+  SoNode * tail = path->getNode(path->getFullLength() - 1);
   \endcode
 */
 SoNode *
@@ -501,8 +493,7 @@ SoPath::getIndexFromTail(const int index) const
   "visible" nodes are counted, i.e. hidden nodes of e.g. nodekits are
   not included.
 
-  If you need the actual path length, you need to cast your path to
-  SoFullPath and use SoFullPath::getLength().
+  Use getFullLength() to include hidden nodes.
 */
 int
 SoPath::getLength(void) const
@@ -553,9 +544,8 @@ SoPath::truncate(const int length, const SbBool donotify)
     // at unrelated locations.
     //
     // mortene -- the paranoid android.
-    SoFullPath * fp = (SoFullPath *)this;
-    for (int l = 0; l < fp->getLength(); l++) {
-      SoNode * n = fp->getNode(l);
+    for (int l = 0; l < this->getFullLength(); l++) {
+      SoNode * n = this->getNode(l);
       // FIXME: are there actually conditions where we can "legally" get
       // a NULL pointer here? Or would that be an indication of an
       // internal error? 20020928 mortene.

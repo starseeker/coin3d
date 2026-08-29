@@ -729,7 +729,8 @@ soproto_find_node(SoNode * root, SbName name, SoSearchAction & sa)
   SoNode * ret = NULL;
 
   if (sa.getPath()) {
-    ret = ((SoFullPath*)sa.getPath())->getTail();
+    SoPath * path = sa.getPath();
+    ret = path->getNode(path->getFullLength() - 1);
   }
   sa.reset();
   return ret;

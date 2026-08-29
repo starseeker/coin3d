@@ -323,16 +323,15 @@ SoSearchAction::isSearchingAll(void) const
   returned from either this method or the getPaths() method below:
   "why am I not getting the complete path as expected?"
 
-  Well, then you probably have to cast the path to a SoFullPath, since
-  certain nodes (nodekits) have hidden
-  children. SoPath::getTail() will return the first node that has
-  hidden children, or the tail if none of the nodes have hidden
-  children. SoFullPath::getTail() will always return the actual
-  tail. Just do like this:
+  Some nodes (notably nodekits) have hidden children. SoPath::getTail() will
+  return the first node with hidden children, or the tail if there are none.
+  Use SoPath::getFullLength() and SoPath::getNode() to access the actual tail
+  without relying on a layout-only downcast:
  
   \code
-    SoFullPath * path = (SoFullPath *) searchaction->getPath();
-    SoCoordinate3 * coord = (SoCoordinate3 *) path->getTail();
+    SoPath * path = searchaction->getPath();
+    SoCoordinate3 * coord = (SoCoordinate3 *)
+      path->getNode(path->getFullLength() - 1);
   \endcode
 */
 SoPath *

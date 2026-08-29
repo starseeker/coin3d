@@ -78,6 +78,8 @@ SO_ENGINE_ABSTRACT_SOURCE(SoInterpolate);
 */
 SoInterpolate::SoInterpolate(void)
 {
+  SoBase::StaticDataLockGuard metadata_lock;
+
   // Don't use standard SO_ENGINE_CONSTRUCTOR.
 
   // Catch attempts to use an engine class which has not been

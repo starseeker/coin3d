@@ -62,6 +62,7 @@
 #include <sstream>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <set>
 
 // ---------------------------------------------------------------------------
@@ -447,11 +448,13 @@ TEST(ThreadPrimitives, StorageSeparatesConcurrentThreads)
 {
     constexpr int thread_count = 64;
     SbStorage storage(sizeof(int));
-    std::atomic<int> ready{0};
-    std::atomic<bool> release{false};
     std::atomic<bool> failed{false};
     std::mutex addresses_mutex;
     std::set<void *> addresses;
+    std::mutex gate_mutex;
+    std::condition_variable gate_changed;
+    int ready = 0;
+    bool release = false;
     std::vector<std::thread> threads;
     threads.reserve(thread_count);
 
@@ -463,14 +466,26 @@ TEST(ThreadPrimitives, StorageSeparatesConcurrentThreads)
                 std::lock_guard<std::mutex> lock(addresses_mutex);
                 addresses.insert(value);
             }
-            ready.fetch_add(1, std::memory_order_release);
-            while (!release.load(std::memory_order_acquire)) {}
+            {
+                std::unique_lock<std::mutex> lock(gate_mutex);
+                ++ready;
+                // Workers and the coordinator wait on the same condition
+                // variable. Wake the coordinator as well as any worker that
+                // may consume a notification while its release predicate is
+                // still false.
+                gate_changed.notify_all();
+                gate_changed.wait(lock, [&] { return release; });
+            }
             if (*value != index) failed.store(true, std::memory_order_relaxed);
         });
     }
 
-    while (ready.load(std::memory_order_acquire) != thread_count) {}
-    release.store(true, std::memory_order_release);
+    {
+        std::unique_lock<std::mutex> lock(gate_mutex);
+        gate_changed.wait(lock, [&] { return ready == thread_count; });
+        release = true;
+    }
+    gate_changed.notify_all();
     for (std::thread & thread : threads) thread.join();
 
     EXPECT_FALSE(failed.load());

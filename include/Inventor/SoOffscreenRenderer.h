@@ -69,6 +69,11 @@ class SoOffscreenRendererP;
   supplied at construction time.  When no explicit manager is provided the
   global singleton from SoDB::getContextManager() is used.
 
+  A supplied context manager is not owned by SoOffscreenRenderer.  It must
+  outlive this renderer and every scene graph rendered through it, because
+  nodes such as SoSceneTexture2 may retain manager-owned context resources in
+  their render caches.
+
   Typical usage:
   \code
   SbViewportRegion vp(800, 600);
@@ -95,7 +100,8 @@ public:
   // Constructors that accept an explicit context manager, removing any
   // dependency on the global SoDB::getContextManager() singleton.
   // The \a manager must not be NULL; use the standard constructors to fall
-  // back to the global singleton.
+  // back to the global singleton. It must outlive the renderer and scene
+  // graphs rendered through it.
   SoOffscreenRenderer(SoDB::ContextManager * manager, const SbViewportRegion & viewportregion);
   SoOffscreenRenderer(SoDB::ContextManager * manager, SoGLRenderAction * action);
   ~SoOffscreenRenderer();

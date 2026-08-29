@@ -7,6 +7,17 @@
 #include <sstream>
 
 namespace ObolTestSupport {
+namespace {
+
+bool hasValidStorage(const RgbImage & image)
+{
+    const std::size_t expected_bytes =
+        static_cast<std::size_t>(image.width) * image.height * 3;
+    return image.width > 0 && image.height > 0 &&
+           image.pixels.size() == expected_bytes;
+}
+
+} // namespace
 
 std::optional<RgbImage> loadRgbPng(const std::string & path, std::string * error)
 {
@@ -19,6 +30,25 @@ std::optional<RgbImage> loadRgbPng(const std::string & path, std::string * error
         *error = "could not load '" + path + "': " + lodepng_error_text(error_code);
     }
     return std::nullopt;
+}
+
+bool saveRgbPng(const RgbImage & image, const std::string & path,
+                std::string * error)
+{
+    if (!hasValidStorage(image)) {
+        if (error) *error = "cannot save an invalid or empty RGB image";
+        return false;
+    }
+
+    const unsigned error_code = lodepng_encode24_file(
+        path.c_str(), image.pixels.data(), image.width, image.height);
+    if (error_code == 0) return true;
+
+    if (error) {
+        *error = "could not save '" + path + "': " +
+                 lodepng_error_text(error_code);
+    }
+    return false;
 }
 
 ImageComparison compareRgb(const RgbImage & actual, const RgbImage & expected)
@@ -51,6 +81,26 @@ ImageComparison compareRgb(const RgbImage & actual, const RgbImage & expected)
         comparison.rms_error = std::sqrt(squared_error_sum / actual.pixels.size());
     }
     return comparison;
+}
+
+std::optional<RgbImage> absoluteDifferenceRgb(const RgbImage & actual,
+                                              const RgbImage & expected)
+{
+    if (!hasValidStorage(actual) || !hasValidStorage(expected) ||
+        actual.width != expected.width || actual.height != expected.height) {
+        return std::nullopt;
+    }
+
+    RgbImage difference;
+    difference.width = actual.width;
+    difference.height = actual.height;
+    difference.pixels.resize(actual.pixels.size());
+    for (std::size_t i = 0; i < actual.pixels.size(); ++i) {
+        difference.pixels[i] = static_cast<unsigned char>(
+            std::abs(static_cast<int>(actual.pixels[i]) -
+                     static_cast<int>(expected.pixels[i])));
+    }
+    return difference;
 }
 
 bool isWithinTolerance(const ImageComparison & comparison,

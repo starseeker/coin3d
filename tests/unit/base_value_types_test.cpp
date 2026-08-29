@@ -80,6 +80,23 @@ TEST(BaseStrings, StringNameAndTimeExposeStableValueSemantics)
     EXPECT_GT(SbTime::getTimeOfDay().getValue(), 0.0);
 }
 
+TEST(BaseTime, MillisecondConversionDefinesAllOutOfRangeInputs)
+{
+    const int value_bits = std::numeric_limits<unsigned long>::digits;
+    // 2^(N-3) seconds is exactly 125 complete 2^N millisecond ranges.
+    const SbTime overflowing(std::ldexp(1.0, value_bits - 3));
+    EXPECT_EQ(overflowing.getMsecValue(), 0ul);
+
+    // Preserve unsigned-style wrapping without relying on undefined
+    // floating-to-integer conversions.
+    EXPECT_EQ(SbTime(-0.001).getMsecValue(),
+              std::numeric_limits<unsigned long>::max());
+    EXPECT_EQ(SbTime(std::numeric_limits<double>::infinity()).getMsecValue(),
+              0ul);
+    EXPECT_EQ(SbTime(std::numeric_limits<double>::quiet_NaN()).getMsecValue(),
+              0ul);
+}
+
 TEST(BaseDictionary, SupportsLookupRemovalEnumerationAndPointerLists)
 {
     SbDict dictionary;

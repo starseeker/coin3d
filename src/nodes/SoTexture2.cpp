@@ -83,9 +83,10 @@
     SbDict namedict;
 
     for (int i = 0; i < pl.getLength(); i++) {
-      SoFullPath * p = (SoFullPath*) pl[i];
-      if (p->getTail()->isOfType(SoTexture2::getClassTypeId())) {
-        SoTexture2 * tex = (SoTexture2*) p->getTail();
+      SoPath * p = pl[i];
+      SoNode * tail = p->getNode(p->getFullLength() - 1);
+      if (tail->isOfType(SoTexture2::getClassTypeId())) {
+        SoTexture2 * tex = (SoTexture2*) tail;
         if (tex->filename.getValue().getLength()) {
           SbName name = tex->filename.getValue().getString();
           unsigned long key = (unsigned long) ((void*) name.getString());
@@ -154,8 +155,9 @@
 
     const SoPathList & pl = searchaction.getPaths();
     for (int i=0; i < pl.getLength(); i++) {
-      SoFullPath * fp = (SoFullPath *)pl[i];
-      SoTexture2 * tex = (SoTexture2 *)fp->getTail();
+      SoPath * path = pl[i];
+      SoTexture2 * tex = (SoTexture2 *)
+        path->getNode(path->getFullLength() - 1);
       assert(tex->getTypeId() == SoTexture2::getClassTypeId());
       tex->image.touch();
     }

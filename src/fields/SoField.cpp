@@ -2361,8 +2361,12 @@ SoField::valueChanged(SbBool resetdefault)
     // construction, while preserving sensors and field connections.
     const bool hasauditors = this->hasExtendedStorage() &&
       this->storage->auditors.getLength() > 0;
-    if (this->container &&
-        (this->container->isNotifyEnabled() || hasauditors))
+    // container and storage share a union.  Once storage has been extended,
+    // reading this->container interprets the SoConnectStorage pointer as an
+    // SoFieldContainer pointer.  Always go through getContainer(), which knows
+    // which union member is active.
+    SoFieldContainer * fieldcontainer = this->getContainer();
+    if ((fieldcontainer && fieldcontainer->isNotifyEnabled()) || hasauditors)
       this->startNotify();
     this->clearStatusBits(FLAG_READONLY);
   }

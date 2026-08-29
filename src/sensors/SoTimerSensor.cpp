@@ -49,6 +49,7 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <cassert>
+#include <climits>
 #include <cmath>
 
 #define DEBUG_TIMERSENSOR_TRACE 0

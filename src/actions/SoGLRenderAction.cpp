@@ -71,7 +71,7 @@
 #include "CoinTidbits.h"
 #include <Inventor/SbColor.h>
 #include <Inventor/SbPlane.h>
-#include <Inventor/SoFullPath.h>
+#include <Inventor/SoPath.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
@@ -1074,8 +1074,8 @@ SoGLRenderAction::beginTraversal(SoNode * node)
         SoBaseKit::setSearchingChildren(oldchildsearch);
         SoPathList plist = sa.getPaths();
         for (int i = 0, n = plist.getLength(); i < n; ++i) {
-          SoFullPath * path = static_cast<SoFullPath *>(plist[i]);
-          SoNode * tail = path->getTail();
+          SoPath * path = plist[i];
+          SoNode * tail = path->getNode(path->getFullLength() - 1);
           if ((tail != NULL) &&
               (tail->isOfType(SoProfilerVisualizeKit::getClassTypeId()))) {
             SoProfilerVisualizeKit * viskit = coin_assert_cast<SoProfilerVisualizeKit *>(tail);
@@ -1398,11 +1398,11 @@ SoGLRenderAction::abortNow(void)
     debug = env && (atoi(env) > 0);
   }
   if (debug) {
-    const SoFullPath * p = (const SoFullPath *)this->getCurPath();
+    const SoPath * p = this->getCurPath();
     assert(p);
-    const int len = p->getLength();
+    const int len = p->getFullLength();
     for (int i=1; i < len; i++) { printf("  "); }
-    const SoNode * n = p->getTail();
+    const SoNode * n = p->getNode(len - 1);
     assert(n);
     printf("%p %s (\"%s\")\n",
            n, n->getTypeId().getName().getString(),
@@ -1639,7 +1639,7 @@ SoGLRenderActionP::addSortTransPath(SoPath * path)
   }
 
   SoState * state = action->getState();
-  SoNode * tail = static_cast<SoFullPath *>(path)->getTail();
+  SoNode * tail = path->getNode(path->getFullLength() - 1);
   float dist;
   SbBox3f bbox;
   // test if we can find the bbox using SoShape::getBoundingBoxCache()

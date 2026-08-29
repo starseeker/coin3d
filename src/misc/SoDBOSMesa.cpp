@@ -44,12 +44,13 @@ constexpr unsigned int maxOSMesaDimension = 16384;
  * concurrently; no lock is held around rendering itself.
  */
 std::recursive_mutex &
-osmesaFallbackMutex()
+osmesaGlobalMutex()
 {
   static std::recursive_mutex mutex;
   return mutex;
 }
 
+#ifndef _WIN32
 bool
 prepareOSMesaThreadDispatch()
 {
@@ -115,6 +116,7 @@ prepareOSMesaThreadDispatch()
   });
   return prepared;
 }
+#endif
 
 } // namespace
 
@@ -199,7 +201,16 @@ struct CoinOSMesaCtxData {
 class CoinOSMesaContextManagerImpl : public SoDB::ContextManager {
 public:
   CoinOSMesaContextManagerImpl()
+#ifdef _WIN32
+    /* The bundled Mesa's proactive single-context handoff is not reliable
+     * with its legacy Win32 TLS implementation.  Keep complete context
+     * activation/render/restore transactions serialized on Windows.  Mesa
+     * can still promote its dispatch state during an ordinary, serialized
+     * handoff between distinct rendering contexts. */
+    : concurrentDispatch(false)
+#else
     : concurrentDispatch(prepareOSMesaThreadDispatch())
+#endif
   {
   }
 
@@ -208,9 +219,11 @@ public:
         width > maxOSMesaDimension || height > maxOSMesaDimension) {
       return nullptr;
     }
-    std::unique_lock<std::recursive_mutex> fallbackLock(
-      osmesaFallbackMutex(), std::defer_lock);
-    if (!this->concurrentDispatch) fallbackLock.lock();
+    /* This bundled Mesa predates reliable concurrent context lifetime
+     * operations.  Context creation also reaches process-global one-time
+     * tables and allocator state.  Serialize creation while allowing the
+     * resulting contexts to render concurrently. */
+    const std::lock_guard<std::recursive_mutex> lock(osmesaGlobalMutex());
     auto * d = new (std::nothrow) CoinOSMesaCtxData(
       static_cast<int>(width), static_cast<int>(height));
     return d && d->isValid() ? d : (delete d, nullptr);
@@ -244,10 +257,10 @@ public:
   }
 
   SbBool makeContextCurrent(void * context) override {
-    if (!this->concurrentDispatch) osmesaFallbackMutex().lock();
+    if (!this->concurrentDispatch) osmesaGlobalMutex().lock();
     const bool current = context &&
       static_cast<CoinOSMesaCtxData *>(context)->makeCurrent();
-    if (!current && !this->concurrentDispatch) osmesaFallbackMutex().unlock();
+    if (!current && !this->concurrentDispatch) osmesaGlobalMutex().unlock();
     return current ? TRUE : FALSE;
   }
 
@@ -264,13 +277,13 @@ public:
         OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
       restored = true;
     }
-    if (!this->concurrentDispatch && restored) osmesaFallbackMutex().unlock();
+    if (!this->concurrentDispatch && restored) osmesaGlobalMutex().unlock();
   }
 
   void destroyContext(void * context) override {
-    std::unique_lock<std::recursive_mutex> fallbackLock(
-      osmesaFallbackMutex(), std::defer_lock);
-    if (!this->concurrentDispatch) fallbackLock.lock();
+    /* Match creation serialization: old Mesa context destruction touches
+     * shared tables even when the contexts do not share GL objects. */
+    const std::lock_guard<std::recursive_mutex> lock(osmesaGlobalMutex());
     auto * d = static_cast<CoinOSMesaCtxData *>(context);
     if (!d) return;
     /* Unbind the context before destroying it.  If it is still current (e.g.

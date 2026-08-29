@@ -87,8 +87,8 @@ _class_::createInstance(void * /*ctx*/) \
 }
 
 #define SO_NODEENGINE_CONSTRUCTOR(_class_) \
+  SoBase::StaticDataLockGuard obol_nodeengine_constructor_lock; \
   do { \
-    SoBase::staticDataLock(); \
     _class_::classinstances++; \
     /* Catch attempts to use an engine class which has not been initialized. */ \
     assert(_class_::classTypeId != SoType::badType()); \
@@ -105,7 +105,6 @@ _class_::createInstance(void * /*ctx*/) \
     /* considered native. This is important to get the export code to do */ \
     /* the Right Thing. */ \
     this->isBuiltIn = FALSE; \
-    SoBase::staticDataUnlock(); \
   } WHILE_0
 
 #define PRIVATE_COMMON_NODEENGINE_INIT_CODE(_class_, _classname_, _createfunc_, _parentclass_) \

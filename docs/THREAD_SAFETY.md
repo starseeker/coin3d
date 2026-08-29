@@ -87,9 +87,11 @@ every enqueue and dequeue operation.
 
 ### 4. GL texture cache — shared `SbMutex`
 
-`SoGLImageP::mutex` is a single shared mutex that serialises all
-`getGLDisplayList()` calls across all `SoGLImage` instances.  `SoGLBigImage`
-uses a per-instance `SbMutex`.
+`SoGLImageP::mutex` is a single shared mutex that serialises texture
+display-list lookup, insertion, ageing, and context-cleanup removal across all
+`SoGLImage` instances. A temporary reference keeps a selected display list
+alive after the lookup lock is released. `SoGLBigImage` uses a per-instance
+`SbMutex`.
 
 *Status:* Correct within each class. The separate GL context registry is
 protected as described below.
@@ -237,6 +239,34 @@ Profiler collection is compiled in by default but runtime-disabled by default.
 When enabled, each action thread owns its stats and overlay nodes; report
 generation remains stack-local and reentrant. Shared visualization textures
 are synchronized.
+
+### 17. Class metadata publication
+
+Node, engine, node-engine, and nodekit construction macros hold a process-wide
+recursive metadata lock while a class's first instance publishes field, enum,
+input, output, or catalog descriptors. Later ordinary node instances release
+the lock immediately after observing complete metadata. Engines and nodekits
+retain the lock for the constructor body because their compatibility macros may
+mutate or validate shared descriptors on every construction. Non-standard
+constructors that perform the same metadata initialization use the same guard.
+
+This prevents one thread from reading a partially populated class descriptor
+while another constructs the first instance. A cold-start stress test creates
+the first instances concurrently and validates every published field and enum
+entry.
+
+### 18. OSMesa context lifecycle
+
+OSMesa context creation and destruction are serialized by a process-wide
+recursive mutex. This covers shared state inside OSMesa/Mesa implementations
+that is not safe to initialize concurrently. Once dispatch preparation has
+succeeded, independent contexts may still be made current and used for
+rendering concurrently; the lifecycle lock is not held on the render path.
+On Windows, the bundled legacy Mesa dispatcher cannot safely perform the
+preparatory cross-thread context handoff, so activation, rendering, and restore
+transactions are serialized as a conservative fallback. This limits parallel
+OSMesa throughput on Windows but does not affect system-WGL rendering or
+backend selection.
 
 ---
 

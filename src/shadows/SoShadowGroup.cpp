@@ -416,9 +416,10 @@ public:
 
     this->path = light_path->copy();
     this->path->ref();
-    assert(static_cast<const SoFullPath*>(light_path)->getTail()->isOfType(SoLight::getClassTypeId()));
+    SoNode * lighttail = light_path->getNode(light_path->getFullLength() - 1);
+    assert(lighttail->isOfType(SoLight::getClassTypeId()));
 
-    this->light = static_cast<SoLight*>(static_cast<const SoFullPath*>(light_path)->getTail());
+    this->light = static_cast<SoLight *>(lighttail);
     this->light->ref();
 
     this->createVSMProgram();
@@ -677,15 +678,15 @@ public:
   }
   void copyLightPaths(const SoPathList & pl) {
     for (int i = 0; i < pl.getLength(); i++) {
-      SoFullPath * p = (SoFullPath*) pl[i];
-      SoNode * tail = p->getTail();
+      SoPath * p = pl[i];
+      SoNode * tail = p->getNode(p->getFullLength() - 1);
       if (tail->isOfType(SoSpotLight::getClassTypeId()) ||
           tail->isOfType(SoShadowDirectionalLight::getClassTypeId())) {
-        SoTempPath * tp = new SoTempPath(p->getLength());
+        SoTempPath * tp = new SoTempPath(p->getFullLength());
         tp->ref();
         tp->setHead(p->getHead());
 
-        for (int j = 1; j < p->getLength(); j++) {
+        for (int j = 1; j < p->getFullLength(); j++) {
           tp->append(p->getNode(j));
         }
         this->lightpaths.append(tp);
@@ -1076,8 +1077,9 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
       this->numtexunitsinscene = lastenabled + 1;
 
       for (i = 0; i < this->searchaction.getPaths().getLength(); i++) {
-        SoFullPath * p = (SoFullPath*) this->searchaction.getPaths()[i];
-        SoTextureUnit * unit = (SoTextureUnit*) p->getTail();
+        SoPath * p = this->searchaction.getPaths()[i];
+        SoTextureUnit * unit = (SoTextureUnit*)
+          p->getNode(p->getFullLength() - 1);
         if (unit->unit.getValue() >= this->numtexunitsinscene) {
           this->numtexunitsinscene = unit->unit.getValue() + 1;
         }
@@ -1101,7 +1103,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
 
     int numlights = 0;
     for (i = 0; i < pl.getLength(); i++) {
-      SoLight * light = (SoLight*)((SoFullPath*)(pl[i]))->getTail();
+      SoLight * light = (SoLight*)pl[i]->getTail();
       if (light->on.getValue() && (numlights < maxlights)) numlights++;
     }
     if (numlights != this->shadowlights.getLength()) {
@@ -1109,7 +1111,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
       this->deleteShadowLights();
       int id = lightidoffset;
       for (i = 0; i < pl.getLength(); i++) {
-        SoLight * light = (SoLight*)((SoFullPath*)pl[i])->getTail();
+        SoLight * light = (SoLight*)pl[i]->getTail();
         if (light->on.getValue() && (this->shadowlights.getLength() < maxlights)) {
           SoNode * scene = PUBLIC(this);
           SoNode * bboxscene = PUBLIC(this);
@@ -1141,7 +1143,8 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
     int id = lightidoffset;
     for (i = 0; i < pl.getLength(); i++) {
       SoPath * path = pl[i];
-      SoLight * light = (SoLight*) ((SoFullPath*)path)->getTail();
+      SoLight * light = (SoLight*)
+        path->getNode(path->getFullLength() - 1);
       if (light->on.getValue() && (i2 < maxlights)) {
         SoShadowLightCache * cache = this->shadowlights[i2];
         int unit = (maxunits - 1) - i2;
