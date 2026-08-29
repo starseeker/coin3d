@@ -351,7 +351,7 @@
 class SoShadowLightCache {
 public:
   SoShadowLightCache(SoState * state,
-                     const SoPath * light_path,
+                     SoTempPath * light_path,
                      SoShadowGroup * sg,
                      SoNode * scene,
                      SoNode * bboxscene,
@@ -414,7 +414,12 @@ public:
     this->shadowmatrix->ref();
     this->shadowmatrix->value = SbMatrix::identity();
 
-    this->path = light_path->copy();
+    // Keep the non-owning path produced by SoShadowGroupP::copyLightPaths().
+    // SoPath::copy() creates an auditing path which references every node in
+    // it, including the SoShadowGroup that owns this cache.  Retaining such a
+    // copy here forms a reference cycle and prevents the entire shadow cache
+    // (including its generated shaders) from being released.
+    this->path = light_path;
     this->path->ref();
     SoNode * lighttail = light_path->getNode(light_path->getFullLength() - 1);
     assert(lighttail->isOfType(SoLight::getClassTypeId()));
@@ -588,7 +593,7 @@ public:
   SoSeparator * createGaussSG(SoShaderProgram * program, SoSceneTexture2 * tex);
 
   SbMatrix matrix;
-  SoPath * path;
+  SoTempPath * path;
   SoLight * light;
   SoSceneTexture2 * depthmap;
   SoNode * depthmapscene;
@@ -1142,7 +1147,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
     int i2 = 0;
     int id = lightidoffset;
     for (i = 0; i < pl.getLength(); i++) {
-      SoPath * path = pl[i];
+      SoTempPath * path = pl[i];
       SoLight * light = (SoLight*)
         path->getNode(path->getFullLength() - 1);
       if (light->on.getValue() && (i2 < maxlights)) {
@@ -1156,8 +1161,9 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
           cache->lightid = lightid;
         }
         if (*(cache->path) != *path) {
+          path->ref();
           cache->path->unref();
-          cache->path = path->copy();
+          cache->path = path;
         }
         if (cache->light->isOfType(SoSpotLight::getClassTypeId())) {
           this->matrixaction.apply(path);

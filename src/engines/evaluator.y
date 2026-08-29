@@ -85,6 +85,9 @@
 %type <node> vecstatement
 %type <node> boolstatement
 
+/* Free partially built syntax trees when error recovery discards them. */
+%destructor { so_eval_delete($$); } <node>
+
 /* operator priorities (based on C operator precedence and associativity */
 %right '='
 %right '?' ':'
@@ -96,7 +99,7 @@
 %left '*' '/' '%'
 %left '!' UNARY
 
-%start expression
+%start input
 
 %{
   static char * get_regname(char reg, int regtype);
@@ -108,9 +111,12 @@
 
 %%
 
+input         : expression { root_node = $1; }
+              ;
+
 expression    : expression ';' subexpression
-              { root_node = so_eval_create_binary(ID_SEPARATOR, $1, $3); $$ = root_node; }
-              | subexpression { root_node = $1; $$ = $1; }
+              { $$ = so_eval_create_binary(ID_SEPARATOR, $1, $3); }
+              | subexpression { $$ = $1; }
               ;
 
 subexpression : { $$ = NULL; }
@@ -287,7 +293,6 @@ so_evalerror(const char *myerr)
   strncpy(myerrorbuf, myerr, 512);
   myerrorbuf[511] = 0; /* just in case string was too long */
   myerrorptr = myerrorbuf; /* signal error */
-  so_eval_delete(root_node); /* free memory used */
   root_node = NULL;
   return 0;
 }

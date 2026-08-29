@@ -151,9 +151,13 @@ SbByteBuffer::operator==(const SbByteBuffer & that) const
 INLINE void
 SbByteBuffer::push(const SbByteBuffer & that)
 {
-  SbByteBuffer n_buf(this->size()+that.size());
-  memcpy(n_buf.data(),this->constData(),this->size());
-  memcpy(&n_buf.data()[this->size()],that.constData(),that.size());
+  const size_t current_size = this->size();
+  const size_t appended_size = that.size();
+  SbByteBuffer n_buf(current_size + appended_size);
+  if (current_size)
+    memcpy(n_buf.data(), this->constData(), current_size);
+  if (appended_size)
+    memcpy(n_buf.data() + current_size, that.constData(), appended_size);
   *this=n_buf;
 }
 

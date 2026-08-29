@@ -483,7 +483,15 @@ struct HandleDragContext {
   HandleDragContext(SoProceduralShape* s, int idx, const SbVec3f& pos,
                     SoDragger* d, bool noIntersect)
     : shape(s), handleIndex(idx), initPos(pos), dragStartTrans(0.f, 0.f, 0.f),
-      dragger(d), sensor(nullptr), isNoIntersect(noIntersect) {}
+      dragger(d), sensor(nullptr), isNoIntersect(noIntersect)
+  {
+    this->shape->ref();
+  }
+
+  ~HandleDragContext()
+  {
+    this->shape->unref();
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -651,6 +659,35 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
     shape->params.setValues(0, nparams, paramsCopy.data());
   }
 }
+
+// SoFieldSensor automatically detaches when its field is destroyed, but it
+// does not delete itself.  This private sensor owns the callback context and
+// releases both when the dragger (and therefore its translation field) dies.
+class HandleDragSensor final : public SoFieldSensor {
+public:
+  explicit HandleDragSensor(HandleDragContext* ctx)
+    : SoFieldSensor(handleDragSensorCB, ctx), context(ctx)
+  {
+  }
+
+protected:
+  ~HandleDragSensor() override
+  {
+    this->context->dragger->removeStartCallback(handleDragStartCB,
+                                                this->context);
+    this->context->sensor = nullptr;
+    delete this->context;
+  }
+
+private:
+  void dyingReference() override
+  {
+    this->detach();
+    delete this;
+  }
+
+  HandleDragContext* context;
+};
 
 } // anonymous namespace
 
@@ -1031,10 +1068,12 @@ SoProceduralShape::buildHandleDraggers()
 
     SoField* tf = dragger->getField("translation");
     if (tf) {
-      SoFieldSensor* sensor = new SoFieldSensor(handleDragSensorCB, ctx);
+      SoFieldSensor* sensor = new HandleDragSensor(ctx);
       ctx->sensor = sensor;  // store for possible reset
       sensor->attach(tf);
-      (void)sensor;
+    } else {
+      dragger->removeStartCallback(handleDragStartCB, ctx);
+      delete ctx;
     }
   }
 

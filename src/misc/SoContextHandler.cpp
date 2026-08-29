@@ -282,7 +282,10 @@ SoContextHandler::removeContextDestructionCallback(ContextDestructionCB * func, 
     socontexthandler_current_invocation != NULL;
   {
     std::lock_guard<std::mutex> lock(socontexthandler_mutex);
-    assert(socontexthandler_callbacks);
+    // Thread-local GL resources can outlive SoDB::finish().  Cleanup has
+    // already deactivated every callback and waited for active dispatches, so
+    // an unregister from a late TLS destructor has nothing left to remove.
+    if (socontexthandler_callbacks == NULL) return;
     auto iter = socontexthandler_callbacks->end();
     auto inactive = socontexthandler_callbacks->end();
     for (auto candidate = socontexthandler_callbacks->begin();

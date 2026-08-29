@@ -136,6 +136,20 @@ namespace {
   // scene-graph lock and does not take this mutex.
   std::recursive_mutex lifecycle_mutex;
   std::atomic<SoDB::ContextManager *> global_context_manager{nullptr};
+
+  void deleteGlobalFieldContainer(SoGlobalField * container)
+  {
+    // The global-field registry is deliberately non-owning.  Most fields
+    // therefore have a zero reference count while registered, whereas
+    // realTime has the single reference installed during SoDB::init().
+    // Let the container destructor remove its registry entry; merely
+    // removing it from the non-owning list would leak the container and its
+    // field.
+    const int refcount = container->getRefCount();
+    assert(refcount <= 1);
+    if (refcount == 0) container->ref();
+    container->unref();
+  }
 }
 
 // *************************************************************************
@@ -889,17 +903,17 @@ SoDB::renameGlobalField(const SbName & from, const SbName & to)
   }
 #endif // OBOL_DEBUG
 
+  if (from == to) return;
+
   if (to == "") { // Empty string is a special case, remove field.
-    assert(gf->getRefCount() == 1);
-    SoGlobalField::removeGlobalFieldContainer(gf);
+    deleteGlobalFieldContainer(gf);
     return;
   }
 
   // Existing entry by the same "to"-name? If so, remove it.
   SoGlobalField * old = SoGlobalField::getGlobalFieldContainer(to);
   if (old) {
-    assert(old->getRefCount() == 1);
-    SoGlobalField::removeGlobalFieldContainer(old);
+    deleteGlobalFieldContainer(old);
   }
 
   gf->setName(to);

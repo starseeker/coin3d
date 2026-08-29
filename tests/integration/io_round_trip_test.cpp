@@ -155,6 +155,8 @@ TEST(SceneIo, DatabaseHeaderValidationAndVersionAreAvailable)
     global_float->setValue(99.0f);
     EXPECT_FLOAT_EQ(global_float->getValue(), 99.0f);
     EXPECT_EQ(SoDB::getGlobalField("modernSceneIoGlobalFloat"), global_float);
+    SoDB::renameGlobalField("modernSceneIoGlobalFloat", SbName::empty());
+    EXPECT_EQ(SoDB::getGlobalField("modernSceneIoGlobalFloat"), nullptr);
     EXPECT_NE(SoDB::getSensorManager(), nullptr);
 }
 

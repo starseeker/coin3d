@@ -138,6 +138,7 @@ TEST(IoInputBinary, BinaryHeaderStartsWithInventorVPrefix)
         std::string header(buf, std::min(sz, static_cast<size_t>(30)));
         EXPECT_NE(header.find("#Inventor"), std::string::npos);
     }
+    std::free(buf);
     root->unref();
 }
 
@@ -159,6 +160,7 @@ TEST(IoInputBinary, SoInputIsBinaryReturnsTRUEForBinaryBuffer)
         in.setBuffer(buf, sz);
         EXPECT_TRUE(in.isBinary());
     }
+    std::free(buf);
     root->unref();
 }
 
@@ -181,6 +183,7 @@ TEST(IoInputBinary, SoInputGetHeaderReturnsNonEmptyStringForBinary)
         SbString hdr = in.getHeader();
         EXPECT_GT(hdr.getLength(), 0);
     }
+    std::free(buf);
     root->unref();
 }
 
@@ -202,6 +205,7 @@ TEST(IoInputBinary, SoInputIsBinaryReturnsFALSEForASCIIBuffer)
         in.setBuffer(buf, sz);
         EXPECT_FALSE(in.isBinary());
     }
+    std::free(buf);
     root->unref();
 }
 
@@ -229,6 +233,7 @@ TEST(IoInputBinary, BinaryRoundTripSoDBReadAllRecoversSameNodeCount)
             r2->unref();
         }
     }
+    std::free(buf);
     root->unref();
 }
 
@@ -264,6 +269,7 @@ TEST(IoInputBinary, TruncatedBinarySoDBReadAllReturnsNullGracefully)
     }
 
     SoError::setHandlerCallback(old, nullptr);
+    std::free(buf);
     root->unref();
 }
 
@@ -401,5 +407,6 @@ TEST(IoInputBinary, LargeBinarySceneRoundTrip10Children)
             r->unref();
         }
     }
+    std::free(buf);
     root->unref();
 }

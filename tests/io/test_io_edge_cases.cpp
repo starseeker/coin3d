@@ -113,6 +113,7 @@ TEST(IoEdgeCases, BinaryWriteBufferStartsWithInventorV21Binary)
     EXPECT_TRUE((buf != nullptr) &&
                 (sz  >= std::strlen(header)) &&
                 (std::memcmp(buf, header, std::strlen(header)) == 0)) << "Binary output does not start with '#Inventor V2.1 binary'";
+    std::free(buf);
     root->unref();
 }
 
@@ -128,6 +129,7 @@ TEST(IoEdgeCases, SoOutputGetBufferReturnsNonNullAndPositiveSize)
     char * buf = nullptr; size_t sz = 0;
     writeNode(root, &buf, &sz);
     EXPECT_TRUE((buf != nullptr) && (sz > 0)) << "SoOutput::getBuffer returned null or zero size";
+    std::free(buf);
     root->unref();
 }
 
@@ -154,6 +156,7 @@ TEST(IoEdgeCases, BinaryRoundTripWriteBinaryThenReadBackNonNullRoot)
         }
     }
     EXPECT_NE(readRoot, nullptr);
+    std::free(buf);
     root->unref();
 }
 
@@ -179,6 +182,7 @@ TEST(IoEdgeCases, BinaryRoundTripRootHasExpectedChildren)
     }
     EXPECT_NE(readRoot, nullptr);
     EXPECT_GT(childCount, 0);
+    std::free(buf);
     root->unref();
 }
 

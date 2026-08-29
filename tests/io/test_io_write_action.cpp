@@ -139,6 +139,7 @@ TEST(IoWriteAction, ASCIIRoundTripSoGroupWithSoSphereSoCube)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -166,6 +167,7 @@ TEST(IoWriteAction, BinaryRoundTripSoGroupWithSoSphereSoCube)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -192,6 +194,7 @@ TEST(IoWriteAction, MultiRefSharedSoCubeReferencedTwiceSurvivesRoundTrip)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -232,6 +235,7 @@ TEST(IoWriteAction, SoTransformTranslation123SurvivesRoundTrip)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -276,6 +280,7 @@ TEST(IoWriteAction, SoMaterialDiffuseColor020406SurvivesRoundTrip)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -298,6 +303,7 @@ TEST(IoWriteAction, SoOutputGetBufferNBytes0AfterWrite)
     void * buf = nullptr; size_t bufLen = 0;
     out.getBuffer(buf, bufLen);
     EXPECT_TRUE((bufLen > 0)) << "SoOutput::getBuffer reported 0 bytes after write";
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -326,6 +332,7 @@ TEST(IoWriteAction, SoInputEofTRUEAfterSoDBReadAll)
             EXPECT_TRUE(in.eof());
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -353,6 +360,7 @@ TEST(IoWriteAction, SoOutputResetAllowsFreshWriteWithNonEmptyResult)
     void * buf = nullptr; size_t bufLen = 0;
     out.getBuffer(buf, bufLen);
     EXPECT_TRUE((bufLen > 0)) << "SoOutput::reset() did not allow a fresh non-empty write";
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -389,6 +397,7 @@ TEST(IoWriteAction, DeepHierarchy3LevelsRoundTrip)
             root->unref();
         }
     }
+    std::free(buf);
 }
 
 // -----------------------------------------------------------------------
@@ -409,6 +418,8 @@ TEST(IoWriteAction, SoOutputGetBufferSize0AfterWrite)
     sep->unref();
 
     EXPECT_TRUE((out.getBufferSize() > 0)) << "SoOutput::getBufferSize() should be > 0 after write";
+    std::free(g_buf);
+    g_buf = nullptr;
 }
 
 // -----------------------------------------------------------------------
@@ -449,6 +460,8 @@ TEST(IoWriteAction, SoInputSecondSetBufferOverridesFirst)
             root->unref();
         }
     }
+    std::free(buf1);
+    std::free(buf2);
 }
 
 // -----------------------------------------------------------------------

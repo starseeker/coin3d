@@ -72,5 +72,7 @@ int main(int argc, char ** argv)
 #else
     ObolTestSupport::initializeObol();
 #endif
-    return RUN_ALL_TESTS();
+    const int result = RUN_ALL_TESTS();
+    SoDB::finish();
+    return result;
 }

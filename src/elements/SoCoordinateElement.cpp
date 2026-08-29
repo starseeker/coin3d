@@ -97,9 +97,8 @@ SoCoordinateElement::initClass(void)
 void
 SoCoordinateElement::clean(void)
 {
-#if OBOL_DEBUG
   delete SoCoordinateElement::initialdefaultcoords;
-#endif // OBOL_DEBUG
+  SoCoordinateElement::initialdefaultcoords = NULL;
 }
 
 /*!
