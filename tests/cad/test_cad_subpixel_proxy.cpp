@@ -3698,6 +3698,66 @@ runCadSubpixelProxyLifecycleContract()
     return 0;
 }
 
+bool
+clearReleasesCompiledPlanGeometry()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    setCadDrawMode(root, SoCADViewState::SHADED);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("clear-plan-retention-part");
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("clear-plan-retention-instance");
+    std::weak_ptr<const Obol::PartGeometry> geometryLifetime;
+    {
+        Obol::PartGeometryBuilder builder;
+        builder.shaded.emplace();
+        builder.shaded->positions = {
+            SbVec3f(-0.5f, -0.5f, 0.0f),
+            SbVec3f(0.5f, -0.5f, 0.0f),
+            SbVec3f(0.0f, 0.5f, 0.0f)};
+        builder.shaded->indices = {0u, 1u, 2u};
+        builder.shaded->bounds = SbBox3f(
+            SbVec3f(-0.5f, -0.5f, 0.0f),
+            SbVec3f(0.5f, 0.5f, 0.0f));
+        const Obol::CadGeometryAdmission admitted =
+            Obol::cadAdmitPartGeometry(std::move(builder));
+        if (!admitted) {
+            root->unref();
+            return false;
+        }
+        geometryLifetime = admitted.geometry.shared();
+        requireCadMutation(assembly->upsertParts(
+            {{part, admitted.geometry, false}}),
+            "clear retention part");
+        Obol::InstanceRecord record;
+        record.part = part;
+        requireCadMutation(assembly->upsertInstance(instance, record),
+            "clear retention instance");
+    }
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    const bool warmed = render(renderer, root) &&
+        assembly->framePlanBuildCount() != 0u &&
+        !geometryLifetime.expired();
+    assembly->clear();
+    const bool released = geometryLifetime.expired() &&
+        assembly->partCount() == 0u && assembly->instanceCount() == 0u;
+    root->unref();
+    return warmed && released;
+}
+
 #include "render_test_registration.h"
 
 class CadSubpixelProxyContracts : public ::testing::Test {
@@ -3806,4 +3866,9 @@ TEST_F(CadSubpixelProxyContracts, FlatShadedAtlasMakesProgressInsideLargeSourceR
 TEST_F(CadSubpixelProxyContracts, ProgressiveReplacementTombstoneKeepsActiveIndex)
 {
     EXPECT_TRUE(progressiveReplacementTombstoneKeepsActiveIndex());
+}
+
+TEST_F(CadSubpixelProxyContracts, ClearReleasesCompiledPlanGeometry)
+{
+    EXPECT_TRUE(clearReleasesCompiledPlanGeometry());
 }

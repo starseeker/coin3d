@@ -187,7 +187,10 @@ public:
      */
     void reserveStreamingCapacity(size_t expectedOccurrences);
 
-    /** Remove all parts, instances, selection and hidden-state records. */
+    /**
+     * Remove all parts, instances, selection and hidden-state records, and
+     * immediately release geometry retained by the compiled frame plan.
+     */
     void clear();
 
     /**
