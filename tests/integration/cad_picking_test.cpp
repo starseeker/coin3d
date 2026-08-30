@@ -185,6 +185,50 @@ TEST(CadPicking, EdgeAndBoundsPicksRetainStableInstanceIdentity)
         instances, parts, edges, 0.01f).valid);
 }
 
+TEST(CadPicking, EdgeToleranceRemainsWorldSpaceUnderAnisotropicScale)
+{
+    const PartId part = CadIdBuilder::partId("scaled-edge-part");
+    PartGeometryBuilder geometry;
+    geometry.wire.emplace();
+    geometry.wire->segmentPoints = {
+        SbVec3f(0.0f, 1.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f)};
+    /* A deliberately loose conservative bound keeps both near-miss rays in
+     * the instance broad phase; the edge tolerance must make the decision. */
+    geometry.wire->bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 2.0f, 0.0f));
+    std::unordered_map<PartId, std::shared_ptr<const PartGeometry>> parts;
+    parts.emplace(part, admitGeometry(std::move(geometry)));
+    std::unordered_map<PartId, CadPartEdgeBVH> edges;
+
+    SbMatrix expanded = SbMatrix::identity();
+    expanded[1][1] = 10.0f;
+    CadInstanceBVH expandedInstances;
+    expandedInstances.build({makeEntry(
+        part, CadIdBuilder::instanceId("expanded-edge"),
+        SbBox3f(SbVec3f(0.0f, 0.0f, 0.0f),
+                SbVec3f(1.0f, 20.0f, 0.0f)), expanded)});
+    EXPECT_FALSE(CadPickQuery::pickEdge(
+        SbLine(SbVec3f(0.5f, 10.5f, -1.0f),
+               SbVec3f(0.5f, 10.5f, 1.0f)),
+        expandedInstances, parts, edges, 0.1f).valid);
+
+    SbMatrix contracted = SbMatrix::identity();
+    contracted[1][1] = 0.1f;
+    CadInstanceBVH contractedInstances;
+    const InstanceId contractedId =
+        CadIdBuilder::instanceId("contracted-edge");
+    contractedInstances.build({makeEntry(
+        part, contractedId,
+        SbBox3f(SbVec3f(0.0f, 0.0f, 0.0f),
+                SbVec3f(1.0f, 0.2f, 0.0f)), contracted)});
+    const CadPickResult hit = CadPickQuery::pickEdge(
+        SbLine(SbVec3f(0.5f, 0.15f, -1.0f),
+               SbVec3f(0.5f, 0.15f, 1.0f)),
+        contractedInstances, parts, edges, 0.1f);
+    ASSERT_TRUE(hit.valid);
+    EXPECT_EQ(hit.instanceId, contractedId);
+}
+
 TEST(CadPicking, TriangleBvhHandlesHitMissAndBehindRay)
 {
     CadPartTriBVH bvh;

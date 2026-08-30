@@ -187,13 +187,23 @@ public:
     };
 
     /**
-     * @brief Find the closest segment within world-space tolerance to @p ray.
+     * @brief Find the closest segment within local-space tolerance to @p ray.
      *
      * @param ray        Ray in part-local coordinates.
-     * @param tolerance  Maximum world-space distance to accept a hit.
+     * @param tolerance  Maximum part-local distance to accept a hit.
      * @return Closest hit segment + u parameter, or empty if none within tolerance.
      */
     std::optional<QueryResult> queryClosest(const SbLine& ray, float tolerance) const;
+
+    /**
+     * Broad-phase in part space and evaluate every candidate in world space.
+     * This preserves an exact world-space tolerance under non-uniform affine
+     * transforms, where local closest-distance ordering is not preserved.
+     */
+    std::optional<QueryResult> queryClosestTransformed(
+        const SbLine& localRay, float localBroadphaseTolerance,
+        const SbLine& worldRay, const SbMatrix& localToWorld,
+        float worldTolerance) const;
 
     /** true after build() with at least one segment. */
     bool isBuilt() const noexcept { return !nodes_.empty(); }
@@ -206,6 +216,11 @@ private:
     void queryRecursive(int nodeIdx, const SbLine& ray, float tolerance,
                         float& bestDist2, const SegEntry** bestSeg,
                         float& bestU) const;
+    void queryTransformedRecursive(
+        int nodeIdx, const SbLine& localRay, float localTolerance,
+        const SbLine& worldRay, const SbMatrix& localToWorld,
+        float& bestWorldDist2, const SegEntry** bestSeg,
+        float& bestU) const;
 
     /** Closest distance squared from a ray to a line segment. */
     static float raySegDist2(const SbLine& ray,
