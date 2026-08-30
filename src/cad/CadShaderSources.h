@@ -28,6 +28,8 @@ inline constexpr unsigned int kInstTransformLoc = 2;
 inline constexpr unsigned int kInstColorLoc = 6;
 inline constexpr unsigned int kInstPopMinLevelLoc = 7;
 inline constexpr unsigned int kInstPopMaxFlagsLoc = 8;
+// A mat3 consumes three consecutive locations beginning at 9.
+inline constexpr unsigned int kInstNormalTransformLoc = 9;
 
 extern const char * const kWireVS1;
 extern const char * const kWirePopVS1;

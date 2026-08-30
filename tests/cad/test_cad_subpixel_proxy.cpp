@@ -706,6 +706,109 @@ normalFreeTwoSidedGlslMatchesFixed()
 }
 
 bool
+nonUniformNormalTransformMatchesFixed()
+{
+    const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
+    const bool hadPreviousGlsl = previousGlsl != nullptr;
+    const std::string previousGlslValue =
+        previousGlsl ? std::string(previousGlsl) : std::string();
+    const auto restoreGlslEnvironment = [&]() {
+        if (hadPreviousGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL",
+                previousGlslValue.c_str(), 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+    };
+
+    struct RouteResult {
+        bool rendered = false;
+        size_t pixels = 0;
+        double mean = 0.0;
+    };
+    const auto renderRoute = [](bool softwareGlsl) {
+        if (softwareGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+
+        SoSeparator *root = new SoSeparator;
+        root->ref();
+        SoOrthographicCamera *camera = new SoOrthographicCamera;
+        camera->position.setValue(0.0f, 0.0f, 5.0f);
+        camera->nearDistance.setValue(0.1f);
+        camera->farDistance.setValue(100.0f);
+        camera->height.setValue(2.4f);
+        root->addChild(camera);
+        SoDirectionalLight *light = new SoDirectionalLight;
+        light->direction.setValue(0.0f, -1.0f, 0.0f);
+        root->addChild(light);
+
+        SoCADAssembly *assembly = new SoCADAssembly;
+        setCadDrawMode(root, SoCADViewState::SHADED);
+        root->addChild(assembly);
+
+        Obol::TriMesh mesh;
+        mesh.positions = {
+            SbVec3f(-0.25f, -0.8f, 0.0f),
+            SbVec3f(0.25f, -0.8f, 0.0f),
+            SbVec3f(0.0f, 0.8f, 0.0f)};
+        mesh.normals.assign(3, SbVec3f(
+            0.70710678f, 0.70710678f, 0.0f));
+        mesh.indices = {0, 1, 2};
+        mesh.bounds = SbBox3f(
+            SbVec3f(-0.25f, -0.8f, 0.0f),
+            SbVec3f(0.25f, 0.8f, 0.0f));
+        Obol::PartGeometryBuilder geometry;
+        geometry.shaded = std::move(mesh);
+        const Obol::PartId part =
+            Obol::CadIdBuilder::partId("non-uniform-normal-transform");
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "non-uniform normal part");
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::rootInstance();
+        instance.childName = "non-uniform-normal-transform";
+        instance.style.hasColorOverride = true;
+        instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        instance.localToRoot.makeIdentity();
+        instance.localToRoot[0][0] = 4.0f;
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "non-uniform normal instance");
+
+        const SbViewportRegion viewport(256, 192);
+        SoOffscreenRenderer renderer(viewport);
+        renderer.setComponents(SoOffscreenRenderer::RGB);
+        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        RouteResult result;
+        result.rendered = render(renderer, root);
+        if (result.rendered) {
+            const HalfImageStats stats = foregroundHalfStats(renderer);
+            result.pixels = stats.leftPixels + stats.rightPixels;
+            if (result.pixels)
+                result.mean =
+                    (stats.leftMean * stats.leftPixels +
+                     stats.rightMean * stats.rightPixels) / result.pixels;
+        }
+        root->unref();
+        return result;
+    };
+
+    const RouteResult fixed = renderRoute(false);
+    const RouteResult glsl = renderRoute(true);
+    restoreGlslEnvironment();
+    const bool matched = fixed.rendered && glsl.rendered &&
+        fixed.pixels > 500 && glsl.pixels > 500 && fixed.mean > 1.0 &&
+        glsl.mean >= fixed.mean * 0.8 && glsl.mean <= fixed.mean * 1.2;
+    if (!matched)
+        std::fprintf(stderr,
+            "non-uniform normal stats fixed={mean=%.3f pixels=%zu} "
+            "glsl={mean=%.3f pixels=%zu}\n",
+            fixed.mean, fixed.pixels, glsl.mean, glsl.pixels);
+    return matched;
+}
+
+bool
 indirectProgressiveAtlasGrows()
 {
     constexpr int partCount = 128;
@@ -3638,6 +3741,11 @@ TEST_F(CadSubpixelProxyContracts, LifecycleAndStreamingStateRemainCoherent)
 TEST_F(CadSubpixelProxyContracts, NormalFreeTwoSidedGlslMatchesFixedPipeline)
 {
     EXPECT_TRUE(normalFreeTwoSidedGlslMatchesFixed());
+}
+
+TEST_F(CadSubpixelProxyContracts, NonUniformNormalTransformMatchesFixedPipeline)
+{
+    EXPECT_TRUE(nonUniformNormalTransformMatchesFixed());
 }
 
 TEST_F(CadSubpixelProxyContracts, IndirectProgressiveAtlasGrows)

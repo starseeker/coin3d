@@ -207,6 +207,18 @@ bool CadRendererGL::submitIndirectPrepared(
                 glue->glEnableVertexAttribArrayARB(location);
                 glue->glVertexAttribDivisor(location, 1);
             }
+            for (GLuint column = 0; column < 3; ++column) {
+                const GLuint location =
+                    kInstNormalTransformLoc + column;
+                const uintptr_t offset =
+                    offsetof(InstVertex, normalTransform) +
+                    column * 3u * sizeof(float);
+                glue->glVertexAttribPointerARB(
+                    location, 3, GL_FLOAT, GL_FALSE, stride,
+                    reinterpret_cast<const GLvoid *>(offset));
+                glue->glEnableVertexAttribArrayARB(location);
+                glue->glVertexAttribDivisor(location, 1);
+            }
             glue->glVertexAttribPointerARB(
                 kInstColorLoc, 4, GL_FLOAT, GL_FALSE, stride,
                 reinterpret_cast<const GLvoid *>(
@@ -610,6 +622,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
             std::memcpy(
                 target.transform, source.transform.data(),
                 16 * sizeof(float));
+            cadPackInstanceNormalTransform(
+                source.transform.data(), target.normalTransform);
             target.color[0] = source.rgba[0] / 255.0f;
             target.color[1] = source.rgba[1] / 255.0f;
             target.color[2] = source.rgba[2] / 255.0f;
@@ -2996,6 +3010,8 @@ bool CadRendererGL::renderIndirectShaded(
             InstVertex target = {};
             std::memcpy(target.transform, source.transform.data(),
                         16 * sizeof(float));
+            cadPackInstanceNormalTransform(
+                source.transform.data(), target.normalTransform);
             target.color[0] = source.rgba[0] / 255.0f;
             target.color[1] = source.rgba[1] / 255.0f;
             target.color[2] = source.rgba[2] / 255.0f;

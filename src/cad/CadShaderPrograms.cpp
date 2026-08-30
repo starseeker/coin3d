@@ -92,6 +92,10 @@ GLuint CadRendererGL::linkProgram(const SoGLContext* glue, GLuint vs, GLuint fs)
             prog, kInstPopMaxFlagsLoc,
             reinterpret_cast<OBOL_GLchar*>(
                 const_cast<char*>("a_instPopMaxFlags")));
+        glue->glBindAttribLocationARB(
+            prog, kInstNormalTransformLoc,
+            reinterpret_cast<OBOL_GLchar*>(
+                const_cast<char*>("a_instNormalTransform")));
     }
 
     glue->glLinkProgramARB(prog);

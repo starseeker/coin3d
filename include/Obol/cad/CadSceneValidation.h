@@ -51,7 +51,8 @@ enum class CadSceneError {
     NonFiniteStyle,
     InvalidStyle,
     MissingInstance,
-    ConflictingUpdate
+    ConflictingUpdate,
+    InvalidTransform
 };
 
 /** Deterministic result from validating one scene mutation or batch. */
