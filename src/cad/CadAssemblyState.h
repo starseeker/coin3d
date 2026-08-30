@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -285,6 +286,14 @@ struct CadSubpixelClassifier {
 };
 
 struct CadRendererState {
+    /*
+     * A retained renderer owns mutable frame-planning scratch, per-context
+     * GPU tables and last-frame diagnostics.  The scene-graph contract lets
+     * independent actions traverse the same read-only node concurrently, so
+     * serialize the complete renderer transaction for one assembly.  Separate
+     * assemblies remain fully concurrent.
+     */
+    std::mutex renderMutex_;
     std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
     bool lastDirectSoftwareWire_ = false;
     /* Increment immediately before retained/direct CAD drawing begins.  A

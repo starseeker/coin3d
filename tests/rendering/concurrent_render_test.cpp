@@ -1,5 +1,7 @@
 #include "framework/render_fixture.h"
 
+#include <Obol/cad/SoCADAssembly.h>
+
 #include <gtest/gtest.h>
 
 #include <Inventor/SbViewportRegion.h>
@@ -8,6 +10,7 @@
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoPointSet.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -62,6 +65,50 @@ buildConcurrentScene(int threadIndex)
   return root;
 }
 
+SoSeparator *
+buildSharedCadScene()
+{
+  SoCADAssembly::initClass();
+
+  SoSeparator * root = new SoSeparator;
+  root->ref();
+
+  SoOrthographicCamera * camera = new SoOrthographicCamera;
+  camera->position.setValue(0.0f, 0.0f, 5.0f);
+  camera->nearDistance.setValue(0.1f);
+  camera->farDistance.setValue(20.0f);
+  camera->height.setValue(4.0f);
+  root->addChild(camera);
+  root->addChild(new SoDirectionalLight);
+
+  SoCADAssembly * assembly = new SoCADAssembly;
+  root->addChild(assembly);
+  const Obol::PartId part = Obol::CadIdBuilder::partId(
+      "concurrent-shared-cad-part");
+  Obol::PartGeometryBuilder geometry;
+  geometry.wire.emplace();
+  geometry.wire->segmentPoints = {
+      SbVec3f(-1.0f, -1.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f),
+      SbVec3f(-1.0f, 1.0f, 0.0f), SbVec3f(1.0f, -1.0f, 0.0f)};
+  geometry.wire->bounds = SbBox3f(
+      SbVec3f(-1.0f, -1.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f));
+  const Obol::CadGeometryAdmission admitted =
+      Obol::cadAdmitPartGeometry(std::move(geometry));
+  if (!admitted || !assembly->upsertParts({{part, admitted.geometry}})) {
+    root->unref();
+    return nullptr;
+  }
+  Obol::InstanceRecord instance;
+  instance.part = part;
+  instance.parent = Obol::CadIdBuilder::rootInstance();
+  instance.childName = "shared";
+  if (!assembly->upsertInstanceAuto(instance)) {
+    root->unref();
+    return nullptr;
+  }
+  return root;
+}
+
 } // namespace
 
 TEST(ConcurrentRendering, IndependentSoftwareContextsRenderSimultaneously)
@@ -109,6 +156,54 @@ TEST(ConcurrentRendering, IndependentSoftwareContextsRenderSimultaneously)
     });
   }
   for (std::thread & worker : workers) worker.join();
+
+  EXPECT_FALSE(failed.load(std::memory_order_relaxed)) << failureMessage;
+}
+
+TEST(ConcurrentRendering, SharedCadAssemblyRendersInIndependentContexts)
+{
+  constexpr int threadCount = 4;
+  constexpr int iterations = 20;
+  SoSeparator * root = buildSharedCadScene();
+  ASSERT_NE(root, nullptr);
+
+  std::atomic<int> ready{0};
+  std::atomic<bool> failed{false};
+  std::mutex messageMutex;
+  std::string failureMessage;
+  auto fail = [&](const std::string & message) {
+    failed.store(true, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(messageMutex);
+    if (failureMessage.empty()) failureMessage = message;
+  };
+
+  std::vector<std::thread> workers;
+  workers.reserve(threadCount);
+  for (int threadIndex = 0; threadIndex < threadCount; ++threadIndex) {
+    workers.emplace_back([&, threadIndex] {
+      ObolTestSupport::RenderFixture fixture(96, 96);
+      if (!fixture.available()) {
+        fail("software render fixture is unavailable");
+        ready.fetch_add(1, std::memory_order_release);
+        return;
+      }
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) < threadCount &&
+             !failed.load(std::memory_order_relaxed)) { }
+      for (int iteration = 0; iteration < iterations &&
+           !failed.load(std::memory_order_relaxed); ++iteration) {
+        if (!fixture.render(root) || fixture.pixels().empty() ||
+            fixture.nonBackgroundPixels() == 0) {
+          std::ostringstream message;
+          message << "thread " << threadIndex
+                  << " failed shared CAD render iteration " << iteration;
+          fail(message.str());
+        }
+      }
+    });
+  }
+  for (std::thread & worker : workers) worker.join();
+  root->unref();
 
   EXPECT_FALSE(failed.load(std::memory_order_relaxed)) << failureMessage;
 }

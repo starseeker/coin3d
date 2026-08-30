@@ -1382,6 +1382,7 @@ SoCADAssembly::setUnpickableInstances(const std::vector<Obol::InstanceId>& ids)
 void
 SoCADAssembly::GLRender(SoGLRenderAction* action)
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     if (impl_->instances_.empty()) return;
 
     SoState* state = action->getState();
