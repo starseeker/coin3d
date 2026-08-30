@@ -277,6 +277,11 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
                     range.activationCut >= mesh.progressiveCuts.size())
                 return failure(CadGeometryError::InvalidClusterRange,
                     clusterIndex);
+            const Obol::ProgressiveTriangleCut& activation =
+                mesh.progressiveCuts[range.activationCut];
+            if (end > activation.indexCount)
+                return failure(CadGeometryError::InvalidClusterRange,
+                    clusterIndex);
             const uint8_t residentCut = (std::min)(
                 mesh.progressiveResidentCut, cluster.residentCut);
             if (range.activationCut <= residentCut &&
@@ -398,6 +403,15 @@ validateWire(const Obol::WireRep& wire) noexcept
             const uint64_t end = static_cast<uint64_t>(range.firstSegment) +
                 static_cast<uint64_t>(range.segmentCount);
             if (range.activationCut >= wire.progressiveCuts.size())
+                return failure(CadGeometryError::InvalidClusterRange,
+                    clusterIndex);
+            const Obol::ProgressiveWireCut& activation =
+                wire.progressiveCuts[range.activationCut];
+            const uint64_t activationEnd =
+                static_cast<uint64_t>(activation.segmentFirst) +
+                static_cast<uint64_t>(activation.segmentCount);
+            if (range.firstSegment < activation.segmentFirst ||
+                    end > activationEnd)
                 return failure(CadGeometryError::InvalidClusterRange,
                     clusterIndex);
             const uint8_t residentCut = (std::min)(

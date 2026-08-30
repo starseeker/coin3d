@@ -80,6 +80,8 @@ struct ProgressiveTriangleCut {
 struct ProgressiveTriangleClusterRange {
     uint32_t firstIndex = 0;
     uint32_t indexCount = 0;
+    /* The complete range must be present in this cut's index/position
+     * prefixes.  Once activated, a range remains active at richer cuts. */
     uint8_t activationCut = ProgressiveCutUnspecified;
 };
 
@@ -93,6 +95,8 @@ struct ProgressiveTriangleCluster {
 struct ProgressiveWireClusterRange {
     uint32_t firstSegment = 0;
     uint32_t segmentCount = 0;
+    /* The complete range must be present in the selected segment interval at
+     * this cut.  Once activated, a range remains active at richer cuts. */
     uint8_t activationCut = ProgressiveCutUnspecified;
 };
 

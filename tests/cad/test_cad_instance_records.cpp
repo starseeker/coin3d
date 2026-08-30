@@ -58,6 +58,63 @@ TEST(CadInstanceRecords, AdmissionCopiesLvalueBuildersIntoImmutableStorage)
     EXPECT_EQ(admitted.geometry.shared()->shaded->indices.front(), 0u);
 }
 
+TEST(CadInstanceRecords, ProgressiveClusterRangesRequireTheirActivationData)
+{
+    Obol::PartGeometryBuilder triangles;
+    triangles.shaded.emplace();
+    Obol::TriMesh& mesh = *triangles.shaded;
+    mesh.positions = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f),
+        SbVec3f(2.0f, 0.0f, 0.0f),
+        SbVec3f(3.0f, 0.0f, 0.0f),
+        SbVec3f(2.0f, 1.0f, 0.0f)};
+    mesh.indices = {0, 1, 2, 3, 4, 5};
+    mesh.bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(3.0f, 1.0f, 0.0f));
+    mesh.progressiveCuts.resize(2);
+    mesh.progressiveCuts[0].indexCount = 3;
+    mesh.progressiveCuts[0].positionCount = 3;
+    mesh.progressiveCuts[1].indexCount = 6;
+    mesh.progressiveCuts[1].positionCount = 6;
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 1;
+    mesh.progressiveClusters.resize(1);
+    mesh.progressiveClusters[0].bounds = mesh.bounds;
+    mesh.progressiveClusters[0].residentCut = 1;
+    mesh.progressiveClusters[0].ranges.push_back({3, 3, 0});
+    Obol::CadGeometryValidation result =
+        Obol::cadValidatePartGeometry(triangles);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidClusterRange);
+
+    mesh.progressiveClusters[0].ranges[0].activationCut = 1;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(triangles));
+
+    Obol::PartGeometryBuilder wires;
+    wires.wire.emplace();
+    Obol::WireRep& wire = *wires.wire;
+    wire.segmentPoints = {
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(2.0f, 0.0f, 0.0f), SbVec3f(3.0f, 0.0f, 0.0f)};
+    wire.bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(3.0f, 0.0f, 0.0f));
+    wire.progressiveCuts.resize(2);
+    wire.progressiveCuts[0].segmentCount = 1;
+    wire.progressiveCuts[1].segmentCount = 2;
+    wire.progressiveMinimumCut = 0;
+    wire.progressiveResidentCut = 1;
+    wire.progressiveClusters.resize(1);
+    wire.progressiveClusters[0].bounds = wire.bounds;
+    wire.progressiveClusters[0].residentCut = 1;
+    wire.progressiveClusters[0].ranges.push_back({1, 1, 0});
+    result = Obol::cadValidatePartGeometry(wires);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidClusterRange);
+
+    wire.progressiveClusters[0].ranges[0].activationCut = 1;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(wires));
+}
+
 static bool
 sameMatrix(const SbMatrix &a, const SbMatrix &b)
 {
