@@ -1650,8 +1650,16 @@ bool SoCADAssembly::hasProgressivePartLod() const
     return !impl_->progressiveParts_.empty();
 }
 
+Obol::ValidatedPartGeometry
+SoCADAssembly::partGeometrySnapshot(Obol::PartId pid) const noexcept
+{
+    const auto it = impl_->parts_.find(pid);
+    return it == impl_->parts_.end() ? Obol::ValidatedPartGeometry() :
+        Obol::ValidatedPartGeometry(it->second);
+}
+
 const Obol::PartGeometry*
-SoCADAssembly::partGeometry(Obol::PartId pid) const
+SoCADAssembly::partGeometry(Obol::PartId pid) const noexcept
 {
     auto it = impl_->parts_.find(pid);
     if (it == impl_->parts_.end()) return nullptr;
@@ -1659,7 +1667,7 @@ SoCADAssembly::partGeometry(Obol::PartId pid) const
 }
 
 std::optional<Obol::InstanceRecord>
-SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
+SoCADAssembly::instanceRecord(Obol::InstanceId iid) const
 {
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return std::nullopt;
@@ -1675,6 +1683,12 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
     rec.lodCut    = d.lodCut;
     rec.lodStructuralProxy = d.lodStructuralProxy;
     return rec;
+}
+
+std::optional<Obol::InstanceRecord>
+SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
+{
+    return instanceRecord(iid);
 }
 
 void

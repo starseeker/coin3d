@@ -252,9 +252,9 @@ public:
      * Remove many parts as one dirty operation.
      *
      * Instance bounds are recomputed in one pass after all removals.  Use
-     * this for a scene-wide LoD cut change; calling removePart() thousands
-     * of times would otherwise rescan the complete instance population once
-     * per retired part.
+     * this for bulk library eviction; calling removePart() thousands of times
+     * would otherwise rescan the referenced occurrence population once per
+     * retired part.
      */
     void removeParts(const std::vector<Obol::PartId>& pids);
 
@@ -359,9 +359,9 @@ public:
     /**
      * Return stable instance IDs in deterministic order.
      *
-     * Renderer-neutral backends use this together with getInstanceRecord()
-     * and partGeometry() to consume the retained assembly without rebuilding
-     * a per-instance scene graph.
+     * Renderer-neutral backends use this together with instanceRecord() and
+     * partGeometrySnapshot() to consume the retained assembly without
+     * rebuilding a per-instance scene graph.
      */
     std::vector<Obol::InstanceId> instanceIds() const;
 
@@ -372,10 +372,25 @@ public:
     bool hasProgressivePartLod() const;
 
     /**
-     * Return the geometry for @p pid, or nullptr if not in the part library.
-     * Used by the GPU renderer to upload per-part VBOs.
+     * Return an ownership-preserving immutable snapshot for @p pid.
+     *
+     * The returned token remains valid after the part is replaced, removed,
+     * or the assembly is cleared.  Renderer-neutral consumers should prefer
+     * this query whenever geometry use can outlive the immediate call.
      */
-    const Obol::PartGeometry* partGeometry(Obol::PartId pid) const;
+    [[nodiscard]] Obol::ValidatedPartGeometry partGeometrySnapshot(
+        Obol::PartId pid) const noexcept;
+
+    /**
+     * Return a borrowed geometry pointer for @p pid, or nullptr if absent.
+     *
+     * The pointer is valid only until the next owner-thread part mutation.
+     * This compatibility query is intended for immediate internal rendering;
+     * other consumers should use partGeometrySnapshot().
+    */
+    [[nodiscard]]
+    const Obol::PartGeometry* partGeometry(
+        Obol::PartId pid) const noexcept;
 
     /**
      * Return the full instance record for @p iid, or empty if not found.
@@ -383,6 +398,11 @@ public:
      * Useful for "materialising" a picked instance into a normal scene-graph
      * node: retrieve part, transform and style, then build an explicit shape.
      */
+    [[nodiscard]] std::optional<Obol::InstanceRecord> instanceRecord(
+        Obol::InstanceId iid) const;
+
+    /** Compatibility spelling; prefer instanceRecord(). */
+    [[nodiscard]]
     std::optional<Obol::InstanceRecord> getInstanceRecord(Obol::InstanceId iid) const;
 
     /**
