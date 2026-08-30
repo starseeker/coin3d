@@ -621,11 +621,12 @@ src_cadAssemblyCB(void *ud, SoCallbackAction *action, const SoNode *node)
         if (assembly->isInstanceHidden(instanceId))
             continue;
         const std::optional<Obol::InstanceRecord> instance =
-            assembly->getInstanceRecord(instanceId);
+            assembly->instanceRecord(instanceId);
         if (!instance)
             continue;
-        const Obol::PartGeometry *geometry =
-            assembly->partGeometry(instance->part);
+        const Obol::ValidatedPartGeometry geometrySnapshot =
+            assembly->partGeometrySnapshot(instance->part);
+        const Obol::PartGeometry *geometry = geometrySnapshot.get();
         if (!geometry || !geometry->shaded)
             continue;
         const Obol::TriMesh &mesh = *geometry->shaded;

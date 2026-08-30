@@ -228,8 +228,12 @@ After a pick, retrieve the full record for an instance to build an explicit
 scene-graph node (e.g. for interactive editing):
 
 ```cpp
-std::optional<Obol::InstanceRecord> rec = assembly->getInstanceRecord(iid);
+std::optional<Obol::InstanceRecord> rec = assembly->instanceRecord(iid);
 if (rec) {
+    Obol::ValidatedPartGeometry geometry =
+        assembly->partGeometrySnapshot(rec->part);
+    if (!geometry)
+        return;
     auto* shape = new MyPartShape(rec->part, rec->localToRoot, rec->style);
     sceneRoot->addChild(shape);
     // Suppress double-rendering: hide the instance from aggregate rendering.

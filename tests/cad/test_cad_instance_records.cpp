@@ -59,6 +59,43 @@ TEST(CadInstanceRecords, AdmissionCopiesLvalueBuildersIntoImmutableStorage)
     EXPECT_EQ(admitted.geometry.shared()->shaded->indices.front(), 0u);
 }
 
+TEST(CadInstanceRecords, GeometrySnapshotOutlivesPartLibraryEntry)
+{
+    SoCADAssembly::initClass();
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("owned-query-part");
+
+    Obol::ValidatedPartGeometry snapshot;
+    const Obol::PartGeometry *address = nullptr;
+    {
+        Obol::PartGeometryBuilder builder;
+        builder.conservativeBounds = SbBox3f(
+            SbVec3f(-2.0f, -1.0f, -0.5f),
+            SbVec3f(2.0f, 1.0f, 0.5f));
+        const Obol::CadGeometryAdmission admitted =
+            Obol::cadAdmitPartGeometry(std::move(builder));
+        ASSERT_TRUE(admitted);
+        address = admitted.geometry.get();
+        ASSERT_TRUE(assembly->upsertParts(
+            {{part, admitted.geometry, false}}));
+        snapshot = assembly->partGeometrySnapshot(part);
+    }
+
+    ASSERT_TRUE(snapshot);
+    EXPECT_EQ(snapshot.get(), address);
+    assembly->removePart(part);
+    EXPECT_FALSE(assembly->partGeometrySnapshot(part));
+    EXPECT_EQ(snapshot.get(), address);
+
+    const Obol::InstanceId missing =
+        Obol::CadIdBuilder::instanceId("owned-query-missing-instance");
+    EXPECT_FALSE(assembly->instanceRecord(missing).has_value());
+    EXPECT_FALSE(assembly->getInstanceRecord(missing).has_value());
+    assembly->unref();
+}
+
 TEST(CadInstanceRecords, ProgressiveClusterRangesRequireTheirActivationData)
 {
     Obol::PartGeometryBuilder triangles;
