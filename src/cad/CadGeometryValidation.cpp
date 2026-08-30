@@ -188,6 +188,35 @@ validQuantization(Obol::ProgressiveQuantization quantization) noexcept
         quantization.zBits <= 16;
 }
 
+bool
+orderedDomain(const SbVec3f& minimum, const SbVec3f& maximum) noexcept
+{
+    return minimum[0] <= maximum[0] &&
+        minimum[1] <= maximum[1] && minimum[2] <= maximum[2];
+}
+
+void
+recordLossyAxes(Obol::ProgressiveQuantization quantization,
+                bool (&lossy)[3]) noexcept
+{
+    const uint8_t bits[3] = {
+        quantization.xBits, quantization.yBits, quantization.zBits};
+    for (int axis = 0; axis < 3; ++axis)
+        lossy[axis] = lossy[axis] || (bits[axis] > 0 && bits[axis] < 16);
+}
+
+bool
+insideQuantizationDomain(const SbVec3f& point, const SbVec3f& minimum,
+                         const SbVec3f& maximum,
+                         const bool (&lossy)[3]) noexcept
+{
+    for (int axis = 0; axis < 3; ++axis)
+        if (lossy[axis] && (point[axis] < minimum[axis] ||
+                point[axis] > maximum[axis]))
+            return false;
+    return true;
+}
+
 CadGeometryValidation
 validateMesh(const Obol::TriMesh& mesh) noexcept
 {
@@ -225,9 +254,13 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
     if (!finite(mesh.progressiveQuantizationMinimum) ||
             !finite(mesh.progressiveQuantizationMaximum))
         return failure(CadGeometryError::NonFiniteValue, 0);
+    if (!orderedDomain(mesh.progressiveQuantizationMinimum,
+            mesh.progressiveQuantizationMaximum))
+        return failure(CadGeometryError::InvalidProgressiveInterval, 0);
     if (!mesh.isProgressive())
         return failure(CadGeometryError::InvalidProgressiveInterval, 0);
 
+    bool lossyAxes[3] = {false, false, false};
     size_t previousIndexCount = 0;
     size_t previousPositionCount = 0;
     uint32_t maximumIndex = 0;
@@ -237,6 +270,8 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
         if (cut.indexCount % 3u != 0u ||
                 !validQuantization(cut.quantization))
             return failure(CadGeometryError::InvalidProgressiveCut, i);
+        if (i <= mesh.progressiveResidentCut)
+            recordLossyAxes(cut.quantization, lossyAxes);
         if (cut.indexCount < previousIndexCount ||
                 cut.positionCount < previousPositionCount)
             return failure(CadGeometryError::InvalidProgressiveOrder, i);
@@ -253,6 +288,12 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
         previousIndexCount = cut.indexCount;
         previousPositionCount = cut.positionCount;
     }
+    for (size_t position = 0; position < mesh.positions.size(); ++position)
+        if (!insideQuantizationDomain(mesh.positions[position],
+                mesh.progressiveQuantizationMinimum,
+                mesh.progressiveQuantizationMaximum, lossyAxes))
+            return failure(CadGeometryError::NonConservativeBounds,
+                position);
 
     const size_t side = mesh.progressiveClusterGridResolution;
     if (side != 0 && (side <= 1 || side > 64 ||
@@ -288,6 +329,13 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
                     end > mesh.indices.size())
                 return failure(CadGeometryError::InvalidClusterRange,
                     clusterIndex);
+            if (range.activationCut <= residentCut)
+                for (size_t index = range.firstIndex; index < end; ++index)
+                    if (!contains(cluster.bounds,
+                            mesh.positions[mesh.indices[index]]))
+                        return failure(
+                            CadGeometryError::NonConservativeBounds,
+                            clusterIndex);
             if (haveActivation && range.activationCut < priorActivation)
                 return failure(CadGeometryError::InvalidProgressiveOrder,
                     clusterIndex);
@@ -355,8 +403,12 @@ validateWire(const Obol::WireRep& wire) noexcept
     if (!finite(wire.progressiveQuantizationMinimum) ||
             !finite(wire.progressiveQuantizationMaximum))
         return failure(CadGeometryError::NonFiniteValue, 0);
+    if (!orderedDomain(wire.progressiveQuantizationMinimum,
+            wire.progressiveQuantizationMaximum))
+        return failure(CadGeometryError::InvalidProgressiveInterval, 0);
     if (!wire.isProgressive())
         return failure(CadGeometryError::InvalidProgressiveInterval, 0);
+    bool lossyAxes[3] = {false, false, false};
     size_t previousEnd = 0;
     float previousError = std::numeric_limits<float>::infinity();
     for (size_t i = 0; i < wire.progressiveCuts.size(); ++i) {
@@ -367,6 +419,8 @@ validateWire(const Obol::WireRep& wire) noexcept
                 !std::isfinite(cut.maximumNormalizedError) ||
                 cut.maximumNormalizedError < -1.0f)
             return failure(CadGeometryError::InvalidProgressiveCut, i);
+        if (i <= wire.progressiveResidentCut)
+            recordLossyAxes(cut.quantization, lossyAxes);
         if (i <= wire.progressiveResidentCut &&
                 end > wire.segmentCount())
             return failure(CadGeometryError::InvalidProgressiveCut, i);
@@ -383,6 +437,11 @@ validateWire(const Obol::WireRep& wire) noexcept
         }
         previousEnd = static_cast<size_t>(end);
     }
+    for (size_t point = 0; point < wire.segmentPoints.size(); ++point)
+        if (!insideQuantizationDomain(wire.segmentPoints[point],
+                wire.progressiveQuantizationMinimum,
+                wire.progressiveQuantizationMaximum, lossyAxes))
+            return failure(CadGeometryError::NonConservativeBounds, point);
 
     const size_t side = wire.progressiveClusterGridResolution;
     if (side != 0 && (side <= 1 || side > 64 ||
@@ -420,6 +479,34 @@ validateWire(const Obol::WireRep& wire) noexcept
                     end > wire.segmentCount())
                 return failure(CadGeometryError::InvalidClusterRange,
                     clusterIndex);
+            if (range.activationCut <= residentCut && !triangleEdges)
+                for (size_t segment = range.firstSegment;
+                        segment < end; ++segment) {
+                    const size_t point = segment * 2u;
+                    if (!contains(cluster.bounds, wire.segmentPoints[point]) ||
+                            !contains(cluster.bounds,
+                                wire.segmentPoints[point + 1u]))
+                        return failure(
+                            CadGeometryError::NonConservativeBounds,
+                            clusterIndex);
+                }
+            if (range.activationCut <= residentCut && triangleEdges)
+                for (size_t segment = range.firstSegment;
+                        segment < end; ++segment) {
+                    const size_t triangle = (segment / 3u) * 3u;
+                    const size_t edge = segment % 3u;
+                    const uint32_t first =
+                        triangleEdges->indices[triangle + edge];
+                    const uint32_t second = triangleEdges->indices[
+                        triangle + (edge + 1u) % 3u];
+                    if (!contains(cluster.bounds,
+                            triangleEdges->positions[first]) ||
+                            !contains(cluster.bounds,
+                                triangleEdges->positions[second]))
+                        return failure(
+                            CadGeometryError::NonConservativeBounds,
+                            clusterIndex);
+                }
             if (haveActivation && range.activationCut < priorActivation)
                 return failure(CadGeometryError::InvalidProgressiveOrder,
                     clusterIndex);

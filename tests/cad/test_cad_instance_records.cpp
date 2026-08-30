@@ -115,6 +115,68 @@ TEST(CadInstanceRecords, ProgressiveClusterRangesRequireTheirActivationData)
     EXPECT_TRUE(Obol::cadValidatePartGeometry(wires));
 }
 
+TEST(CadInstanceRecords, ProgressiveSpatialMetadataMustBeConservative)
+{
+    Obol::PartGeometryBuilder triangles;
+    triangles.shaded.emplace();
+    Obol::TriMesh& mesh = *triangles.shaded;
+    mesh.positions = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f)};
+    mesh.indices = {0, 1, 2};
+    mesh.bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f));
+    mesh.progressiveCuts.resize(1);
+    mesh.progressiveCuts[0].indexCount = 3;
+    mesh.progressiveCuts[0].positionCount = 3;
+    mesh.progressiveCuts[0].quantization = {8, 0, 0};
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 0;
+    mesh.progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
+    mesh.progressiveQuantizationMaximum = SbVec3f(0.5f, 1.0f, 0.0f);
+    Obol::CadGeometryValidation result =
+        Obol::cadValidatePartGeometry(triangles);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::NonConservativeBounds);
+
+    mesh.progressiveQuantizationMaximum[0] = 1.0f;
+    mesh.progressiveClusters.resize(1);
+    mesh.progressiveClusters[0].bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(0.5f, 1.0f, 0.0f));
+    mesh.progressiveClusters[0].residentCut = 0;
+    mesh.progressiveClusters[0].ranges.push_back({0, 3, 0});
+    result = Obol::cadValidatePartGeometry(triangles);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::NonConservativeBounds);
+
+    mesh.progressiveClusters[0].bounds = mesh.bounds;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(triangles));
+
+    Obol::PartGeometryBuilder wires;
+    wires.wire.emplace();
+    Obol::WireRep& wire = *wires.wire;
+    wire.segmentPoints = {
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(2.0f, 0.0f, 0.0f)};
+    wire.bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(2.0f, 0.0f, 0.0f));
+    wire.progressiveCuts.resize(1);
+    wire.progressiveCuts[0].segmentCount = 1;
+    wire.progressiveCuts[0].quantization = {8, 0, 0};
+    wire.progressiveMinimumCut = 0;
+    wire.progressiveResidentCut = 0;
+    wire.progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
+    wire.progressiveQuantizationMaximum = SbVec3f(2.0f, 0.0f, 0.0f);
+    wire.progressiveClusters.resize(1);
+    wire.progressiveClusters[0].bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(1.0f, 0.0f, 0.0f));
+    wire.progressiveClusters[0].residentCut = 0;
+    wire.progressiveClusters[0].ranges.push_back({0, 1, 0});
+    result = Obol::cadValidatePartGeometry(wires);
+    EXPECT_EQ(result.error, Obol::CadGeometryError::NonConservativeBounds);
+
+    wire.progressiveClusters[0].bounds = wire.bounds;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(wires));
+}
+
 static bool
 sameMatrix(const SbMatrix &a, const SbMatrix &b)
 {
