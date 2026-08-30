@@ -52,6 +52,15 @@ sceneFinite(const SbColor4f& color) noexcept
 }
 
 bool
+sceneNormalized(const SbColor4f& color) noexcept
+{
+    for (int component = 0; component != 4; ++component)
+        if (color[component] < 0.0f || color[component] > 1.0f)
+            return false;
+    return true;
+}
+
+bool
 sceneFinite(const SbMatrix& matrix) noexcept
 {
     for (int row = 0; row != 4; ++row)
@@ -113,7 +122,8 @@ cadValidateInstanceStyle(InstanceId instance,
         return failure(CadSceneError::InvalidInstanceId);
     if (!sceneFinite(style.color) || !sceneFinite(style.lineWidth))
         return failure(CadSceneError::NonFiniteStyle);
-    if (style.lineWidth <= 0.0f || style.linePatternFactor == 0)
+    if (!sceneNormalized(style.color) || style.lineWidth <= 0.0f ||
+            style.linePatternFactor == 0)
         return failure(CadSceneError::InvalidStyle);
     return CadSceneValidation();
 }

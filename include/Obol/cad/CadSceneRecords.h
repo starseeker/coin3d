@@ -51,6 +51,7 @@ namespace Obol {
 
 struct InstanceStyle {
     bool hasColorOverride = false;
+    /** Linear RGBA components; every component must be in [0, 1]. */
     SbColor4f color = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
     float lineWidth = 1.0f;
     uint16_t linePattern = 0xffffu;

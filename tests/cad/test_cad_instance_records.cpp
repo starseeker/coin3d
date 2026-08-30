@@ -604,6 +604,21 @@ TEST(CadInstanceRecords, RejectsMalformedSceneMutationsAtomically)
     ASSERT_TRUE(afterStyle.has_value());
     EXPECT_EQ(afterStyle->style.lineWidth, before->style.lineWidth);
 
+    invalidStyle = valid.style;
+    invalidStyle.hasColorOverride = true;
+    invalidStyle.color = SbColor4f(-0.01f, 0.5f, 0.5f, 1.0f);
+    validation = assembly->updateInstanceStyle(
+        validUpdate.instance, invalidStyle);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::InvalidStyle);
+    invalidStyle.color = SbColor4f(0.5f, 1.01f, 0.5f, 1.0f);
+    validation = assembly->updateInstanceStyle(
+        validUpdate.instance, invalidStyle);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::InvalidStyle);
+    const std::optional<Obol::InstanceRecord> afterInvalidColors =
+        assembly->getInstanceRecord(validUpdate.instance);
+    ASSERT_TRUE(afterInvalidColors.has_value());
+    EXPECT_EQ(afterInvalidColors->style.color, before->style.color);
+
     Obol::InstanceStyleUpdate validStyleUpdate;
     validStyleUpdate.instance = validUpdate.instance;
     validStyleUpdate.style = valid.style;

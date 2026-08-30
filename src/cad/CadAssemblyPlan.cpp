@@ -175,6 +175,30 @@ cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
     return Obol::cadPartGeometryProxyCorners(geometry, corners.data());
 }
 
+static uint8_t
+cadPackNormalizedColor(float component) noexcept
+{
+    /* Retained style validation supplies [0, 1] values.  Keep this conversion
+     * defensive as it is the final boundary before floating-to-integer
+     * conversion, which is undefined for an out-of-range destination. */
+    if (!(component > 0.0f))
+        return 0u;
+    if (component >= 1.0f)
+        return 255u;
+    return static_cast<uint8_t>(component * 255.0f);
+}
+
+static std::array<uint8_t, 4>
+cadPackInstanceStyleColor(const Obol::InstanceStyle& style) noexcept
+{
+    if (!style.hasColorOverride)
+        return {{204u, 204u, 204u, 255u}};
+    return {{
+        cadPackNormalizedColor(style.color[0]),
+        cadPackNormalizedColor(style.color[1]),
+        cadPackNormalizedColor(style.color[2]),
+        cadPackNormalizedColor(style.color[3])}};
+}
 
 } // namespace
 
@@ -552,24 +576,7 @@ bool SoCADAssemblyImpl::patchCachedInstanceStyle(Obol::InstanceId instance) {
         const uint16_t oldLinePattern = record.linePattern;
         const uint16_t oldLinePatternFactor = record.linePatternFactor;
         const Obol::InstanceStyle& style = instanceFound->second.style;
-        float r = 0.8f;
-        float g = 0.8f;
-        float b = 0.8f;
-        float a = 1.0f;
-        if (style.hasColorOverride) {
-            r = style.color[0];
-            g = style.color[1];
-            b = style.color[2];
-            a = style.color[3];
-        }
-        record.rgba[0] =
-            static_cast<uint8_t>(std::min(255.0f, r * 255.0f));
-        record.rgba[1] =
-            static_cast<uint8_t>(std::min(255.0f, g * 255.0f));
-        record.rgba[2] =
-            static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
-        record.rgba[3] =
-            static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
+        record.rgba = cadPackInstanceStyleColor(style);
         if (cadDebugEnabled()) {
             std::fprintf(stderr,
                 "SoCADAssembly patch style instance=%016llx:%016llx "
@@ -783,18 +790,7 @@ void SoCADAssemblyImpl::finishSparsePresentationPatch(bool visibilityChanged) {
             // as selected-full-detail LoD, but do not impose a fixed CAD-node
             // highlight color here.
             const bool isSel = selected.count(iid) != 0;
-            float r = 0.8f, g = 0.8f, b = 0.8f, a = 1.0f;
-            if (idata.style.hasColorOverride) {
-                r = idata.style.color[0];
-                g = idata.style.color[1];
-                b = idata.style.color[2];
-                a = idata.style.color[3];
-            }
-
-            vi.rgba[0] = static_cast<uint8_t>(std::min(255.0f, r * 255.0f));
-            vi.rgba[1] = static_cast<uint8_t>(std::min(255.0f, g * 255.0f));
-            vi.rgba[2] = static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
-            vi.rgba[3] = static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
+            vi.rgba = cadPackInstanceStyleColor(idata.style);
             vi.lineWidth = std::max(1.0f, idata.style.lineWidth);
             vi.linePattern = idata.style.linePattern;
             vi.linePatternFactor = std::max<uint16_t>(
@@ -1686,21 +1682,7 @@ bool SoCADAssemblyImpl::patchCachedInstancePartRebind(
         std::memcpy(
             visible.transform.data(), data.localToRoot[0],
             16 * sizeof(float));
-        float r = 0.8f, g = 0.8f, b = 0.8f, a = 1.0f;
-        if (data.style.hasColorOverride) {
-            r = data.style.color[0];
-            g = data.style.color[1];
-            b = data.style.color[2];
-            a = data.style.color[3];
-        }
-        visible.rgba[0] = static_cast<uint8_t>(
-            std::min(255.0f, r * 255.0f));
-        visible.rgba[1] = static_cast<uint8_t>(
-            std::min(255.0f, g * 255.0f));
-        visible.rgba[2] = static_cast<uint8_t>(
-            std::min(255.0f, b * 255.0f));
-        visible.rgba[3] = static_cast<uint8_t>(
-            std::min(255.0f, a * 255.0f));
+        visible.rgba = cadPackInstanceStyleColor(data.style);
         visible.lineWidth = std::max(1.0f, data.style.lineWidth);
         visible.linePattern = data.style.linePattern;
         visible.linePatternFactor = std::max<uint16_t>(
