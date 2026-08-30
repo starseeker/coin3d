@@ -394,6 +394,59 @@ CadPartEdgeBVH::queryClosest(const SbLine& ray, float tolerance) const
     return std::nullopt;
 }
 
+void
+CadPartEdgeBVH::queryTransformedRecursive(
+    int nodeIdx, const SbLine& localRay, float localTolerance,
+    const SbLine& worldRay, const SbMatrix& localToWorld,
+    float& bestWorldDist2, const SegEntry** bestSeg, float& bestU) const
+{
+    if (nodeIdx < 0 || nodeIdx >= static_cast<int>(nodes_.size())) return;
+    const BvhNode& node = nodes_[nodeIdx];
+    if (!CadInstanceBVH::rayIntersectsBox(
+            localRay, expandedBox(node.bounds, localTolerance)))
+        return;
+
+    if (node.itemIdx >= 0) {
+        const SegEntry& seg = segments_[node.itemIdx];
+        SbVec3f worldP0;
+        SbVec3f worldP1;
+        localToWorld.multVecMatrix(seg.p0, worldP0);
+        localToWorld.multVecMatrix(seg.p1, worldP1);
+        float u = 0.0f;
+        const float distance2 =
+            raySegDist2(worldRay, worldP0, worldP1, u);
+        if (distance2 < bestWorldDist2) {
+            bestWorldDist2 = distance2;
+            *bestSeg = &seg;
+            bestU = u;
+        }
+        return;
+    }
+    queryTransformedRecursive(
+        node.left, localRay, localTolerance, worldRay, localToWorld,
+        bestWorldDist2, bestSeg, bestU);
+    queryTransformedRecursive(
+        node.right, localRay, localTolerance, worldRay, localToWorld,
+        bestWorldDist2, bestSeg, bestU);
+}
+
+std::optional<CadPartEdgeBVH::QueryResult>
+CadPartEdgeBVH::queryClosestTransformed(
+    const SbLine& localRay, float localBroadphaseTolerance,
+    const SbLine& worldRay, const SbMatrix& localToWorld,
+    float worldTolerance) const
+{
+    if (nodes_.empty()) return std::nullopt;
+    float bestDistance2 = worldTolerance * worldTolerance;
+    const SegEntry *bestSeg = nullptr;
+    float bestU = 0.0f;
+    queryTransformedRecursive(
+        0, localRay, localBroadphaseTolerance, worldRay, localToWorld,
+        bestDistance2, &bestSeg, bestU);
+    return bestSeg ? std::optional<QueryResult>(QueryResult{*bestSeg, bestU}) :
+        std::nullopt;
+}
+
 // ===========================================================================
 // CadPickQuery
 // ===========================================================================
@@ -596,12 +649,21 @@ CadPickQuery::pickEdge(
         localDir /= dirLen;
         SbLine localRay(localOrigin, localOrigin + localDir);
 
-        // Scale tolerance from world to local space (approximate: use max scale)
-        // Simple heuristic: use the inverse of the max column magnitude
-        float scaleApprox = 1.0f / (dirLen > 1e-6f ? dirLen : 1.0f);
-        float localTol = toleranceWS * scaleApprox;
+        /* The Frobenius norm is a conservative upper bound on the inverse
+         * transform's distance amplification.  Use it only for BVH pruning;
+         * candidate ordering and acceptance are evaluated exactly in world
+         * space below. */
+        double inverseNorm2 = 0.0;
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column) {
+                const double component = w2l[row][column];
+                inverseNorm2 += component * component;
+            }
+        const float localTol = static_cast<float>(
+            toleranceWS * std::sqrt(inverseNorm2));
 
-        auto hit = edgeBvh->queryClosest(localRay, localTol);
+        auto hit = edgeBvh->queryClosestTransformed(
+            localRay, localTol, ray, entry->localToWorld, toleranceWS);
         if (!hit) continue;
 
         // Compute world-space t for depth comparison
