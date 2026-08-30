@@ -618,6 +618,16 @@ SoCADAssembly::clear()
     impl_->partEdgeBvhCache_.clear();
     impl_->partTriBvhCache_.clear();
     impl_->progressiveParts_.clear();
+    /* CadPartBinding retains immutable geometry for camera-only plan reuse.
+     * An explicitly empty assembly must release that ownership immediately,
+     * even if no later render arrives to replace the dirty plan. */
+    impl_->cachedPlan_ = Obol::internal::CadFramePlan();
+    impl_->progressiveShadedPlanGroups_.clear();
+    impl_->progressiveShadedPlanGroupByInstance_.clear();
+    impl_->progressivePlanIndexByInstance_.clear();
+    impl_->cachedPlanPartSpansByPart_.clear();
+    impl_->pendingInstanceAttributeIndices_.clear();
+    impl_->cachedDrawMode_.reset();
     impl_->instanceBvh_ = Obol::picking::CadInstanceBVH();
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
