@@ -46,6 +46,8 @@ cadSceneMutationDomainName(CadSceneMutationDomain domain) noexcept
     case CadSceneMutationDomain::RemovedInstances:
         return "removed-instances";
     case CadSceneMutationDomain::RemovedParts: return "removed-parts";
+    case CadSceneMutationDomain::ResourceUnavailable:
+        return "resource-unavailable";
     }
     return "unknown";
 }

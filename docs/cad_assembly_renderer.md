@@ -202,12 +202,13 @@ assembly; clients must not compose it with several checked insert operations
 to emulate a replacement.
 
 Sparse publication is deliberately proportional to the mutation rather than
-the retained scene population.  Validation and application-owned staging are
-atomic, but `applySceneMutation()` does not clone the complete retained scene
-to provide recovery from process-wide allocator exhaustion during its
-mechanical commit.  Producers must keep sparse journals bounded and reserve a
-known streaming population with `reserveStreamingCapacity()` before sustained
-publication.
+the retained scene population.  `applySceneMutation()` stages rollback data
+only for records and part-index buckets the journal can change.  Validation,
+staging, and application therefore have the strong exception guarantee: an
+allocator failure returns `CadSceneMutationDomain::ResourceUnavailable` and
+leaves the preceding authoritative scene live.  Producers should still keep
+sparse journals bounded and reserve a known streaming population with
+`reserveStreamingCapacity()` before sustained publication.
 
 ### Fast transform edits
 

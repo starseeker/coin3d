@@ -212,7 +212,8 @@ public:
 
     /**
      * Validate and apply a sparse transaction under one update window.
-     * Validation rejection leaves the preceding scene unchanged.
+     * Validation rejection or allocation failure leaves the preceding scene
+     * unchanged.  Allocation failure reports ResourceUnavailable.
      */
     [[nodiscard]] Obol::CadSceneMutationResult applySceneMutation(
         const Obol::CadSceneMutation& mutation);
