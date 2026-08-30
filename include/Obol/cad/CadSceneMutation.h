@@ -74,7 +74,9 @@ enum class CadSceneMutationDomain {
     Styles,
     Cuts,
     RemovedInstances,
-    RemovedParts
+    RemovedParts,
+    /** Validation or transactional staging could not allocate memory. */
+    ResourceUnavailable
 };
 
 /**
@@ -84,6 +86,8 @@ enum class CadSceneMutationDomain {
  * validation index refers to the vector named by @ref domain.  Geometry
  * and scene carry the reason; in particular, duplicate or contradictory
  * records report CadSceneError::ConflictingUpdate without losing their field.
+ * ResourceUnavailable has no vector index and reports allocation failure
+ * while validating, staging, or applying the sparse transaction.
  */
 struct [[nodiscard]] CadSceneMutationResult {
     CadSceneMutationDomain domain = CadSceneMutationDomain::NoDomain;

@@ -50,6 +50,7 @@
 #include "CadAssemblyImpl.h"
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
+#include "CadSceneMutationTestHooks.h"
 #include "CadSoftwareWire.h"
 #include "picking/CadPicking.h"
 
@@ -105,6 +106,328 @@
 // ---------------------------------------------------------------------------
 // SoCADAssemblyImpl – private implementation (Pimpl pattern)
 // ---------------------------------------------------------------------------
+
+namespace Obol {
+namespace internal {
+
+namespace {
+thread_local unsigned int cadSceneMutationFailurePoint = 0;
+
+void
+cadCheckSceneMutationFailurePointForTesting(unsigned int point)
+{
+    if (cadSceneMutationFailurePoint != point)
+        return;
+    cadSceneMutationFailurePoint = 0;
+    throw std::bad_alloc();
+}
+}
+
+void
+cadSetSceneMutationFailurePointForTesting(unsigned int point) noexcept
+{
+    cadSceneMutationFailurePoint = point;
+}
+
+} // namespace internal
+} // namespace Obol
+
+namespace {
+
+using PartSet = std::unordered_set<Obol::PartId,
+    std::hash<Obol::PartId>>;
+using InstanceSet = std::unordered_set<Obol::InstanceId,
+    std::hash<Obol::InstanceId>>;
+
+/*
+ * Sparse mutations retain the strong exception guarantee without cloning the
+ * complete scene.  Capture only authoritative records which the requested
+ * operations can change.  Renderer plans and picking caches are derived; a
+ * rollback invalidates those instead of copying their potentially large
+ * allocations.
+ */
+class CadSceneMutationSnapshot {
+public:
+    CadSceneMutationSnapshot(
+        SoCADAssemblyImpl& impl,
+        const Obol::CadSceneMutation& mutation) :
+        impl_(impl), nextGeneration_(impl.nextGeneration_)
+    {
+        changedParts_.reserve(mutation.parts.size());
+        changedInstances_.reserve(mutation.instances.size());
+        changedStyles_.reserve(mutation.styles.size());
+        changedCuts_.reserve(mutation.cuts.size());
+        changedIndexParts_.reserve(mutation.instances.size() * 2u);
+
+        for (const Obol::PartUpdate& update : mutation.parts)
+            changedParts_.insert(update.part);
+        for (const Obol::InstanceUpdate& update : mutation.instances) {
+            changedInstances_.insert(update.instance);
+            const auto preceding = impl_.instances_.find(update.instance);
+            if (preceding == impl_.instances_.end()) {
+                changedIndexParts_.insert(update.record.part);
+            } else if (!(preceding->second.partId == update.record.part)) {
+                changedIndexParts_.insert(preceding->second.partId);
+                changedIndexParts_.insert(update.record.part);
+            }
+        }
+        for (const Obol::InstanceStyleUpdate& update : mutation.styles)
+            changedStyles_.insert(update.instance);
+        for (const Obol::InstanceLodUpdate& update : mutation.cuts)
+            changedCuts_.insert(update.instance);
+
+        capturePartState();
+        captureInstanceState();
+        capturePartIndexState();
+    }
+
+    CadSceneMutationSnapshot(const CadSceneMutationSnapshot&) = delete;
+    CadSceneMutationSnapshot& operator=(
+        const CadSceneMutationSnapshot&) = delete;
+
+    void rollback() noexcept
+    {
+        restorePartIndexes();
+        restoreInstances();
+        restoreParts();
+        impl_.nextGeneration_ = nextGeneration_;
+
+        /* A failed plan patch may have changed any derived presentation
+         * table.  Discard it and rebuild from the restored database. */
+        impl_.markDirty("scene-mutation-rollback");
+        impl_.subpixelProxyBuildActive_ = false;
+        impl_.subpixelProxyViewValid_ = false;
+    }
+
+private:
+    using PartMap = decltype(SoCADAssemblyImpl::parts_);
+    using InstanceMap = decltype(SoCADAssemblyImpl::instances_);
+    using PartBucketMap = decltype(SoCADAssemblyImpl::instanceIdsByPart_);
+    using SlotMap = decltype(SoCADAssemblyImpl::instancePartSlot_);
+    using ProxyCornerMap = decltype(
+        SoCADAssemblyImpl::subpixelProxyCorners_);
+    using GenerationMap = decltype(SoCADAssemblyImpl::partGeneration_);
+    using StyleMap = std::unordered_map<Obol::InstanceId,
+        Obol::InstanceStyle, std::hash<Obol::InstanceId>>;
+    struct CutState {
+        uint8_t cut = Obol::ProgressiveCutUnspecified;
+        bool structuralProxy = false;
+    };
+    using CutMap = std::unordered_map<Obol::InstanceId, CutState,
+        std::hash<Obol::InstanceId>>;
+    using BoundsMap = std::unordered_map<Obol::InstanceId, SbBox3f,
+        std::hash<Obol::InstanceId>>;
+
+    static void restoreInstanceData(
+        InstanceData& destination, InstanceData& source) noexcept
+    {
+        destination.partId = source.partId;
+        destination.localToRoot = source.localToRoot;
+        destination.style = source.style;
+        destination.parent = source.parent;
+        destination.childName.swap(source.childName);
+        destination.occurrenceIndex = source.occurrenceIndex;
+        destination.boolOp = source.boolOp;
+        destination.lodCut = source.lodCut;
+        destination.lodStructuralProxy = source.lodStructuralProxy;
+        destination.worldBounds = source.worldBounds;
+    }
+
+    void capturePartState()
+    {
+        precedingParts_.reserve(changedParts_.size());
+        precedingProxyCorners_.reserve(changedParts_.size());
+        precedingGenerations_.reserve(changedParts_.size());
+        precedingProgressiveParts_.reserve(changedParts_.size());
+        precedingWorldBounds_.reserve(changedParts_.size());
+
+        for (const Obol::PartId part : changedParts_) {
+            const auto geometry = impl_.parts_.find(part);
+            if (geometry != impl_.parts_.end())
+                precedingParts_.emplace(part, geometry->second);
+            const auto corners = impl_.subpixelProxyCorners_.find(part);
+            if (corners != impl_.subpixelProxyCorners_.end())
+                precedingProxyCorners_.emplace(part, corners->second);
+            const auto generation = impl_.partGeneration_.find(part);
+            if (generation != impl_.partGeneration_.end())
+                precedingGenerations_.emplace(part, generation->second);
+            if (impl_.progressiveParts_.count(part))
+                precedingProgressiveParts_.insert(part);
+
+            const auto bucket = impl_.instanceIdsByPart_.find(part);
+            if (bucket == impl_.instanceIdsByPart_.end())
+                continue;
+            for (size_t slot = 0; slot < bucket->second.size(); ++slot) {
+                const Obol::InstanceId instance = bucket->second.at(slot);
+                const auto live = impl_.instances_.find(instance);
+                if (live != impl_.instances_.end())
+                    precedingWorldBounds_.emplace(
+                        instance, live->second.worldBounds);
+            }
+        }
+    }
+
+    void captureInstanceState()
+    {
+        precedingInstances_.reserve(changedInstances_.size());
+        precedingStyles_.reserve(changedStyles_.size());
+        precedingCuts_.reserve(changedCuts_.size());
+        for (const Obol::InstanceId instance : changedInstances_) {
+            const auto live = impl_.instances_.find(instance);
+            if (live != impl_.instances_.end())
+                precedingInstances_.emplace(instance, live->second);
+        }
+        for (const Obol::InstanceId instance : changedStyles_) {
+            const auto live = impl_.instances_.find(instance);
+            if (live != impl_.instances_.end())
+                precedingStyles_.emplace(instance, live->second.style);
+        }
+        for (const Obol::InstanceId instance : changedCuts_) {
+            const auto live = impl_.instances_.find(instance);
+            if (live != impl_.instances_.end())
+                precedingCuts_.emplace(instance, CutState{
+                    live->second.lodCut,
+                    live->second.lodStructuralProxy});
+        }
+    }
+
+    void capturePartIndexState()
+    {
+        changedSlotInstances_.reserve(changedInstances_.size());
+        precedingSlots_.reserve(changedInstances_.size());
+        for (const Obol::InstanceId instance : changedInstances_)
+            changedSlotInstances_.insert(instance);
+
+        for (const Obol::PartId part : changedIndexParts_) {
+            const auto bucket = impl_.instanceIdsByPart_.find(part);
+            if (bucket == impl_.instanceIdsByPart_.end())
+                continue;
+            precedingBuckets_.emplace(part, bucket->second);
+            for (size_t slot = 0; slot < bucket->second.size(); ++slot)
+                changedSlotInstances_.insert(bucket->second.at(slot));
+        }
+        precedingSlots_.reserve(changedSlotInstances_.size());
+        for (const Obol::InstanceId instance : changedSlotInstances_) {
+            const auto slot = impl_.instancePartSlot_.find(instance);
+            if (slot != impl_.instancePartSlot_.end())
+                precedingSlots_.emplace(instance, slot->second);
+        }
+    }
+
+    void restorePartIndexes() noexcept
+    {
+        for (const Obol::PartId part : changedIndexParts_)
+            impl_.instanceIdsByPart_.erase(part);
+        while (!precedingBuckets_.empty()) {
+            auto node = precedingBuckets_.extract(
+                precedingBuckets_.begin());
+            impl_.instanceIdsByPart_.insert(std::move(node));
+        }
+
+        for (const Obol::InstanceId instance : changedSlotInstances_)
+            impl_.instancePartSlot_.erase(instance);
+        while (!precedingSlots_.empty()) {
+            auto node = precedingSlots_.extract(precedingSlots_.begin());
+            impl_.instancePartSlot_.insert(std::move(node));
+        }
+    }
+
+    void restoreInstances() noexcept
+    {
+        for (const Obol::InstanceId instance : changedInstances_) {
+            auto preceding = precedingInstances_.find(instance);
+            if (preceding == precedingInstances_.end()) {
+                impl_.instances_.erase(instance);
+                continue;
+            }
+            const auto live = impl_.instances_.find(instance);
+            if (live != impl_.instances_.end())
+                restoreInstanceData(live->second, preceding->second);
+        }
+        for (const auto& entry : precedingWorldBounds_) {
+            const auto live = impl_.instances_.find(entry.first);
+            if (live != impl_.instances_.end())
+                live->second.worldBounds = entry.second;
+        }
+        for (const auto& entry : precedingStyles_) {
+            const auto live = impl_.instances_.find(entry.first);
+            if (live != impl_.instances_.end())
+                live->second.style = entry.second;
+        }
+        for (const auto& entry : precedingCuts_) {
+            const auto live = impl_.instances_.find(entry.first);
+            if (live != impl_.instances_.end()) {
+                live->second.lodCut = entry.second.cut;
+                live->second.lodStructuralProxy =
+                    entry.second.structuralProxy;
+            }
+        }
+    }
+
+    void restoreParts() noexcept
+    {
+        for (const Obol::PartId part : changedParts_) {
+            const auto preceding = precedingParts_.find(part);
+            if (preceding == precedingParts_.end()) {
+                impl_.parts_.erase(part);
+            } else {
+                const auto live = impl_.parts_.find(part);
+                if (live != impl_.parts_.end())
+                    live->second = preceding->second;
+            }
+        }
+
+        for (const Obol::PartId part : changedParts_) {
+            impl_.subpixelProxyCorners_.erase(part);
+            impl_.partGeneration_.erase(part);
+            impl_.progressiveParts_.erase(part);
+        }
+        while (!precedingProxyCorners_.empty()) {
+            auto node = precedingProxyCorners_.extract(
+                precedingProxyCorners_.begin());
+            impl_.subpixelProxyCorners_.insert(std::move(node));
+        }
+        while (!precedingGenerations_.empty()) {
+            auto node = precedingGenerations_.extract(
+                precedingGenerations_.begin());
+            impl_.partGeneration_.insert(std::move(node));
+        }
+        while (!precedingProgressiveParts_.empty()) {
+            auto node = precedingProgressiveParts_.extract(
+                precedingProgressiveParts_.begin());
+            impl_.progressiveParts_.insert(std::move(node));
+        }
+    }
+
+    SoCADAssemblyImpl& impl_;
+    uint64_t nextGeneration_;
+    PartSet changedParts_;
+    InstanceSet changedInstances_;
+    InstanceSet changedStyles_;
+    InstanceSet changedCuts_;
+    PartSet changedIndexParts_;
+    InstanceSet changedSlotInstances_;
+    PartMap precedingParts_;
+    InstanceMap precedingInstances_;
+    PartBucketMap precedingBuckets_;
+    SlotMap precedingSlots_;
+    ProxyCornerMap precedingProxyCorners_;
+    GenerationMap precedingGenerations_;
+    PartSet precedingProgressiveParts_;
+    BoundsMap precedingWorldBounds_;
+    StyleMap precedingStyles_;
+    CutMap precedingCuts_;
+};
+
+Obol::CadSceneMutationResult
+cadSceneMutationResourceUnavailable() noexcept
+{
+    Obol::CadSceneMutationResult result;
+    result.domain = Obol::CadSceneMutationDomain::ResourceUnavailable;
+    return result;
+}
+
+} // namespace
 
 
 // ---------------------------------------------------------------------------
@@ -484,22 +807,54 @@ SoCADAssembly::validateSceneMutation(
 Obol::CadSceneMutationResult
 SoCADAssembly::applySceneMutation(const Obol::CadSceneMutation& mutation)
 {
-    const Obol::CadSceneMutationResult result =
-        validateSceneMutation(mutation);
+    Obol::CadSceneMutationResult result;
+    try {
+        result = validateSceneMutation(mutation);
+    } catch (const std::bad_alloc&) {
+        return cadSceneMutationResourceUnavailable();
+    }
     if (!result || mutation.empty())
         return result;
 
-    auto update = batchUpdate();
-    /* Validation above covers every rejection path in these operations.
-     * With owner-thread mutation there is no intervening state change, so
-     * commit is mechanical and cannot expose a validation-partial scene. */
-    (void)upsertParts(mutation.parts);
-    (void)upsertInstances(mutation.instances);
-    (void)updateInstanceStyles(mutation.styles);
-    (void)updateInstanceCuts(mutation.cuts);
+    std::unique_ptr<CadSceneMutationSnapshot> snapshot;
+    try {
+        snapshot = std::make_unique<CadSceneMutationSnapshot>(
+            *impl_, mutation);
+    } catch (const std::bad_alloc&) {
+        return cadSceneMutationResourceUnavailable();
+    }
+
+    beginUpdate();
+    try {
+        /* Validation above covers every semantic rejection path.  These
+         * calls can still allocate while updating sparse indexes or patching
+         * retained plans, so retain rollback state until all have finished. */
+        (void)upsertParts(mutation.parts);
+        Obol::internal::cadCheckSceneMutationFailurePointForTesting(1);
+        (void)upsertInstances(mutation.instances);
+        Obol::internal::cadCheckSceneMutationFailurePointForTesting(2);
+        (void)updateInstanceStyles(mutation.styles);
+        Obol::internal::cadCheckSceneMutationFailurePointForTesting(3);
+        (void)updateInstanceCuts(mutation.cuts);
+        Obol::internal::cadCheckSceneMutationFailurePointForTesting(4);
+    } catch (const std::bad_alloc&) {
+        snapshot->rollback();
+        --impl_->updateDepth_;
+        return cadSceneMutationResourceUnavailable();
+    } catch (...) {
+        snapshot->rollback();
+        --impl_->updateDepth_;
+        throw;
+    }
+
+    /* Erasure and retained-record destruction are non-allocating.  Delay
+     * them until the allocation-capable portion has committed so rollback
+     * never needs to reconstruct an erased node. */
     for (const Obol::InstanceId instance : mutation.removedInstances)
         removeInstance(instance);
-    removeParts(mutation.removedParts);
+    for (const Obol::PartId part : mutation.removedParts)
+        removePart(part);
+    endUpdate();
     return result;
 }
 

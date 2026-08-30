@@ -5,6 +5,7 @@
 
 #include <Obol/cad/SoCADAssembly.h>
 #include <Obol/cad/CadViewState.h>
+#include "CadSceneMutationTestHooks.h"
 
 #include <gtest/gtest.h>
 
@@ -816,6 +817,107 @@ TEST(CadInstanceRecords, SparseMutationCommitsOneValidatedDelta)
         Obol::CadSceneMutationDomain::RemovedInstances);
     EXPECT_TRUE(assembly->getInstanceRecord(instance).has_value());
 
+    assembly->unref();
+}
+
+TEST(CadInstanceRecords, SparseMutationRollsBackAllocationFailure)
+{
+    SoCADAssembly::initClass();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.attach(assembly);
+
+    Obol::PartGeometryBuilder oldBuilder;
+    oldBuilder.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const auto oldGeometry =
+        Obol::cadAdmitPartGeometry(std::move(oldBuilder));
+    ASSERT_TRUE(oldGeometry);
+    Obol::PartGeometryBuilder replacementBuilder;
+    replacementBuilder.conservativeBounds = SbBox3f(
+        SbVec3f(-4.0f, -4.0f, -4.0f), SbVec3f(4.0f, 4.0f, 4.0f));
+    const auto replacementGeometry =
+        Obol::cadAdmitPartGeometry(std::move(replacementBuilder));
+    ASSERT_TRUE(replacementGeometry);
+    Obol::PartGeometryBuilder targetBuilder;
+    targetBuilder.conservativeBounds = SbBox3f(
+        SbVec3f(8.0f, 8.0f, 8.0f), SbVec3f(9.0f, 9.0f, 9.0f));
+    const auto targetGeometry =
+        Obol::cadAdmitPartGeometry(std::move(targetBuilder));
+    ASSERT_TRUE(targetGeometry);
+
+    const Obol::PartId oldPart =
+        Obol::CadIdBuilder::partId("rollback-old-part");
+    const Obol::PartId targetPart =
+        Obol::CadIdBuilder::partId("rollback-target-part");
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("rollback-instance");
+    const Obol::InstanceId peer =
+        Obol::CadIdBuilder::instanceId("rollback-peer");
+
+    Obol::InstanceRecord preceding;
+    preceding.part = oldPart;
+    preceding.childName = "preceding";
+    preceding.occurrenceIndex = 7;
+    preceding.lodCut = 2;
+    preceding.style.hasColorOverride = true;
+    preceding.style.color = SbColor4f(0.1f, 0.2f, 0.3f, 0.4f);
+    Obol::InstanceRecord peerRecord;
+    peerRecord.part = oldPart;
+    ASSERT_TRUE(assembly->replaceScene(
+        {{oldPart, oldGeometry.geometry, false},
+         {targetPart, targetGeometry.geometry, false}},
+        {{instance, preceding}, {peer, peerRecord}}));
+    const unsigned int committedChanges = changeCount;
+
+    Obol::InstanceRecord replacement = preceding;
+    replacement.part = targetPart;
+    replacement.childName = "replacement";
+    replacement.occurrenceIndex = 23;
+    replacement.localToRoot.setTranslate(SbVec3f(3.0f, 2.0f, 1.0f));
+    Obol::InstanceStyle replacementStyle;
+    replacementStyle.hasColorOverride = true;
+    replacementStyle.color = SbColor4f(0.8f, 0.7f, 0.6f, 0.5f);
+
+    Obol::CadSceneMutation mutation;
+    mutation.parts.push_back(
+        {oldPart, replacementGeometry.geometry, false});
+    mutation.instances.push_back({instance, replacement});
+    mutation.styles.push_back({instance, replacementStyle});
+    mutation.cuts.push_back({instance, 5u});
+
+    for (unsigned int failurePoint = 1; failurePoint <= 4;
+            ++failurePoint) {
+        Obol::internal::cadSetSceneMutationFailurePointForTesting(
+            failurePoint);
+        const Obol::CadSceneMutationResult failed =
+            assembly->applySceneMutation(mutation);
+        EXPECT_EQ(failed.domain,
+            Obol::CadSceneMutationDomain::ResourceUnavailable);
+        EXPECT_STREQ(Obol::cadSceneMutationDomainName(failed.domain),
+            "resource-unavailable");
+        EXPECT_EQ(assembly->partGeometry(oldPart),
+            oldGeometry.geometry.get());
+        EXPECT_EQ(assembly->partCount(), 2u);
+        EXPECT_EQ(assembly->instanceCount(), 2u);
+        const std::optional<Obol::InstanceRecord> stored =
+            assembly->getInstanceRecord(instance);
+        ASSERT_TRUE(stored.has_value());
+        EXPECT_EQ(stored->part, preceding.part);
+        EXPECT_EQ(stored->childName, preceding.childName);
+        EXPECT_EQ(stored->occurrenceIndex, preceding.occurrenceIndex);
+        EXPECT_EQ(stored->lodCut, preceding.lodCut);
+        EXPECT_EQ(stored->style.hasColorOverride,
+            preceding.style.hasColorOverride);
+        EXPECT_EQ(stored->style.color, preceding.style.color);
+        ASSERT_TRUE(assembly->getInstanceRecord(peer).has_value());
+        EXPECT_EQ(changeCount, committedChanges);
+    }
+
+    changeSensor.detach();
     assembly->unref();
 }
 
