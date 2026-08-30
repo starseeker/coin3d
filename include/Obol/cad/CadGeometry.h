@@ -87,6 +87,8 @@ struct ProgressiveTriangleClusterRange {
 
 /** Private spatial page of a logical triangle part, without CAD identity. */
 struct ProgressiveTriangleCluster {
+    /* Conservative bounds for every currently resident primitive referenced
+     * by ranges in this cluster. */
     SbBox3f bounds;
     std::vector<ProgressiveTriangleClusterRange> ranges;
     uint8_t residentCut = ProgressiveCutUnspecified;
@@ -102,6 +104,8 @@ struct ProgressiveWireClusterRange {
 
 /** Private spatial page of a logical wire part, without CAD identity. */
 struct ProgressiveWireCluster {
+    /* Conservative bounds for every currently resident segment referenced
+     * by ranges in this cluster. */
     SbBox3f bounds;
     std::vector<ProgressiveWireClusterRange> ranges;
     uint8_t residentCut = ProgressiveCutUnspecified;
@@ -129,6 +133,8 @@ struct WireRep {
     std::vector<ProgressiveWireCut> progressiveCuts;
     uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
     uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
+    /* Ordered domain containing every stored coordinate on an axis for which
+     * a resident cut requests lossy (1..15 bit) quantization. */
     SbVec3f progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
     SbVec3f progressiveQuantizationMaximum = SbVec3f(0.0f, 0.0f, 0.0f);
 
@@ -227,6 +233,8 @@ struct TriMesh {
     std::vector<ProgressiveTriangleCut> progressiveCuts;
     uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
     uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
+    /* Ordered domain containing every stored coordinate on an axis for which
+     * a resident cut requests lossy (1..15 bit) quantization. */
     SbVec3f progressiveQuantizationMinimum = SbVec3f(0.0f, 0.0f, 0.0f);
     SbVec3f progressiveQuantizationMaximum = SbVec3f(0.0f, 0.0f, 0.0f);
     std::vector<ProgressiveTriangleCluster> progressiveClusters;
