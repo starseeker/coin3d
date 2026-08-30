@@ -91,6 +91,8 @@ void CadRendererGL::renderInstanced(
             return;
         const auto& vi = plan.visibleInstances[i];
         std::memcpy(instData[i].transform, vi.transform.data(), 16 * sizeof(float));
+        cadPackInstanceNormalTransform(
+            vi.transform.data(), instData[i].normalTransform);
         instData[i].color[0] = vi.rgba[0] / 255.0f;
         instData[i].color[1] = vi.rgba[1] / 255.0f;
         instData[i].color[2] = vi.rgba[2] / 255.0f;
@@ -135,6 +137,20 @@ void CadRendererGL::renderInstanced(
             glue->glVertexAttribDivisor(aloc, 1);
         }
 
+        // a_instNormalTransform occupies three consecutive mat3 locations.
+        for (GLuint col = 0; col < 3; ++col) {
+            const GLuint aloc = kInstNormalTransformLoc + col;
+            const GLvoid* off = reinterpret_cast<const GLvoid*>(
+                baseOff + static_cast<GLsizeiptr>(
+                    offsetof(InstVertex, normalTransform)) +
+                static_cast<GLsizeiptr>(col) * 3 *
+                    static_cast<GLsizeiptr>(sizeof(float)));
+            glue->glVertexAttribPointerARB(aloc, 3, GL_FLOAT, GL_FALSE,
+                                           instStride, off);
+            glue->glEnableVertexAttribArrayARB(aloc);
+            glue->glVertexAttribDivisor(aloc, 1);
+        }
+
         // a_instColor
         {
             GLuint aloc = kInstColorLoc;
@@ -155,6 +171,11 @@ void CadRendererGL::renderInstanced(
         for (GLuint col = 0; col < 4; ++col) {
             glue->glVertexAttribDivisor(kInstTransformLoc + col, 0);
             glue->glDisableVertexAttribArrayARB(kInstTransformLoc + col);
+        }
+        for (GLuint col = 0; col < 3; ++col) {
+            const GLuint aloc = kInstNormalTransformLoc + col;
+            glue->glVertexAttribDivisor(aloc, 0);
+            glue->glDisableVertexAttribArrayARB(aloc);
         }
         glue->glVertexAttribDivisor(kInstColorLoc, 0);
         glue->glDisableVertexAttribArrayARB(kInstColorLoc);

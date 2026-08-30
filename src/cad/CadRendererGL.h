@@ -509,6 +509,7 @@ private:
 
     struct InstVertex {
         float transform[16];  ///< column-major 4×4 (raw OI float[16])
+        float normalTransform[9]; ///< inverse-transpose 3x3, raw OI rows
         float color[4];        ///< RGBA [0,1]
         float popMinLevel[4];  ///< quantization minimum xyz + active level
         float popMaxFlags[4];  ///< quantization maximum xyz + packed flags

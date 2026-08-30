@@ -111,6 +111,25 @@ cadProgressiveCutCullSafe(bool sourceCullSafe, const TriMesh *mesh,
 
 static const float kLightDir[3] = { 0.577f, 0.577f, 0.577f };
 
+static void
+executorNormalMatrix(const std::array<float, 16>& transform,
+                     float (&packed)[9])
+{
+    cadPackInstanceNormalTransform(transform.data(), packed);
+}
+
+void
+cadPackInstanceNormalTransform(const float *transform,
+                               float *normalTransform)
+{
+    SbMatrix model;
+    model.setValue(transform);
+    const SbMatrix normal = model.inverse().transpose();
+    for (int row = 0; row < 3; ++row)
+        for (int column = 0; column < 3; ++column)
+            normalTransform[row * 3 + column] = normal[row][column];
+}
+
 ExecutorFrustumPlanes
 extractExecutorFrustumPlanes(const SbMatrix& vp) noexcept
 {
@@ -1740,6 +1759,7 @@ void CadRendererGL::renderVboLoop(
         struct ShadedLocations {
             GLint viewProjection = -1;
             GLint model = -1;
+            GLint normalMatrix = -1;
             GLint color = -1;
             GLint hasNormal = -1;
             GLint lightVector = -1;
@@ -1776,6 +1796,9 @@ void CadRendererGL::renderVboLoop(
             locations[programIndex].model =
                 glue->glGetUniformLocationARB(
                     programs[programIndex], "u_model");
+            locations[programIndex].normalMatrix =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_normalMatrix");
             locations[programIndex].color =
                 glue->glGetUniformLocationARB(
                     programs[programIndex], "u_color");
@@ -2041,6 +2064,12 @@ void CadRendererGL::renderVboLoop(
 
                 glue->glUniformMatrix4fvARB(loc.model, 1, GL_FALSE,
                                             inst.transform.data());
+                if (hasNorm && loc.normalMatrix >= 0) {
+                    float normalMatrix[9];
+                    executorNormalMatrix(inst.transform, normalMatrix);
+                    glue->glUniformMatrix3fvARB(
+                        loc.normalMatrix, 1, GL_FALSE, normalMatrix);
+                }
                 float rgba[4] = {
                     inst.rgba[0] / 255.0f, inst.rgba[1] / 255.0f,
                     inst.rgba[2] / 255.0f, inst.rgba[3] / 255.0f

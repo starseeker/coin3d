@@ -60,6 +60,9 @@ struct InstanceStyle {
 /** One retained occurrence of shared part geometry. */
 struct InstanceRecord {
     PartId part;
+    /* Finite, invertible affine transform.  Projective and singular matrices
+     * are rejected because retained bounds, normal transforms and picking
+     * all consume one affine inverse contract. */
     SbMatrix localToRoot = SbMatrix::identity();
 
     /* Stable automatic-ID inputs.  Explicit-ID updates ignore them. */

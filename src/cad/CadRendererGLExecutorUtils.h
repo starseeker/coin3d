@@ -91,6 +91,8 @@ void restoreWireRasterState(
     bool hasLineStipple);
 SbVec3f transformedFlatPoint(
     const SbVec3f& point, const std::array<float, 16>& matrix);
+void cadPackInstanceNormalTransform(
+    const float *transform, float *normalTransform);
 uint64_t cadSaturatingWorkAdd(uint64_t left, uint64_t right);
 float packedProgressiveQuantization(
     ProgressiveQuantization quantization);

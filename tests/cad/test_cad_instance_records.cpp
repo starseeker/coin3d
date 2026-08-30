@@ -413,6 +413,29 @@ TEST(CadInstanceRecords, PreserveIdentityGeometryAndBoundsContracts)
     assembly->unref();
 }
 
+TEST(CadInstanceRecords, InstanceTransformsMustBeInvertibleAndAffine)
+{
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("transform-contract");
+
+    SbMatrix projective = SbMatrix::identity();
+    projective[0][3] = 0.25f;
+    Obol::CadSceneValidation validation =
+        Obol::cadValidateInstanceTransform(instance, projective);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::InvalidTransform);
+
+    SbMatrix singular = SbMatrix::identity();
+    singular[1][1] = 0.0f;
+    validation = Obol::cadValidateInstanceTransform(instance, singular);
+    EXPECT_EQ(validation.error, Obol::CadSceneError::InvalidTransform);
+
+    SbMatrix nonUniform = SbMatrix::identity();
+    nonUniform[0][0] = 2.0f;
+    nonUniform[1][1] = 3.0f;
+    nonUniform[2][2] = 4.0f;
+    EXPECT_TRUE(Obol::cadValidateInstanceTransform(instance, nonUniform));
+}
+
 TEST(CadInstanceRecords, RejectsMalformedGeometryAtomically)
 {
     SoCADAssembly::initClass();

@@ -32,7 +32,9 @@
 
 #include <Obol/cad/CadSceneValidation.h>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace {
 
@@ -57,6 +59,38 @@ sceneFinite(const SbMatrix& matrix) noexcept
             if (!sceneFinite(matrix[row][column]))
                 return false;
     return true;
+}
+
+bool
+sceneAffine(const SbMatrix& matrix) noexcept
+{
+    return matrix[0][3] == 0.0f && matrix[1][3] == 0.0f &&
+        matrix[2][3] == 0.0f && matrix[3][3] == 1.0f;
+}
+
+bool
+sceneInvertible(const SbMatrix& matrix) noexcept
+{
+    double maximum = 0.0;
+    for (int row = 0; row != 3; ++row)
+        for (int column = 0; column != 3; ++column)
+            maximum = (std::max)(maximum,
+                std::abs(static_cast<double>(matrix[row][column])));
+    if (maximum == 0.0)
+        return false;
+    const double determinant =
+        static_cast<double>(matrix[0][0]) *
+            (static_cast<double>(matrix[1][1]) * matrix[2][2] -
+             static_cast<double>(matrix[1][2]) * matrix[2][1]) -
+        static_cast<double>(matrix[0][1]) *
+            (static_cast<double>(matrix[1][0]) * matrix[2][2] -
+             static_cast<double>(matrix[1][2]) * matrix[2][0]) +
+        static_cast<double>(matrix[0][2]) *
+            (static_cast<double>(matrix[1][0]) * matrix[2][1] -
+             static_cast<double>(matrix[1][1]) * matrix[2][0]);
+    const double scale = maximum * maximum * maximum;
+    return std::abs(determinant) >
+        16.0 * std::numeric_limits<float>::epsilon() * scale;
 }
 
 Obol::CadSceneValidation
@@ -92,6 +126,8 @@ cadValidateInstanceTransform(InstanceId instance,
         return failure(CadSceneError::InvalidInstanceId);
     if (!sceneFinite(transform))
         return failure(CadSceneError::NonFiniteTransform);
+    if (!sceneAffine(transform) || !sceneInvertible(transform))
+        return failure(CadSceneError::InvalidTransform);
     return CadSceneValidation();
 }
 
@@ -173,6 +209,8 @@ cadSceneErrorName(CadSceneError error) noexcept
         return "missing-instance";
     case CadSceneError::ConflictingUpdate:
         return "conflicting-update";
+    case CadSceneError::InvalidTransform:
+        return "invalid-transform";
     }
     return "unknown";
 }
