@@ -2163,6 +2163,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 void
 SoCADAssembly::rayPick(SoRayPickAction* action)
 {
+    std::lock_guard<std::mutex> pickLock(impl_->pickMutex_);
     if (impl_->instances_.empty()) return;
 
     impl_->rebuildBvhIfNeeded();
@@ -2375,6 +2376,7 @@ SoCADAssembly::getPrimitiveCount(SoGetPrimitiveCountAction* action)
 int
 SoCADAssembly::lastRenderTier() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     if (!impl_->renderer_) return -1;
     return impl_->renderer_->lastRenderTier();
 }
@@ -2382,6 +2384,7 @@ SoCADAssembly::lastRenderTier() const
 int
 SoCADAssembly::lastIndirectStatus() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     if (!impl_->renderer_) return -1;
     return impl_->renderer_->lastIndirectStatus();
 }
@@ -2389,6 +2392,7 @@ SoCADAssembly::lastIndirectStatus() const
 uint64_t
 SoCADAssembly::lastRenderedTriangleCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     if (!impl_->renderer_) return 0;
     return impl_->renderer_->lastRenderedTriangleCount();
 }
@@ -2396,6 +2400,7 @@ SoCADAssembly::lastRenderedTriangleCount() const
 Obol::CadRenderedWork
 SoCADAssembly::lastRenderedWork() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ? impl_->renderer_->lastRenderedWork() :
         Obol::CadRenderedWork();
 }
@@ -2403,6 +2408,7 @@ SoCADAssembly::lastRenderedWork() const
 uint64_t
 SoCADAssembly::lastGpuRenderNanoseconds() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ?
         impl_->renderer_->lastGpuRenderNanoseconds() : 0;
 }
@@ -2410,6 +2416,7 @@ SoCADAssembly::lastGpuRenderNanoseconds() const
 uint64_t
 SoCADAssembly::lastGpuRenderedTriangleCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ?
         impl_->renderer_->lastGpuRenderedTriangleCount() : 0;
 }
@@ -2417,6 +2424,7 @@ SoCADAssembly::lastGpuRenderedTriangleCount() const
 float
 SoCADAssembly::lastGpuPointProxyPixelThreshold() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ?
         impl_->renderer_->lastGpuPointProxyPixelThreshold() : 1.0f;
 }
@@ -2424,6 +2432,7 @@ SoCADAssembly::lastGpuPointProxyPixelThreshold() const
 uint64_t
 SoCADAssembly::gpuTimerSampleSerial() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ?
         impl_->renderer_->gpuTimerSampleSerial() : 0;
 }
@@ -2431,6 +2440,7 @@ SoCADAssembly::gpuTimerSampleSerial() const
 Obol::CadGpuResourceSnapshot
 SoCADAssembly::gpuResourceSnapshot() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ? impl_->renderer_->gpuResourceSnapshot() :
         Obol::CadGpuResourceSnapshot();
 }
@@ -2438,6 +2448,7 @@ SoCADAssembly::gpuResourceSnapshot() const
 bool
 SoCADAssembly::lastRenderUsedPreparedReplay() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ &&
         impl_->renderer_->lastRenderUsedPreparedReplay();
 }
@@ -2445,18 +2456,21 @@ SoCADAssembly::lastRenderUsedPreparedReplay() const
 bool
 SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->lastDirectSoftwareWire_;
 }
 
 uint64_t
 SoCADAssembly::renderExecutionSerial() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderExecutionSerial_;
 }
 
 uint64_t
 SoCADAssembly::renderPreparationSerial() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     const uint64_t rendererSerial = impl_->renderer_ ?
         impl_->renderer_->renderPreparationSerial() : 0;
     return rendererSerial > UINT64_MAX - impl_->renderPreparationSerial_ ?
@@ -2466,12 +2480,14 @@ SoCADAssembly::renderPreparationSerial() const
 Obol::CadPresentationPreparationSnapshot
 SoCADAssembly::presentationPreparationSnapshot() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->presentationPreparation_;
 }
 
 size_t
 SoCADAssembly::lastSubpixelProxyCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     size_t visible = 0;
     for (const Obol::internal::CadSubpixelProxyPoint& point :
             impl_->cachedPlan_.subpixelProxyPoints)
@@ -2484,6 +2500,7 @@ SoCADAssembly::lastSubpixelProxyCount() const
 size_t
 SoCADAssembly::lastSubpixelProxyDrawPointCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->renderer_ ?
         impl_->renderer_->lastSubpixelProxyDrawPointCount() : 0u;
 }
@@ -2491,6 +2508,7 @@ SoCADAssembly::lastSubpixelProxyDrawPointCount() const
 Obol::CadAggregateProxyPresentationWork
 SoCADAssembly::lastAggregateProxyPresentationWork() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     Obol::CadAggregateProxyPresentationWork work;
     work.exact = impl_->renderer_ &&
         impl_->renderer_->lastRenderedWork().exact;
@@ -2518,12 +2536,14 @@ SoCADAssembly::lastAggregateProxyPresentationWork() const
 size_t
 SoCADAssembly::lastUncollapsedStructuralProxyCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->uncollapsedStructuralProxyCount_;
 }
 
 std::vector<Obol::InstanceId>
 SoCADAssembly::lastUncollapsedStructuralProxyInstances() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     std::vector<Obol::InstanceId> instances;
     instances.reserve(impl_->uncollapsedStructuralProxyInstances_.size());
     for (const Obol::InstanceId instance :
@@ -2541,6 +2561,7 @@ SoCADAssembly::lastUncollapsedStructuralProxyInstances() const
 std::vector<Obol::InstanceId>
 SoCADAssembly::lastStructuralProxyInstancesAbovePixels(float pixels) const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     std::vector<Obol::InstanceId> instances;
     const Obol::CadStructuralProxyProjectionHistogram &histogram =
         impl_->structuralProjectionHistogram_;
@@ -2587,12 +2608,14 @@ SoCADAssembly::lastStructuralProxyInstancesAbovePixels(float pixels) const
 Obol::CadStructuralProxyProjectionHistogram
 SoCADAssembly::lastStructuralProxyProjectionHistogram() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->structuralProjectionHistogram_;
 }
 
 Obol::CadStructuralProxyPresentationWork
 SoCADAssembly::lastStructuralProxyPresentationWork() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     Obol::CadStructuralProxyPresentationWork work;
     work.exact = impl_->structuralProjectionHistogram_.exact;
     work.retainedWireBoxCount = impl_->uncollapsedStructuralProxyCount_;
@@ -2617,17 +2640,20 @@ SoCADAssembly::lastStructuralProxyPresentationWork() const
 uint64_t
 SoCADAssembly::lastSubpixelProxyRevision() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->cachedPlan_.subpixelProxyRevision;
 }
 
 uint64_t
 SoCADAssembly::framePlanBuildCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->framePlanBuildCount_;
 }
 
 size_t
 SoCADAssembly::framePlanInstanceRecordCount() const
 {
+    std::lock_guard<std::mutex> renderLock(impl_->renderMutex_);
     return impl_->cachedPlan_.visibleInstances.size();
 }
