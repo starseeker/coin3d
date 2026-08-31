@@ -1845,8 +1845,14 @@ SoCADAssembly::setHiddenInstances(const std::vector<Obol::InstanceId>& ids)
 void
 SoCADAssembly::setUnpickableInstances(const std::vector<Obol::InstanceId>& ids)
 {
-    impl_->unpickable_.clear();
-    impl_->unpickable_.insert(ids.begin(), ids.end());
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next;
+    next.reserve(ids.size());
+    for (const Obol::InstanceId& id : ids)
+        if (impl_->instances_.find(id) != impl_->instances_.end())
+            next.insert(id);
+    if (next == impl_->unpickable_)
+        return;
+    impl_->unpickable_.swap(next);
     impl_->bvhDirty_ = true;
     if (!impl_->updateDepth_) touch();
 }

@@ -314,7 +314,7 @@ public:
     Obol::CadSceneValidation updateInstanceStyles(
         const std::vector<Obol::InstanceStyleUpdate>& updates);
 
-    /** Replace the selection highlight set. */
+    /** Replace the selection highlight set. Unknown identifiers are ignored. */
     void setSelectedInstances(const std::vector<Obol::InstanceId>& ids);
 
     /**
@@ -428,6 +428,8 @@ public:
      * Typical use: after promoting selected/edited instances to explicit
      * scene-graph nodes, hide the corresponding aggregate entries so they
      * don't double-render.
+     *
+     * Unknown identifiers are ignored.
      */
     void setHiddenInstances(const std::vector<Obol::InstanceId>& ids);
 
@@ -439,6 +441,9 @@ public:
      * BVH ignores them.  Use this for view/application state such as
      * "visible but not selectable" without promoting the instance to a full
      * scene-graph node.
+     *
+     * Unknown identifiers are ignored. Reapplying the effective set is a
+     * no-op and does not notify scene auditors.
      */
     void setUnpickableInstances(const std::vector<Obol::InstanceId>& ids);
 
