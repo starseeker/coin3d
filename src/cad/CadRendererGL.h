@@ -89,6 +89,7 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -195,15 +196,19 @@ public:
 
     /** Most recently completed, asynchronously measured CAD GPU work. */
     uint64_t lastGpuRenderNanoseconds() const {
+        std::lock_guard<std::recursive_mutex> lock(resourceMutex_);
         return gpuRes_ ? gpuRes_->lastGpuTimeNanoseconds() : 0;
     }
     uint64_t lastGpuRenderedTriangleCount() const {
+        std::lock_guard<std::recursive_mutex> lock(resourceMutex_);
         return gpuRes_ ? gpuRes_->lastGpuTriangleCount() : 0;
     }
     float lastGpuPointProxyPixelThreshold() const {
+        std::lock_guard<std::recursive_mutex> lock(resourceMutex_);
         return gpuRes_ ? gpuRes_->lastGpuPointProxyPixelThreshold() : 1.0f;
     }
     uint64_t gpuTimerSampleSerial() const {
+        std::lock_guard<std::recursive_mutex> lock(resourceMutex_);
         return gpuRes_ ? gpuRes_->gpuTimerSampleSerial() : 0;
     }
     Obol::CadGpuResourceSnapshot gpuResourceSnapshot() const {
@@ -402,6 +407,11 @@ private:
     std::vector<GlLight> lights_;
     float ambientLight_[3] = {0.3f, 0.3f, 0.3f};
     SbMatrix assemblyModel_;
+
+    /* Context destruction callbacks may arrive independently of a traversal.
+     * Serialize resource publication and teardown with every renderer entry
+     * point which can use the per-context resource map. */
+    mutable std::recursive_mutex resourceMutex_;
 
     // GPU objects are namespaced by GL context.  A renderer may be traversed
     // by multiple system-GL or offscreen contexts during its lifetime.

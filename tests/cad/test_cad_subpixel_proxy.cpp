@@ -2,6 +2,7 @@
 
 #include "headless_utils.h"
 #include "cad/CadFramePlan.h"
+#include "cad/CadGpuResources.h"
 
 #include <Obol/cad/CadProjectedProxy.h>
 #include <Obol/cad/SoCADAssembly.h>
@@ -677,6 +678,57 @@ triangleDerivedProgressiveWireGrowsWithRequestedCut()
     root->unref();
     return rendered && coarse.exact && richer.exact &&
         coarse.lineCount == 3u && richer.lineCount == 6u;
+}
+
+bool
+assemblyDestructionReleasesGpuResourcesOnLiveContext()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    if (!render(renderer, root)) {
+        root->unref();
+        return false;
+    }
+    const size_t baseline =
+        Obol::internal::CadGpuResources::liveInstanceCountForTesting();
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("destruction-gpu-resource-part");
+    Obol::PartGeometryBuilder geometry;
+    geometry.wire = unitBox();
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "destruction GPU resource part");
+    Obol::InstanceRecord record;
+    record.part = part;
+    requireCadMutation(assembly->upsertInstance(
+        Obol::CadIdBuilder::instanceId("destruction-gpu-resource-instance"),
+        record), "destruction GPU resource instance");
+    if (!render(renderer, root) ||
+            Obol::internal::CadGpuResources::liveInstanceCountForTesting() !=
+                baseline + 1u) {
+        root->unref();
+        return false;
+    }
+
+    root->removeChild(assembly);
+    const bool deferred =
+        Obol::internal::CadGpuResources::liveInstanceCountForTesting() ==
+            baseline + 1u;
+    const bool drained = render(renderer, root) &&
+        Obol::internal::CadGpuResources::liveInstanceCountForTesting() ==
+            baseline;
+    root->unref();
+    return deferred && drained;
 }
 
 bool
@@ -4131,4 +4183,9 @@ TEST_F(CadSubpixelProxyContracts, SparseGeometryTopologyChangesRebuildPlan)
 TEST_F(CadSubpixelProxyContracts, TriangleDerivedProgressiveWireGrows)
 {
     EXPECT_TRUE(triangleDerivedProgressiveWireGrowsWithRequestedCut());
+}
+
+TEST_F(CadSubpixelProxyContracts, AssemblyDestructionReleasesGpuResources)
+{
+    EXPECT_TRUE(assemblyDestructionReleasesGpuResourcesOnLiveContext());
 }
