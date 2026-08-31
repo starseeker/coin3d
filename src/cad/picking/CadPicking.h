@@ -147,6 +147,11 @@ public:
     /** Number of instances in the BVH. */
     size_t size() const noexcept { return entries_.size(); }
 
+    /** Root bounds, or an empty box when the index has no entries. */
+    SbBox3f bounds() const noexcept {
+        return nodes_.empty() ? SbBox3f() : nodes_.front().bounds;
+    }
+
     /** Ray-AABB intersection test (public so other BVH classes can reuse it). */
     static bool rayIntersectsBox(const SbLine& ray, const SbBox3f& box) noexcept;
 

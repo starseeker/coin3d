@@ -11,6 +11,7 @@ set(CAD_SOURCES
     # Core CAD node
     ${CMAKE_CURRENT_SOURCE_DIR}/CadGeometryValidation.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadIds.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadPickTolerance.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadSceneMutation.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadSceneReplacement.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadSceneValidation.cpp
