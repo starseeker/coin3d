@@ -307,6 +307,8 @@ include(cmake/ObolIntegrationSources.cmake)
 
 obol_add_gtest(obol_unit_tests "unit" ${OBOL_UNIT_SOURCES})
 obol_add_gtest(obol_integration_tests "integration" ${OBOL_INTEGRATION_SOURCES})
+target_compile_definitions(obol_integration_tests PRIVATE
+    OBOL_CAD_ENABLE_SCENE_MUTATION_TEST_HOOKS)
 target_include_directories(obol_integration_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/cad
     ${PROJECT_SOURCE_DIR}/src/cad/picking

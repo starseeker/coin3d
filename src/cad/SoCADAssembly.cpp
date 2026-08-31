@@ -113,6 +113,7 @@ namespace Obol {
 namespace internal {
 
 namespace {
+#if defined(OBOL_CAD_ENABLE_SCENE_MUTATION_TEST_HOOKS)
 thread_local unsigned int cadSceneMutationFailurePoint = 0;
 
 void
@@ -123,13 +124,21 @@ cadCheckSceneMutationFailurePointForTesting(unsigned int point)
     cadSceneMutationFailurePoint = 0;
     throw std::bad_alloc();
 }
+#else
+void
+cadCheckSceneMutationFailurePointForTesting(unsigned int) noexcept
+{
+}
+#endif
 }
 
+#if defined(OBOL_CAD_ENABLE_SCENE_MUTATION_TEST_HOOKS)
 void
 cadSetSceneMutationFailurePointForTesting(unsigned int point) noexcept
 {
     cadSceneMutationFailurePoint = point;
 }
+#endif
 
 } // namespace internal
 } // namespace Obol
