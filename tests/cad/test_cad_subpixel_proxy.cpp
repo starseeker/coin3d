@@ -518,6 +518,90 @@ enclosingModelTransformMovesCadRendering()
 }
 
 bool
+sparseGeometryTopologyChangesRebuildPlan()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("sparse-topology-part");
+    Obol::PartGeometryBuilder initial;
+    initial.wire = unitBox();
+    initial.points.emplace();
+    initial.points->bounds.makeEmpty();
+    requireCadMutation(admitAndUpsertPart(assembly, part, initial),
+        "initial sparse topology");
+    Obol::InstanceRecord record;
+    record.part = part;
+    requireCadMutation(assembly->upsertInstance(
+        Obol::CadIdBuilder::instanceId("sparse-topology-instance"),
+        record), "sparse topology instance");
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    if (!render(renderer, root)) {
+        root->unref();
+        return false;
+    }
+    const uint64_t initialBuilds = assembly->framePlanBuildCount();
+
+    Obol::PartGeometryBuilder edgeSource;
+    edgeSource.shaded.emplace();
+    edgeSource.shaded->positions = {
+        SbVec3f(-0.5f, -0.5f, 0.0f),
+        SbVec3f(0.5f, -0.5f, 0.0f),
+        SbVec3f(0.0f, 0.5f, 0.0f)};
+    edgeSource.shaded->indices = {0u, 1u, 2u};
+    edgeSource.shaded->bounds = SbBox3f(
+        SbVec3f(-0.5f, -0.5f, 0.0f),
+        SbVec3f(0.5f, 0.5f, 0.0f));
+    const Obol::CadGeometryAdmission edgeAdmission =
+        Obol::cadAdmitPartGeometry(std::move(edgeSource));
+    if (!edgeAdmission) {
+        root->unref();
+        return false;
+    }
+
+    Obol::PartGeometryBuilder derived;
+    derived.wire.emplace();
+    derived.wire->triangleEdgeGeometry = edgeAdmission.geometry.shared();
+    derived.wire->triangleEdgeSegmentCount = 3u;
+    derived.wire->bounds = edgeAdmission.geometry.get()->shaded->bounds;
+    derived.points.emplace();
+    derived.points->bounds.makeEmpty();
+    requireCadMutation(admitAndUpsertPart(assembly, part, derived),
+        "derived-wire sparse topology");
+    if (!render(renderer, root) ||
+            assembly->framePlanBuildCount() != initialBuilds + 1u) {
+        root->unref();
+        return false;
+    }
+
+    Obol::PartGeometryBuilder populated;
+    populated.wire.emplace();
+    populated.wire->triangleEdgeGeometry = edgeAdmission.geometry.shared();
+    populated.wire->triangleEdgeSegmentCount = 3u;
+    populated.wire->bounds = edgeAdmission.geometry.get()->shaded->bounds;
+    populated.points.emplace();
+    populated.points->positions = {SbVec3f(0.0f, 0.0f, 0.0f)};
+    populated.points->bounds = SbBox3f(
+        SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(0.0f, 0.0f, 0.0f));
+    requireCadMutation(admitAndUpsertPart(assembly, part, populated),
+        "populated-point sparse topology");
+    const bool rebuilt = render(renderer, root) &&
+        assembly->framePlanBuildCount() == initialBuilds + 2u;
+    root->unref();
+    return rebuilt;
+}
+
+bool
 softwareSubpixelProxyAggregationContract()
 {
     /*
@@ -3959,4 +4043,9 @@ TEST_F(CadSubpixelProxyContracts, ClearReleasesCompiledPlanGeometry)
 TEST_F(CadSubpixelProxyContracts, EnclosingModelTransformMovesCadRendering)
 {
     EXPECT_TRUE(enclosingModelTransformMovesCadRendering());
+}
+
+TEST_F(CadSubpixelProxyContracts, SparseGeometryTopologyChangesRebuildPlan)
+{
+    EXPECT_TRUE(sparseGeometryTopologyChangesRebuildPlan());
 }
