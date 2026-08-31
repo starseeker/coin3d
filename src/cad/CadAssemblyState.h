@@ -300,7 +300,10 @@ struct CadRendererState {
      * serialize the complete renderer transaction for one assembly.  Separate
      * assemblies remain fully concurrent.
      */
-    mutable std::mutex renderMutex_;
+    /* Abort and progress callbacks run synchronously inside GLRender and may
+     * query the public render diagnostics.  Recursive acquisition preserves
+     * that supported callback path while still excluding other traversals. */
+    mutable std::recursive_mutex renderMutex_;
     std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
     bool lastDirectSoftwareWire_ = false;
     /* Increment immediately before retained/direct CAD drawing begins.  A
