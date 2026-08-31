@@ -1266,9 +1266,15 @@ bool SoCADAssemblyImpl::partGeometryPlanCompatible(
                 oldGeometry.shaded.has_value() !=
                 newGeometry.shaded.has_value())
             return false;
+        if (oldGeometry.points &&
+                oldGeometry.points->positions.empty() !=
+                    newGeometry.points->positions.empty())
+            return false;
         if (oldGeometry.wire &&
-                oldGeometry.wire->isProgressive() !=
-                    newGeometry.wire->isProgressive())
+                (oldGeometry.wire->isProgressive() !=
+                     newGeometry.wire->isProgressive() ||
+                 oldGeometry.wire->derivesTriangleEdges() !=
+                     newGeometry.wire->derivesTriangleEdges()))
             return false;
         if (oldGeometry.shaded &&
                 oldGeometry.shaded->isProgressive() !=
