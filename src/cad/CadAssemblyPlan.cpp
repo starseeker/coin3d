@@ -513,6 +513,9 @@ bool SoCADAssemblyImpl::patchCachedInstanceFlags(Obol::InstanceId instance) {
             return fail("instance-not-retained");
         const uint32_t visibleIndex = indexFound->second;
         auto& record = cachedPlan_.visibleInstances[visibleIndex];
+        const bool wasTransparent =
+            !(record.flags & Obol::internal::CadInstanceHidden) &&
+            record.rgba[3] < 255;
         const bool wasProxyProtected =
             (record.flags &
                 Obol::internal::CadInstancePointProxyProtected) != 0;
@@ -530,6 +533,15 @@ bool SoCADAssemblyImpl::patchCachedInstanceFlags(Obol::InstanceId instance) {
         if (instanceFound->second.lodStructuralProxy)
             flags |= Obol::internal::CadInstanceLodStructuralProxy;
         record.flags = flags;
+        const bool isTransparent =
+            !(record.flags & Obol::internal::CadInstanceHidden) &&
+            record.rgba[3] < 255;
+        if (wasTransparent != isTransparent) {
+            if (isTransparent)
+                ++cachedPlan_.transparentVisibleInstanceCount;
+            else if (cachedPlan_.transparentVisibleInstanceCount)
+                --cachedPlan_.transparentVisibleInstanceCount;
+        }
         updateStructuralProjectionForVisible(visibleIndex);
         if (cadDebugEnabled()) {
             std::fprintf(stderr,
@@ -836,6 +848,9 @@ void SoCADAssemblyImpl::finishSparsePresentationPatch(bool visibilityChanged) {
 
             if (!isHidden && !idata.worldBounds.isEmpty())
                 plan.worldBounds.extendBy(idata.worldBounds);
+
+            if (!isHidden && vi.rgba[3] < 255)
+                ++plan.transparentVisibleInstanceCount;
 
             plan.visibleInstances.push_back(std::move(vi));
         };
@@ -1397,6 +1412,10 @@ bool SoCADAssemblyImpl::partGeometryPlanCompatible(
          */
         for (const uint32_t oldIndex : replacedIndices) {
             auto& oldVisible = cachedPlan_.visibleInstances[oldIndex];
+            if (!(oldVisible.flags & CadInstanceHidden) &&
+                    oldVisible.rgba[3] < 255 &&
+                    cachedPlan_.transparentVisibleInstanceCount)
+                --cachedPlan_.transparentVisibleInstanceCount;
             oldVisible.flags |= CadInstanceHidden;
             progressiveShadedPlanGroupByInstance_.erase(
                 oldVisible.instanceId);
@@ -1506,6 +1525,8 @@ bool SoCADAssemblyImpl::partGeometryPlanCompatible(
             visible.partIndex += static_cast<uint32_t>(partBase);
             cachedPlan_.visibleInstances.push_back(std::move(visible));
         }
+        cachedPlan_.transparentVisibleInstanceCount +=
+            delta.transparentVisibleInstanceCount;
         for (CadPartBinding& binding : delta.partBindings)
             cachedPlan_.partBindings.push_back(std::move(binding));
         const auto appendItems = [visibleBase, partBase](
@@ -1689,6 +1710,9 @@ bool SoCADAssemblyImpl::patchCachedInstancePartRebind(
             return false;
 
         const InstanceData& data = retained->second;
+        const bool wasTransparent =
+            !(visible.flags & CadInstanceHidden) &&
+            visible.rgba[3] < 255;
         std::memcpy(
             visible.transform.data(), data.localToRoot[0],
             16 * sizeof(float));
@@ -1710,6 +1734,15 @@ bool SoCADAssemblyImpl::patchCachedInstancePartRebind(
             (data.lodStructuralProxy ?
                 CadInstanceLodStructuralProxy : 0u);
         visible.lodCut = data.lodCut;
+        const bool isTransparent =
+            !(visible.flags & CadInstanceHidden) &&
+            visible.rgba[3] < 255;
+        if (wasTransparent != isTransparent) {
+            if (isTransparent)
+                ++cachedPlan_.transparentVisibleInstanceCount;
+            else if (cachedPlan_.transparentVisibleInstanceCount)
+                --cachedPlan_.transparentVisibleInstanceCount;
+        }
         if (!data.worldBounds.isEmpty()) {
             SbVec3f minimum, maximum;
             data.worldBounds.getBounds(minimum, maximum);

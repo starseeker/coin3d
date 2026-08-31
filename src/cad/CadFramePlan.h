@@ -433,6 +433,17 @@ struct CadFramePlan {
     std::vector<CadVisibleInstance> visibleInstances;
 
     /**
+     * Number of non-hidden occurrences whose packed alpha is translucent.
+     * Maintained with the retained plan so a steady render does not rescan
+     * every occurrence merely to decide whether blending is needed.
+     */
+    size_t transparentVisibleInstanceCount = 0;
+
+    bool hasVisibleTransparency() const noexcept {
+        return transparentVisibleInstanceCount != 0;
+    }
+
+    /**
      * Direct part bindings referenced by visibleInstances and draw items.
      * The shared ownership makes payload access valid for the complete plan
      * lifetime, including camera-only frames with no scene traversal.

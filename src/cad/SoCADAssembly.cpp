@@ -1995,12 +1995,8 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 
     const GLboolean lightingEnabled = glue->glIsEnabled(GL_LIGHTING);
     const GLboolean light0Enabled = glue->glIsEnabled(GL_LIGHT0);
-    const bool hasTransparency = std::any_of(
-        impl_->cachedPlan_.visibleInstances.begin(),
-        impl_->cachedPlan_.visibleInstances.end(),
-        [](const Obol::internal::CadVisibleInstance& instance) {
-            return instance.rgba[3] < 255;
-        });
+    const bool hasTransparency =
+        impl_->cachedPlan_.hasVisibleTransparency();
     const GLboolean blendEnabled = glue->glIsEnabled(GL_BLEND);
     GLint blendSource = GL_ONE;
     GLint blendDestination = GL_ZERO;
