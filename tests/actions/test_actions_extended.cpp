@@ -77,6 +77,8 @@
 
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoCube.h>
+
+#include <limits>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoCone.h>
 #include <Inventor/nodes/SoTranslation.h>
@@ -192,6 +194,32 @@ TEST(ActionsExtended, SoGetPrimitiveCountActionAddNumTrianglesLinesPoints)
                 (action.getPointCount()    >= 3)  &&
                 (action.getTextCount()     >= 2)  &&
                 (action.getImageCount()    >= 1)) << "addNum* methods failed";
+}
+
+TEST(ActionsExtended, SoGetPrimitiveCountActionSaturatesLargeTotals)
+{
+    SoGetPrimitiveCountAction action;
+    const int nearLimit = std::numeric_limits<int>::max() - 1;
+    action.addNumTriangles(nearLimit);
+    action.addNumLines(nearLimit);
+    action.addNumPoints(nearLimit);
+    action.addNumText(nearLimit);
+    action.addNumImage(nearLimit);
+
+    action.addNumTriangles(10);
+    action.addNumLines(10);
+    action.incNumPoints();
+    action.incNumPoints();
+    action.incNumText();
+    action.incNumText();
+    action.incNumImage();
+    action.incNumImage();
+
+    EXPECT_EQ(action.getTriangleCount(), std::numeric_limits<int>::max());
+    EXPECT_EQ(action.getLineCount(), std::numeric_limits<int>::max());
+    EXPECT_EQ(action.getPointCount(), std::numeric_limits<int>::max());
+    EXPECT_EQ(action.getTextCount(), std::numeric_limits<int>::max());
+    EXPECT_EQ(action.getImageCount(), std::numeric_limits<int>::max());
 }
 
 // =======================================================================

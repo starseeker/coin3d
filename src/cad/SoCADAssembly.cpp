@@ -2367,7 +2367,16 @@ SoCADAssembly::getPrimitiveCount(SoGetPrimitiveCountAction* action)
 {
     // Count total segments and triangles across all visible instances
     int totalLines = 0;
-    int totalTris  = 0;
+    int totalTris = 0;
+    int totalPoints = 0;
+    const auto addCount = [](int& total, size_t amount) {
+        const size_t remaining = static_cast<size_t>(
+            std::numeric_limits<int>::max() - total);
+        if (amount >= remaining)
+            total = std::numeric_limits<int>::max();
+        else
+            total += static_cast<int>(amount);
+    };
     for (const auto& [iid, idata] : impl_->instances_) {
         if (impl_->hidden_.count(iid))
             continue;
@@ -2375,19 +2384,18 @@ SoCADAssembly::getPrimitiveCount(SoGetPrimitiveCountAction* action)
         if (geomIt == impl_->parts_.end() || !geomIt->second) continue;
         const auto& geom = *geomIt->second;
         if (geom.points)
-            action->addNumPoints(static_cast<int>(geom.points->positions.size()));
+            addCount(totalPoints, geom.points->positions.size());
         if (geom.wire) {
-            totalLines += static_cast<int>(geom.wire->segmentCount());
+            addCount(totalLines, geom.wire->segmentCount());
             for (const auto& poly : geom.wire->polylines) {
-                if (poly.points.size() >= 2) {
-                    totalLines += static_cast<int>(poly.points.size() - 1);
-                }
+                if (poly.points.size() >= 2)
+                    addCount(totalLines, poly.points.size() - 1);
             }
         }
-        if (geom.shaded) {
-            totalTris += static_cast<int>(geom.shaded->indices.size() / 3);
-        }
+        if (geom.shaded)
+            addCount(totalTris, geom.shaded->indices.size() / 3);
     }
+    action->addNumPoints(totalPoints);
     action->addNumLines(totalLines);
     action->addNumTriangles(totalTris);
 }

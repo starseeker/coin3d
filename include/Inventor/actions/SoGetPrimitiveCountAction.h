@@ -50,7 +50,7 @@ class SbViewportRegion;
   SoGetPrimitiveCountAction traverses the scene graph and tallies the
   total number of triangles, lines, and points contributed by each
   geometry node.  The results can be used for level-of-detail decisions
-  or profiling.
+  or profiling. Counts saturate at the limits of int instead of wrapping.
 
   \sa SoAction, SoGetBoundingBoxAction
 */

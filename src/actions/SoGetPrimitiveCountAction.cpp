@@ -58,6 +58,28 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/elements/SoDecimationPercentageElement.h>
 #include <Inventor/elements/SoDecimationTypeElement.h>
+
+#include <limits>
+
+namespace {
+
+void
+saturatingAddPrimitiveCount(int& total, int amount) noexcept
+{
+  if (amount > 0 &&
+      total > std::numeric_limits<int>::max() - amount) {
+    total = std::numeric_limits<int>::max();
+  }
+  else if (amount < 0 &&
+           total < std::numeric_limits<int>::min() - amount) {
+    total = std::numeric_limits<int>::min();
+  }
+  else {
+    total += amount;
+  }
+}
+
+} // namespace
 #include <Inventor/elements/SoViewportRegionElement.h>
 
 #include "actions/SoSubActionP.h"
@@ -281,7 +303,7 @@ SoGetPrimitiveCountAction::getDecimationPercentage(void)
 void
 SoGetPrimitiveCountAction::addNumTriangles(const int num)
 {
-  this->numtris += num;
+  saturatingAddPrimitiveCount(this->numtris, num);
 }
 
 /*!
@@ -291,7 +313,7 @@ SoGetPrimitiveCountAction::addNumTriangles(const int num)
 void
 SoGetPrimitiveCountAction::addNumLines(const int num)
 {
-  this->numlines += num;
+  saturatingAddPrimitiveCount(this->numlines, num);
 }
 
 /*!
@@ -301,7 +323,7 @@ SoGetPrimitiveCountAction::addNumLines(const int num)
 void
 SoGetPrimitiveCountAction::addNumPoints(const int num)
 {
-  this->numpoints += num;
+  saturatingAddPrimitiveCount(this->numpoints, num);
 }
 
 /*!
@@ -311,7 +333,7 @@ SoGetPrimitiveCountAction::addNumPoints(const int num)
 void
 SoGetPrimitiveCountAction::addNumText(const int num)
 {
-  this->numtexts += num;
+  saturatingAddPrimitiveCount(this->numtexts, num);
 }
 
 /*!
@@ -321,7 +343,7 @@ SoGetPrimitiveCountAction::addNumText(const int num)
 void
 SoGetPrimitiveCountAction::addNumImage(const int num)
 {
-  this->numimages += num;
+  saturatingAddPrimitiveCount(this->numimages, num);
 }
 
 /*!
@@ -331,7 +353,7 @@ SoGetPrimitiveCountAction::addNumImage(const int num)
 void
 SoGetPrimitiveCountAction::incNumTriangles(void)
 {
-  this->numtris++;
+  saturatingAddPrimitiveCount(this->numtris, 1);
 }
 
 /*!
@@ -341,7 +363,7 @@ SoGetPrimitiveCountAction::incNumTriangles(void)
 void
 SoGetPrimitiveCountAction::incNumLines(void)
 {
-  this->numlines++;
+  saturatingAddPrimitiveCount(this->numlines, 1);
 }
 
 /*!
@@ -351,7 +373,7 @@ SoGetPrimitiveCountAction::incNumLines(void)
 void
 SoGetPrimitiveCountAction::incNumPoints(void)
 {
-  this->numpoints++;
+  saturatingAddPrimitiveCount(this->numpoints, 1);
 }
 
 /*!
@@ -361,7 +383,7 @@ SoGetPrimitiveCountAction::incNumPoints(void)
 void
 SoGetPrimitiveCountAction::incNumText(void)
 {
-  this->numtexts++;
+  saturatingAddPrimitiveCount(this->numtexts, 1);
 }
 
 /*!
@@ -371,7 +393,7 @@ SoGetPrimitiveCountAction::incNumText(void)
 void
 SoGetPrimitiveCountAction::incNumImage(void)
 {
-  this->numimages++;
+  saturatingAddPrimitiveCount(this->numimages, 1);
 }
 
 
