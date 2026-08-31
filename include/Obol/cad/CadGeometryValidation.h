@@ -105,10 +105,11 @@ OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
 /**
  * Immutable geometry which has passed every renderer-visible invariant.
  *
- * The token is cheap to copy between views and presentation batches.  Its
- * constructor is deliberately private: shared geometry enters a CAD scene
- * only through cadAdmitPartGeometry(), so a renderer never has to rescan a
- * large PoP generation on the traversal thread.
+ * The token is cheap to copy between views and presentation batches.  A
+ * non-null token can only refer to PartGeometry, whose private constructor is
+ * restricted to cadAdmitPartGeometry().  The public retaining constructor is
+ * therefore safe for cache restoration without rescanning a large PoP
+ * generation on the traversal thread.
  */
 class ValidatedPartGeometry {
 public:
