@@ -141,6 +141,14 @@ using PartSet = std::unordered_set<Obol::PartId,
 using InstanceSet = std::unordered_set<Obol::InstanceId,
     std::hash<Obol::InstanceId>>;
 
+void
+advanceNonzeroRevision(uint64_t& revision) noexcept
+{
+    ++revision;
+    if (revision == 0)
+        revision = 1;
+}
+
 /*
  * Sparse mutations retain the strong exception guarantee without cloning the
  * complete scene.  Capture only authoritative records which the requested
@@ -595,6 +603,7 @@ void SoCADAssembly::endUpdate()
 void
 SoCADAssembly::clear()
 {
+    const bool protectionChanged = !impl_->pointProxyProtected_.empty();
     impl_->parts_.clear();
     impl_->subpixelProxyCorners_.clear();
     impl_->partGeneration_.clear();
@@ -624,6 +633,11 @@ SoCADAssembly::clear()
      * An explicitly empty assembly must release that ownership immediately,
      * even if no later render arrives to replace the dirty plan. */
     impl_->cachedPlan_ = Obol::internal::CadFramePlan();
+    if (protectionChanged) {
+        advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
+        impl_->classifiedPointProxyProtectionRevision_ =
+            impl_->pointProxyProtectionRevision_;
+    }
     impl_->progressiveShadedPlanGroups_.clear();
     impl_->progressiveShadedPlanGroupByInstance_.clear();
     impl_->progressivePlanIndexByInstance_.clear();
@@ -1402,7 +1416,8 @@ SoCADAssembly::removeInstance(Obol::InstanceId iid)
     impl_->selected_.erase(iid);
     impl_->hidden_.erase(iid);
     impl_->unpickable_.erase(iid);
-    impl_->pointProxyProtected_.erase(iid);
+    if (impl_->pointProxyProtected_.erase(iid))
+        advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
@@ -1567,9 +1582,7 @@ SoCADAssembly::setPointProxyProtectedInstances(
         if (!impl_->pointProxyProtected_.count(id))
             changed.push_back(id);
     impl_->pointProxyProtected_.swap(next);
-    ++impl_->pointProxyProtectionRevision_;
-    if (impl_->pointProxyProtectionRevision_ == 0)
-        impl_->pointProxyProtectionRevision_ = 1;
+    advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
     bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
     for (const Obol::InstanceId& id : changed)
         if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
@@ -1611,9 +1624,7 @@ SoCADAssembly::adoptPointProxyProtectedInstances(
         std::hash<Obol::InstanceId>>&& ids)
 {
     impl_->pointProxyProtected_.swap(ids);
-    ++impl_->pointProxyProtectionRevision_;
-    if (impl_->pointProxyProtectionRevision_ == 0)
-        impl_->pointProxyProtectionRevision_ = 1;
+    advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
     /* Protection affects only view-local point classification.  Keep the
      * immutable geometry/instance plan and its GPU resources intact.  The
      * classifier builds the new mask and aggregate point list into scratch
