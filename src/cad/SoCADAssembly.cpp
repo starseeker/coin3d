@@ -1565,6 +1565,9 @@ SoCADAssembly::setPointProxyProtectedInstances(
         if (!impl_->pointProxyProtected_.count(id))
             changed.push_back(id);
     impl_->pointProxyProtected_.swap(next);
+    ++impl_->pointProxyProtectionRevision_;
+    if (impl_->pointProxyProtectionRevision_ == 0)
+        impl_->pointProxyProtectionRevision_ = 1;
     bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
     for (const Obol::InstanceId& id : changed)
         if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
@@ -1579,6 +1582,8 @@ SoCADAssembly::setPointProxyProtectedInstances(
         }
         impl_->refreshWireProxyParts(parts);
         impl_->finishSparsePresentationPatch();
+        impl_->classifiedPointProxyProtectionRevision_ =
+            impl_->pointProxyProtectionRevision_;
     } else {
         impl_->planDirty_ = true;
         impl_->planDirtyReason_ = "point-proxy-protection-set";
@@ -1604,6 +1609,9 @@ SoCADAssembly::adoptPointProxyProtectedInstances(
         std::hash<Obol::InstanceId>>&& ids)
 {
     impl_->pointProxyProtected_.swap(ids);
+    ++impl_->pointProxyProtectionRevision_;
+    if (impl_->pointProxyProtectionRevision_ == 0)
+        impl_->pointProxyProtectionRevision_ = 1;
     /* Protection affects only view-local point classification.  Keep the
      * immutable geometry/instance plan and its GPU resources intact.  The
      * classifier builds the new mask and aggregate point list into scratch
@@ -1614,6 +1622,18 @@ SoCADAssembly::adoptPointProxyProtectedInstances(
     impl_->subpixelProxyBuildActive_ = false;
     impl_->subpixelProxyViewValid_ = false;
     if (!impl_->updateDepth_) touch();
+}
+
+uint64_t
+SoCADAssembly::pointProxyProtectionRevision() const
+{
+    return impl_->pointProxyProtectionRevision_;
+}
+
+uint64_t
+SoCADAssembly::lastClassifiedPointProxyProtectionRevision() const
+{
+    return impl_->classifiedPointProxyProtectionRevision_;
 }
 
 // --- Query -----------------------------------------------------------------
