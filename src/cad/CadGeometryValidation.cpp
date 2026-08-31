@@ -304,7 +304,8 @@ validateMesh(const Obol::TriMesh& mesh) noexcept
         const Obol::ProgressiveTriangleCluster& cluster =
             mesh.progressiveClusters[clusterIndex];
         if (!finite(cluster.bounds) ||
-                cluster.residentCut >= mesh.progressiveCuts.size())
+                (cluster.residentCut != Obol::ProgressiveCutUnspecified &&
+                 cluster.residentCut >= mesh.progressiveCuts.size()))
             return failure(CadGeometryError::InvalidClusterLayout,
                 clusterIndex);
         uint8_t priorActivation = 0;
@@ -452,7 +453,8 @@ validateWire(const Obol::WireRep& wire) noexcept
         const Obol::ProgressiveWireCluster& cluster =
             wire.progressiveClusters[clusterIndex];
         if (!finite(cluster.bounds) ||
-                cluster.residentCut >= wire.progressiveCuts.size())
+                (cluster.residentCut != Obol::ProgressiveCutUnspecified &&
+                 cluster.residentCut >= wire.progressiveCuts.size()))
             return failure(CadGeometryError::InvalidClusterLayout,
                 clusterIndex);
         uint8_t priorActivation = 0;
