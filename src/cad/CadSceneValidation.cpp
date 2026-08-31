@@ -80,13 +80,18 @@ sceneAffine(const SbMatrix& matrix) noexcept
 bool
 sceneInvertible(const SbMatrix& matrix) noexcept
 {
-    double maximum = 0.0;
-    for (int row = 0; row != 3; ++row)
-        for (int column = 0; column != 3; ++column)
-            maximum = (std::max)(maximum,
-                std::abs(static_cast<double>(matrix[row][column])));
-    if (maximum == 0.0)
-        return false;
+    double rowNormProduct = 1.0;
+    for (int row = 0; row != 3; ++row) {
+        double squaredNorm = 0.0;
+        for (int column = 0; column != 3; ++column) {
+            const double value = static_cast<double>(matrix[row][column]);
+            squaredNorm += value * value;
+        }
+        const double rowNorm = std::sqrt(squaredNorm);
+        if (!(rowNorm > 0.0) || !std::isfinite(rowNorm))
+            return false;
+        rowNormProduct *= rowNorm;
+    }
     const double determinant =
         static_cast<double>(matrix[0][0]) *
             (static_cast<double>(matrix[1][1]) * matrix[2][2] -
@@ -97,9 +102,13 @@ sceneInvertible(const SbMatrix& matrix) noexcept
         static_cast<double>(matrix[0][2]) *
             (static_cast<double>(matrix[1][0]) * matrix[2][1] -
              static_cast<double>(matrix[1][1]) * matrix[2][0]);
-    const double scale = maximum * maximum * maximum;
+    /* Normalize by Hadamard's determinant bound.  A maximum-element cubed
+     * scale incorrectly classifies valid anisotropic CAD transforms as
+     * singular (for example, a long thin cable represented by a scaled unit
+     * primitive).  The row-norm product remains scale invariant while still
+     * detecting nearly dependent rows. */
     return std::abs(determinant) >
-        16.0 * std::numeric_limits<float>::epsilon() * scale;
+        16.0 * std::numeric_limits<float>::epsilon() * rowNormProduct;
 }
 
 Obol::CadSceneValidation
