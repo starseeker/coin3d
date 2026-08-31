@@ -1044,4 +1044,46 @@ TEST(CadInstanceRecords, PointProtectionRevisionTracksImplicitRemoval)
     assembly->unref();
 }
 
+TEST(CadInstanceRecords, UnpickableSetIgnoresUnknownIdsAndNoOpUpdates)
+{
+    SoCADAssembly::initClass();
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.setPriority(0);
+    changeSensor.attach(assembly);
+
+    const Obol::InstanceId missing =
+        Obol::CadIdBuilder::instanceId("unpickable-missing");
+    assembly->setUnpickableInstances({missing});
+    EXPECT_EQ(changeCount, 0u);
+
+    Obol::PartGeometryBuilder builder;
+    builder.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const Obol::CadGeometryAdmission geometry =
+        Obol::cadAdmitPartGeometry(std::move(builder));
+    ASSERT_TRUE(geometry);
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("unpickable-part");
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("unpickable-instance");
+    Obol::InstanceRecord record;
+    record.part = part;
+    ASSERT_TRUE(assembly->replaceScene(
+        {{part, geometry.geometry, false}}, {{instance, record}}));
+
+    const unsigned int beforePolicy = changeCount;
+    assembly->setUnpickableInstances({missing, instance, instance});
+    EXPECT_GT(changeCount, beforePolicy);
+    const unsigned int afterPolicy = changeCount;
+    assembly->setUnpickableInstances({instance, missing});
+    EXPECT_EQ(changeCount, afterPolicy);
+
+    changeSensor.detach();
+    assembly->unref();
+}
+
 } // namespace
