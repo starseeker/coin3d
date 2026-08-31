@@ -985,4 +985,57 @@ TEST(CadInstanceRecords, SparseMutationRollsBackAllocationFailure)
     assembly->unref();
 }
 
+TEST(CadInstanceRecords, PointProtectionRevisionTracksImplicitRemoval)
+{
+    SoCADAssembly::initClass();
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->ref();
+
+    Obol::PartGeometryBuilder builder;
+    builder.conservativeBounds = SbBox3f(
+        SbVec3f(-1.0f, -1.0f, -1.0f), SbVec3f(1.0f, 1.0f, 1.0f));
+    const Obol::CadGeometryAdmission geometry =
+        Obol::cadAdmitPartGeometry(std::move(builder));
+    ASSERT_TRUE(geometry);
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("protection-revision-part");
+    const Obol::InstanceId first =
+        Obol::CadIdBuilder::instanceId("protection-revision-first");
+    const Obol::InstanceId second =
+        Obol::CadIdBuilder::instanceId("protection-revision-second");
+    Obol::InstanceRecord record;
+    record.part = part;
+    ASSERT_TRUE(assembly->replaceScene(
+        {{part, geometry.geometry, false}},
+        {{first, record}, {second, record}}));
+
+    assembly->setPointProxyProtectedInstances({first, second});
+    const uint64_t beforeRemove =
+        assembly->pointProxyProtectionRevision();
+    assembly->removeInstance(first);
+    EXPECT_NE(assembly->pointProxyProtectionRevision(), beforeRemove);
+    EXPECT_EQ(assembly->pointProxyProtectedInstances(),
+        std::vector<Obol::InstanceId>({second}));
+
+    const uint64_t beforeClear =
+        assembly->pointProxyProtectionRevision();
+    assembly->clear();
+    EXPECT_NE(assembly->pointProxyProtectionRevision(), beforeClear);
+    EXPECT_EQ(assembly->lastClassifiedPointProxyProtectionRevision(),
+        assembly->pointProxyProtectionRevision());
+    EXPECT_TRUE(assembly->pointProxyProtectedInstances().empty());
+
+    ASSERT_TRUE(assembly->replaceScene(
+        {{part, geometry.geometry, false}}, {{second, record}}));
+    assembly->setPointProxyProtectedInstances({second});
+    const uint64_t beforeReplace =
+        assembly->pointProxyProtectionRevision();
+    ASSERT_TRUE(assembly->replaceScene(
+        {{part, geometry.geometry, false}}, {{first, record}}));
+    EXPECT_NE(assembly->pointProxyProtectionRevision(), beforeReplace);
+    EXPECT_TRUE(assembly->pointProxyProtectedInstances().empty());
+
+    assembly->unref();
+}
+
 } // namespace
