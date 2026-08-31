@@ -129,6 +129,11 @@ SoGetPrimitiveCountAction::commonConstructor(const SbViewportRegion & vp)
   this->textastris = TRUE;
   this->approx = FALSE;
   this->nonvertexastris = TRUE;
+  this->numtris = 0;
+  this->numlines = 0;
+  this->numpoints = 0;
+  this->numtexts = 0;
+  this->numimages = 0;
   this->pimpl->viewport = vp;
 }
 
