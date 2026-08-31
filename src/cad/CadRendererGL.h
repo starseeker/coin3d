@@ -113,7 +113,9 @@ public:
      * @param plan       Pre-built frame plan from SoCADAssembly::buildFramePlan().
      * @param assembly   The owning node (for geometry access).
      * @param glue       Active GL dispatch context (from sogl_current_render_glue()).
-     * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
+     * @param viewProj   Assembly-model/view/projection matrix (OI row-major,
+     *                   GL_FALSE upload).
+     * @param assemblyModel Enclosing scene-graph model matrix.
      * @param viewMatrix Active model-view matrix before local instance transforms.
      * @param projectionMatrix Active projection matrix.
      * @param viewVolume Camera projection point/direction used to orient
@@ -126,6 +128,7 @@ public:
                 SoGLRenderAction*    action,
                 const SoGLContext*   glue,
                 const SbMatrix&      viewProj,
+                const SbMatrix&      assemblyModel,
                 const SbMatrix&      viewMatrix,
                 const SbMatrix&      projectionMatrix,
                 const SbViewVolume&  viewVolume,
@@ -322,6 +325,8 @@ private:
 
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
+    /// Upload the enclosing scene-graph transform used by shaded programs.
+    void uploadAssemblyTransform(const SoGLContext* glue, GLuint program);
     /// Upload environment ambient RGB x intensity to a shaded program.
     void uploadAmbientLight(const SoGLContext* glue, GLuint program);
     /** Program compatibility-profile lighting from the same explicit snapshot
@@ -396,6 +401,7 @@ private:
     bool lightsSupplied_ = false;
     std::vector<GlLight> lights_;
     float ambientLight_[3] = {0.3f, 0.3f, 0.3f};
+    SbMatrix assemblyModel_;
 
     // GPU objects are namespaced by GL context.  A renderer may be traversed
     // by multiple system-GL or offscreen contexts during its lifetime.
