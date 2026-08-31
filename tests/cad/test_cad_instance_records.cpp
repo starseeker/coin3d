@@ -128,6 +128,9 @@ TEST(CadInstanceRecords, ProgressiveClusterRangesRequireTheirActivationData)
 
     mesh.progressiveClusters[0].ranges[0].activationCut = 1;
     EXPECT_TRUE(Obol::cadValidatePartGeometry(triangles));
+    mesh.progressiveClusters[0].residentCut =
+        Obol::ProgressiveCutUnspecified;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(triangles));
 
     Obol::PartGeometryBuilder wires;
     wires.wire.emplace();
@@ -150,6 +153,9 @@ TEST(CadInstanceRecords, ProgressiveClusterRangesRequireTheirActivationData)
     EXPECT_EQ(result.error, Obol::CadGeometryError::InvalidClusterRange);
 
     wire.progressiveClusters[0].ranges[0].activationCut = 1;
+    EXPECT_TRUE(Obol::cadValidatePartGeometry(wires));
+    wire.progressiveClusters[0].residentCut =
+        Obol::ProgressiveCutUnspecified;
     EXPECT_TRUE(Obol::cadValidatePartGeometry(wires));
 }
 
