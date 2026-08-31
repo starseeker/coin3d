@@ -49,6 +49,7 @@
 #include <Obol/cad/SoCADViewState.h>
 #include "CadAssemblyImpl.h"
 #include "CadFramePlan.h"
+#include "CadPickTolerance.h"
 #include "CadRendererGL.h"
 #include "CadSceneMutationTestHooks.h"
 #include "CadSoftwareWire.h"
@@ -2183,43 +2184,18 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             Obol::CadPickMode::Edge : Obol::CadPickMode::Triangle;
     }
 
-    // Derive an assembly-space edge-pick tolerance from the screen-space field.
-    // Approximate: use the view volume to find how large one pixel is in world
-    // coordinates at the assembly centre, then scale by the user-specified tolerance.
+    // Convert the screen-space field to assembly-local units.  The instance
+    // BVH already owns the exact pickable aggregate bounds, avoiding an O(N)
+    // occurrence scan on every otherwise-clean pick.
     float toleranceWS = viewState.edgePickTolerancePixels * 0.01f;
-    {
-        SoState* state = action->getState();
-        if (state) {
-            const SbViewportRegion& vpr =
-                SoViewportRegionElement::get(state);
-            const SbViewVolume vv = SoViewVolumeElement::get(state);
-            const float vpH = static_cast<float>(
-                vpr.getViewportSizePixels()[1]);
-            if (vpH > 0.0f && vv.getNearDist() > 0.0f) {
-                // Pick ray distance to assembly centre (or fallback to near*10)
-                SbBox3f bbox;
-                for (const auto& [iid, idata] : impl_->instances_) {
-                    if (impl_->hidden_.count(iid) ||
-                            impl_->unpickable_.count(iid))
-                        continue;
-                    if (!idata.worldBounds.isEmpty())
-                        bbox.extendBy(idata.worldBounds);
-                }
-                float dist = vv.getNearDist() * 10.0f;
-                if (!bbox.isEmpty()) {
-                    dist = (bbox.getCenter() - pickRay.getPosition())
-                               .dot(pickRay.getDirection());
-                    dist = std::max(vv.getNearDist(), dist);
-                }
-                // Height of the view volume at that distance (perspective or ortho)
-                float nearH  = vv.getHeight();          // at nearDist for persp
-                float nearD  = vv.getNearDist();
-                float pixelH = (nearH / vpH) * (dist / nearD);
-                toleranceWS = std::max(toleranceWS,
-                    viewState.edgePickTolerancePixels * pixelH);
-            }
-        }
-    }
+    SoState* state = action->getState();
+    if (state)
+        toleranceWS = Obol::internal::cadEdgePickTolerance(
+            SoViewVolumeElement::get(state),
+            SoViewportRegionElement::get(state).getViewportSizePixels(),
+            impl_->instanceBvh_.bounds(),
+            SoModelMatrixElement::get(state),
+            viewState.edgePickTolerancePixels);
 
     Obol::picking::CadPickResult result;
     const int configuredCutCeiling = viewState.progressiveCutCeiling;

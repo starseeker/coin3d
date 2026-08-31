@@ -2,6 +2,7 @@
 #include <Obol/cad/SoCADAssembly.h>
 
 #include "CadPicking.h"
+#include "cad/CadPickTolerance.h"
 
 #include <gtest/gtest.h>
 
@@ -113,6 +114,42 @@ TEST(CadPicking, InstanceBvhQueriesOnlyIntersectedInstances)
     EXPECT_EQ(hit.front()->instanceId, first);
     EXPECT_TRUE(bvh.query(
         SbLine(SbVec3f(10, 10, 0), SbVec3f(11, 10, 0))).empty());
+}
+
+TEST(CadPicking, ScreenToleranceRespectsProjectionAndAssemblyScale)
+{
+    const SbVec2s viewport(400, 400);
+    SbMatrix identity;
+    identity.makeIdentity();
+    const SbBox3f nearBounds(
+        SbVec3f(-1.0f, -1.0f, -1.0f),
+        SbVec3f(1.0f, 1.0f, -1.0f));
+    const SbBox3f farBounds(
+        SbVec3f(-1.0f, -1.0f, -10.0f),
+        SbVec3f(1.0f, 1.0f, -10.0f));
+
+    SbViewVolume orthographic;
+    orthographic.ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.1f, 100.0f);
+    const float orthoNear = Obol::internal::cadEdgePickTolerance(
+        orthographic, viewport, nearBounds, identity, 5.0f);
+    const float orthoFar = Obol::internal::cadEdgePickTolerance(
+        orthographic, viewport, farBounds, identity, 5.0f);
+    EXPECT_NEAR(orthoNear, 0.05f, 1.0e-6f);
+    EXPECT_NEAR(orthoFar, orthoNear, 1.0e-6f);
+
+    SbViewVolume perspective;
+    perspective.perspective(1.0f, 1.0f, 0.1f, 100.0f);
+    const float perspectiveNear = Obol::internal::cadEdgePickTolerance(
+        perspective, viewport, nearBounds, identity, 5.0f);
+    const float perspectiveFar = Obol::internal::cadEdgePickTolerance(
+        perspective, viewport, farBounds, identity, 5.0f);
+    EXPECT_NEAR(perspectiveFar / perspectiveNear, 10.0f, 1.0e-4f);
+
+    SbMatrix doubled;
+    doubled.setScale(SbVec3f(2.0f, 2.0f, 2.0f));
+    const float scaled = Obol::internal::cadEdgePickTolerance(
+        orthographic, viewport, nearBounds, doubled, 5.0f);
+    EXPECT_NEAR(scaled, orthoNear * 0.5f, 1.0e-6f);
 }
 
 TEST(CadPicking, EdgeBvhReturnsOnlySegmentsInsideTolerance)
