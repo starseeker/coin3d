@@ -149,6 +149,70 @@ advanceNonzeroRevision(uint64_t& revision) noexcept
         revision = 1;
 }
 
+/* SoCADAssembly opens a private Coin state frame because it bypasses the
+ * normal SoShape render path.  Keep that frame balanced on every return and
+ * during allocation failures from retained-plan preparation. */
+class CadTraversalStateGuard {
+public:
+    explicit CadTraversalStateGuard(SoState *state) : state_(state)
+    {
+        state_->push();
+    }
+
+    ~CadTraversalStateGuard()
+    {
+        SoGLLazyElement::getInstance(state_)->reset(
+            state_, SoLazyElement::ALL_MASK);
+        state_->pop();
+    }
+
+    CadTraversalStateGuard(const CadTraversalStateGuard&) = delete;
+    CadTraversalStateGuard& operator=(const CadTraversalStateGuard&) = delete;
+
+private:
+    SoState *state_;
+};
+
+/* Blending is enabled outside CadRendererGL's own raw-state guard.  Restore
+ * it independently so building light vectors or entering another executor
+ * cannot leak CAD-local blending state when an exception unwinds the frame. */
+class CadBlendStateGuard {
+public:
+    CadBlendStateGuard(const SoGLContext *glue, bool activate) :
+        glue_(glue), active_(activate)
+    {
+        if (!active_)
+            return;
+        enabled_ = glue_->glIsEnabled(GL_BLEND);
+        glue_->glGetIntegerv(GL_BLEND_SRC, &source_);
+        glue_->glGetIntegerv(GL_BLEND_DST, &destination_);
+        glue_->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glue_->glEnable(GL_BLEND);
+    }
+
+    ~CadBlendStateGuard()
+    {
+        if (!active_)
+            return;
+        glue_->glBlendFunc(static_cast<GLenum>(source_),
+                           static_cast<GLenum>(destination_));
+        if (enabled_)
+            glue_->glEnable(GL_BLEND);
+        else
+            glue_->glDisable(GL_BLEND);
+    }
+
+    CadBlendStateGuard(const CadBlendStateGuard&) = delete;
+    CadBlendStateGuard& operator=(const CadBlendStateGuard&) = delete;
+
+private:
+    const SoGLContext *glue_;
+    bool active_ = false;
+    GLboolean enabled_ = GL_FALSE;
+    GLint source_ = GL_ONE;
+    GLint destination_ = GL_ZERO;
+};
+
 /*
  * Sparse mutations retain the strong exception guarantee without cloning the
  * complete scene.  Capture only authoritative records which the requested
@@ -1814,7 +1878,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // state before returning.  Keeping this in a local state frame lets the
     // next node restore its own semantics through the normal lazy-element
     // path.
-    state->push();
+    CadTraversalStateGuard stateFrame(state);
     SoShapeHintsElement::set(state, this,
         SoShapeHintsElement::COUNTERCLOCKWISE,
         SoShapeHintsElement::UNKNOWN_SHAPE_TYPE,
@@ -1937,9 +2001,6 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
              * any future semantic failure mode rather than a retry path. */
             impl_->planDirty_ = true;
             impl_->planDirtyReason_ = "plan-index-build";
-            SoGLLazyElement::getInstance(state)->reset(
-                state, SoLazyElement::ALL_MASK);
-            state->pop();
             return;
         }
         impl_->planDirty_ = false;
@@ -1961,9 +2022,6 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
             impl_->renderPreparationSerial_ = 1;
     }
     if (!subpixelPreparationComplete) {
-        SoGLLazyElement::getInstance(state)->reset(
-            state, SoLazyElement::ALL_MASK);
-        state->pop();
         return;
     }
 
@@ -1977,9 +2035,6 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
      * and the next frame reuses it in O(1) before drawing.
      */
     if (action->abortNow()) {
-        SoGLLazyElement::getInstance(state)->reset(
-            state, SoLazyElement::ALL_MASK);
-        state->pop();
         return;
     }
 
@@ -1997,15 +2052,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     const GLboolean light0Enabled = glue->glIsEnabled(GL_LIGHT0);
     const bool hasTransparency =
         impl_->cachedPlan_.hasVisibleTransparency();
-    const GLboolean blendEnabled = glue->glIsEnabled(GL_BLEND);
-    GLint blendSource = GL_ONE;
-    GLint blendDestination = GL_ZERO;
-    if (hasTransparency) {
-        glue->glGetIntegerv(GL_BLEND_SRC, &blendSource);
-        glue->glGetIntegerv(GL_BLEND_DST, &blendDestination);
-        glue->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glue->glEnable(GL_BLEND);
-    }
+    CadBlendStateGuard blendState(glue, hasTransparency);
 
     ++impl_->renderExecutionSerial_;
     if (impl_->renderExecutionSerial_ == 0)
@@ -2131,11 +2178,6 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->presentationPreparation_ =
             impl_->renderer_->presentationPreparationSnapshot();
     }
-    if (hasTransparency) {
-        glue->glBlendFunc(static_cast<GLenum>(blendSource),
-                          static_cast<GLenum>(blendDestination));
-        if (!blendEnabled) glue->glDisable(GL_BLEND);
-    }
     if (cadDebugEnabled()) {
         std::fprintf(stderr,
                      "SoCADAssembly render tier=%d visible=%zu wireItems=%zu "
@@ -2158,10 +2200,8 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // before popping our local state frame so the next Coin node resends its
     // own state instead of inheriting a stale CAD frame.  This is the proper
     // renderer boundary; hosts must not compensate with extra clears or
-    // presentation timing workarounds.
-    SoGLLazyElement::getInstance(state)->reset(state,
-        SoLazyElement::ALL_MASK);
-    state->pop();
+    // presentation timing workarounds.  CadTraversalStateGuard performs the
+    // invalidation and pop after all local GL guards have unwound.
 }
 
 // ---------------------------------------------------------------------------
