@@ -13,6 +13,7 @@
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTransform.h>
 
 #include <cstdlib>
 #include <cstdio>
@@ -444,6 +445,76 @@ nonBlackPixels(const SoOffscreenRenderer &renderer)
             ++count;
     }
     return count;
+}
+
+double
+nonBlackPixelCentroidX(const SoOffscreenRenderer &renderer)
+{
+    const unsigned char *buffer = renderer.getBuffer();
+    const SbVec2s size = renderer.getViewportRegion().getViewportSizePixels();
+    if (!buffer || size[0] <= 0 || size[1] <= 0)
+        return -1.0;
+    uint64_t count = 0;
+    uint64_t total = 0;
+    for (int y = 0; y < size[1]; ++y) {
+        for (int x = 0; x < size[0]; ++x) {
+            const size_t pixel = static_cast<size_t>(y) *
+                static_cast<size_t>(size[0]) + static_cast<size_t>(x);
+            const unsigned char *rgb = buffer + pixel * 3u;
+            if (rgb[0] || rgb[1] || rgb[2]) {
+                total += static_cast<uint64_t>(x);
+                ++count;
+            }
+        }
+    }
+    return count ? static_cast<double>(total) / static_cast<double>(count) :
+        -1.0;
+}
+
+bool
+enclosingModelTransformMovesCadRendering()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+
+    SoTransform *transform = new SoTransform;
+    root->addChild(transform);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("enclosing-transform-part");
+    Obol::PartGeometryBuilder geometry;
+    geometry.wire = unitBox();
+    requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+        "enclosing transform part");
+    Obol::InstanceRecord record;
+    record.part = part;
+    requireCadMutation(assembly->upsertInstance(
+        Obol::CadIdBuilder::instanceId("enclosing-transform-instance"),
+        record), "enclosing transform instance");
+
+    SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool firstRendered = render(renderer, root);
+    const double firstCentroid = nonBlackPixelCentroidX(renderer);
+    transform->translation.setValue(1.0f, 0.0f, 0.0f);
+    const bool secondRendered = render(renderer, root);
+    const double secondCentroid = nonBlackPixelCentroidX(renderer);
+    root->unref();
+
+    /* A one-unit translation spans one quarter of the four-unit viewport.
+     * Leave margin for line rasterization and backend rounding. */
+    return firstRendered && secondRendered && firstCentroid >= 0.0 &&
+        secondCentroid - firstCentroid > 48.0;
 }
 
 bool
@@ -3883,4 +3954,9 @@ TEST_F(CadSubpixelProxyContracts, ProgressiveReplacementTombstoneKeepsActiveInde
 TEST_F(CadSubpixelProxyContracts, ClearReleasesCompiledPlanGeometry)
 {
     EXPECT_TRUE(clearReleasesCompiledPlanGeometry());
+}
+
+TEST_F(CadSubpixelProxyContracts, EnclosingModelTransformMovesCadRendering)
+{
+    EXPECT_TRUE(enclosingModelTransformMovesCadRendering());
 }

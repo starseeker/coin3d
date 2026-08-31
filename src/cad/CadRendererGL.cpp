@@ -604,8 +604,32 @@ CadRendererGL::uploadAmbientLight(const SoGLContext* glue, GLuint program)
 }
 
 void
+CadRendererGL::uploadAssemblyTransform(
+        const SoGLContext* glue, GLuint program)
+{
+    const GLint modelLocation =
+        glue->glGetUniformLocationARB(program, "u_rootModel");
+    if (modelLocation >= 0)
+        glue->glUniformMatrix4fvARB(
+            modelLocation, 1, GL_FALSE, assemblyModel_[0]);
+
+    const GLint normalLocation =
+        glue->glGetUniformLocationARB(program, "u_rootNormalMatrix");
+    if (normalLocation >= 0) {
+        const SbMatrix normal = assemblyModel_.inverse().transpose();
+        float packed[9];
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column)
+                packed[row * 3 + column] = normal[row][column];
+        glue->glUniformMatrix3fvARB(
+            normalLocation, 1, GL_FALSE, packed);
+    }
+}
+
+void
 CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
 {
+    this->uploadAssemblyTransform(glue, program);
     // Build parallel arrays for the shaded shader's u_light* uniforms.  Fall
     // back to a single fixed directional light when no scene lights are set.
     int   type[kMaxLights];
@@ -716,7 +740,32 @@ CadRendererGL::uploadFixedLights(const SoGLContext* glue)
             continue;
         }
 
-        const GlLight& light = active[i];
+        GlLight light = active[i];
+        /* Fixed-function GL transforms a light by the model-view matrix
+         * current when glLight is called.  That matrix includes the enclosing
+         * assembly model transform, so express world-space scene lights in
+         * assembly-local space first; the two transforms then cancel. */
+        const SbMatrix worldToAssembly = assemblyModel_.inverse();
+        SbVec3f vector(light.vec);
+        SbVec3f transformed;
+        if (light.type == 0)
+            worldToAssembly.multDirMatrix(vector, transformed);
+        else
+            worldToAssembly.multVecMatrix(vector, transformed);
+        if (light.type == 0 && transformed.normalize() == 0.0f)
+            transformed.setValue(kLightDir);
+        light.vec[0] = transformed[0];
+        light.vec[1] = transformed[1];
+        light.vec[2] = transformed[2];
+        if (light.type == 2) {
+            SbVec3f axis(light.axis);
+            worldToAssembly.multDirMatrix(axis, transformed);
+            if (transformed.normalize() != 0.0f) {
+                light.axis[0] = transformed[0];
+                light.axis[1] = transformed[1];
+                light.axis[2] = transformed[2];
+            }
+        }
         const GLfloat color[4] = {
             light.color[0], light.color[1], light.color[2], 1.0f
         };
@@ -2403,6 +2452,7 @@ void CadRendererGL::render(
         SoGLRenderAction*    action,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbMatrix&      assemblyModel,
         const SbMatrix&      viewMatrix,
         const SbMatrix&      projectionMatrix,
         const SbViewVolume&  viewVolume,
@@ -2410,6 +2460,7 @@ void CadRendererGL::render(
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
+    assemblyModel_ = assemblyModel;
     activeRenderInterrupted_ = false;
     const Obol::CadViewState *previousViewState = activeViewState_;
     activeViewState_ = &viewState;

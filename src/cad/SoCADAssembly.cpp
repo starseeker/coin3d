@@ -69,6 +69,7 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/elements/SoViewportRegionElement.h>
+#include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoContextManagerElement.h>
@@ -1816,12 +1817,17 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->renderer_ = std::make_unique<Obol::internal::CadRendererGL>();
     }
 
-    // Build the combined view-projection matrix from the state stack.
-    // Both matrices are OI row-major SbMatrix values.
-    const SbMatrix viewMat = SoViewingMatrixElement::get(state);
+    // Instances are expressed in assembly-local coordinates.  Preserve the
+    // enclosing scene-graph model transform in every retained execution tier
+    // by folding it into the camera matrices supplied to the renderer and the
+    // view-local classifiers.  SbMatrix uses the OI post-multiply convention:
+    // local * instance * assemblyModel * view * projection.
+    const SbMatrix assemblyModel = SoModelMatrixElement::get(state);
+    const SbMatrix cameraView = SoViewingMatrixElement::get(state);
     const SbMatrix projMat = SoProjectionMatrixElement::get(state);
-    // OI post-multiply convention: VP = view * proj
-    SbMatrix viewProj = viewMat;
+    SbMatrix modelView = assemblyModel;
+    modelView.multRight(cameraView);
+    SbMatrix viewProj = modelView;
     viewProj.multRight(projMat);
 
     const Obol::CadViewState viewState =
@@ -2111,7 +2117,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, viewState,
                                  action, glue, viewProj,
-                                 viewMat, projMat, viewVolume,
+                                 assemblyModel, modelView, projMat, viewVolume,
 				 fixedFunctionClipPlanes,
                                  impl_->partGeneration_);
         impl_->presentationPreparation_ =

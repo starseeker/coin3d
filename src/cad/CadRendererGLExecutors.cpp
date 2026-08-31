@@ -1957,6 +1957,8 @@ void CadRendererGL::renderVboLoop(
                         loc.viewProjection, 1, GL_FALSE, vpData);
                     if (!programUploaded[programIndex]) {
                         if (programIndex >= DirectionalNormExact) {
+                            this->uploadAssemblyTransform(
+                                glue, activeProgram);
                             glue->glUniform3fvARB(
                                 loc.lightVector, 1, directionalVector);
                             glue->glUniform3fvARB(
