@@ -52,3 +52,7 @@ target_include_directories(obol_cad_objects PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/lod
     ${CMAKE_CURRENT_SOURCE_DIR}/picking)
+if(OBOL_BUILD_TESTS)
+    target_compile_definitions(obol_cad_objects PRIVATE
+        OBOL_CAD_ENABLE_SCENE_MUTATION_TEST_HOOKS)
+endif()
