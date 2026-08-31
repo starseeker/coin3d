@@ -384,6 +384,9 @@ public:
     CadGpuResources();
     ~CadGpuResources();
 
+    /** Private regression diagnostic for deferred context cleanup. */
+    static size_t liveInstanceCountForTesting() noexcept;
+
     /**
      * Ensure the GPU representation for @p pid is current.
      *

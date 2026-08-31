@@ -39,6 +39,7 @@
 #include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/misc/SoContextHandler.h>
+#include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/system/gl.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -514,6 +515,15 @@ releaseSharedCadShaders(uint32_t contextId, void *)
     sharedCadShaders.erase(found);
 }
 
+void
+deleteDeferredCadGpuResources(void *closure, uint32_t contextId)
+{
+    std::unique_ptr<CadGpuResources> resources(
+        static_cast<CadGpuResources *>(closure));
+    resources->releaseAll(
+        SoGLContext_instance(static_cast<int>(contextId)));
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -823,8 +833,29 @@ CadRendererGL::uploadViewFacing(const SoGLContext* glue, GLuint program,
 
 CadRendererGL::~CadRendererGL()
 {
-    std::lock_guard<std::mutex> guard(cadRendererRegistryMutex);
-    cadRendererRegistry.erase(this);
+    {
+        std::lock_guard<std::mutex> guard(cadRendererRegistryMutex);
+        cadRendererRegistry.erase(this);
+    }
+
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
+    for (auto& [contextId, resources] : gpuResources_) {
+        if (!resources)
+            continue;
+        try {
+            SoGLCacheContextElement::scheduleDeleteCallback(
+                contextId, deleteDeferredCadGpuResources, resources.get());
+            (void)resources.release();
+        } catch (const std::bad_alloc&) {
+            /* No context is guaranteed current in this destructor.  Drop CPU
+             * ownership safely; the GL driver reclaims the names with the
+             * context in this exceptional allocation-failure path. */
+            resources->releaseAll(nullptr);
+        }
+    }
+    gpuResources_.clear();
+    gpuRes_ = nullptr;
+    gpuContextId_ = 0;
 }
 
 void
@@ -839,6 +870,7 @@ CadRendererGL::contextDestroyed(uint32_t contextId, void *)
 void
 CadRendererGL::releaseContext(uint32_t contextId, const SoGLContext *glue)
 {
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
     if (indirectPrepared_.contextId == contextId)
         indirectPrepared_.valid = false;
     const auto found = gpuResources_.find(contextId);
@@ -1882,6 +1914,7 @@ CadRendererGL::subpixelProxyPresentationPoints(
         const CadFramePlan& plan, const SoGLContext* glue,
         const SbMatrix& viewProj)
 {
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
     if (!ensureReady(glue))
         return plan.subpixelProxyPoints;
     return presentationSubpixelProxyPoints(plan, glue, viewProj);
@@ -2417,6 +2450,7 @@ void CadRendererGL::completeDirectSoftwareWireFrame(
         const Obol::CadRenderedWork& work, uint32_t contextId,
         size_t subpixelProxyDrawPointCount)
 {
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
     /*
      * Direct software rasterization is an executor, not a side channel.  In
      * particular, publish the same exact-work and completed-resource-frame
@@ -2463,6 +2497,7 @@ void CadRendererGL::render(
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
     assemblyModel_ = assemblyModel;
     activeRenderInterrupted_ = false;
     const Obol::CadViewState *previousViewState = activeViewState_;
@@ -3054,6 +3089,7 @@ void CadRendererGL::render(
 
 void CadRendererGL::releaseGpuResources(const SoGLContext* glue)
 {
+    std::lock_guard<std::recursive_mutex> resourceLock(resourceMutex_);
     if (glue) {
         releaseContext(glue->contextid, glue);
     } else {

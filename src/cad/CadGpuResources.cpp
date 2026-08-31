@@ -36,6 +36,7 @@
 #include "glue/glp.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -61,6 +62,8 @@
 namespace {
 
 using Obol::internal::CadAtlasRange;
+
+std::atomic<size_t> cadGpuResourceLiveInstances{0};
 
 static size_t
 cadTriangleAtlasBudget()
@@ -528,6 +531,7 @@ CadGpuResources::CadGpuResources() :
     progressiveReserveBudgetBytes_(cadProgressiveReserveBudget()),
     triangleAtlasBudgetBytes_(cadTriangleAtlasBudget())
 {
+    cadGpuResourceLiveInstances.fetch_add(1, std::memory_order_relaxed);
 }
 
 CadGpuResources::~CadGpuResources()
@@ -535,6 +539,13 @@ CadGpuResources::~CadGpuResources()
     // GL resources must be released explicitly via releaseAll() while the
     // correct context is current.  The destructor cannot safely delete
     // GPU objects because it may be called without a current GL context.
+    cadGpuResourceLiveInstances.fetch_sub(1, std::memory_order_relaxed);
+}
+
+size_t
+CadGpuResources::liveInstanceCountForTesting() noexcept
+{
+    return cadGpuResourceLiveInstances.load(std::memory_order_relaxed);
 }
 
 size_t
