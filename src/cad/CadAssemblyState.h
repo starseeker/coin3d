@@ -216,6 +216,8 @@ struct CadPlanCache {
 struct CadSubpixelClassifier {
     std::unordered_map<Obol::PartId, std::array<SbVec3f, 8>,
         std::hash<Obol::PartId>> subpixelProxyCorners_;
+    uint64_t pointProxyProtectionRevision_ = 1;
+    uint64_t classifiedPointProxyProtectionRevision_ = 0;
     uint64_t nextSubpixelProxyRevision_ = 1;
     uint64_t nextSubpixelProxyInputRevision_ = 1;
     uint64_t subpixelProxyStateInputRevision_ = 0;

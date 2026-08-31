@@ -2907,10 +2907,15 @@ runCadSubpixelProxyLifecycleContract()
     // must promote/demote the same retained occurrence through the sparse
     // proxy channel without rebuilding the assembly-wide frame plan.
     assembly->setPointProxyProtectedInstances({proxyInstance});
+    const uint64_t protectedRevision =
+        assembly->pointProxyProtectionRevision();
     const std::vector<Obol::InstanceId> protectedSnapshot =
         assembly->pointProxyProtectedInstances();
     if (protectedSnapshot.size() != 1u ||
             protectedSnapshot[0] != proxyInstance ||
+            protectedRevision == 0 ||
+            assembly->lastClassifiedPointProxyProtectionRevision() !=
+                protectedRevision ||
             !render(renderer, root) ||
             assembly->selectedInstanceCount() != 0u ||
             assembly->lastSubpixelProxyCount() != 0u ||
@@ -2923,9 +2928,16 @@ runCadSubpixelProxyLifecycleContract()
     std::unordered_set<Obol::InstanceId,
         std::hash<Obol::InstanceId>> adoptedProtection;
     assembly->adoptPointProxyProtectedInstances(std::move(adoptedProtection));
-    if (!assembly->pointProxyProtectedInstances().empty() ||
+    const uint64_t adoptedRevision =
+        assembly->pointProxyProtectionRevision();
+    if (adoptedRevision == protectedRevision ||
+            assembly->lastClassifiedPointProxyProtectionRevision() ==
+                adoptedRevision ||
+            !assembly->pointProxyProtectedInstances().empty() ||
             !render(renderer, root) ||
             assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->lastClassifiedPointProxyProtectionRevision() !=
+                adoptedRevision ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
             "adopting point-proxy protection did not restore aggregation\n");

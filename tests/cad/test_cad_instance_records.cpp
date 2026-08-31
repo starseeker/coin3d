@@ -472,6 +472,18 @@ TEST(CadInstanceRecords, InstanceTransformsMustBeInvertibleAndAffine)
     nonUniform[1][1] = 3.0f;
     nonUniform[2][2] = 4.0f;
     EXPECT_TRUE(Obol::cadValidateInstanceTransform(instance, nonUniform));
+
+    SbMatrix anisotropic = SbMatrix::identity();
+    anisotropic[0][0] = 5718.2002f;
+    anisotropic[1][1] = 15.9003906f;
+    anisotropic[2][2] = 3.20019531f;
+    EXPECT_TRUE(Obol::cadValidateInstanceTransform(instance, anisotropic));
+
+    SbMatrix nearlyDependent = SbMatrix::identity();
+    nearlyDependent[1][0] = 1.0f;
+    nearlyDependent[1][1] = std::numeric_limits<float>::epsilon();
+    EXPECT_EQ(Obol::cadValidateInstanceTransform(instance, nearlyDependent).error,
+        Obol::CadSceneError::InvalidTransform);
 }
 
 TEST(CadInstanceRecords, RejectsMalformedGeometryAtomically)

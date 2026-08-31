@@ -343,6 +343,17 @@ public:
         std::unordered_set<Obol::InstanceId,
             std::hash<Obol::InstanceId>>&& ids);
 
+    /** Monotonic revision of the authoritative point-protection set. */
+    uint64_t pointProxyProtectionRevision() const;
+
+    /**
+     * Point-protection revision consumed by the last complete camera-local
+     * proxy classification.  A value different from
+     * pointProxyProtectionRevision() means the retained plan is still showing
+     * the preceding coherent classification while its replacement is built.
+     */
+    uint64_t lastClassifiedPointProxyProtectionRevision() const;
+
     // -----------------------------------------------------------------------
     // Query
     // -----------------------------------------------------------------------

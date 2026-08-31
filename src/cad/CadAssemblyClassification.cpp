@@ -1395,6 +1395,8 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
             plan.subpixelProxyInputRevision;
         subpixelProxyClassifiedAppendRevision_ =
             plan.appendRevision;
+        classifiedPointProxyProtectionRevision_ =
+            pointProxyProtectionRevision_;
         subpixelProxyViewValid_ = true;
         subpixelProxyBuildActive_ = false;
         publishSubpixelPreparation(
