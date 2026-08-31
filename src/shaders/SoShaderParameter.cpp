@@ -427,15 +427,17 @@ public:
     SbList <uint32_t> keylist;
     this->glparams.makeKeyList(keylist);
     for (int i = 0; i < keylist.getLength(); i++) {
-      SoGLShaderParameter * param;
-      (void) this->glparams.get(keylist[i], param);
-      deleteGLParameter(param);
+      SoGLShaderParameter * param = NULL;
+      if (this->glparams.get(keylist[i], param)) {
+        deleteGLParameter(param);
+      }
     }
   }
-  static void deleteGLParameter(SoGLShaderParameter * OBOL_UNUSED_ARG(param)) {
-    // FIXME: schedule for delete, pederb 2005-11-30
+  static void deleteGLParameter(SoGLShaderParameter * param) {
+    // Shader parameters only cache uniform metadata; they do not own GL
+    // objects and therefore require no current context for destruction.
+    delete param;
   }
-  // FIXME: add a cache context destruction callback, pederb 2005-11-30
   SbHash<uint32_t, SoGLShaderParameter *> glparams;
 };
 
@@ -1333,4 +1335,3 @@ SoShaderParameterArray4i::updateParameter(SoGLShaderObject *shader)
 #undef PRIVATE
 
 // *************************************************************************
-
