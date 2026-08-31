@@ -2092,7 +2092,6 @@ void
 SoShadowLightCache::createVSMProgram(void)
 {
   SoShaderProgram * program = new SoShaderProgram;
-  program->ref();
 
   SoVertexShader * vshader = new SoVertexShader;
   SoFragmentShader * fshader = new SoFragmentShader;
