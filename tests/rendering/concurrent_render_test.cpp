@@ -7,6 +7,7 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -92,6 +93,13 @@ buildSharedCadScene()
       SbVec3f(-1.0f, 1.0f, 0.0f), SbVec3f(1.0f, -1.0f, 0.0f)};
   geometry.wire->bounds = SbBox3f(
       SbVec3f(-1.0f, -1.0f, 0.0f), SbVec3f(1.0f, 1.0f, 0.0f));
+  geometry.shaded.emplace();
+  geometry.shaded->positions = {
+      SbVec3f(-1.0f, -1.0f, 0.0f),
+      SbVec3f(1.0f, -1.0f, 0.0f),
+      SbVec3f(0.0f, 1.0f, 0.0f)};
+  geometry.shaded->indices = {0u, 1u, 2u};
+  geometry.shaded->bounds = geometry.wire->bounds;
   const Obol::CadGeometryAdmission admitted =
       Obol::cadAdmitPartGeometry(std::move(geometry));
   if (!admitted || !assembly->upsertParts({{part, admitted.geometry}})) {
@@ -160,6 +168,40 @@ TEST(ConcurrentRendering, IndependentSoftwareContextsRenderSimultaneously)
   EXPECT_FALSE(failed.load(std::memory_order_relaxed)) << failureMessage;
 }
 
+TEST(ConcurrentRendering, SharedCadAssemblySupportsConcurrentPicking)
+{
+  constexpr int threadCount = 4;
+  constexpr int iterations = 100;
+  SoSeparator * root = buildSharedCadScene();
+  ASSERT_NE(root, nullptr);
+
+  std::atomic<int> ready{0};
+  std::atomic<int> completed{0};
+  std::vector<std::thread> workers;
+  workers.reserve(threadCount);
+  for (int threadIndex = 0; threadIndex < threadCount; ++threadIndex) {
+    workers.emplace_back([&] {
+      ready.fetch_add(1, std::memory_order_release);
+      while (ready.load(std::memory_order_acquire) < threadCount) { }
+      for (int iteration = 0; iteration < iterations; ++iteration) {
+        SoRayPickAction action(SbViewportRegion(96, 96));
+        action.setRay(
+            SbVec3f(0.0f, 0.0f, 5.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        action.apply(root);
+        /* The shared node lazily populates its instance and per-part pick
+         * BVHs here.  The assertion is deliberately traversal-oriented: the
+         * configured default pick policy is independent of this race test. */
+        completed.fetch_add(1, std::memory_order_relaxed);
+      }
+    });
+  }
+  for (std::thread & worker : workers) worker.join();
+  root->unref();
+
+  EXPECT_EQ(completed.load(std::memory_order_relaxed),
+            threadCount * iterations);
+}
+
 TEST(ConcurrentRendering, SharedCadAssemblyRendersInIndependentContexts)
 {
   constexpr int threadCount = 4;
@@ -199,6 +241,11 @@ TEST(ConcurrentRendering, SharedCadAssemblyRendersInIndependentContexts)
                   << " failed shared CAD render iteration " << iteration;
           fail(message.str());
         }
+        SoCADAssembly * assembly =
+            static_cast<SoCADAssembly *>(root->getChild(2));
+        (void)assembly->lastRenderedWork();
+        (void)assembly->gpuResourceSnapshot();
+        (void)assembly->renderPreparationSerial();
       }
     });
   }

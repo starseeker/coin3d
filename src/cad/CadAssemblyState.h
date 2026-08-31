@@ -128,6 +128,11 @@ struct CadSceneDatabase {
 };
 
 struct CadPickingIndex {
+    /* Read-only actions may traverse one assembly concurrently, but picking
+     * populates these acceleration caches lazily.  Publish/query them as one
+     * transaction so two SoRayPickAction instances never mutate the same
+     * unordered_map or BVH concurrently. */
+    std::mutex pickMutex_;
     Obol::picking::CadInstanceBVH instanceBvh_;
     bool bvhDirty_ = true;
     std::unordered_map<Obol::PartId, Obol::picking::CadPartEdgeBVH,
@@ -295,7 +300,7 @@ struct CadRendererState {
      * serialize the complete renderer transaction for one assembly.  Separate
      * assemblies remain fully concurrent.
      */
-    std::mutex renderMutex_;
+    mutable std::mutex renderMutex_;
     std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
     bool lastDirectSoftwareWire_ = false;
     /* Increment immediately before retained/direct CAD drawing begins.  A
