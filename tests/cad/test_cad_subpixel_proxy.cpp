@@ -602,6 +602,84 @@ sparseGeometryTopologyChangesRebuildPlan()
 }
 
 bool
+triangleDerivedProgressiveWireGrowsWithRequestedCut()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    setCadDrawMode(root, SoCADViewState::WIREFRAME);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+
+    Obol::PartGeometryBuilder source;
+    source.shaded.emplace();
+    source.shaded->positions = {
+        SbVec3f(-0.75f, -0.75f, 0.0f),
+        SbVec3f(0.75f, -0.75f, 0.0f),
+        SbVec3f(-0.75f, 0.75f, 0.0f),
+        SbVec3f(0.75f, 0.75f, 0.0f)};
+    source.shaded->indices = {0u, 1u, 2u, 1u, 3u, 2u};
+    source.shaded->bounds = SbBox3f(
+        SbVec3f(-0.75f, -0.75f, 0.0f),
+        SbVec3f(0.75f, 0.75f, 0.0f));
+    source.shaded->progressiveCuts.resize(2);
+    source.shaded->progressiveCuts[0].indexCount = 3u;
+    source.shaded->progressiveCuts[0].positionCount = 3u;
+    source.shaded->progressiveCuts[1].indexCount = 6u;
+    source.shaded->progressiveCuts[1].positionCount = 4u;
+    source.shaded->progressiveMinimumCut = 0u;
+    source.shaded->progressiveResidentCut = 1u;
+    source.shaded->progressiveLineage = 0x445752495245ULL;
+    const Obol::CadGeometryAdmission admittedSource =
+        Obol::cadAdmitPartGeometry(std::move(source));
+    if (!admittedSource) {
+        root->unref();
+        return false;
+    }
+
+    Obol::PartGeometryBuilder wireGeometry;
+    wireGeometry.wire.emplace();
+    wireGeometry.wire->triangleEdgeGeometry =
+        admittedSource.geometry.shared();
+    wireGeometry.wire->triangleEdgeSegmentCount = 6u;
+    wireGeometry.wire->bounds =
+        admittedSource.geometry.get()->shaded->bounds;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::partId("derived-progressive-wire-part");
+    requireCadMutation(admitAndUpsertPart(
+        assembly, part, std::move(wireGeometry)),
+        "derived progressive wire part");
+    Obol::InstanceRecord record;
+    record.part = part;
+    record.lodCut = 0u;
+    const Obol::InstanceId instance =
+        Obol::CadIdBuilder::instanceId("derived-progressive-wire-instance");
+    requireCadMutation(assembly->upsertInstance(instance, record),
+        "derived progressive wire instance");
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    if (!render(renderer, root)) {
+        root->unref();
+        return false;
+    }
+    const Obol::CadRenderedWork coarse = assembly->lastRenderedWork();
+    Obol::InstanceLodUpdate rich;
+    rich.instance = instance;
+    rich.lodCut = 1u;
+    requireCadMutation(assembly->updateInstanceCuts({rich}),
+        "derived progressive wire rich cut");
+    const bool rendered = render(renderer, root);
+    const Obol::CadRenderedWork richer = assembly->lastRenderedWork();
+    root->unref();
+    return rendered && coarse.exact && richer.exact &&
+        coarse.lineCount == 3u && richer.lineCount == 6u;
+}
+
+bool
 softwareSubpixelProxyAggregationContract()
 {
     /*
@@ -4048,4 +4126,9 @@ TEST_F(CadSubpixelProxyContracts, EnclosingModelTransformMovesCadRendering)
 TEST_F(CadSubpixelProxyContracts, SparseGeometryTopologyChangesRebuildPlan)
 {
     EXPECT_TRUE(sparseGeometryTopologyChangesRebuildPlan());
+}
+
+TEST_F(CadSubpixelProxyContracts, TriangleDerivedProgressiveWireGrows)
+{
+    EXPECT_TRUE(triangleDerivedProgressiveWireGrowsWithRequestedCut());
 }

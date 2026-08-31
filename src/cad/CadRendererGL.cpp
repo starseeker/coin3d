@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "CadRendererGL.h"
+#include "CadWireSource.h"
 #include "CadRendererConfiguration.h"
 #include "CadResolvedDraw.h"
 #include "CadShaderSources.h"
@@ -1069,7 +1070,8 @@ void CadRendererGL::ensurePartUploaded(
     const Obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
     const bool progressive =
-        (geom->wire.has_value() && geom->wire->isProgressive()) ||
+        (geom->wire.has_value() &&
+            Obol::internal::cadWireSourceIsProgressive(*geom->wire)) ||
         (geom->shaded.has_value() && geom->shaded->isProgressive());
 
     // Ordinary geometry has no view-dependent upload size, so retain its
@@ -1342,9 +1344,10 @@ void CadRendererGL::ensurePartUploaded(
     }
 
     const bool wireUploadProgressive = wirePointCount > 0 &&
-        geom->wire.has_value() && geom->wire->isProgressive();
+        geom->wire.has_value() &&
+        Obol::internal::cadWireSourceIsProgressive(*geom->wire);
     const uint64_t wireProgressiveLineage = wireUploadProgressive ?
-        geom->wire->progressiveLineage : 0u;
+        Obol::internal::cadWireSourceProgressiveLineage(*geom->wire) : 0u;
 
     /*
      * A richer cumulative prefix already on the GPU remains valid when the

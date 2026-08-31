@@ -44,6 +44,7 @@
  */
 
 #include "CadAssemblyImpl.h"
+#include "CadWireSource.h"
 #include <Obol/cad/CadProjectedProxy.h>
 #include <Obol/cad/SoCADDetail.h>
 #include <Obol/cad/SoCADViewState.h>
@@ -305,7 +306,8 @@ void SoCADAssemblyImpl::updatePartGeometry(
         }
         const bool progressive =
             (geom->shaded.has_value() && geom->shaded->isProgressive()) ||
-            (geom->wire.has_value() && geom->wire->isProgressive());
+            (geom->wire.has_value() &&
+                Obol::internal::cadWireSourceIsProgressive(*geom->wire));
         if (progressive)
             progressiveParts_.insert(pid);
         else if (replacing)
@@ -1271,8 +1273,10 @@ bool SoCADAssemblyImpl::partGeometryPlanCompatible(
                     newGeometry.points->positions.empty())
             return false;
         if (oldGeometry.wire &&
-                (oldGeometry.wire->isProgressive() !=
-                     newGeometry.wire->isProgressive() ||
+                (Obol::internal::cadWireSourceIsProgressive(
+                     *oldGeometry.wire) !=
+                     Obol::internal::cadWireSourceIsProgressive(
+                         *newGeometry.wire) ||
                  oldGeometry.wire->derivesTriangleEdges() !=
                      newGeometry.wire->derivesTriangleEdges()))
             return false;
