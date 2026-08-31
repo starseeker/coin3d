@@ -214,3 +214,11 @@ TEST(CadResolvedDraw, MatchesTheExhaustiveSparseResolutionOracle)
 {
     EXPECT_EQ(testExhaustiveSparseResolution(), 0);
 }
+
+TEST(CadResolvedDraw, ReportsCachedVisibleTransparency)
+{
+    CadFramePlan plan;
+    EXPECT_FALSE(plan.hasVisibleTransparency());
+    plan.transparentVisibleInstanceCount = 1;
+    EXPECT_TRUE(plan.hasVisibleTransparency());
+}
