@@ -286,7 +286,6 @@ private:
     using PartMap = decltype(SoCADAssemblyImpl::parts_);
     using InstanceMap = decltype(SoCADAssemblyImpl::instances_);
     using PartBucketMap = decltype(SoCADAssemblyImpl::instanceIdsByPart_);
-    using SlotMap = decltype(SoCADAssemblyImpl::instancePartSlot_);
     using ProxyCornerMap = decltype(
         SoCADAssemblyImpl::subpixelProxyCorners_);
     using GenerationMap = decltype(SoCADAssemblyImpl::partGeneration_);
@@ -313,6 +312,7 @@ private:
         destination.boolOp = source.boolOp;
         destination.lodCut = source.lodCut;
         destination.lodStructuralProxy = source.lodStructuralProxy;
+        destination.partSlot = source.partSlot;
         destination.worldBounds = source.worldBounds;
     }
 
@@ -376,24 +376,11 @@ private:
 
     void capturePartIndexState()
     {
-        changedSlotInstances_.reserve(changedInstances_.size());
-        precedingSlots_.reserve(changedInstances_.size());
-        for (const Obol::InstanceId instance : changedInstances_)
-            changedSlotInstances_.insert(instance);
-
         for (const Obol::PartId part : changedIndexParts_) {
             const auto bucket = impl_.instanceIdsByPart_.find(part);
             if (bucket == impl_.instanceIdsByPart_.end())
                 continue;
             precedingBuckets_.emplace(part, bucket->second);
-            for (size_t slot = 0; slot < bucket->second.size(); ++slot)
-                changedSlotInstances_.insert(bucket->second.at(slot));
-        }
-        precedingSlots_.reserve(changedSlotInstances_.size());
-        for (const Obol::InstanceId instance : changedSlotInstances_) {
-            const auto slot = impl_.instancePartSlot_.find(instance);
-            if (slot != impl_.instancePartSlot_.end())
-                precedingSlots_.emplace(instance, slot->second);
         }
     }
 
@@ -404,14 +391,12 @@ private:
         while (!precedingBuckets_.empty()) {
             auto node = precedingBuckets_.extract(
                 precedingBuckets_.begin());
+            for (size_t slot = 0; slot < node.mapped().size(); ++slot) {
+                InstanceData *data = node.mapped().dataAt(slot);
+                if (data)
+                    data->partSlot = slot;
+            }
             impl_.instanceIdsByPart_.insert(std::move(node));
-        }
-
-        for (const Obol::InstanceId instance : changedSlotInstances_)
-            impl_.instancePartSlot_.erase(instance);
-        while (!precedingSlots_.empty()) {
-            auto node = precedingSlots_.extract(precedingSlots_.begin());
-            impl_.instancePartSlot_.insert(std::move(node));
         }
     }
 
@@ -489,11 +474,9 @@ private:
     InstanceSet changedStyles_;
     InstanceSet changedCuts_;
     PartSet changedIndexParts_;
-    InstanceSet changedSlotInstances_;
     PartMap precedingParts_;
     InstanceMap precedingInstances_;
     PartBucketMap precedingBuckets_;
-    SlotMap precedingSlots_;
     ProxyCornerMap precedingProxyCorners_;
     GenerationMap precedingGenerations_;
     PartSet precedingProgressiveParts_;
@@ -634,7 +617,6 @@ void SoCADAssembly::reserveStreamingCapacity(size_t expectedOccurrences)
      */
     impl_->parts_.reserve(expectedOccurrences);
     impl_->instances_.reserve(expectedOccurrences);
-    impl_->instancePartSlot_.reserve(expectedOccurrences);
     impl_->progressivePlanIndexByInstance_.reserve(
         expectedOccurrences);
     impl_->cachedPlanPartSpansByPart_.reserve(
@@ -682,7 +664,6 @@ SoCADAssembly::clear()
     impl_->partGeneration_.clear();
     impl_->instances_.clear();
     impl_->instanceIdsByPart_.clear();
-    impl_->instancePartSlot_.clear();
     impl_->cachedPlanTombstoneCount_ = 0;
     impl_->streamTombstoneCompactionPerformed_ = false;
     impl_->subpixelProxyPointByVisible_.clear();
@@ -761,7 +742,6 @@ SoCADAssembly::replaceScene(
         replacement->partGeneration_.reserve(parts.size());
         replacement->progressiveParts_.reserve(parts.size());
         replacement->instances_.reserve(occurrenceCapacity);
-        replacement->instancePartSlot_.reserve(occurrenceCapacity);
 
         for (const Obol::PartUpdate& part : parts)
             replacement->updatePartGeometry(
@@ -1483,7 +1463,8 @@ SoCADAssembly::removeInstance(Obol::InstanceId iid)
 {
     const auto instance = impl_->instances_.find(iid);
     if (instance != impl_->instances_.end()) {
-        impl_->removeInstanceFromPartIndex(iid, instance->second.partId);
+        impl_->removeInstanceFromPartIndex(
+            iid, instance->second.partId, &instance->second);
         impl_->instances_.erase(instance);
     }
     impl_->selected_.erase(iid);
