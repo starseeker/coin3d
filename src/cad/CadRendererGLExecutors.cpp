@@ -32,6 +32,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <limits>
@@ -1859,8 +1860,9 @@ void CadRendererGL::renderVboLoop(
         GLuint activeProgram = 0;
         bool programUploaded[ShadedProgramCount] = {};
         if (cadLightDebugRequested()) {
-            static unsigned int uniformLocationReportCount = 0;
-            if (uniformLocationReportCount++ < 4) {
+            static std::atomic<unsigned int> uniformLocationReportCount{0};
+            if (uniformLocationReportCount.fetch_add(
+                    1, std::memory_order_relaxed) < 4) {
                 std::fprintf(stderr,
                     "CadRendererGL shaded locations="
                     "{base={vp=%d model=%d color=%d hasNorm=%d} "
@@ -1891,8 +1893,9 @@ void CadRendererGL::renderVboLoop(
 
             bool hasNorm = (t->normBuf != 0);
             if (cadLightDebugRequested()) {
-                static unsigned int geometryReportCount = 0;
-                if (geometryReportCount++ < 32) {
+                static std::atomic<unsigned int> geometryReportCount{0};
+                if (geometryReportCount.fetch_add(
+                        1, std::memory_order_relaxed) < 32) {
                     const size_t positionCount =
                         geometry && geometry->shaded ?
                         geometry->shaded->positions.size() : 0;
@@ -1990,8 +1993,9 @@ void CadRendererGL::renderVboLoop(
                         std::fabs(this->lights_[0].vec[1]) > 0.9f &&
                         geometry && geometry->shaded &&
                         geometry->shaded->indices.size() >= 3) {
-                    static unsigned int normalReportCount = 0;
-                    if (normalReportCount++ < 32) {
+                    static std::atomic<unsigned int> normalReportCount{0};
+                    if (normalReportCount.fetch_add(
+                            1, std::memory_order_relaxed) < 32) {
                         const TriMesh& mesh = *geometry->shaded;
                         const uint32_t ia = mesh.indices[0];
                         const uint32_t ib = mesh.indices[1];
@@ -2085,8 +2089,9 @@ void CadRendererGL::renderVboLoop(
                         progressive->progressiveQuantizationMaximum);
                 }
                 if (cadLightDebugRequested()) {
-                    static unsigned int uniformValueReportCount = 0;
-                    if (uniformValueReportCount++ < 8) {
+                    static std::atomic<unsigned int> uniformValueReportCount{0};
+                    if (uniformValueReportCount.fetch_add(
+                            1, std::memory_order_relaxed) < 8) {
                         typedef void (APIENTRY * GetUniformivProc)(
                             GLuint, GLint, GLint *);
                         GetUniformivProc getUniform =
@@ -2594,8 +2599,9 @@ void CadRendererGL::renderFixedVboLoop(
             setImmediateMaterialFromRgba(glue, inst.rgba.data());
 
             if (cadLightDebugRequested()) {
-                static unsigned int fixedLightReportCount = 0;
-                if (fixedLightReportCount++ < 16) {
+                static std::atomic<unsigned int> fixedLightReportCount{0};
+                if (fixedLightReportCount.fetch_add(
+                        1, std::memory_order_relaxed) < 16) {
                     GLfloat modelAmbient[4] = {};
                     GLfloat materialAmbient[4] = {};
                     GLfloat materialDiffuse[4] = {};
