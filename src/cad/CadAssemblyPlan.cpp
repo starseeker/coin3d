@@ -205,17 +205,8 @@ cadPackInstanceStyleColor(const Obol::InstanceStyle& style) noexcept
 
 using InstanceData = Obol::internal::CadAssemblyInstanceData;
 
-
-
-    /* Transaction framing and producer hints describe the live assembly,
-     * not the retained scene payload.  Keeping them outside CadSceneDatabase
-     * prevents complete-scene publication from swapping away an open update
-     * scope or a capacity hint. */
-    size_t updateDepth_ = 0;
-    size_t streamingOccurrenceCapacityHint_ = 0;
-
-    // Rebuild instance BVH if dirty
-    void SoCADAssemblyImpl::rebuildBvhIfNeeded() {
+// Rebuild instance BVH if dirty
+void SoCADAssemblyImpl::rebuildBvhIfNeeded() {
         if (!bvhDirty_) return;
         std::vector<Obol::picking::CadInstanceBVH::Entry> entries;
         entries.reserve(instances_.size());
