@@ -112,8 +112,9 @@ struct CadTriGpu {
 /**
  * Fixed-function VBOs for one retained PoP coordinate cut.
  *
- * Indexed entries contain one snapped position per source vertex and reuse
- * the ordinary triangle index/normal buffers.  Expanded entries contain
+ * Indexed entries contain one snapped position per source vertex, retain the
+ * ordinary normal buffer, and own a cut-local index buffer whose winding is
+ * coherent with the source triangles.  Expanded entries contain
  * triangle-corner positions and normals and are used when the source has no
  * normals, preserving flat lighting without per-frame glBegin/glVertex work.
  */
@@ -126,7 +127,9 @@ struct CadProgressiveGpu {
 
     GLuint posBuf = 0;
     GLuint normBuf = 0;
+    GLuint idxBuf = 0;
     GLsizei vertexCount = 0;
+    GLsizei indexCount = 0;
     bool indexed = false;
     uint64_t rangeSignature = 0;
     std::vector<PackedRange> packedRanges;
@@ -486,6 +489,7 @@ public:
         PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
+        const std::vector<uint32_t>& indices,
         bool indexed, uint64_t rangeSignature,
         const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
         const SoGLContext *glue);

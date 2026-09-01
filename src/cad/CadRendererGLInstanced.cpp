@@ -387,6 +387,7 @@ void CadRendererGL::renderInstanced(
         struct ShadedLocations {
             GLint viewProjection = -1;
             GLint hasNormal = -1;
+            GLint sourceFacingNormal = -1;
             GLint position = 0;
             GLint normal = 1;
             GLint encodeScale = -1;
@@ -406,6 +407,9 @@ void CadRendererGL::renderInstanced(
             locations[variant].hasNormal =
                 glue->glGetUniformLocationARB(
                     programs[variant], "u_hasNorm");
+            locations[variant].sourceFacingNormal =
+                glue->glGetUniformLocationARB(
+                    programs[variant], "u_sourceFacingNormal");
             locations[variant].position =
                 glue->glGetAttribLocationARB(programs[variant], "a_pos");
             locations[variant].normal =
@@ -501,7 +505,11 @@ void CadRendererGL::renderInstanced(
                 cadProgressiveCutCullSafe(
                     item.cullBackfaces, progressive, level));
             glue->glUniform1iARB(
-                loc.hasNormal, (t->normBuf != 0) ? 1 : 0);
+                loc.hasNormal, t->normBuf != 0 ? 1 : 0);
+            glue->glUniform1iARB(
+                loc.sourceFacingNormal,
+                cadProgressiveCutRequiresSourceWinding(
+                    progressive, level, t->normBuf != 0) ? 1 : 0);
 
             const bool retainedVao =
                 t->vao && glue->glBindVertexArray;

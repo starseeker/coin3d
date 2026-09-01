@@ -671,6 +671,8 @@ void CadGpuResources::deleteProgressiveGpu(
         glue->glDeleteBuffers(1, &p.posBuf);
     if (p.normBuf && glue->glDeleteBuffers)
         glue->glDeleteBuffers(1, &p.normBuf);
+    if (p.idxBuf && glue->glDeleteBuffers)
+        glue->glDeleteBuffers(1, &p.idxBuf);
     progressiveBytes_ = p.bytes <= progressiveBytes_ ?
         progressiveBytes_ - p.bytes : 0;
     p = CadProgressiveGpu();
@@ -1240,13 +1242,15 @@ void CadGpuResources::uploadProgressive(
         PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
+        const std::vector<uint32_t>& indices,
         bool indexed, uint64_t rangeSignature,
         const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
         const SoGLContext *glue)
 {
     if (!glue || !glue->glGenBuffers ||
             positions.empty() || positions.size() % 3 != 0 ||
-            (!normals.empty() && normals.size() != positions.size()))
+            (!normals.empty() && normals.size() != positions.size()) ||
+            (!indices.empty() && !indexed))
         return;
     auto found = cache_.find(pid);
     if (found == cache_.end()) return;
@@ -1259,14 +1263,20 @@ void CadGpuResources::uploadProgressive(
                 std::numeric_limits<GLsizeiptr>::max()) / sizeof(float) ||
             normals.size() >
             static_cast<size_t>(
-                std::numeric_limits<GLsizeiptr>::max()) / sizeof(float))
+                std::numeric_limits<GLsizeiptr>::max()) / sizeof(float) ||
+            indices.size() >
+            static_cast<size_t>(
+                std::numeric_limits<GLsizeiptr>::max()) / sizeof(uint32_t))
         return;
     const GLsizeiptr positionBytes = static_cast<GLsizeiptr>(
         positions.size() * sizeof(float));
     const GLsizeiptr normalBytes = static_cast<GLsizeiptr>(
         normals.size() * sizeof(float));
+    const GLsizeiptr indexBytes = static_cast<GLsizeiptr>(
+        indices.size() * sizeof(uint32_t));
     GLuint positionBuffer = 0;
     GLuint normalBuffer = 0;
+    GLuint indexBuffer = 0;
     if (!cadCreatePopulatedBuffer(
             glue, GL_ARRAY_BUFFER, positionBytes, positions.data(),
             GL_STATIC_DRAW, positionBuffer))
@@ -1281,7 +1291,22 @@ void CadGpuResources::uploadProgressive(
             return;
         }
     }
+    if (!indices.empty()) {
+        if (!cadCreatePopulatedBuffer(
+                glue, GL_ELEMENT_ARRAY_BUFFER, indexBytes, indices.data(),
+                GL_STATIC_DRAW, indexBuffer)) {
+            if (glue->glDeleteBuffers) {
+                if (normalBuffer)
+                    glue->glDeleteBuffers(1, &normalBuffer);
+                glue->glDeleteBuffers(1, &positionBuffer);
+            }
+            glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+            return;
+        }
+    }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     /* Commit only after every replacement store is known complete.  A failed
      * richer-cut upload therefore leaves the last drawable cut intact and
@@ -1290,11 +1315,14 @@ void CadGpuResources::uploadProgressive(
     deleteProgressiveGpu(p, glue);
     p.posBuf = positionBuffer;
     p.normBuf = normalBuffer;
+    p.idxBuf = indexBuffer;
     p.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    p.indexCount = static_cast<GLsizei>(indices.size());
     p.indexed = indexed;
     p.rangeSignature = rangeSignature;
     p.packedRanges = packedRanges;
-    p.bytes = (positions.size() + normals.size()) * sizeof(float);
+    p.bytes = (positions.size() + normals.size()) * sizeof(float) +
+        indices.size() * sizeof(uint32_t);
     p.lastUsedFrame = progressiveFrame_;
     progressiveBytes_ += p.bytes;
 }

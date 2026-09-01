@@ -33,6 +33,7 @@
 #include <chrono>
 #include <cmath>
 #include <atomic>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <limits>
@@ -625,7 +626,8 @@ ensureProgressiveWireGpuImpl(
         appendPoints(pointFirst, pointCount);
     }
     resources->uploadProgressive(
-        part, false, level, positions, std::vector<float>(), false,
+        part, false, level, positions, std::vector<float>(),
+        std::vector<uint32_t>(), false,
         rangeSignature, packedRanges, glue);
     if (const CadProgressiveGpu *uploaded = resources->progressiveFor(
             part, false, level, rangeSignature))
@@ -669,7 +671,11 @@ ensureProgressiveTriGpuImpl(
     const size_t indexCount = mesh.indexCountAtCut(level);
     if (indexCount < 3 || indexCount > mesh.indices.size())
         return nullptr;
-    const bool indexed = mesh.normals.size() == mesh.positions.size();
+    const ProgressiveQuantization quantization =
+        mesh.quantizationAtCut(level);
+    const bool hasVertexNormals =
+        mesh.normals.size() == mesh.positions.size();
+    const bool indexed = hasVertexNormals;
     uint32_t maximumIndex = 0;
     if (indexed) {
         for (size_t i = 0; i < indexCount; ++i) {
@@ -743,6 +749,7 @@ ensureProgressiveTriGpuImpl(
 
     std::vector<float> positions;
     std::vector<float> normals;
+    std::vector<uint32_t> orientedIndices;
     if (indexed) {
         positions.reserve((static_cast<size_t>(maximumIndex) + 1) * 3);
         for (size_t i = 0; i <= maximumIndex; ++i) {
@@ -750,8 +757,28 @@ ensureProgressiveTriGpuImpl(
                 mesh.positions[i],
                 mesh.progressiveQuantizationMinimum,
                 mesh.progressiveQuantizationMaximum,
-                mesh.quantizationAtCut(level));
+                quantization);
             executorAppendPackedPoint(positions, point);
+        }
+        orientedIndices.assign(mesh.indices.begin(),
+            mesh.indices.begin() + static_cast<std::ptrdiff_t>(indexCount));
+        for (size_t triangle = 0; triangle + 2 < indexCount;
+                triangle += 3) {
+            SbVec3f displayed[3];
+            SbVec3f source[3];
+            for (size_t corner = 0; corner < 3; ++corner) {
+                const uint32_t index = orientedIndices[triangle + corner];
+                source[corner] = mesh.positions[index];
+                displayed[corner].setValue(
+                    positions[static_cast<size_t>(index) * 3u],
+                    positions[static_cast<size_t>(index) * 3u + 1u],
+                    positions[static_cast<size_t>(index) * 3u + 2u]);
+            }
+            if (cadDisplayedTriangleReversesSourceWinding(
+                    displayed, source)) {
+                std::swap(orientedIndices[triangle + 1],
+                    orientedIndices[triangle + 2]);
+            }
         }
     } else {
         size_t selectedIndexCount = indexCount;
@@ -778,15 +805,10 @@ ensureProgressiveTriGpuImpl(
                     sourceTriangle[k],
                     mesh.progressiveQuantizationMinimum,
                     mesh.progressiveQuantizationMaximum,
-                    mesh.quantizationAtCut(level));
+                    quantization);
             }
-            SbVec3f normal =
-                (sourceTriangle[1] - sourceTriangle[0]).cross(
-                    sourceTriangle[2] - sourceTriangle[0]);
-            if (normal.sqrLength() > 0.0f)
-                normal.normalize();
-            else
-                normal.setValue(0.0f, 0.0f, 1.0f);
+            const SbVec3f normal = cadDisplayedTriangleNormal(
+                triangle, sourceTriangle);
             for (int k = 0; k < 3; ++k) {
                 executorAppendPackedPoint(positions, triangle[k]);
                 executorAppendPackedPoint(normals, normal);
@@ -804,7 +826,8 @@ ensureProgressiveTriGpuImpl(
     }
     if (prepared) *prepared = true;
     resources->uploadProgressive(
-        part, true, level, positions, normals, indexed, rangeSignature,
+        part, true, level, positions, normals, orientedIndices, indexed,
+        rangeSignature,
         packedRanges, glue);
     return resources->progressiveFor(
         part, true, level, rangeSignature);
@@ -873,7 +896,8 @@ ensureProgressiveIndexedWireGpuImpl(
             mesh.progressiveQuantizationMaximum, quantization));
     if (prepared) *prepared = true;
     resources->uploadProgressive(
-        part, false, level, positions, std::vector<float>(), true,
+        part, false, level, positions, std::vector<float>(),
+        std::vector<uint32_t>(), true,
         signature, std::vector<CadProgressiveGpu::PackedRange>(), glue);
     return resources->progressiveFor(part, false, level, signature);
 }
@@ -1724,6 +1748,7 @@ void CadRendererGL::renderVboLoop(
             GLint normalMatrix = -1;
             GLint color = -1;
             GLint hasNormal = -1;
+            GLint sourceFacingNormal = -1;
             GLint lightVector = -1;
             GLint lightColor = -1;
             GLint encodeScale = -1;
@@ -1767,6 +1792,9 @@ void CadRendererGL::renderVboLoop(
             locations[programIndex].hasNormal =
                 glue->glGetUniformLocationARB(
                     programs[programIndex], "u_hasNorm");
+            locations[programIndex].sourceFacingNormal =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_sourceFacingNormal");
             locations[programIndex].lightVector =
                 glue->glGetUniformLocationARB(
                     programs[programIndex], "u_lightVec");
@@ -1929,11 +1957,8 @@ void CadRendererGL::renderVboLoop(
                                 loc.lightColor, 1, directionalColor);
                             this->uploadAmbientLight(
                                 glue, activeProgram);
-                            if (programIndex == DirectionalFaceExact ||
-                                    programIndex == DirectionalFacePop) {
-                                this->uploadViewFacing(
-                                    glue, activeProgram, viewVolume);
-                            }
+                            this->uploadViewFacing(
+                                glue, activeProgram, viewVolume);
                         } else {
                             this->uploadLights(glue, activeProgram);
                             this->uploadViewFacing(
@@ -1944,6 +1969,10 @@ void CadRendererGL::renderVboLoop(
                 }
                 glue->glUniform1iARB(
                     loc.hasNormal, hasNorm ? 1 : 0);
+                glue->glUniform1iARB(
+                    loc.sourceFacingNormal,
+                    cadProgressiveCutRequiresSourceWinding(
+                        progressive, level, hasNorm) ? 1 : 0);
                 if (!hasNorm) {
                     SoGLContext_glVertexAttrib3f(
                         glue, static_cast<GLuint>(locNorm),
@@ -2669,10 +2698,12 @@ void CadRendererGL::renderFixedVboLoop(
             if (nonIndexedCut)
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
             else
-                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tri->idxBuf);
+                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                    cut && cut->idxBuf ? cut->idxBuf : tri->idxBuf);
             const GLsizei availableIndexCount = nonIndexedCut ?
                 std::min(indexCount, cut->vertexCount) :
-                std::min(indexCount, tri->idxCount);
+                std::min(indexCount,
+                    cut && cut->idxBuf ? cut->indexCount : tri->idxCount);
             uint64_t submittedIndices = 0;
             const auto submitRange = [&](uint32_t first,
                                          uint32_t requestedCount) {
@@ -3125,31 +3156,41 @@ void CadRendererGL::renderImmediateMode(
                     triangleOffset + triangleWork * 3u;
                 glue->glBegin(GL_TRIANGLES);
                 for (; triangleOffset < chunkEnd; triangleOffset += 3) {
+                    uint32_t triangleIndices[3] = {
+                        drawIdx[triangleOffset],
+                        drawIdx[triangleOffset + 1],
+                        drawIdx[triangleOffset + 2]
+                    };
                     SbVec3f triangle[3];
+                    SbVec3f sourceTriangle[3];
                     for (int k = 0; k < 3; ++k) {
-                        uint32_t idx = drawIdx[triangleOffset + k];
+                        const uint32_t idx = triangleIndices[k];
+                        sourceTriangle[k] = mesh.positions[idx];
                         triangle[k] = mesh.isProgressive() ?
-                            cadProgressiveSnapPoint(mesh.positions[idx],
+                            cadProgressiveSnapPoint(sourceTriangle[k],
                                 mesh.progressiveQuantizationMinimum,
                                 mesh.progressiveQuantizationMaximum,
                                 mesh.quantizationAtCut(drawLevel)) :
-                            mesh.positions[idx];
+                            sourceTriangle[k];
+                    }
+                    if (cadProgressiveCutRequiresSourceWinding(
+                            mesh.isProgressive() ? &mesh : nullptr,
+                            drawLevel, hasNorm) &&
+                            cadDisplayedTriangleReversesSourceWinding(
+                                triangle, sourceTriangle)) {
+                        std::swap(triangleIndices[1], triangleIndices[2]);
+                        std::swap(triangle[1], triangle[2]);
+                        std::swap(sourceTriangle[1], sourceTriangle[2]);
                     }
                     if (!hasNorm) {
-                        SbVec3f faceNormal =
-                            (mesh.positions[drawIdx[triangleOffset + 1]] -
-                                mesh.positions[drawIdx[triangleOffset]]).cross(
-                                mesh.positions[drawIdx[triangleOffset + 2]] -
-                                mesh.positions[drawIdx[triangleOffset]]);
-                        if (faceNormal.sqrLength() > 0.0f)
-                            faceNormal.normalize();
-                        else
-                            faceNormal.setValue(0.0f, 0.0f, 1.0f);
+                        const SbVec3f faceNormal =
+                            cadDisplayedTriangleNormal(
+                                triangle, sourceTriangle);
                         glue->glNormal3f(faceNormal[0], faceNormal[1],
                                          faceNormal[2]);
                     }
                     for (int k = 0; k < 3; ++k) {
-                        uint32_t idx = drawIdx[triangleOffset + k];
+                        const uint32_t idx = triangleIndices[k];
                         if (hasNorm && idx < mesh.normals.size()) {
                             const auto& n = mesh.normals[idx];
                             glue->glNormal3f(n[0], n[1], n[2]);

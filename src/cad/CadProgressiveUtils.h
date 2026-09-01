@@ -102,6 +102,56 @@ cadProgressiveSnapPoint(
             point[2], minimum[2], maximum[2], quantization.zBits));
 }
 
+/**
+ * Return the face normal represented by displayed progressive coordinates.
+ *
+ * Lossy snapping can change a triangle's plane or collapse it entirely.  In
+ * the latter case the source triangle remains the only stable orientation
+ * signal, so use it as a deterministic fallback.
+ */
+inline SbVec3f
+cadDisplayedTriangleNormal(const SbVec3f (&displayed)[3],
+                           const SbVec3f (&source)[3])
+{
+    SbVec3f normal = (displayed[1] - displayed[0]).cross(
+        displayed[2] - displayed[0]);
+    if (normal.sqrLength() == 0.0f) {
+        normal = (source[1] - source[0]).cross(source[2] - source[0]);
+    }
+    if (normal.sqrLength() > 0.0f)
+        normal.normalize();
+    else
+        normal.setValue(0.0f, 0.0f, 1.0f);
+    return normal;
+}
+
+/** Return true when lossy coordinates reverse the source triangle winding. */
+inline bool
+cadDisplayedTriangleReversesSourceWinding(
+    const SbVec3f (&displayed)[3], const SbVec3f (&source)[3])
+{
+    const SbVec3f displayedNormal =
+        (displayed[1] - displayed[0]).cross(displayed[2] - displayed[0]);
+    const SbVec3f sourceNormal =
+        (source[1] - source[0]).cross(source[2] - source[0]);
+    if (displayedNormal.sqrLength() == 0.0f ||
+            sourceNormal.sqrLength() == 0.0f)
+        return false;
+    return displayedNormal.dot(sourceNormal) < 0.0f;
+}
+
+/**
+ * Authored vertex normals retain source-facing semantics at lossy cuts.
+ * Displayed winding is not stable enough to decide whether to flip them.
+ */
+inline bool
+cadProgressiveCutRequiresSourceWinding(
+    const TriMesh *mesh, uint8_t cut, bool hasAuthoredNormals)
+{
+    return hasAuthoredNormals && mesh && mesh->isProgressive() &&
+        !mesh->quantizationAtCut(cut).isExact();
+}
+
 } // namespace internal
 } // namespace Obol
 
