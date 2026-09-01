@@ -112,6 +112,25 @@ cadUpdateStructuralProjectionHistogram(
 }
 
 static bool
+cadSameSubpixelProxyPoint(
+        const Obol::internal::CadSubpixelProxyPoint& left,
+        const Obol::internal::CadSubpixelProxyPoint& right)
+{
+    return left.instanceId == right.instanceId &&
+        left.rgba == right.rgba &&
+        left.flags == right.flags &&
+        left.shape == right.shape &&
+        left.position[0] == right.position[0] &&
+        left.position[1] == right.position[1] &&
+        left.position[2] == right.position[2] &&
+        left.boundsMinimum == right.boundsMinimum &&
+        left.boundsMaximum == right.boundsMaximum &&
+        left.boxCornersValid == right.boxCornersValid &&
+        left.boxOriented == right.boxOriented &&
+        (!left.boxCornersValid || left.boxCorners == right.boxCorners);
+}
+
+static bool
 cadSameSubpixelProxyPoints(
         const std::vector<Obol::internal::CadSubpixelProxyPoint>& left,
         const std::vector<Obol::internal::CadSubpixelProxyPoint>& right)
@@ -119,19 +138,7 @@ cadSameSubpixelProxyPoints(
     if (left.size() != right.size())
         return false;
     for (size_t i = 0; i < left.size(); ++i) {
-        const Obol::internal::CadSubpixelProxyPoint& a = left[i];
-        const Obol::internal::CadSubpixelProxyPoint& b = right[i];
-        if (a.instanceId != b.instanceId || a.rgba != b.rgba ||
-                a.flags != b.flags ||
-                a.shape != b.shape ||
-                a.position[0] != b.position[0] ||
-                a.position[1] != b.position[1] ||
-                a.position[2] != b.position[2] ||
-                a.boundsMinimum != b.boundsMinimum ||
-                a.boundsMaximum != b.boundsMaximum ||
-                a.boxCornersValid != b.boxCornersValid ||
-                a.boxOriented != b.boxOriented ||
-                (a.boxCornersValid && a.boxCorners != b.boxCorners))
+        if (!cadSameSubpixelProxyPoint(left[i], right[i]))
             return false;
     }
     return true;
@@ -335,6 +342,68 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
                 (currentPoint >= plan.subpixelProxyPoints.size() ||
                  currentPoint >= subpixelProxyVisibleByPoint_.size()))
             return false;
+
+        const CadProxyPresentation previousPresentation =
+            static_cast<CadProxyPresentation>(
+                subpixelProxyState_[visibleIndex]);
+        CadSubpixelProxyPoint replacement;
+        CadStructuralProjectionSample structuralSample;
+        const CadProxyPresentation presentation =
+            subpixelProxyPresentationForOccurrence(
+                plan, visibleIndex, subpixelProxyViewProj_,
+                subpixelProxyViewportSize_, subpixelProxyPixelThreshold_,
+                previousPresentation, replacement, &structuralSample);
+        const bool previousSuppressed =
+            plan.subpixelProxyMask[visibleIndex] != 0u;
+        const bool suppressed =
+            presentation != CadProxyPresentation::Geometry;
+        const bool previousCollapsed = currentPoint != noPoint;
+        const bool collapsed =
+            presentation == CadProxyPresentation::Point ||
+            presentation == CadProxyPresentation::Box;
+        const bool proxyOutputChanged =
+            previousPresentation != presentation ||
+            previousSuppressed != suppressed ||
+            previousCollapsed != collapsed ||
+            (collapsed && !cadSameSubpixelProxyPoint(
+                plan.subpixelProxyPoints[currentPoint], replacement));
+
+        const int8_t previousStructuralBucket =
+            visibleIndex < structuralProjectionBucketByVisible_.size() ?
+                structuralProjectionBucketByVisible_[visibleIndex] : -1;
+        const int8_t structuralBucket =
+            cadStructuralProjectionBucket(structuralSample);
+        if (visibleIndex <
+                structuralProjectionBucketByVisible_.size() &&
+                previousStructuralBucket != structuralBucket) {
+            cadUpdateStructuralProjectionHistogram(
+                structuralProjectionHistogram_,
+                previousStructuralBucket, false);
+            structuralProjectionBucketByVisible_[visibleIndex] =
+                structuralBucket;
+            cadUpdateStructuralProjectionHistogram(
+                structuralProjectionHistogram_, structuralBucket, true);
+            if (structuralProjectionHistogram_.exact) {
+                structuralProjectionHistogram_.revision =
+                    nextStructuralProjectionRevision_++;
+                if (nextStructuralProjectionRevision_ == 0)
+                    nextStructuralProjectionRevision_ = 1;
+            }
+        } else if (visibleIndex >=
+                structuralProjectionBucketByVisible_.size() &&
+                structuralProjectionHistogram_.exact) {
+            structuralProjectionHistogram_.exact = false;
+        }
+
+        /* The classifier input revision is an internal freshness witness.
+         * Renderer consumers need a new proxy revision only when the
+         * published mask or aggregate record actually changes.  In
+         * particular, replacing a startup box part with an ordinary mesh
+         * while both classify as Geometry must remain a sparse geometry
+         * patch rather than invalidating the complete retained frame. */
+        if (!proxyOutputChanged)
+            return true;
+
         if (currentPoint != noPoint) {
             const uint32_t last = static_cast<uint32_t>(
                 plan.subpixelProxyPoints.size() - 1u);
@@ -356,33 +425,6 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
         plan.subpixelProxyMask[visibleIndex] = 0u;
         subpixelProxyState_[visibleIndex] = 0u;
 
-        if (visibleIndex <
-                structuralProjectionBucketByVisible_.size()) {
-            cadUpdateStructuralProjectionHistogram(
-                structuralProjectionHistogram_,
-                structuralProjectionBucketByVisible_[visibleIndex], false);
-            structuralProjectionBucketByVisible_[visibleIndex] = -1;
-        } else if (structuralProjectionHistogram_.exact) {
-            structuralProjectionHistogram_.exact = false;
-        }
-
-        CadSubpixelProxyPoint replacement;
-        CadStructuralProjectionSample structuralSample;
-        const CadProxyPresentation presentation =
-            subpixelProxyPresentationForOccurrence(
-                plan, visibleIndex, subpixelProxyViewProj_,
-                subpixelProxyViewportSize_, subpixelProxyPixelThreshold_,
-                CadProxyPresentation::Geometry, replacement,
-                &structuralSample);
-        const int8_t structuralBucket =
-            cadStructuralProjectionBucket(structuralSample);
-        if (visibleIndex <
-                structuralProjectionBucketByVisible_.size()) {
-            structuralProjectionBucketByVisible_[visibleIndex] =
-                structuralBucket;
-            cadUpdateStructuralProjectionHistogram(
-                structuralProjectionHistogram_, structuralBucket, true);
-        }
         subpixelProxyState_[visibleIndex] =
             static_cast<uint8_t>(presentation);
         if (presentation != CadProxyPresentation::Geometry)
@@ -399,12 +441,6 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
         plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
         if (nextSubpixelProxyRevision_ == 0)
             nextSubpixelProxyRevision_ = 1;
-        if (structuralProjectionHistogram_.exact) {
-            structuralProjectionHistogram_.revision =
-                nextStructuralProjectionRevision_++;
-            if (nextStructuralProjectionRevision_ == 0)
-                nextStructuralProjectionRevision_ = 1;
-        }
         return true;
     }
 
@@ -1369,9 +1405,7 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
             nextStructuralProjectionRevision_ = 1;
         structuralProjectionHistogram_.exact = true;
 
-        const bool changed = plan.subpixelProxySourceInputRevision !=
-                plan.subpixelProxyInputRevision ||
-                mask != plan.subpixelProxyMask ||
+        const bool changed = mask != plan.subpixelProxyMask ||
                 !cadSameSubpixelProxyPoints(points,
                     plan.subpixelProxyPoints);
         if (changed) {
