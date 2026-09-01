@@ -1026,7 +1026,15 @@ CadRendererGL::planFlatShadedOccurrences(
                     instance.instanceId, occurrence.cut, rangeToken};
                 occurrence.cullBackfaces = cadProgressiveCutCullSafe(
                     item.cullBackfaces, &mesh, occurrence.cut);
-                occurrence.twoSidedLighting = !item.cullBackfaces;
+                /* A non-exact PoP cut is deliberately not culled because
+                 * quantization can temporarily expose a triangle's back
+                 * face.  Its lighting must follow that displayed-surface
+                 * contract rather than the exact source mesh's orientation;
+                 * otherwise the fixed-function software path renders those
+                 * newly visible faces nearly black while the GLSL path
+                 * correctly flips them. */
+                occurrence.twoSidedLighting =
+                    !occurrence.cullBackfaces;
                 occurrence.styleKey =
                     static_cast<uint64_t>(flatRgbaKey(instance)) |
                     (static_cast<uint64_t>(
