@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -58,6 +59,28 @@ TEST(CadIds, ExtendingAPathPreservesOccurrenceAndBooleanIdentity)
     EXPECT_EQ(wheel, CadIdBuilder::childInstance(root, "wheel", 0, 0));
     EXPECT_NE(wheel, CadIdBuilder::childInstance(root, "wheel", 1, 0));
     EXPECT_NE(wheel, CadIdBuilder::childInstance(root, "wheel", 0, 1));
+
+    // Instance IDs are persisted by clients, so implementation changes must
+    // retain the established byte encoding.
+    EXPECT_EQ(wheel.w0, UINT64_C(0x5fdcbbf0994365a5));
+    EXPECT_EQ(wheel.w1, UINT64_C(0x8aa83d078483e27c));
+}
+
+TEST(CadIds, LongChildNamesRemainNoexceptAndDeterministic)
+{
+    static_assert(noexcept(CadIdBuilder::childInstance(
+        InstanceId{}, std::declval<const std::string&>(), 0, 0)),
+        "child ID construction must remain noexcept");
+
+    const std::string longName(4096, 'x');
+    const InstanceId parent = CadIdBuilder::instanceId("long-name-parent");
+    const InstanceId first =
+        CadIdBuilder::childInstance(parent, longName, 123456u, 2u);
+    EXPECT_TRUE(first.isValid());
+    EXPECT_EQ(first,
+        CadIdBuilder::childInstance(parent, longName, 123456u, 2u));
+    EXPECT_NE(first,
+        CadIdBuilder::childInstance(parent, longName, 123457u, 2u));
 }
 
 TEST(CadIds, TraversalOrderAndDeepPathsAreDeterministic)
