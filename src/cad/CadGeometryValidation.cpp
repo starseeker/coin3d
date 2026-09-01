@@ -97,45 +97,45 @@ contains(const SbBox3f& outer, const SbBox3f& inner) noexcept
 }
 
 bool
-containsWithTolerance(const SbBox3f& outer, const SbBox3f& inner) noexcept
+insideAggregateProxy(const SbVec3f& point,
+                     const SbVec3f& origin,
+                     const SbVec3f (&axes)[3],
+                     float tolerance) noexcept
 {
-    if (inner.isEmpty())
+    SbVec3f projected = origin;
+    for (const SbVec3f& axis : axes) {
+        const float squaredLength = axis.sqrLength();
+        if (squaredLength <= tolerance * tolerance)
+            continue;
+        const float coordinate = (point - origin).dot(axis) / squaredLength;
+        const float coordinateTolerance = tolerance / std::sqrt(squaredLength);
+        if (coordinate < -coordinateTolerance ||
+                coordinate > 1.0f + coordinateTolerance)
+            return false;
+        projected += axis * coordinate;
+    }
+    return (point - projected).length() <= tolerance;
+}
+
+bool
+boxInsideAggregateProxy(const SbBox3f& bounds,
+                        const SbVec3f& origin,
+                        const SbVec3f (&axes)[3],
+                        float tolerance) noexcept
+{
+    if (bounds.isEmpty())
         return true;
-    if (outer.isEmpty())
-        return false;
-    const SbVec3f outerMinimum = outer.getMin();
-    const SbVec3f outerMaximum = outer.getMax();
-    const SbVec3f innerMinimum = inner.getMin();
-    const SbVec3f innerMaximum = inner.getMax();
-    for (int axis = 0; axis < 3; ++axis) {
-        const float scale = std::max(1.0f,
-            std::max(std::abs(outerMinimum[axis]),
-                std::max(std::abs(outerMaximum[axis]),
-                    outerMaximum[axis] - outerMinimum[axis])));
-        const float tolerance = 64.0f *
-            std::numeric_limits<float>::epsilon() * scale;
-        if (innerMinimum[axis] < outerMinimum[axis] - tolerance ||
-                innerMaximum[axis] > outerMaximum[axis] + tolerance)
+    const SbVec3f minimum = bounds.getMin();
+    const SbVec3f maximum = bounds.getMax();
+    for (size_t corner = 0; corner < 8; ++corner) {
+        const SbVec3f point(
+            corner & 1u ? maximum[0] : minimum[0],
+            corner & 2u ? maximum[1] : minimum[1],
+            corner & 4u ? maximum[2] : minimum[2]);
+        if (!insideAggregateProxy(point, origin, axes, tolerance))
             return false;
     }
     return true;
-}
-
-template <typename Geometry>
-SbBox3f
-geometryBounds(const Geometry& geometry) noexcept
-{
-    SbBox3f bounds;
-    bounds.makeEmpty();
-    if (geometry.conservativeBounds)
-        bounds.extendBy(*geometry.conservativeBounds);
-    if (geometry.points)
-        bounds.extendBy(geometry.points->bounds);
-    if (geometry.wire)
-        bounds.extendBy(geometry.wire->bounds);
-    if (geometry.shaded)
-        bounds.extendBy(geometry.shaded->bounds);
-    return bounds;
 }
 
 template <typename Geometry>
@@ -145,16 +145,10 @@ validAggregateProxy(const Geometry& geometry) noexcept
     if (!geometry.aggregateProxyCorners)
         return true;
     const auto& corners = *geometry.aggregateProxyCorners;
-    SbBox3f proxyBounds;
-    proxyBounds.makeEmpty();
     for (const SbVec3f& corner : corners) {
         if (!finite(corner))
             return false;
-        proxyBounds.extendBy(corner);
     }
-    if (!containsWithTolerance(proxyBounds, geometryBounds(geometry)))
-        return false;
-
     const SbVec3f axes[3] = {
         corners[1] - corners[0],
         corners[2] - corners[0],
@@ -177,6 +171,40 @@ validAggregateProxy(const Geometry& geometry) noexcept
         for (size_t right = left + 1; right < 3; ++right)
             if (std::abs(axes[left].dot(axes[right])) >
                     tolerance * scale)
+                return false;
+
+    /* The AABB of a rotated or degenerate box can contain points which the
+     * box itself does not.  Aggregate classification consumes these exact
+     * corners, so validate renderer-visible geometry in the proxy's oriented
+     * coordinate system instead of treating its AABB as a proof. */
+    const auto containsPoint = [&](const SbVec3f& point) {
+        return insideAggregateProxy(
+            point, corners[0], axes, tolerance);
+    };
+    if (geometry.conservativeBounds &&
+            !boxInsideAggregateProxy(*geometry.conservativeBounds,
+                corners[0], axes, tolerance))
+        return false;
+    if (geometry.points)
+        for (const SbVec3f& point : geometry.points->positions)
+            if (!containsPoint(point))
+                return false;
+    if (geometry.wire) {
+        for (const SbVec3f& point : geometry.wire->segmentPoints)
+            if (!containsPoint(point))
+                return false;
+        for (const Obol::WirePolyline& polyline : geometry.wire->polylines)
+            for (const SbVec3f& point : polyline.points)
+                if (!containsPoint(point))
+                    return false;
+        if (const Obol::TriMesh *triangles = geometry.wire->triangleEdges())
+            for (const SbVec3f& point : triangles->positions)
+                if (!containsPoint(point))
+                    return false;
+    }
+    if (geometry.shaded)
+        for (const SbVec3f& point : geometry.shaded->positions)
+            if (!containsPoint(point))
                 return false;
     return true;
 }
