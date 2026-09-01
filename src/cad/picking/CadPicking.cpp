@@ -101,6 +101,33 @@ progressiveCut(uint8_t requested, uint8_t minimum, uint8_t resident) noexcept
     return std::max(minimum, std::min(resident, requested));
 }
 
+template <typename Progressive>
+uint8_t
+adaptiveProgressiveCut(const Progressive& progressive,
+                       uint8_t requested) noexcept
+{
+    uint8_t level = progressiveCut(requested,
+        progressive.progressiveMinimumCut,
+        progressive.progressiveResidentCut);
+    if (!progressive.hasAdaptiveProgressiveClusters())
+        return level;
+
+    /* CadPickQuery has no camera frustum with which to discard offscreen
+     * pages.  Constrain the occurrence by every populated page so picking can
+     * never test a cut which is not fully resident.  This is conservative
+     * relative to rendering, which may ignore an offscreen coarse page. */
+    for (const auto& cluster : progressive.progressiveClusters) {
+        if (cluster.ranges.empty())
+            continue;
+        const uint8_t resident =
+            cluster.residentCut == Obol::ProgressiveCutUnspecified ?
+            progressive.progressiveResidentCut : cluster.residentCut;
+        level = std::min(level,
+            std::max(progressive.progressiveMinimumCut, resident));
+    }
+    return level;
+}
+
 float
 progressiveSnapCoordinate(float value, float minimum, float maximum,
                           uint8_t bits) noexcept
@@ -519,10 +546,9 @@ CadPickQuery::pickEdge(
         const CadPartEdgeBVH *edgeBvh = nullptr;
         if (const Obol::TriMesh *triangleEdges = wire.triangleEdges()) {
             const Obol::TriMesh& mesh = *triangleEdges;
-            const uint8_t level = mesh.isProgressive() ? progressiveCut(
-                std::min(entry->lodCut, lodCeiling),
-                mesh.progressiveMinimumCut,
-                mesh.progressiveResidentCut) :
+            const uint8_t level = mesh.isProgressive() ?
+                adaptiveProgressiveCut(mesh,
+                    std::min(entry->lodCut, lodCeiling)) :
                 Obol::ProgressiveCutUnspecified;
             std::vector<CadPartEdgeBVH::SegEntry> segs;
             segs.reserve(mesh.isProgressive() ?
@@ -575,32 +601,44 @@ CadPickQuery::pickEdge(
             progressiveBvh.build(std::move(segs));
             edgeBvh = &progressiveBvh;
         } else if (wire.isProgressive()) {
-            const uint8_t level = progressiveCut(
-                std::min(entry->lodCut, lodCeiling),
-                wire.progressiveMinimumCut,
-                wire.progressiveResidentCut);
-            const size_t segmentCount = wire.segmentCountAtCut(level);
-            const size_t segmentFirst = wire.segmentFirstAtCut(level);
+            const uint8_t level = adaptiveProgressiveCut(
+                wire, std::min(entry->lodCut, lodCeiling));
             std::vector<CadPartEdgeBVH::SegEntry> segs;
-            segs.reserve(segmentCount);
-            for (size_t i = 0; i < segmentCount; ++i) {
-                const size_t sourceSegment = segmentFirst + i;
-                const uint32_t segId =
-                    (sourceSegment < wire.segmentIds.size()) ?
-                    wire.segmentIds[sourceSegment] :
-                    static_cast<uint32_t>(sourceSegment);
-                segs.push_back({
-                    progressiveSnapPoint(
-                        wire.segmentPoints[2 * sourceSegment],
-                        wire.progressiveQuantizationMinimum,
-                        wire.progressiveQuantizationMaximum,
-                        wire.quantizationAtCut(level)),
-                    progressiveSnapPoint(
-                        wire.segmentPoints[2 * sourceSegment + 1],
-                        wire.progressiveQuantizationMinimum,
-                        wire.progressiveQuantizationMaximum,
-                        wire.quantizationAtCut(level)),
-                    segId, 0 });
+            segs.reserve(wire.segmentCountAtCut(level));
+            const auto appendRange = [&](size_t first, size_t count) {
+                const size_t end = std::min(wire.segmentCount(), first + count);
+                for (size_t sourceSegment = first;
+                        sourceSegment < end; ++sourceSegment) {
+                    const uint32_t segId =
+                        sourceSegment < wire.segmentIds.size() ?
+                        wire.segmentIds[sourceSegment] :
+                        static_cast<uint32_t>(sourceSegment);
+                    segs.push_back({
+                        progressiveSnapPoint(
+                            wire.segmentPoints[2 * sourceSegment],
+                            wire.progressiveQuantizationMinimum,
+                            wire.progressiveQuantizationMaximum,
+                            wire.quantizationAtCut(level)),
+                        progressiveSnapPoint(
+                            wire.segmentPoints[2 * sourceSegment + 1],
+                            wire.progressiveQuantizationMinimum,
+                            wire.progressiveQuantizationMaximum,
+                            wire.quantizationAtCut(level)),
+                        segId, 0 });
+                }
+            };
+            if (wire.hasAdaptiveProgressiveClusters()) {
+                for (const Obol::ProgressiveWireCluster& cluster :
+                        wire.progressiveClusters)
+                    for (const Obol::ProgressiveWireClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > level)
+                            break;
+                        appendRange(range.firstSegment, range.segmentCount);
+                    }
+            } else {
+                appendRange(wire.segmentFirstAtCut(level),
+                    wire.segmentCountAtCut(level));
             }
             progressiveBvh.build(std::move(segs));
             edgeBvh = &progressiveBvh;
@@ -915,10 +953,8 @@ CadPickQuery::pickTriangle(
         std::vector<SbVec3f> progressivePositions;
         std::vector<uint32_t> progressiveIndices;
         if (mesh.isProgressive()) {
-            activeLevel = progressiveCut(
-                std::min(entry->lodCut, lodCeiling),
-                mesh.progressiveMinimumCut,
-                mesh.progressiveResidentCut);
+            activeLevel = adaptiveProgressiveCut(
+                mesh, std::min(entry->lodCut, lodCeiling));
             progressivePositions.reserve(mesh.positions.size());
             for (const SbVec3f& point : mesh.positions) {
                 progressivePositions.push_back(progressiveSnapPoint(

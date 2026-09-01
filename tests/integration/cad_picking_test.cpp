@@ -25,6 +25,8 @@ using Obol::PartGeometryBuilder;
 using Obol::PointRep;
 using Obol::ProgressiveTriangleCluster;
 using Obol::ProgressiveTriangleCut;
+using Obol::ProgressiveWireCluster;
+using Obol::ProgressiveWireCut;
 using Obol::TriMesh;
 using Obol::WireRep;
 using Obol::picking::CadInstanceBVH;
@@ -335,6 +337,65 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     ASSERT_TRUE(rich.valid);
     EXPECT_EQ(rich.instanceId, instance);
     EXPECT_EQ(rich.primType, CadPickResult::TRIANGLE);
+
+    /* A coarse resident page constrains the complete logical occurrence.
+     * Picking must not expose the richer range merely because the part-wide
+     * resident cut has already advanced. */
+    mesh.progressiveClusters[1].residentCut = 0;
+    PartGeometryBuilder partiallyResidentGeometry;
+    partiallyResidentGeometry.shaded = mesh;
+    parts[part] = admitGeometry(std::move(partiallyResidentGeometry));
+    EXPECT_FALSE(CadPickQuery::pickTriangle(
+        ray, instances, parts, triangles, 0.05f, 2).valid);
+}
+
+TEST(CadPicking, AdaptiveWirePicksOnlyFullyResidentClusterRanges)
+{
+    const PartId part = CadIdBuilder::partId("adaptive-wire-part");
+    const InstanceId instance = CadIdBuilder::instanceId(
+        "adaptive-wire-instance");
+    WireRep wire;
+    wire.segmentPoints = {
+        {-1, 0, 0}, {1, 0, 0},
+        {9, 0, 0}, {11, 0, 0},
+    };
+    wire.segmentIds = {17, 23};
+    wire.bounds.setBounds(SbVec3f(-1, 0, 0), SbVec3f(11, 0, 0));
+    wire.progressiveCuts.resize(2);
+    for (ProgressiveWireCut& cut : wire.progressiveCuts) {
+        cut.segmentFirst = 0;
+        cut.segmentCount = 2;
+        cut.quantization = {16, 16, 16};
+    }
+    wire.progressiveMinimumCut = 0;
+    wire.progressiveResidentCut = 1;
+    ProgressiveWireCluster first;
+    first.bounds.setBounds(SbVec3f(-1, 0, 0), SbVec3f(1, 0, 0));
+    first.residentCut = 1;
+    first.ranges.push_back({0, 1, 0});
+    ProgressiveWireCluster second;
+    second.bounds.setBounds(SbVec3f(9, 0, 0), SbVec3f(11, 0, 0));
+    second.residentCut = 0;
+    second.ranges.push_back({1, 1, 1});
+    wire.progressiveClusters = {first, second};
+
+    PartGeometryBuilder geometry;
+    geometry.wire = wire;
+    std::unordered_map<PartId, std::shared_ptr<const PartGeometry>> parts;
+    parts.emplace(part, admitGeometry(std::move(geometry)));
+    SbMatrix identity;
+    identity.makeIdentity();
+    CadInstanceBVH instances;
+    instances.build({makeEntry(part, instance, wire.bounds, identity)});
+    std::unordered_map<PartId, CadPartEdgeBVH> edges;
+    EXPECT_FALSE(CadPickQuery::pickEdge(
+        SbLine(SbVec3f(10, 0, 5), SbVec3f(10, 0, 4)),
+        instances, parts, edges, 0.05f, 1).valid);
+    const CadPickResult coarse = CadPickQuery::pickEdge(
+        SbLine(SbVec3f(0, 0, 5), SbVec3f(0, 0, 4)),
+        instances, parts, edges, 0.05f, 1);
+    ASSERT_TRUE(coarse.valid);
+    EXPECT_EQ(coarse.primIndex0, 17u);
 }
 
 TEST(CadPicking, PointPicksApplyTransformsAndPreserveProducerIds)
