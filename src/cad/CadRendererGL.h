@@ -270,7 +270,9 @@ public:
         float vec[3] = { 0.577f, 0.577f, 0.577f }; ///< dir: toward-light; point/spot: world position
         float axis[3] = { 0.0f, 0.0f, -1.0f };     ///< spot: world travel axis (else unused)
         float color[3] = { 1.0f, 1.0f, 1.0f };     ///< rgb premultiplied by intensity
+        float attenuation[3] = { 1.0f, 0.0f, 0.0f }; ///< constant, linear, quadratic
         float cosCutoff = -2.0f;              ///< spot cutoff cosine (<= -1 disables the cone test)
+        float spotExponent = 0.0f;            ///< OpenGL-compatible spotlight falloff [0, 128]
     };
 
     /**

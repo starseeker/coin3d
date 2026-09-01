@@ -647,14 +647,20 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
     float vec[kMaxLights * 3];
     float axis[kMaxLights * 3];
     float color[kMaxLights * 3];
+    float attenuation[kMaxLights * 3];
     float cosCut[kMaxLights];
+    float exponent[kMaxLights];
     int n = 0;
     if (!this->lightsSupplied_) {
         type[0] = 0;
         vec[0] = kLightDir[0]; vec[1] = kLightDir[1]; vec[2] = kLightDir[2];
         axis[0] = 0.0f; axis[1] = 0.0f; axis[2] = -1.0f;
         color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
+        attenuation[0] = 1.0f;
+        attenuation[1] = 0.0f;
+        attenuation[2] = 0.0f;
         cosCut[0] = -2.0f;
+        exponent[0] = 0.0f;
         n = 1;
     } else {
         for (const GlLight& l : this->lights_) {
@@ -669,7 +675,11 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
             color[n * 3 + 0] = l.color[0];
             color[n * 3 + 1] = l.color[1];
             color[n * 3 + 2] = l.color[2];
+            attenuation[n * 3 + 0] = l.attenuation[0];
+            attenuation[n * 3 + 1] = l.attenuation[1];
+            attenuation[n * 3 + 2] = l.attenuation[2];
             cosCut[n] = l.cosCutoff;
+            exponent[n] = l.spotExponent;
             ++n;
         }
     }
@@ -685,13 +695,19 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
         glue->glGetUniformLocationARB(program, "u_lcolor");
     const GLint cutoffLocation =
         glue->glGetUniformLocationARB(program, "u_lcos");
+    const GLint attenuationLocation =
+        glue->glGetUniformLocationARB(program, "u_latten");
+    const GLint exponentLocation =
+        glue->glGetUniformLocationARB(program, "u_lexponent");
     glue->glUniform1iARB(countLocation, n);
     if (n > 0) {
         glue->glUniform1ivARB(typeLocation, n, type);
         glue->glUniform3fvARB(vectorLocation, n, vec);
         glue->glUniform3fvARB(axisLocation, n, axis);
         glue->glUniform3fvARB(colorLocation, n, color);
+        glue->glUniform3fvARB(attenuationLocation, n, attenuation);
         glue->glUniform1fvARB(cutoffLocation, n, cosCut);
+        glue->glUniform1fvARB(exponentLocation, n, exponent);
     }
     this->uploadAmbientLight(glue, program);
     if (cadLightDebugRequested()) {
@@ -788,10 +804,14 @@ CadRendererGL::uploadFixedLights(const SoGLContext* glue)
         SoGLContext_glLightfv(glue, slot, GL_DIFFUSE, color);
         SoGLContext_glLightfv(glue, slot, GL_SPECULAR, color);
         SoGLContext_glLightfv(glue, slot, GL_POSITION, position);
-        SoGLContext_glLightf(glue, slot, GL_CONSTANT_ATTENUATION, 1.0f);
-        SoGLContext_glLightf(glue, slot, GL_LINEAR_ATTENUATION, 0.0f);
-        SoGLContext_glLightf(glue, slot, GL_QUADRATIC_ATTENUATION, 0.0f);
-        SoGLContext_glLightf(glue, slot, GL_SPOT_EXPONENT, 0.0f);
+        SoGLContext_glLightf(glue, slot, GL_CONSTANT_ATTENUATION,
+            light.attenuation[0]);
+        SoGLContext_glLightf(glue, slot, GL_LINEAR_ATTENUATION,
+            light.attenuation[1]);
+        SoGLContext_glLightf(glue, slot, GL_QUADRATIC_ATTENUATION,
+            light.attenuation[2]);
+        SoGLContext_glLightf(glue, slot, GL_SPOT_EXPONENT,
+            light.spotExponent);
         if (light.type == 2) {
             const GLfloat direction[3] = {
                 light.axis[0], light.axis[1], light.axis[2]
