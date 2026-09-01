@@ -278,6 +278,31 @@ orientedAggregateProxyContract()
         return false;
     }
 
+    /* A degenerate diagonal proxy has an AABB which covers this point, but
+     * the point is not on the producer-certified proxy itself.  Admission
+     * must test the oriented volume, not only its axis-aligned envelope. */
+    Obol::PartGeometryBuilder nonConservative;
+    Obol::PointRep outside;
+    outside.positions = {SbVec3f(-1.0f, 1.0f, 0.0f)};
+    outside.bounds.setBounds(outside.positions[0], outside.positions[0]);
+    nonConservative.points = std::move(outside);
+    std::array<SbVec3f, 8> diagonal;
+    diagonal[0].setValue(-1.0f, -1.0f, 0.0f);
+    const SbVec3f diagonalAxis(2.0f, 2.0f, 0.0f);
+    for (size_t corner = 0; corner < diagonal.size(); ++corner)
+        diagonal[corner] = diagonal[0] +
+            ((corner & 1u) ? diagonalAxis : SbVec3f(0.0f, 0.0f, 0.0f));
+    nonConservative.aggregateProxyCorners = diagonal;
+    const Obol::CadGeometryAdmission outsideRejected =
+        Obol::cadAdmitPartGeometry(std::move(nonConservative));
+    if (outsideRejected || outsideRejected.validation.error !=
+            Obol::CadGeometryError::InvalidAggregateProxy) {
+        std::fprintf(stderr,
+            "non-conservative oriented aggregate proxy had result %s\n",
+            Obol::cadGeometryErrorName(outsideRejected.validation.error));
+        return false;
+    }
+
     SoSeparator *root = new SoSeparator;
     root->ref();
     SoOrthographicCamera *camera = new SoOrthographicCamera;
