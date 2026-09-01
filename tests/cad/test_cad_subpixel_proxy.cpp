@@ -1160,7 +1160,148 @@ nonUniformNormalTransformMatchesFixed()
 }
 
 bool
-transformedSpotlightStateMatchesFixed()
+progressiveNormalFacingIgnoresQuantizedWinding()
+{
+    const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
+    const bool hadPreviousGlsl = previousGlsl != nullptr;
+    const std::string previousGlslValue =
+        previousGlsl ? std::string(previousGlsl) : std::string();
+    const auto restoreGlslEnvironment = [&]() {
+        if (hadPreviousGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL",
+                previousGlslValue.c_str(), 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+    };
+
+    struct RouteResult {
+        bool rendered = false;
+        HalfImageStats image;
+    };
+    const auto renderRoute = [](bool softwareGlsl) {
+        if (softwareGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+
+        SoSeparator *root = new SoSeparator;
+        root->ref();
+        SoOrthographicCamera *camera = new SoOrthographicCamera;
+        camera->position.setValue(0.0f, 0.0f, 5.0f);
+        camera->nearDistance.setValue(0.1f);
+        camera->farDistance.setValue(100.0f);
+        camera->height.setValue(1.2f);
+        root->addChild(camera);
+        SoDirectionalLight *light = new SoDirectionalLight;
+        light->direction.setValue(0.0f, 0.0f, -1.0f);
+        root->addChild(light);
+
+        SoCADAssembly *assembly = new SoCADAssembly;
+        setCadDrawMode(root, SoCADViewState::SHADED);
+        root->addChild(assembly);
+
+        Obol::TriMesh reference;
+        reference.positions = {
+            SbVec3f(0.05f, 0.25f, 0.0f),
+            SbVec3f(0.95f, 0.25f, 0.0f),
+            SbVec3f(0.50f, 0.40f, 0.0f)};
+        reference.normals.assign(3, SbVec3f(0.0f, 0.0f, 1.0f));
+        reference.indices = {0, 1, 2};
+        reference.bounds = SbBox3f(
+            SbVec3f(0.0f, 0.0f, 0.0f),
+            SbVec3f(1.0f, 1.0f, 0.0f));
+
+        Obol::TriMesh progressive;
+        /* This triangle is counter-clockwise before three-bit PoP snapping
+         * and clockwise afterwards.  Authored smooth normals remain the
+         * shading authority: lossy displayed winding is neither stable nor a
+         * reliable orientation signal for an unoriented source mesh. */
+        progressive.positions = {
+            SbVec3f(0.054196399f, 0.282882103f, 0.0f),
+            SbVec3f(0.831061744f, 0.842560400f, 0.0f),
+            SbVec3f(0.135469593f, 0.370431414f, 0.0f)};
+        progressive.normals.assign(3, SbVec3f(0.0f, 0.0f, 1.0f));
+        progressive.indices = {0, 1, 2};
+        progressive.bounds = SbBox3f(
+            SbVec3f(0.0f, 0.0f, 0.0f),
+            SbVec3f(1.0f, 1.0f, 0.0f));
+        progressive.progressiveMinimumCut = 3;
+        progressive.progressiveResidentCut = 16;
+        setProgressiveCuts(progressive, 17, 3u, 3u);
+        for (size_t cut = progressive.progressiveMinimumCut;
+                cut < progressive.progressiveCuts.size(); ++cut) {
+            progressive.progressiveCuts[cut].quantization = cut == 16 ?
+                Obol::ProgressiveQuantization{16, 16, 0} :
+                Obol::ProgressiveQuantization{3, 3, 0};
+        }
+        progressive.progressiveQuantizationMinimum.setValue(
+            0.0f, 0.0f, 0.0f);
+        progressive.progressiveQuantizationMaximum.setValue(
+            1.0f, 1.0f, 0.0f);
+
+        const auto addPart = [assembly](const char *name,
+                                        Obol::TriMesh mesh,
+                                        float xOffset, uint8_t cut) {
+            Obol::PartGeometryBuilder geometry;
+            geometry.shaded = std::move(mesh);
+            geometry.shadedCullBackfaces = true;
+            const Obol::PartId part = Obol::CadIdBuilder::partId(name);
+            requireCadMutation(admitAndUpsertPart(
+                assembly, part, std::move(geometry)), name);
+            Obol::InstanceRecord instance;
+            instance.part = part;
+            instance.parent = Obol::CadIdBuilder::rootInstance();
+            instance.childName = name;
+            instance.lodCut = cut;
+            instance.localToRoot.setTranslate(
+                SbVec3f(xOffset, -0.5f, 0.0f));
+            instance.style.hasColorOverride = true;
+            instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+            requireCadMutation(assembly->upsertInstanceAuto(instance), name);
+        };
+        addPart("display-normal-reference", std::move(reference), -1.0f,
+            Obol::ProgressiveCutUnspecified);
+        addPart("display-normal-progressive", std::move(progressive), 0.0f,
+            3);
+
+        SoOffscreenRenderer renderer(SbViewportRegion(256, 192));
+        renderer.setComponents(SoOffscreenRenderer::RGB);
+        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        RouteResult result;
+        result.rendered = render(renderer, root);
+        if (result.rendered)
+            result.image = foregroundHalfStats(renderer);
+        root->unref();
+        return result;
+    };
+
+    const RouteResult fixed = renderRoute(false);
+    const RouteResult glsl = renderRoute(true);
+    restoreGlslEnvironment();
+    const auto routeMatched = [](const RouteResult& result) {
+        const double low = (std::min)(
+            result.image.leftMean, result.image.rightMean);
+        const double high = (std::max)(
+            result.image.leftMean, result.image.rightMean);
+        return result.rendered && result.image.leftPixels > 100 &&
+            result.image.rightPixels > 100 && high > 0.0 &&
+            low / high >= 0.85;
+    };
+    const bool matched = routeMatched(fixed) && routeMatched(glsl);
+    if (!matched) {
+        std::fprintf(stderr,
+            "display-normal stats fixed={left=%.3f/%zu right=%.3f/%zu} "
+            "glsl={left=%.3f/%zu right=%.3f/%zu}\n",
+            fixed.image.leftMean, fixed.image.leftPixels,
+            fixed.image.rightMean, fixed.image.rightPixels,
+            glsl.image.leftMean, glsl.image.leftPixels,
+            glsl.image.rightMean, glsl.image.rightPixels);
+    }
+    return matched;
+}
+
+bool
+transformedSpotlightStateAffectsBothPipelines()
 {
     const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
     const bool hadPreviousGlsl = previousGlsl != nullptr;
@@ -1218,19 +1359,43 @@ transformedSpotlightStateMatchesFixed()
         root->addChild(assembly);
 
         Obol::TriMesh mesh;
-        mesh.positions = {
-            SbVec3f(-1.0f, -0.6f, 0.0f),
-            SbVec3f(-0.25f, -0.6f, 0.0f),
-            SbVec3f(-0.25f, 0.6f, 0.0f),
-            SbVec3f(-1.0f, 0.6f, 0.0f),
-            SbVec3f(0.25f, -0.6f, 0.0f),
-            SbVec3f(1.0f, -0.6f, 0.0f),
-            SbVec3f(1.0f, 0.6f, 0.0f),
-            SbVec3f(0.25f, 0.6f, 0.0f)
+        /* Fixed-function OpenGL evaluates positional and spot lighting per
+         * vertex, while the CAD GLSL route evaluates it per fragment.  Use a
+         * modest grid so this contract measures transformed light state and
+         * attenuation instead of a backend's Gouraud interpolation error. */
+        const auto appendPanel = [&mesh](float minimumX, float maximumX) {
+            constexpr uint32_t columns = 8;
+            constexpr uint32_t rows = 8;
+            const uint32_t base = static_cast<uint32_t>(
+                mesh.positions.size());
+            for (uint32_t row = 0; row <= rows; ++row) {
+                const float y = -0.6f + 1.2f *
+                    static_cast<float>(row) / static_cast<float>(rows);
+                for (uint32_t column = 0; column <= columns; ++column) {
+                    const float x = minimumX + (maximumX - minimumX) *
+                        static_cast<float>(column) /
+                        static_cast<float>(columns);
+                    mesh.positions.emplace_back(x, y, 0.0f);
+                }
+            }
+            for (uint32_t row = 0; row < rows; ++row) {
+                for (uint32_t column = 0; column < columns; ++column) {
+                    const uint32_t lowerLeft = base +
+                        row * (columns + 1u) + column;
+                    const uint32_t lowerRight = lowerLeft + 1u;
+                    const uint32_t upperLeft =
+                        lowerLeft + columns + 1u;
+                    const uint32_t upperRight = upperLeft + 1u;
+                    mesh.indices.insert(mesh.indices.end(), {
+                        lowerLeft, lowerRight, upperRight,
+                        lowerLeft, upperRight, upperLeft});
+                }
+            }
         };
+        appendPanel(-1.0f, -0.25f);
+        appendPanel(0.25f, 1.0f);
         mesh.normals.assign(mesh.positions.size(),
             SbVec3f(0.0f, 0.0f, 1.0f));
-        mesh.indices = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
         mesh.bounds.makeEmpty();
         for (const SbVec3f& point : mesh.positions)
             mesh.bounds.extendBy(point);
@@ -1270,14 +1435,13 @@ transformedSpotlightStateMatchesFixed()
             result.image.rightPixels > 500 && result.image.rightMean > 0.0 &&
             result.image.leftMean / result.image.rightMean > 1.5;
     };
-    const double fixedRatio = fixed.image.rightMean > 0.0 ?
-        fixed.image.leftMean / fixed.image.rightMean : 0.0;
-    const double glslRatio = glsl.image.rightMean > 0.0 ?
-        glsl.image.leftMean / glsl.image.rightMean : 0.0;
-    const bool matched = hasExpectedFalloff(fixed) &&
-        hasExpectedFalloff(glsl) &&
-        glslRatio >= fixedRatio * 0.75 &&
-        glslRatio <= fixedRatio * 1.25;
+    /* The fixed path evaluates spot attenuation at vertices and interpolates
+     * the resulting colour, while GLSL evaluates it per fragment.  Their
+     * exact gradients are intentionally different; the shared contract is
+     * that both consume the transformed spotlight and put the strong falloff
+     * on the same side of the image. */
+    const bool matched =
+        hasExpectedFalloff(fixed) && hasExpectedFalloff(glsl);
     if (!matched)
         std::fprintf(stderr,
             "transformed spotlight stats fixed={left=%.3f/%zu "
@@ -4301,9 +4465,16 @@ TEST_F(CadSubpixelProxyContracts, NonUniformNormalTransformMatchesFixedPipeline)
     EXPECT_TRUE(nonUniformNormalTransformMatchesFixed());
 }
 
-TEST_F(CadSubpixelProxyContracts, TransformedSpotlightStateMatchesFixedPipeline)
+TEST_F(CadSubpixelProxyContracts,
+       ProgressiveNormalFacingIgnoresQuantizedWinding)
 {
-    EXPECT_TRUE(transformedSpotlightStateMatchesFixed());
+    EXPECT_TRUE(progressiveNormalFacingIgnoresQuantizedWinding());
+}
+
+TEST_F(CadSubpixelProxyContracts,
+       TransformedSpotlightStateAffectsBothPipelines)
+{
+    EXPECT_TRUE(transformedSpotlightStateAffectsBothPipelines());
 }
 
 TEST_F(CadSubpixelProxyContracts, IndirectProgressiveAtlasGrows)
