@@ -246,6 +246,7 @@ TEST(ConcurrentRendering, SharedCadAssemblyRendersInIndependentContexts)
         (void)assembly->lastRenderedWork();
         (void)assembly->gpuResourceSnapshot();
         (void)assembly->renderPreparationSerial();
+        (void)assembly->lastClassifiedPointProxyProtectionRevision();
       }
     });
   }
