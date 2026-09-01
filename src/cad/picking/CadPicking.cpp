@@ -807,11 +807,21 @@ void
 CadPartTriBVH::build(const std::vector<SbVec3f>& positions,
                      const std::vector<uint32_t>& indices)
 {
+    build(positions, indices, {});
+}
+
+void
+CadPartTriBVH::build(const std::vector<SbVec3f>& positions,
+                     const std::vector<uint32_t>& indices,
+                     const std::vector<uint32_t>& triangleIds)
+{
     triangles_.clear();
     nodes_.clear();
     if (positions.empty() || indices.size() < 3) return;
 
     const size_t nTri = indices.size() / 3;
+    if (!triangleIds.empty() && triangleIds.size() != nTri)
+        return;
     triangles_.reserve(nTri);
     for (size_t i = 0; i < nTri; ++i) {
         uint32_t i0 = indices[i * 3 + 0];
@@ -823,7 +833,9 @@ CadPartTriBVH::build(const std::vector<SbVec3f>& positions,
         e.p0       = positions[i0];
         e.p1       = positions[i1];
         e.p2       = positions[i2];
-        e.triIndex = static_cast<uint32_t>(i);
+        e.triIndex = triangleIds.empty() ? static_cast<uint32_t>(i) :
+            triangleIds[i];
+        e.compactIndex = static_cast<uint32_t>(i);
         triangles_.push_back(e);
     }
     if (triangles_.empty()) return;
@@ -916,7 +928,8 @@ CadPartTriBVH::queryClosest(const SbLine& ray) const
     queryRecursive(0, ray, bestT, &bestTri, bestU, bestV);
 
     if (!bestTri) return std::nullopt;
-    return QueryResult{ bestTri->triIndex, bestT, bestU, bestV };
+    return QueryResult{bestTri->triIndex, bestTri->compactIndex,
+        bestT, bestU, bestV};
 }
 
 // ===========================================================================
@@ -952,6 +965,7 @@ CadPickQuery::pickTriangle(
         uint8_t activeLevel = 255;
         std::vector<SbVec3f> progressivePositions;
         std::vector<uint32_t> progressiveIndices;
+        std::vector<uint32_t> progressiveTriangleIds;
         if (mesh.isProgressive()) {
             activeLevel = adaptiveProgressiveCut(
                 mesh, std::min(entry->lodCut, lodCeiling));
@@ -977,6 +991,7 @@ CadPickQuery::pickTriangle(
                                 range.indexCount % 3u ||
                                 end > mesh.indices.size()) {
                             progressiveIndices.clear();
+                            progressiveTriangleIds.clear();
                             validRanges = false;
                             break;
                         }
@@ -985,6 +1000,12 @@ CadPickQuery::pickTriangle(
                             mesh.indices.begin() + range.firstIndex,
                             mesh.indices.begin() +
                                 static_cast<size_t>(end));
+                        const uint32_t firstTriangle = range.firstIndex / 3u;
+                        const uint32_t triangleCount = range.indexCount / 3u;
+                        for (uint32_t triangle = 0;
+                                triangle < triangleCount; ++triangle)
+                            progressiveTriangleIds.push_back(
+                                firstTriangle + triangle);
                     }
                     if (!validRanges)
                         break;
@@ -996,7 +1017,8 @@ CadPickQuery::pickTriangle(
                     mesh.indices.begin(),
                     mesh.indices.begin() + indexCount);
             }
-            progressiveBvh.build(progressivePositions, progressiveIndices);
+            progressiveBvh.build(progressivePositions, progressiveIndices,
+                progressiveTriangleIds);
             triBvh = &progressiveBvh;
         } else {
             // Build non-progressive part triangle BVH lazily.
@@ -1031,9 +1053,9 @@ CadPickQuery::pickTriangle(
             progressiveIndices : mesh.indices;
         const std::vector<SbVec3f>& pickPositions = mesh.isProgressive() ?
             progressivePositions : mesh.positions;
-        uint32_t i0 = pickIndices[hit->triIndex * 3 + 0];
-        uint32_t i1 = pickIndices[hit->triIndex * 3 + 1];
-        uint32_t i2 = pickIndices[hit->triIndex * 3 + 2];
+        uint32_t i0 = pickIndices[hit->compactIndex * 3 + 0];
+        uint32_t i1 = pickIndices[hit->compactIndex * 3 + 1];
+        uint32_t i2 = pickIndices[hit->compactIndex * 3 + 2];
         SbVec3f localHit =
             pickPositions[i0] * (1.0f - hit->u - hit->v)
           + pickPositions[i1] * hit->u

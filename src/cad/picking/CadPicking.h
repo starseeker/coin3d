@@ -250,15 +250,22 @@ public:
     struct TriEntry {
         SbVec3f  p0, p1, p2;   ///< Triangle vertices in part-local space
         uint32_t triIndex;     ///< Triangle index (= mesh.indices offset / 3)
+        uint32_t compactIndex; ///< Triangle position in the supplied index list
     };
 
     /** Build from vertex positions and a triangle index list. */
     void build(const std::vector<SbVec3f>& positions,
                const std::vector<uint32_t>& indices);
 
+    /** Build a compact triangle list while preserving producer face IDs. */
+    void build(const std::vector<SbVec3f>& positions,
+               const std::vector<uint32_t>& indices,
+               const std::vector<uint32_t>& triangleIds);
+
     /** Combined result from queryClosest. */
     struct QueryResult {
         uint32_t triIndex;   ///< Triangle index in the original mesh
+        uint32_t compactIndex; ///< Triangle position in the supplied index list
         float    t;          ///< Ray parameter at the hit point (> 0)
         float    u, v;       ///< Barycentric coordinates within the triangle
     };
