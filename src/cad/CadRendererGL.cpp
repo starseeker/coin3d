@@ -51,6 +51,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <mutex>
 #include <map>
@@ -711,8 +712,8 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
     }
     this->uploadAmbientLight(glue, program);
     if (cadLightDebugRequested()) {
-        static unsigned int reportCount = 0;
-        if (reportCount++ < 32) {
+        static std::atomic<unsigned int> reportCount{0};
+        if (reportCount.fetch_add(1, std::memory_order_relaxed) < 32) {
             std::fprintf(stderr,
                 "CadRendererGL uploadLights program=%u n=%d "
                 "locations={count=%d type=%d vec=%d axis=%d color=%d cos=%d} "

@@ -3355,8 +3355,8 @@ bool CadRendererGL::renderIndirectShaded(
                     completedTriangles));
     }
     if (configuration_->indirectDebug) {
-        static uint32_t lastDebugContext = UINT32_MAX;
-        static size_t lastDebugParts = 0;
+        static thread_local uint32_t lastDebugContext = UINT32_MAX;
+        static thread_local size_t lastDebugParts = 0;
         const size_t parts = gpuRes_->triangleAtlasPartCount();
         if (lastDebugContext != glue->contextid ||
                 parts >= lastDebugParts + 4096u) {

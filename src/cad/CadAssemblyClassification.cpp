@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -1089,8 +1090,9 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
             if (preparationPerformed)
                 *preparationPerformed = true;
             if (cadPlanDebugEnabled()) {
-                static unsigned int resetMessageCount = 0;
-                if (resetMessageCount++ < 256)
+                static std::atomic<unsigned int> resetMessageCount{0};
+                if (resetMessageCount.fetch_add(
+                        1, std::memory_order_relaxed) < 256)
                     std::fprintf(stderr,
                         "SoCADAssembly subpixel classifier reset "
                         "active=%d cursor=%zu input=%llu/%llu "
@@ -1189,8 +1191,9 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
                 ++subpixelProxyBuildVisibleCursor_) {
             if (abortRequested()) {
                 if (cadPlanDebugEnabled()) {
-                    static unsigned int abortMessageCount = 0;
-                    if (abortMessageCount++ < 256)
+                    static std::atomic<unsigned int> abortMessageCount{0};
+                    if (abortMessageCount.fetch_add(
+                            1, std::memory_order_relaxed) < 256)
                         std::fprintf(stderr,
                             "SoCADAssembly subpixel classifier defer "
                             "visible=%zu/%zu wire=%zu/%zu\n",
@@ -1438,8 +1441,9 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
             Obol::CadPresentationPreparationState::Complete,
             subpixelProxyBuildTotalUnits_);
         if (cadPlanDebugEnabled()) {
-            static unsigned int completeMessageCount = 0;
-            if (completeMessageCount++ < 256)
+            static std::atomic<unsigned int> completeMessageCount{0};
+            if (completeMessageCount.fetch_add(
+                    1, std::memory_order_relaxed) < 256)
                 std::fprintf(stderr,
                     "SoCADAssembly subpixel classifier complete "
                     "visible=%zu wire=%zu points=%zu threshold=%.9g\n",

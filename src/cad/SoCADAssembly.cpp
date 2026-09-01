@@ -92,6 +92,7 @@
 #include <unordered_set>
 #include <map>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <vector>
 #include <memory>
@@ -2152,8 +2153,9 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
             ambientColor[0], ambientColor[1], ambientColor[2],
             SoEnvironmentElement::getAmbientIntensity(state));
         if (cadLightDebugEnabled()) {
-            static unsigned int reportCount = 0;
-            if (reportCount++ < 32) {
+            static std::atomic<unsigned int> reportCount{0};
+            if (reportCount.fetch_add(
+                    1, std::memory_order_relaxed) < 32) {
                 std::fprintf(stderr,
                     "SoCADAssembly lights count=%zu stateCount=%d",
                     glLights.size(), lights.getLength());
