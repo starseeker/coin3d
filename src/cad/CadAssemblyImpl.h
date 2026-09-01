@@ -113,7 +113,8 @@ struct SoCADAssemblyImpl :
                                  std::hash<Obol::PartId>>& pids);
 
     void removeInstanceFromPartIndex(
-            Obol::InstanceId iid, Obol::PartId pid);
+            Obol::InstanceId iid, Obol::PartId pid,
+            InstanceData *idata);
 
     void addInstanceToPartIndex(
             Obol::InstanceId iid, Obol::PartId pid,

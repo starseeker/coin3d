@@ -872,7 +872,8 @@ normalFreeTwoSidedGlslMatchesFixed()
         bool rendered = false;
         HalfImageStats image;
     };
-    const auto renderRoute = [](bool softwareGlsl) {
+    const auto renderRoute = [](bool softwareGlsl,
+                                bool coarseOriented) {
         if (softwareGlsl)
             setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
         else
@@ -918,30 +919,38 @@ normalFreeTwoSidedGlslMatchesFixed()
         mesh.bounds.makeEmpty();
         for (const SbVec3f& point : mesh.positions)
             mesh.bounds.extendBy(point);
-        mesh.progressiveMinimumCut = 15;
-        mesh.progressiveResidentCut = 15;
-        setProgressiveCuts(mesh, 16, 0, 0);
-        mesh.progressiveCuts[15].indexCount =
-            static_cast<uint32_t>(mesh.indices.size());
-        mesh.progressiveCuts[15].positionCount =
-            static_cast<uint32_t>(mesh.positions.size());
+        mesh.progressiveMinimumCut = coarseOriented ? 8 : 15;
+        mesh.progressiveResidentCut = 16;
+        setProgressiveCuts(mesh, 17,
+            static_cast<uint32_t>(mesh.indices.size()),
+            static_cast<uint32_t>(mesh.positions.size()));
+        for (size_t cut = mesh.progressiveMinimumCut;
+                cut < mesh.progressiveCuts.size(); ++cut) {
+            mesh.progressiveCuts[cut].quantization = cut == 16 ?
+                Obol::ProgressiveQuantization{16, 16, 0} :
+                Obol::ProgressiveQuantization{8, 8, 0};
+        }
         mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
         mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
 
         Obol::PartGeometryBuilder geometry;
         geometry.shaded = std::move(mesh);
-        geometry.shadedCullBackfaces = false;
+        geometry.shadedCullBackfaces = coarseOriented;
         const Obol::PartId part =
-            Obol::CadIdBuilder::partId("normal-free-two-sided");
+            Obol::CadIdBuilder::partId(coarseOriented ?
+                "normal-free-coarse-oriented" :
+                "normal-free-two-sided");
         requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
             "retained proxy part");
 
         Obol::InstanceRecord instance;
         instance.part = part;
         instance.parent = Obol::CadIdBuilder::rootInstance();
-        instance.childName = "normal-free-two-sided";
+        instance.childName = coarseOriented ?
+            "normal-free-coarse-oriented" :
+            "normal-free-two-sided";
         instance.localToRoot.makeIdentity();
-        instance.lodCut = 15;
+        instance.lodCut = coarseOriented ? 8 : 16;
         instance.style.hasColorOverride = true;
         instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         requireCadMutation(assembly->upsertInstanceAuto(instance),
@@ -960,15 +969,22 @@ normalFreeTwoSidedGlslMatchesFixed()
         return result;
     };
 
-    const RouteResult fixed = renderRoute(false);
-    const RouteResult glsl = renderRoute(true);
+    const RouteResult fixed = renderRoute(false, false);
+    const RouteResult glsl = renderRoute(true, false);
+    const RouteResult coarseFixed = renderRoute(false, true);
+    const RouteResult coarseGlsl = renderRoute(true, true);
     restoreGlslEnvironment();
 
     if (!fixed.rendered || !glsl.rendered ||
+            !coarseFixed.rendered || !coarseGlsl.rendered ||
             fixed.image.leftPixels < 100 ||
             fixed.image.rightPixels < 100 ||
             glsl.image.leftPixels < 100 ||
-            glsl.image.rightPixels < 100)
+            glsl.image.rightPixels < 100 ||
+            coarseFixed.image.leftPixels < 100 ||
+            coarseFixed.image.rightPixels < 100 ||
+            coarseGlsl.image.leftPixels < 100 ||
+            coarseGlsl.image.rightPixels < 100)
         return false;
     const double minimumLit = 0.75 *
         (std::min)(fixed.image.leftMean, fixed.image.rightMean);
@@ -976,16 +992,38 @@ normalFreeTwoSidedGlslMatchesFixed()
         (std::min)(glsl.image.leftMean, glsl.image.rightMean);
     const double glslHigh =
         (std::max)(glsl.image.leftMean, glsl.image.rightMean);
-    const bool matched = glslLow >= minimumLit && glslHigh > 0.0 &&
+    const bool exactMatched = glslLow >= minimumLit && glslHigh > 0.0 &&
         glslLow / glslHigh >= 0.9;
+    const double coarseFixedLow = (std::min)(
+        coarseFixed.image.leftMean, coarseFixed.image.rightMean);
+    const double coarseFixedHigh = (std::max)(
+        coarseFixed.image.leftMean, coarseFixed.image.rightMean);
+    const double coarseGlslLow = (std::min)(
+        coarseGlsl.image.leftMean, coarseGlsl.image.rightMean);
+    const double coarseGlslHigh = (std::max)(
+        coarseGlsl.image.leftMean, coarseGlsl.image.rightMean);
+    /* A source certified as oriented may use one-sided lighting only at an
+     * exact cut.  Non-exact quantization disables culling, so both newly
+     * visible sides must remain lit on the fixed and GLSL routes. */
+    const bool coarseMatched = coarseFixedHigh > 0.0 &&
+        coarseFixedLow / coarseFixedHigh >= 0.9 &&
+        coarseGlslHigh > 0.0 && coarseGlslLow / coarseGlslHigh >= 0.9 &&
+        coarseGlslLow >= 0.75 * coarseFixedLow;
+    const bool matched = exactMatched && coarseMatched;
     if (!matched) {
         std::fprintf(stderr,
             "two-sided stats fixed={left=%.3f/%zu right=%.3f/%zu} "
-            "glsl={left=%.3f/%zu right=%.3f/%zu}\n",
+            "glsl={left=%.3f/%zu right=%.3f/%zu} "
+            "coarse-fixed={left=%.3f/%zu right=%.3f/%zu} "
+            "coarse-glsl={left=%.3f/%zu right=%.3f/%zu}\n",
             fixed.image.leftMean, fixed.image.leftPixels,
             fixed.image.rightMean, fixed.image.rightPixels,
             glsl.image.leftMean, glsl.image.leftPixels,
-            glsl.image.rightMean, glsl.image.rightPixels);
+            glsl.image.rightMean, glsl.image.rightPixels,
+            coarseFixed.image.leftMean, coarseFixed.image.leftPixels,
+            coarseFixed.image.rightMean, coarseFixed.image.rightPixels,
+            coarseGlsl.image.leftMean, coarseGlsl.image.leftPixels,
+            coarseGlsl.image.rightMean, coarseGlsl.image.rightPixels);
     }
     return matched;
 }

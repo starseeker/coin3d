@@ -353,14 +353,13 @@ void SoCADAssemblyImpl::recomputeWorldBoundsForParts(
     }
 
 void SoCADAssemblyImpl::removeInstanceFromPartIndex(
-            Obol::InstanceId iid, Obol::PartId pid) {
+            Obol::InstanceId iid, Obol::PartId pid,
+            InstanceData *idata) {
         const auto indexed = instanceIdsByPart_.find(pid);
-        const auto slot = instancePartSlot_.find(iid);
-        if (indexed == instanceIdsByPart_.end() ||
-                slot == instancePartSlot_.end())
+        if (indexed == instanceIdsByPart_.end() || !idata)
             return;
         InstancePartBucket& ids = indexed->second;
-        size_t offset = slot->second;
+        size_t offset = idata->partSlot;
         if (offset >= ids.size() || !(ids.at(offset) == iid)) {
             offset = ids.size();
             for (size_t candidate = 0; candidate < ids.size(); ++candidate) {
@@ -369,10 +368,8 @@ void SoCADAssemblyImpl::removeInstanceFromPartIndex(
                     break;
                 }
             }
-            if (offset == ids.size()) {
-                instancePartSlot_.erase(slot);
+            if (offset == ids.size())
                 return;
-            }
         }
         const size_t last = ids.size() - 1u;
         if (offset < last) {
@@ -386,7 +383,8 @@ void SoCADAssemblyImpl::removeInstanceFromPartIndex(
                 ids.firstData = replacementData;
             else
                 ids.additionalData[offset - 1u] = replacementData;
-            instancePartSlot_[replacement] = offset;
+            if (replacementData)
+                replacementData->partSlot = offset;
         }
         if (last == 0) {
             ids.hasFirst = false;
@@ -395,7 +393,6 @@ void SoCADAssemblyImpl::removeInstanceFromPartIndex(
             ids.additional.pop_back();
             ids.additionalData.pop_back();
         }
-        instancePartSlot_.erase(iid);
         if (!ids.hasFirst)
             instanceIdsByPart_.erase(indexed);
     }
@@ -405,7 +402,7 @@ void SoCADAssemblyImpl::addInstanceToPartIndex(
             InstanceData *idata) {
         InstancePartBucket& ids = instanceIdsByPart_[pid];
         const size_t slot = ids.size();
-        instancePartSlot_[iid] = slot;
+        idata->partSlot = slot;
         if (!ids.hasFirst) {
             ids.first = iid;
             ids.firstData = idata;
@@ -426,7 +423,7 @@ void SoCADAssemblyImpl::updateKnownInstance(Obol::InstanceId iid,
             idata = &inserted.first->second;
             addInstanceToPartIndex(iid, rec.part, idata);
         } else if (!(prior->partId == rec.part)) {
-            removeInstanceFromPartIndex(iid, prior->partId);
+            removeInstanceFromPartIndex(iid, prior->partId, prior);
             addInstanceToPartIndex(iid, rec.part, prior);
         }
         idata->partId         = rec.part;

@@ -54,6 +54,7 @@ struct CadAssemblyInstanceData {
     uint8_t boolOp = 0;
     uint8_t lodCut = Obol::ProgressiveCutUnspecified;
     bool lodStructuralProxy = false;
+    size_t partSlot = 0;
     SbBox3f worldBounds;
 };
 
@@ -86,8 +87,6 @@ struct CadSceneDatabase {
     std::unordered_map<Obol::InstanceId, CadAssemblyInstanceData,
         std::hash<Obol::InstanceId>> instances_;
     std::map<Obol::PartId, InstancePartBucket> instanceIdsByPart_;
-    std::unordered_map<Obol::InstanceId, size_t,
-        std::hash<Obol::InstanceId>> instancePartSlot_;
     std::unordered_set<Obol::InstanceId,
         std::hash<Obol::InstanceId>> selected_;
     std::unordered_set<Obol::InstanceId,
@@ -115,7 +114,6 @@ struct CadSceneDatabase {
         left.parts_.swap(right.parts_);
         left.instances_.swap(right.instances_);
         left.instanceIdsByPart_.swap(right.instanceIdsByPart_);
-        left.instancePartSlot_.swap(right.instancePartSlot_);
         left.selected_.swap(right.selected_);
         left.hidden_.swap(right.hidden_);
         left.unpickable_.swap(right.unpickable_);
