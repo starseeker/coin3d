@@ -215,6 +215,33 @@ TEST(CadResolvedDraw, MatchesTheExhaustiveSparseResolutionOracle)
     EXPECT_EQ(testExhaustiveSparseResolution(), 0);
 }
 
+TEST(CadResolvedDraw, SharesProgressiveCpuQuantizationAndResidencyRules)
+{
+    const SbVec3f point(0.37f, 0.41f, 0.83f);
+    const SbVec3f minimum(0.0f, 0.0f, 0.0f);
+    const SbVec3f maximum(1.0f, 1.0f, 1.0f);
+    EXPECT_EQ(cadProgressiveSnapPoint(point, minimum, maximum,
+        ProgressiveQuantization{16, 0, 16}), point);
+    const SbVec3f snapped = cadProgressiveSnapPoint(
+        point, minimum, maximum, ProgressiveQuantization{8, 0, 16});
+    EXPECT_NE(snapped[0], point[0]);
+    EXPECT_EQ(snapped[1], point[1]);
+    EXPECT_GE(snapped[0], minimum[0]);
+    EXPECT_LE(snapped[0], maximum[0]);
+
+    WireRep wire;
+    wire.progressiveCuts.resize(5);
+    wire.progressiveMinimumCut = 3;
+    wire.progressiveResidentCut = 4;
+    ProgressiveWireCluster cluster;
+    cluster.ranges.push_back({0, 1, 0});
+    cluster.residentCut = 1;
+    wire.progressiveClusters.push_back(cluster);
+    /* A transient page below the preferred minimum remains a hard safety
+     * ceiling across every CPU consumer. */
+    EXPECT_EQ(cadFullyResidentProgressiveCut(wire, 4), 1u);
+}
+
 TEST(CadResolvedDraw, ReportsCachedVisibleTransparency)
 {
     CadFramePlan plan;

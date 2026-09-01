@@ -25,6 +25,7 @@
  */
 
 #include "CadFramePlan.h"
+#include "CadProgressiveUtils.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -121,21 +122,6 @@ cadDrawableInstanceCount(const CadFramePlan& plan, const CadDrawItem& item,
             ++count;
     }
     return count;
-}
-
-/** Resolve one producer cut request against a resident cut interval. */
-inline uint8_t
-cadResolvedProgressiveCut(uint8_t requested, uint8_t minimum,
-                          uint8_t resident) noexcept
-{
-    /* A newly admitted or compacted population can transiently have less
-     * resident data than the producer's preferred minimum.  Residency is a
-     * hard safety ceiling; minimum is only a quality floor inside the
-     * available interval.  Never manufacture an index range which has not
-     * been published. */
-    const uint8_t availableMinimum = minimum > resident ? resident : minimum;
-    return requested < availableMinimum ? availableMinimum :
-        (requested > resident ? resident : requested);
 }
 
 } // namespace internal
