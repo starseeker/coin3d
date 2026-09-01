@@ -435,13 +435,13 @@ bool CadRendererGL::renderFlatWire(
                 if (renderInterruptedAfter(deadlineWork))
                     return false;
                 const SbVec3f a = wire.isProgressive() ?
-                    progressiveSnapPoint(wire.segmentPoints[p],
+                    cadProgressiveSnapPoint(wire.segmentPoints[p],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum,
                         wire.quantizationAtCut(occurrence.cut)) :
                     wire.segmentPoints[p];
                 const SbVec3f b = wire.isProgressive() ?
-                    progressiveSnapPoint(wire.segmentPoints[p + 1],
+                    cadProgressiveSnapPoint(wire.segmentPoints[p + 1],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum,
                         wire.quantizationAtCut(occurrence.cut)) :
@@ -1270,7 +1270,7 @@ bool CadRendererGL::renderFlatShaded(
                         mesh.positions[indices[vertex]];
                     SbVec3f point = sourcePoint;
                     if (mesh.isProgressive()) {
-                        point = progressiveSnapPoint(
+                        point = cadProgressiveSnapPoint(
                             point, mesh.progressiveQuantizationMinimum,
                             mesh.progressiveQuantizationMaximum,
                             mesh.quantizationAtCut(occurrence.cut));

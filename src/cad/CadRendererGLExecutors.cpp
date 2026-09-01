@@ -239,8 +239,8 @@ executorVisibleProgressiveCut(const TriMesh& mesh,
         const uint8_t resident =
             cluster.residentCut == ProgressiveCutUnspecified ?
                 mesh.progressiveResidentCut : cluster.residentCut;
-        level = std::min(level,
-            std::max(mesh.progressiveMinimumCut, resident));
+        level = cadResolvedProgressiveCut(
+            level, mesh.progressiveMinimumCut, resident);
     }
     return level;
 }
@@ -267,8 +267,8 @@ executorVisibleProgressiveCut(const WireRep& wire,
         const uint8_t resident =
             cluster.residentCut == ProgressiveCutUnspecified ?
                 wire.progressiveResidentCut : cluster.residentCut;
-        level = std::min(level,
-            std::max(wire.progressiveMinimumCut, resident));
+        level = cadResolvedProgressiveCut(
+            level, wire.progressiveMinimumCut, resident);
     }
     return level;
 }
@@ -502,45 +502,6 @@ uploadProgressivePositionUniforms(
     glue->glUniform3fvARB(minLocation, 1, minimum.getValue());
 }
 
-static float
-progressiveSnapCoordinate(float value, float minimum, float maximum,
-                          double mask)
-{
-    if (!(maximum > minimum)) return value;
-    const double scaled =
-        (static_cast<double>(value) - minimum) /
-        (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
-    const double cell = std::floor(code / mask);
-    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
-    return static_cast<float>(
-        (snapped / 65535.0) *
-        (static_cast<double>(maximum) - minimum) + minimum);
-}
-
-SbVec3f
-progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
-                     const SbVec3f& maximum,
-                     ProgressiveQuantization quantization)
-{
-    if (quantization.isExact()) return point;
-    const uint8_t bits[3] = {
-        quantization.xBits, quantization.yBits, quantization.zBits
-    };
-    double mask[3] = {1.0, 1.0, 1.0};
-    for (int axis = 0; axis < 3; ++axis)
-        if (bits[axis] > 0)
-            mask[axis] = std::ldexp(
-                1.0, 16 - std::min<int>(16, bits[axis]));
-    return SbVec3f(
-        bits[0] ? progressiveSnapCoordinate(
-            point[0], minimum[0], maximum[0], mask[0]) : point[0],
-        bits[1] ? progressiveSnapCoordinate(
-            point[1], minimum[1], maximum[1], mask[1]) : point[1],
-        bits[2] ? progressiveSnapCoordinate(
-            point[2], minimum[2], maximum[2], mask[2]) : point[2]);
-}
-
 static const CadProgressiveGpu*
 ensureProgressiveWireGpuImpl(
         CadGpuResources *resources, PartId part, const WireRep& wire,
@@ -649,7 +610,7 @@ ensureProgressiveWireGpuImpl(
     positions.reserve(uploadedPointCount * 3);
     const auto appendPoints = [&](size_t first, size_t count) {
         for (size_t i = first; i < first + count; ++i) {
-            const SbVec3f point = progressiveSnapPoint(
+            const SbVec3f point = cadProgressiveSnapPoint(
                 wire.segmentPoints[i],
                 wire.progressiveQuantizationMinimum,
                 wire.progressiveQuantizationMaximum, quantization);
@@ -785,7 +746,7 @@ ensureProgressiveTriGpuImpl(
     if (indexed) {
         positions.reserve((static_cast<size_t>(maximumIndex) + 1) * 3);
         for (size_t i = 0; i <= maximumIndex; ++i) {
-            const SbVec3f point = progressiveSnapPoint(
+            const SbVec3f point = cadProgressiveSnapPoint(
                 mesh.positions[i],
                 mesh.progressiveQuantizationMinimum,
                 mesh.progressiveQuantizationMaximum,
@@ -813,7 +774,7 @@ ensureProgressiveTriGpuImpl(
                 if (index >= mesh.positions.size())
                     return false;
                 sourceTriangle[k] = mesh.positions[index];
-                triangle[k] = progressiveSnapPoint(
+                triangle[k] = cadProgressiveSnapPoint(
                     sourceTriangle[k],
                     mesh.progressiveQuantizationMinimum,
                     mesh.progressiveQuantizationMaximum,
@@ -907,7 +868,7 @@ ensureProgressiveIndexedWireGpuImpl(
     std::vector<float> positions;
     positions.reserve(positionCount * 3u);
     for (size_t index = 0; index < positionCount; ++index)
-        executorAppendPackedPoint(positions, progressiveSnapPoint(
+        executorAppendPackedPoint(positions, cadProgressiveSnapPoint(
             mesh.positions[index], mesh.progressiveQuantizationMinimum,
             mesh.progressiveQuantizationMaximum, quantization));
     if (prepared) *prepared = true;
@@ -1429,7 +1390,7 @@ bool CadRendererGL::renderIndexedTriangleWire(
                                 SbVec3f point[3];
                                 for (int corner = 0; corner < 3; ++corner)
                                     point[corner] = mesh->isProgressive() ?
-                                        progressiveSnapPoint(
+                                        cadProgressiveSnapPoint(
                                             mesh->positions[source[corner]],
                                             mesh->
                                                 progressiveQuantizationMinimum,
@@ -2948,13 +2909,13 @@ void CadRendererGL::renderImmediateMode(
                 glue->glBegin(GL_LINES);
                 for (; point + 1 < chunkEnd; point += 2) {
                     const SbVec3f a = wire.isProgressive() ?
-                        progressiveSnapPoint(wire.segmentPoints[point],
+                        cadProgressiveSnapPoint(wire.segmentPoints[point],
                             wire.progressiveQuantizationMinimum,
                             wire.progressiveQuantizationMaximum,
                             wire.quantizationAtCut(drawLevel)) :
                         wire.segmentPoints[point];
                     const SbVec3f b = wire.isProgressive() ?
-                        progressiveSnapPoint(
+                        cadProgressiveSnapPoint(
                             wire.segmentPoints[point + 1],
                             wire.progressiveQuantizationMinimum,
                             wire.progressiveQuantizationMaximum,
@@ -3168,7 +3129,7 @@ void CadRendererGL::renderImmediateMode(
                     for (int k = 0; k < 3; ++k) {
                         uint32_t idx = drawIdx[triangleOffset + k];
                         triangle[k] = mesh.isProgressive() ?
-                            progressiveSnapPoint(mesh.positions[idx],
+                            cadProgressiveSnapPoint(mesh.positions[idx],
                                 mesh.progressiveQuantizationMinimum,
                                 mesh.progressiveQuantizationMaximum,
                                 mesh.quantizationAtCut(drawLevel)) :

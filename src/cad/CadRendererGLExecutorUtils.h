@@ -34,6 +34,7 @@
 #define OBOL_CAD_RENDERER_GL_EXECUTOR_UTILS_H
 
 #include "CadRendererGL.h"
+#include "CadProgressiveUtils.h"
 
 #include <Inventor/system/gl.h>
 
@@ -96,9 +97,6 @@ void cadPackInstanceNormalTransform(
 uint64_t cadSaturatingWorkAdd(uint64_t left, uint64_t right);
 float packedProgressiveQuantization(
     ProgressiveQuantization quantization);
-SbVec3f progressiveSnapPoint(
-    const SbVec3f& point, const SbVec3f& minimum,
-    const SbVec3f& maximum, ProgressiveQuantization quantization);
 GLsizei progressiveTriangleIndexCount(
     const SoCADAssembly& assembly, const CadViewState& viewState,
     PartId part, const CadVisibleInstance& instance,

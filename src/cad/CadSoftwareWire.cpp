@@ -13,6 +13,7 @@
  */
 
 #include "CadSoftwareWire.h"
+#include "CadProgressiveUtils.h"
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>
@@ -262,41 +263,15 @@ cadSoftwareProxyBox(unsigned char *pixels, unsigned int width,
         });
 }
 
-static float
-cadSoftwareSnapCoordinate(float value, float minimum, float maximum,
-                          uint8_t bits)
-{
-    if (!bits || !(maximum > minimum)) return value;
-    const double mask = std::ldexp(
-        1.0, 16 - std::min<int>(16, bits));
-    const double scaled =
-        (static_cast<double>(value) - minimum) /
-        (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
-    const double cell = std::floor(code / mask);
-    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
-    return static_cast<float>((snapped / 65535.0) *
-        (static_cast<double>(maximum) - minimum) + minimum);
-}
-
 static SbVec3f
 cadSoftwareSnapPoint(const SbVec3f& point, const Obol::WireRep& wire,
                      uint8_t level)
 {
     if (!wire.isProgressive()) return point;
-    const Obol::ProgressiveQuantization quantization =
-        wire.quantizationAtCut(level);
-    if (quantization.isExact()) return point;
-    return SbVec3f(
-        cadSoftwareSnapCoordinate(point[0],
-            wire.progressiveQuantizationMinimum[0],
-            wire.progressiveQuantizationMaximum[0], quantization.xBits),
-        cadSoftwareSnapCoordinate(point[1],
-            wire.progressiveQuantizationMinimum[1],
-            wire.progressiveQuantizationMaximum[1], quantization.yBits),
-        cadSoftwareSnapCoordinate(point[2],
-            wire.progressiveQuantizationMinimum[2],
-            wire.progressiveQuantizationMaximum[2], quantization.zBits));
+    return Obol::internal::cadProgressiveSnapPoint(
+        point, wire.progressiveQuantizationMinimum,
+        wire.progressiveQuantizationMaximum,
+        wire.quantizationAtCut(level));
 }
 
 static SbVec3f
@@ -304,19 +279,10 @@ cadSoftwareSnapPoint(const SbVec3f& point, const Obol::TriMesh& mesh,
                      uint8_t level)
 {
     if (!mesh.isProgressive()) return point;
-    const Obol::ProgressiveQuantization quantization =
-        mesh.quantizationAtCut(level);
-    if (quantization.isExact()) return point;
-    return SbVec3f(
-        cadSoftwareSnapCoordinate(point[0],
-            mesh.progressiveQuantizationMinimum[0],
-            mesh.progressiveQuantizationMaximum[0], quantization.xBits),
-        cadSoftwareSnapCoordinate(point[1],
-            mesh.progressiveQuantizationMinimum[1],
-            mesh.progressiveQuantizationMaximum[1], quantization.yBits),
-        cadSoftwareSnapCoordinate(point[2],
-            mesh.progressiveQuantizationMinimum[2],
-            mesh.progressiveQuantizationMaximum[2], quantization.zBits));
+    return Obol::internal::cadProgressiveSnapPoint(
+        point, mesh.progressiveQuantizationMinimum,
+        mesh.progressiveQuantizationMaximum,
+        mesh.quantizationAtCut(level));
 }
 
 static bool
@@ -406,8 +372,9 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             if (wire.isProgressive()) {
                 if (level == Obol::ProgressiveCutUnspecified)
                     level = wire.progressiveResidentCut;
-                level = std::max(wire.progressiveMinimumCut,
-                    std::min(wire.progressiveResidentCut, level));
+                level = Obol::internal::cadResolvedProgressiveCut(
+                    level, wire.progressiveMinimumCut,
+                    wire.progressiveResidentCut);
                 /* One logical occurrence must use one coherent cut.  A page
                  * that has only a coarser resident prefix constrains the
                  * entire visible mesh, while an offscreen page does not. */
@@ -423,8 +390,8 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
                                 Obol::ProgressiveCutUnspecified ?
                                 wire.progressiveResidentCut :
                                 cluster.residentCut;
-                        level = std::min(level,
-                            std::max(wire.progressiveMinimumCut, resident));
+                        level = Obol::internal::cadResolvedProgressiveCut(
+                            level, wire.progressiveMinimumCut, resident);
                     }
                 }
             }

@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "CadPicking.h"
+#include "../CadProgressiveUtils.h"
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbBox3f.h>
@@ -91,74 +92,6 @@ rayBoxHit(const SbLine& ray, const SbBox3f& box, float* hitT) noexcept
     if (tmax < 0.0f) return false;
     if (hitT) *hitT = std::max(0.0f, tmin);
     return true;
-}
-
-uint8_t
-progressiveCut(uint8_t requested, uint8_t minimum, uint8_t resident) noexcept
-{
-    if (resident == 255) return requested;
-    if (requested == 255) requested = resident;
-    return std::max(minimum, std::min(resident, requested));
-}
-
-template <typename Progressive>
-uint8_t
-adaptiveProgressiveCut(const Progressive& progressive,
-                       uint8_t requested) noexcept
-{
-    uint8_t level = progressiveCut(requested,
-        progressive.progressiveMinimumCut,
-        progressive.progressiveResidentCut);
-    if (!progressive.hasAdaptiveProgressiveClusters())
-        return level;
-
-    /* CadPickQuery has no camera frustum with which to discard offscreen
-     * pages.  Constrain the occurrence by every populated page so picking can
-     * never test a cut which is not fully resident.  This is conservative
-     * relative to rendering, which may ignore an offscreen coarse page. */
-    for (const auto& cluster : progressive.progressiveClusters) {
-        if (cluster.ranges.empty())
-            continue;
-        const uint8_t resident =
-            cluster.residentCut == Obol::ProgressiveCutUnspecified ?
-            progressive.progressiveResidentCut : cluster.residentCut;
-        level = std::min(level,
-            std::max(progressive.progressiveMinimumCut, resident));
-    }
-    return level;
-}
-
-float
-progressiveSnapCoordinate(float value, float minimum, float maximum,
-                          uint8_t bits) noexcept
-{
-    if (!bits || !(maximum > minimum)) return value;
-    const double mask = std::ldexp(
-        1.0, 16 - std::min<int>(16, bits));
-    const double scaled =
-        (static_cast<double>(value) - minimum) /
-        (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
-    const double cell = std::floor(code / mask);
-    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
-    return static_cast<float>(
-        (snapped / 65535.0) *
-        (static_cast<double>(maximum) - minimum) + minimum);
-}
-
-SbVec3f
-progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
-                     const SbVec3f& maximum,
-                     Obol::ProgressiveQuantization quantization) noexcept
-{
-    if (quantization.isExact()) return point;
-    return SbVec3f(
-        progressiveSnapCoordinate(point[0], minimum[0], maximum[0],
-            quantization.xBits),
-        progressiveSnapCoordinate(point[1], minimum[1], maximum[1],
-            quantization.yBits),
-        progressiveSnapCoordinate(point[2], minimum[2], maximum[2],
-            quantization.zBits));
 }
 
 }  // namespace
@@ -689,7 +622,7 @@ CadPickQuery::pickEdge(
         if (const Obol::TriMesh *triangleEdges = wire.triangleEdges()) {
             const Obol::TriMesh& mesh = *triangleEdges;
             const uint8_t level = mesh.isProgressive() ?
-                adaptiveProgressiveCut(mesh,
+                Obol::internal::cadFullyResidentProgressiveCut(mesh,
                     std::min(entry->lodCut, lodCeiling)) :
                 Obol::ProgressiveCutUnspecified;
             const CadProgressivePickKey key{pid, level};
@@ -713,7 +646,7 @@ CadPickQuery::pickEdge(
                         SbVec3f point[3];
                         for (int corner = 0; corner < 3; ++corner) {
                             point[corner] = mesh.isProgressive() ?
-                                progressiveSnapPoint(
+                                Obol::internal::cadProgressiveSnapPoint(
                                     mesh.positions[source[corner]],
                                     mesh.progressiveQuantizationMinimum,
                                     mesh.progressiveQuantizationMaximum,
@@ -750,7 +683,8 @@ CadPickQuery::pickEdge(
             }
             edgeBvh = &cached->second;
         } else if (wire.isProgressive()) {
-            const uint8_t level = adaptiveProgressiveCut(
+            const uint8_t level =
+                Obol::internal::cadFullyResidentProgressiveCut(
                 wire, std::min(entry->lodCut, lodCeiling));
             const CadProgressivePickKey key{pid, level};
             auto cached = cutCache.find(key);
@@ -767,12 +701,12 @@ CadPickQuery::pickEdge(
                             wire.segmentIds[sourceSegment] :
                             static_cast<uint32_t>(sourceSegment);
                         segs.push_back({
-                            progressiveSnapPoint(
+                            Obol::internal::cadProgressiveSnapPoint(
                                 wire.segmentPoints[2 * sourceSegment],
                                 wire.progressiveQuantizationMinimum,
                                 wire.progressiveQuantizationMaximum,
                                 wire.quantizationAtCut(level)),
-                            progressiveSnapPoint(
+                            Obol::internal::cadProgressiveSnapPoint(
                                 wire.segmentPoints[2 * sourceSegment + 1],
                                 wire.progressiveQuantizationMinimum,
                                 wire.progressiveQuantizationMaximum,
@@ -1126,7 +1060,8 @@ CadPickQuery::pickTriangle(
         const Obol::TriMesh& mesh = *geom.shaded;
         const CadPartTriBVH *triBvh = nullptr;
         if (mesh.isProgressive()) {
-            const uint8_t activeLevel = adaptiveProgressiveCut(
+            const uint8_t activeLevel =
+                Obol::internal::cadFullyResidentProgressiveCut(
                 mesh, std::min(entry->lodCut, lodCeiling));
             const CadProgressivePickKey key{pid, activeLevel};
             auto cached = cutCache.find(key);
@@ -1134,10 +1069,11 @@ CadPickQuery::pickTriangle(
                 std::vector<SbVec3f> progressivePositions;
                 progressivePositions.reserve(mesh.positions.size());
                 for (const SbVec3f& point : mesh.positions) {
-                    progressivePositions.push_back(progressiveSnapPoint(
-                        point, mesh.progressiveQuantizationMinimum,
-                        mesh.progressiveQuantizationMaximum,
-                        mesh.quantizationAtCut(activeLevel)));
+                    progressivePositions.push_back(
+                        Obol::internal::cadProgressiveSnapPoint(
+                            point, mesh.progressiveQuantizationMinimum,
+                            mesh.progressiveQuantizationMaximum,
+                            mesh.quantizationAtCut(activeLevel)));
                 }
                 std::vector<uint32_t> progressiveIndices;
                 std::vector<uint32_t> progressiveTriangleIds;
