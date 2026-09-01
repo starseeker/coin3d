@@ -2083,17 +2083,15 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         // lights are all supported (up to CadRendererGL::kMaxLights), each with
         // its own RGB colour x intensity.
         //
-        // The shaded GLSL pass lights in WORLD space (v_worldPos/v_norm use the
-        // model matrix without the view).  Obol authors all its lights directly
-        // in world coordinates -- the headlight direction is rewritten in world
-        // space each frame, and DB light positions are world bbox centers -- and
-        // places them without transform nodes above them, so the SoLight field
-        // values ARE world space.  We therefore read the raw fields rather than
-        // SoLightElement::getMatrix(), whose accumulated matrix for the
-        // post-camera scene-lights group is contaminated with the view transform
-        // in this custom render batch (which would put point/spot positions in
-        // eye space and make them drift with the camera).
+        // The shaded GLSL pass lights in world space.  SoLightElement records
+        // the model-view matrix active when each light was traversed; remove
+        // the current viewing matrix so transformed scene lights retain their
+        // authored model transform without becoming camera-relative.
         const SoNodeList& lights = SoLightElement::getLights(state);
+        const SbMatrix viewToWorld =
+            SoViewingMatrixElement::get(state).inverse();
+        const SbVec3f environmentAttenuation =
+            SoEnvironmentElement::getLightAttenuation(state);
         std::vector<Obol::internal::CadRendererGL::GlLight> glLights;
         for (int li = 0; li < lights.getLength(); ++li) {
             SoLight* l = static_cast<SoLight*>(lights[li]);
@@ -2105,9 +2103,15 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
             gl.color[0] = c[0] * inten;
             gl.color[1] = c[1] * inten;
             gl.color[2] = c[2] * inten;
+            gl.attenuation[0] = environmentAttenuation[2];
+            gl.attenuation[1] = environmentAttenuation[1];
+            gl.attenuation[2] = environmentAttenuation[0];
+            SbMatrix lightToWorld = SoLightElement::getMatrix(state, li);
+            lightToWorld.multRight(viewToWorld);
             if (l->isOfType(SoDirectionalLight::getClassTypeId())) {
                 SoDirectionalLight* dl = static_cast<SoDirectionalLight*>(l);
                 SbVec3f travel = dl->direction.getValue();
+                lightToWorld.multDirMatrix(travel, travel);
                 if (travel.length() <= 0.0f)
                     continue;
                 travel.normalize();
@@ -2118,15 +2122,23 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
                 SoSpotLight* sl = static_cast<SoSpotLight*>(l);
                 SbVec3f pos = sl->location.getValue();
                 SbVec3f axis = sl->direction.getValue();
-                if (axis.length() > 0.0f) axis.normalize();
+                lightToWorld.multVecMatrix(pos, pos);
+                lightToWorld.multDirMatrix(axis, axis);
+                if (axis.length() > 0.0f)
+                    axis.normalize();
                 gl.type = 2;  // spot
                 gl.vec[0] = pos[0];  gl.vec[1] = pos[1];  gl.vec[2] = pos[2];
                 gl.axis[0] = axis[0]; gl.axis[1] = axis[1]; gl.axis[2] = axis[2];
-                gl.cosCutoff =
-                    static_cast<float>(std::cos(sl->cutOffAngle.getValue()));
+                const float cutoff = std::max(0.0f, std::min(
+                    sl->cutOffAngle.getValue(),
+                    1.57079632679489661923f));
+                gl.cosCutoff = static_cast<float>(std::cos(cutoff));
+                gl.spotExponent = std::max(0.0f, std::min(
+                    sl->dropOffRate.getValue(), 1.0f)) * 128.0f;
             } else if (l->isOfType(SoPointLight::getClassTypeId())) {
                 SoPointLight* pl = static_cast<SoPointLight*>(l);
                 SbVec3f pos = pl->location.getValue();
+                lightToWorld.multVecMatrix(pos, pos);
                 gl.type = 1;  // point
                 gl.vec[0] = pos[0]; gl.vec[1] = pos[1]; gl.vec[2] = pos[2];
             } else {

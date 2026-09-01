@@ -12,8 +12,11 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoEnvironment.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
+#include <Inventor/nodes/SoResetTransform.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoSpotLight.h>
 #include <Inventor/nodes/SoTransform.h>
 
 #include <cstdlib>
@@ -1153,6 +1156,136 @@ nonUniformNormalTransformMatchesFixed()
             "non-uniform normal stats fixed={mean=%.3f pixels=%zu} "
             "glsl={mean=%.3f pixels=%zu}\n",
             fixed.mean, fixed.pixels, glsl.mean, glsl.pixels);
+    return matched;
+}
+
+bool
+transformedSpotlightStateMatchesFixed()
+{
+    const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
+    const bool hadPreviousGlsl = previousGlsl != nullptr;
+    const std::string previousGlslValue =
+        previousGlsl ? std::string(previousGlsl) : std::string();
+    const auto restoreGlslEnvironment = [&]() {
+        if (hadPreviousGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL",
+                previousGlslValue.c_str(), 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+    };
+
+    struct RouteResult {
+        bool rendered = false;
+        HalfImageStats image;
+    };
+    const auto renderRoute = [](bool softwareGlsl) {
+        if (softwareGlsl)
+            setTestEnvironment("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+        else
+            unsetTestEnvironment("OBOL_CAD_SOFTWARE_GLSL");
+
+        SoSeparator *root = new SoSeparator;
+        root->ref();
+        SoOrthographicCamera *camera = new SoOrthographicCamera;
+        camera->position.setValue(0.0f, 0.0f, 5.0f);
+        camera->nearDistance.setValue(0.1f);
+        camera->farDistance.setValue(100.0f);
+        camera->height.setValue(2.0f);
+        root->addChild(camera);
+
+        SoEnvironment *environment = new SoEnvironment;
+        environment->ambientIntensity.setValue(0.0f);
+        // SoEnvironment stores quadratic, linear, then constant.
+        environment->attenuation.setValue(0.5f, 0.0f, 0.5f);
+        root->addChild(environment);
+
+        // Capture a translated light matrix, then reset the model transform
+        // before the CAD assembly.  Reading the light's raw fields would
+        // incorrectly leave this spotlight centered between the two panels.
+        SoTransform *lightTransform = new SoTransform;
+        lightTransform->translation.setValue(-0.625f, 0.0f, 0.0f);
+        root->addChild(lightTransform);
+        SoSpotLight *light = new SoSpotLight;
+        light->location.setValue(0.0f, 0.0f, 1.0f);
+        light->direction.setValue(0.0f, 0.0f, -1.0f);
+        light->cutOffAngle.setValue(1.3f);
+        light->dropOffRate.setValue(0.01f);
+        root->addChild(light);
+        root->addChild(new SoResetTransform);
+
+        SoCADAssembly *assembly = new SoCADAssembly;
+        setCadDrawMode(root, SoCADViewState::SHADED);
+        root->addChild(assembly);
+
+        Obol::TriMesh mesh;
+        mesh.positions = {
+            SbVec3f(-1.0f, -0.6f, 0.0f),
+            SbVec3f(-0.25f, -0.6f, 0.0f),
+            SbVec3f(-0.25f, 0.6f, 0.0f),
+            SbVec3f(-1.0f, 0.6f, 0.0f),
+            SbVec3f(0.25f, -0.6f, 0.0f),
+            SbVec3f(1.0f, -0.6f, 0.0f),
+            SbVec3f(1.0f, 0.6f, 0.0f),
+            SbVec3f(0.25f, 0.6f, 0.0f)
+        };
+        mesh.normals.assign(mesh.positions.size(),
+            SbVec3f(0.0f, 0.0f, 1.0f));
+        mesh.indices = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
+        mesh.bounds.makeEmpty();
+        for (const SbVec3f& point : mesh.positions)
+            mesh.bounds.extendBy(point);
+        Obol::PartGeometryBuilder geometry;
+        geometry.shaded = std::move(mesh);
+        const Obol::PartId part =
+            Obol::CadIdBuilder::partId("transformed-spotlight-state");
+        requireCadMutation(admitAndUpsertPart(assembly, part, geometry),
+            "transformed spotlight part");
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::rootInstance();
+        instance.childName = "transformed-spotlight-state";
+        instance.localToRoot.makeIdentity();
+        instance.style.hasColorOverride = true;
+        instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        requireCadMutation(assembly->upsertInstanceAuto(instance),
+            "transformed spotlight instance");
+
+        SoOffscreenRenderer renderer(SbViewportRegion(256, 192));
+        renderer.setComponents(SoOffscreenRenderer::RGB);
+        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        RouteResult result;
+        result.rendered = render(renderer, root);
+        if (result.rendered)
+            result.image = foregroundHalfStats(renderer);
+        root->unref();
+        return result;
+    };
+
+    const RouteResult fixed = renderRoute(false);
+    const RouteResult glsl = renderRoute(true);
+    restoreGlslEnvironment();
+    const auto hasExpectedFalloff = [](const RouteResult& result) {
+        return result.rendered && result.image.leftPixels > 500 &&
+            result.image.rightPixels > 500 && result.image.rightMean > 0.0 &&
+            result.image.leftMean / result.image.rightMean > 1.5;
+    };
+    const double fixedRatio = fixed.image.rightMean > 0.0 ?
+        fixed.image.leftMean / fixed.image.rightMean : 0.0;
+    const double glslRatio = glsl.image.rightMean > 0.0 ?
+        glsl.image.leftMean / glsl.image.rightMean : 0.0;
+    const bool matched = hasExpectedFalloff(fixed) &&
+        hasExpectedFalloff(glsl) &&
+        glslRatio >= fixedRatio * 0.75 &&
+        glslRatio <= fixedRatio * 1.25;
+    if (!matched)
+        std::fprintf(stderr,
+            "transformed spotlight stats fixed={left=%.3f/%zu "
+            "right=%.3f/%zu} glsl={left=%.3f/%zu right=%.3f/%zu}\n",
+            fixed.image.leftMean, fixed.image.leftPixels,
+            fixed.image.rightMean, fixed.image.rightPixels,
+            glsl.image.leftMean, glsl.image.leftPixels,
+            glsl.image.rightMean, glsl.image.rightPixels);
     return matched;
 }
 
@@ -4166,6 +4299,11 @@ TEST_F(CadSubpixelProxyContracts, NormalFreeTwoSidedGlslMatchesFixedPipeline)
 TEST_F(CadSubpixelProxyContracts, NonUniformNormalTransformMatchesFixedPipeline)
 {
     EXPECT_TRUE(nonUniformNormalTransformMatchesFixed());
+}
+
+TEST_F(CadSubpixelProxyContracts, TransformedSpotlightStateMatchesFixedPipeline)
+{
+    EXPECT_TRUE(transformedSpotlightStateMatchesFixed());
 }
 
 TEST_F(CadSubpixelProxyContracts, IndirectProgressiveAtlasGrows)
