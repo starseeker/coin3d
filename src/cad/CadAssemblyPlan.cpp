@@ -301,8 +301,7 @@ void SoCADAssemblyImpl::updatePartGeometry(
         }
         partGeneration_[pid] = nextGeneration_++;
         if (replacing) {
-            partEdgeBvhCache_.erase(pid);
-            partTriBvhCache_.erase(pid);
+            erasePartBvhCaches(pid);
         }
         const bool progressive =
             (geom->shaded.has_value() && geom->shaded->isProgressive()) ||

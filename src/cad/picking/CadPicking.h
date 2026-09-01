@@ -236,6 +236,47 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// CadPartPointBVH – AABB tree over points of one part's PointRep
+// ---------------------------------------------------------------------------
+
+/** Point-level acceleration for a retained part, evaluated with an exact
+ * world-space tolerance after conservative part-space pruning. */
+class OBOL_DLL_API CadPartPointBVH {
+public:
+    struct PointEntry {
+        SbVec3f point;
+        uint32_t pointId = 0;
+    };
+
+    struct QueryResult {
+        PointEntry point;
+        float t = 0.0f;
+    };
+
+    void build(const std::vector<SbVec3f>& positions,
+               const std::vector<uint32_t>& pointIds);
+
+    std::optional<QueryResult> queryClosestTransformed(
+        const SbLine& localRay, float localBroadphaseTolerance,
+        const SbLine& worldRay, const SbMatrix& localToWorld,
+        float worldTolerance) const;
+
+    bool isBuilt() const noexcept { return !nodes_.empty(); }
+
+private:
+    std::vector<PointEntry> points_;
+    std::vector<BvhNode> nodes_;
+
+    int buildRecursive(std::vector<int>& indices, int begin, int end);
+    void queryTransformedRecursive(
+        int nodeIdx, const SbLine& localRay, float localTolerance,
+        const SbLine& worldRay, const SbMatrix& localToWorld,
+        float worldTolerance2, float& bestT,
+        const PointEntry** bestPoint) const;
+    static SbBox3f pointBounds(const SbVec3f& point) noexcept;
+};
+
+// ---------------------------------------------------------------------------
 // CadPartTriBVH – AABB tree over triangles of one part's TriMesh
 // ---------------------------------------------------------------------------
 
@@ -268,6 +309,7 @@ public:
         uint32_t compactIndex; ///< Triangle position in the supplied index list
         float    t;          ///< Ray parameter at the hit point (> 0)
         float    u, v;       ///< Barycentric coordinates within the triangle
+        SbVec3f  hitPoint;   ///< Intersection in part-local coordinates
     };
 
     /**
@@ -302,6 +344,33 @@ private:
                                 float& t, float& u, float& v) noexcept;
 };
 
+/** Cache identity for geometry whose progressive vertex/index payload depends
+ * on the active cut.  A part replacement invalidates all keys for that part. */
+struct CadProgressivePickKey {
+    PartId part;
+    uint8_t cut = Obol::ProgressiveCutUnspecified;
+
+    bool operator==(const CadProgressivePickKey& other) const noexcept {
+        return part == other.part && cut == other.cut;
+    }
+};
+
+struct CadProgressivePickKeyHash {
+    size_t operator()(const CadProgressivePickKey& key) const noexcept {
+        size_t value = std::hash<PartId>{}(key.part);
+        value ^= static_cast<size_t>(key.cut) +
+            static_cast<size_t>(0x9e3779b9u) + (value << 6) + (value >> 2);
+        return value;
+    }
+};
+
+using CadPartPointBvhCache = std::unordered_map<
+    PartId, CadPartPointBVH, std::hash<PartId>>;
+using CadProgressiveEdgeBvhCache = std::unordered_map<
+    CadProgressivePickKey, CadPartEdgeBVH, CadProgressivePickKeyHash>;
+using CadProgressiveTriBvhCache = std::unordered_map<
+    CadProgressivePickKey, CadPartTriBVH, CadProgressivePickKeyHash>;
+
 // ---------------------------------------------------------------------------
 // CadPickQuery – orchestrates picking using the above BVH structures
 // ---------------------------------------------------------------------------
@@ -319,7 +388,8 @@ public:
         const CadInstanceBVH& instanceBvh,
         const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                                  std::hash<Obol::PartId>>& partGeometries,
-        float toleranceWS);
+        float toleranceWS,
+        CadPartPointBvhCache *partBvhCache = nullptr);
 
     /**
      * @brief Perform edge (wire) picking.
@@ -339,7 +409,8 @@ public:
         std::unordered_map<PartId, CadPartEdgeBVH,
                            std::hash<Obol::PartId>>&        partBvhCache,
         float                                               toleranceWS,
-        uint8_t                                             lodCeiling = 255);
+        uint8_t                                             lodCeiling = 255,
+        CadProgressiveEdgeBvhCache *progressiveBvhCache = nullptr);
 
     /**
      * @brief Perform bounding-box picking (bounds proxy).
@@ -373,7 +444,8 @@ public:
         std::unordered_map<PartId, CadPartTriBVH,
                            std::hash<Obol::PartId>>&        partTriBvhCache,
         float                                               toleranceWS = 0.0f,
-        uint8_t                                             lodCeiling = 255);
+        uint8_t                                             lodCeiling = 255,
+        CadProgressiveTriBvhCache *progressiveBvhCache = nullptr);
 };
 
 } // namespace picking
