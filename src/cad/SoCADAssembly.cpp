@@ -1700,6 +1700,7 @@ SoCADAssembly::pointProxyProtectionRevision() const
 uint64_t
 SoCADAssembly::lastClassifiedPointProxyProtectionRevision() const
 {
+    std::lock_guard<std::recursive_mutex> renderLock(impl_->renderMutex_);
     return impl_->classifiedPointProxyProtectionRevision_;
 }
 
