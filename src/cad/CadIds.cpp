@@ -32,8 +32,6 @@
 
 #include <Obol/cad/CadIds.h>
 
-#include <cstring>
-
 namespace Obol {
 
 // ---------------------------------------------------------------------------
@@ -137,31 +135,20 @@ CadIdBuilder::childInstance(InstanceId parent,
                             uint32_t occurrenceIndex,
                             uint8_t boolOp) noexcept
 {
-    // Pack step data: name bytes + NUL separator + occurrence (4 bytes LE) + boolOp
-    // Using a fixed-format encoding ensures determinism independent of endianness.
-    const size_t nameLen = childName.size();
-    // 4 bytes for occurrence, 1 byte boolOp, 1 byte NUL separator
-    const size_t totalLen = nameLen + 1 + 4 + 1;
-    // Use a stack buffer for common short names; heap for long ones
-    uint8_t  stack_buf[256];
-    uint8_t* buf = totalLen <= sizeof(stack_buf) ? stack_buf : new uint8_t[totalLen];
-
-    size_t pos = 0;
-    std::memcpy(buf + pos, childName.data(), nameLen);
-    pos += nameLen;
-    buf[pos++] = 0x00;  // NUL separator between name and numeric fields
-    // occurrence index, little-endian
-    buf[pos++] = static_cast<uint8_t>( occurrenceIndex        & 0xFF);
-    buf[pos++] = static_cast<uint8_t>((occurrenceIndex >>  8) & 0xFF);
-    buf[pos++] = static_cast<uint8_t>((occurrenceIndex >> 16) & 0xFF);
-    buf[pos++] = static_cast<uint8_t>((occurrenceIndex >> 24) & 0xFF);
-    buf[pos++] = boolOp;
-
-    const InstanceId result = extendInstance(parent, buf, pos);
-    if (buf != stack_buf) {
-        delete[] buf;
-    }
-    return result;
+    // Feed the fixed-format encoding incrementally so this noexcept API never
+    // allocates for a long child name.  The byte stream remains exactly:
+    // name + NUL + little-endian occurrence + boolean operation.
+    InstanceId result = extendInstance(parent,
+        reinterpret_cast<const uint8_t*>(childName.data()), childName.size());
+    const uint8_t suffix[6] = {
+        0x00,
+        static_cast<uint8_t>( occurrenceIndex        & 0xFF),
+        static_cast<uint8_t>((occurrenceIndex >>  8) & 0xFF),
+        static_cast<uint8_t>((occurrenceIndex >> 16) & 0xFF),
+        static_cast<uint8_t>((occurrenceIndex >> 24) & 0xFF),
+        boolOp
+    };
+    return extendInstance(result, suffix, sizeof(suffix));
 }
 
 } // namespace Obol
