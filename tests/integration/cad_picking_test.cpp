@@ -31,9 +31,12 @@ using Obol::TriMesh;
 using Obol::WireRep;
 using Obol::picking::CadInstanceBVH;
 using Obol::picking::CadPartEdgeBVH;
+using Obol::picking::CadPartPointBvhCache;
 using Obol::picking::CadPartTriBVH;
 using Obol::picking::CadPickQuery;
 using Obol::picking::CadPickResult;
+using Obol::picking::CadProgressiveEdgeBvhCache;
+using Obol::picking::CadProgressiveTriBvhCache;
 
 std::shared_ptr<const PartGeometry>
 admitGeometry(PartGeometryBuilder geometry)
@@ -329,15 +332,19 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     CadInstanceBVH instances;
     instances.build({entry});
     std::unordered_map<PartId, CadPartTriBVH> triangles;
+    CadProgressiveTriBvhCache progressiveTriangles;
     const SbLine ray(SbVec3f(10, 0, 5), SbVec3f(10, 0, 4));
     EXPECT_FALSE(CadPickQuery::pickTriangle(
-        ray, instances, parts, triangles, 0.05f, 0).valid);
+        ray, instances, parts, triangles, 0.05f, 0,
+        &progressiveTriangles).valid);
     const CadPickResult rich = CadPickQuery::pickTriangle(
-        ray, instances, parts, triangles, 0.05f, 2);
+        ray, instances, parts, triangles, 0.05f, 2,
+        &progressiveTriangles);
     ASSERT_TRUE(rich.valid);
     EXPECT_EQ(rich.instanceId, instance);
     EXPECT_EQ(rich.primType, CadPickResult::TRIANGLE);
     EXPECT_EQ(rich.primIndex0, 1u);
+    EXPECT_EQ(progressiveTriangles.size(), 2u);
 
     /* Sparse adaptive ranges are compacted for the temporary pick BVH, but
      * their producer-facing face identity remains the source index offset. */
@@ -345,8 +352,10 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     PartGeometryBuilder sparseGeometry;
     sparseGeometry.shaded = mesh;
     parts[part] = admitGeometry(std::move(sparseGeometry));
+    progressiveTriangles.clear();
     const CadPickResult sparse = CadPickQuery::pickTriangle(
-        ray, instances, parts, triangles, 0.05f, 2);
+        ray, instances, parts, triangles, 0.05f, 2,
+        &progressiveTriangles);
     ASSERT_TRUE(sparse.valid);
     EXPECT_EQ(sparse.primIndex0, 1u);
 
@@ -357,8 +366,10 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     PartGeometryBuilder partiallyResidentGeometry;
     partiallyResidentGeometry.shaded = mesh;
     parts[part] = admitGeometry(std::move(partiallyResidentGeometry));
+    progressiveTriangles.clear();
     EXPECT_FALSE(CadPickQuery::pickTriangle(
-        ray, instances, parts, triangles, 0.05f, 2).valid);
+        ray, instances, parts, triangles, 0.05f, 2,
+        &progressiveTriangles).valid);
 }
 
 TEST(CadPicking, AdaptiveWirePicksOnlyFullyResidentClusterRanges)
@@ -400,14 +411,16 @@ TEST(CadPicking, AdaptiveWirePicksOnlyFullyResidentClusterRanges)
     CadInstanceBVH instances;
     instances.build({makeEntry(part, instance, wire.bounds, identity)});
     std::unordered_map<PartId, CadPartEdgeBVH> edges;
+    CadProgressiveEdgeBvhCache progressiveEdges;
     EXPECT_FALSE(CadPickQuery::pickEdge(
         SbLine(SbVec3f(10, 0, 5), SbVec3f(10, 0, 4)),
-        instances, parts, edges, 0.05f, 1).valid);
+        instances, parts, edges, 0.05f, 1, &progressiveEdges).valid);
     const CadPickResult coarse = CadPickQuery::pickEdge(
         SbLine(SbVec3f(0, 0, 5), SbVec3f(0, 0, 4)),
-        instances, parts, edges, 0.05f, 1);
+        instances, parts, edges, 0.05f, 1, &progressiveEdges);
     ASSERT_TRUE(coarse.valid);
     EXPECT_EQ(coarse.primIndex0, 17u);
+    EXPECT_EQ(progressiveEdges.size(), 1u);
 }
 
 TEST(CadPicking, PointPicksApplyTransformsAndPreserveProducerIds)
@@ -430,17 +443,19 @@ TEST(CadPicking, PointPicksApplyTransformsAndPreserveProducerIds)
     world_bounds.transform(transform);
     CadInstanceBVH instances;
     instances.build({makeEntry(part, instance, world_bounds, transform)});
+    CadPartPointBvhCache pointCache;
 
     const CadPickResult hit = CadPickQuery::pickPoint(
         SbLine(SbVec3f(6.02f, 3, 5), SbVec3f(6.02f, 3, 4)),
-        instances, parts, 0.05f);
+        instances, parts, 0.05f, &pointCache);
     ASSERT_TRUE(hit.valid);
     EXPECT_EQ(hit.instanceId, instance);
     EXPECT_EQ(hit.primType, CadPickResult::POINT);
     EXPECT_EQ(hit.primIndex0, 23u);
     EXPECT_FALSE(CadPickQuery::pickPoint(
         SbLine(SbVec3f(6.2f, 3, 5), SbVec3f(6.2f, 3, 4)),
-        instances, parts, 0.05f).valid);
+        instances, parts, 0.05f, &pointCache).valid);
+    EXPECT_EQ(pointCache.size(), 1u);
 }
 
 } // namespace

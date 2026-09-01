@@ -680,8 +680,7 @@ SoCADAssembly::clear()
     impl_->hidden_.clear();
     impl_->unpickable_.clear();
     impl_->pointProxyProtected_.clear();
-    impl_->partEdgeBvhCache_.clear();
-    impl_->partTriBvhCache_.clear();
+    impl_->clearPartBvhCaches();
     impl_->progressiveParts_.clear();
     /* CadPartBinding retains immutable geometry for camera-only plan reuse.
      * An explicitly empty assembly must release that ownership immediately,
@@ -1034,8 +1033,7 @@ SoCADAssembly::removePart(Obol::PartId pid)
     impl_->parts_.erase(pid);
     impl_->subpixelProxyCorners_.erase(pid);
     impl_->partGeneration_.erase(pid);
-    impl_->partEdgeBvhCache_.erase(pid);
-    impl_->partTriBvhCache_.erase(pid);
+    impl_->erasePartBvhCaches(pid);
     impl_->progressiveParts_.erase(pid);
     impl_->recomputeWorldBoundsForPart(pid);
     if (affectsPlan)
@@ -1061,8 +1059,7 @@ SoCADAssembly::removeParts(const std::vector<Obol::PartId>& pids)
         changedParts.insert(pid);
         impl_->subpixelProxyCorners_.erase(pid);
         impl_->partGeneration_.erase(pid);
-        impl_->partEdgeBvhCache_.erase(pid);
-        impl_->partTriBvhCache_.erase(pid);
+        impl_->erasePartBvhCaches(pid);
         impl_->progressiveParts_.erase(pid);
     }
     if (changedParts.empty()) return;
@@ -2265,7 +2262,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     if (automaticPick || pickPolicy == Obol::CadPickMode::Edge ||
             pickPolicy == Obol::CadPickMode::Hybrid) {
         result = Obol::picking::CadPickQuery::pickPoint(
-            pickRay, impl_->instanceBvh_, impl_->parts_, toleranceWS);
+            pickRay, impl_->instanceBvh_, impl_->parts_, toleranceWS,
+            &impl_->partPointBvhCache_);
     }
 
     if (!result.valid && (pickPolicy == Obol::CadPickMode::Edge ||
@@ -2276,7 +2274,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->parts_,
             impl_->partEdgeBvhCache_,
             toleranceWS,
-            pickCutCeiling);
+            pickCutCeiling,
+            &impl_->progressiveEdgeBvhCache_);
     }
 
     if (!result.valid && (pickPolicy == Obol::CadPickMode::Triangle ||
@@ -2287,7 +2286,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->parts_,
             impl_->partTriBvhCache_,
             toleranceWS,
-            pickCutCeiling);
+            pickCutCeiling,
+            &impl_->progressiveTriBvhCache_);
     }
 
     if (!result.valid && pickPolicy == Obol::CadPickMode::Bounds) {

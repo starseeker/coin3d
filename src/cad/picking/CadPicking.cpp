@@ -475,6 +475,122 @@ CadPartEdgeBVH::queryClosestTransformed(
 }
 
 // ===========================================================================
+// CadPartPointBVH
+// ===========================================================================
+
+SbBox3f
+CadPartPointBVH::pointBounds(const SbVec3f& point) noexcept
+{
+    constexpr float padding = 1e-6f;
+    const SbVec3f extent(padding, padding, padding);
+    return SbBox3f(point - extent, point + extent);
+}
+
+void
+CadPartPointBVH::build(const std::vector<SbVec3f>& positions,
+                       const std::vector<uint32_t>& pointIds)
+{
+    points_.clear();
+    nodes_.clear();
+    points_.reserve(positions.size());
+    for (size_t index = 0; index < positions.size(); ++index) {
+        points_.push_back({positions[index],
+            index < pointIds.size() ? pointIds[index] :
+                static_cast<uint32_t>(index)});
+    }
+    if (points_.empty())
+        return;
+    std::vector<int> indices(points_.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    buildRecursive(indices, 0, static_cast<int>(indices.size()));
+}
+
+int
+CadPartPointBVH::buildRecursive(
+    std::vector<int>& indices, int begin, int end)
+{
+    assert(begin < end);
+    const int nodeIndex = static_cast<int>(nodes_.size());
+    nodes_.emplace_back();
+    SbBox3f combined;
+    for (int index = begin; index < end; ++index)
+        combined.extendBy(pointBounds(points_[indices[index]].point));
+    nodes_[nodeIndex].bounds = combined;
+
+    if (end - begin == 1) {
+        nodes_[nodeIndex].itemIdx = indices[begin];
+        return nodeIndex;
+    }
+
+    const SbVec3f extents = combined.getSize();
+    int axis = extents[1] > extents[0] ? 1 : 0;
+    if (extents[2] > extents[axis])
+        axis = 2;
+    const int middle = begin + (end - begin) / 2;
+    std::nth_element(indices.begin() + begin, indices.begin() + middle,
+        indices.begin() + end, [&](int left, int right) {
+            return points_[left].point[axis] < points_[right].point[axis];
+        });
+    const int left = buildRecursive(indices, begin, middle);
+    const int right = buildRecursive(indices, middle, end);
+    nodes_[nodeIndex].left = left;
+    nodes_[nodeIndex].right = right;
+    return nodeIndex;
+}
+
+void
+CadPartPointBVH::queryTransformedRecursive(
+    int nodeIdx, const SbLine& localRay, float localTolerance,
+    const SbLine& worldRay, const SbMatrix& localToWorld,
+    float worldTolerance2, float& bestT,
+    const PointEntry** bestPoint) const
+{
+    if (nodeIdx < 0 || nodeIdx >= static_cast<int>(nodes_.size()))
+        return;
+    const BvhNode& node = nodes_[nodeIdx];
+    if (!CadInstanceBVH::rayIntersectsBox(
+            localRay, expandedBox(node.bounds, localTolerance)))
+        return;
+    if (node.itemIdx >= 0) {
+        const PointEntry& point = points_[node.itemIdx];
+        SbVec3f worldPoint;
+        localToWorld.multVecMatrix(point.point, worldPoint);
+        const float t = (worldPoint - worldRay.getPosition()).dot(
+            worldRay.getDirection());
+        if (t < 0.0f || t >= bestT)
+            return;
+        const SbVec3f closest = worldRay.getPosition() +
+            worldRay.getDirection() * t;
+        if ((worldPoint - closest).sqrLength() > worldTolerance2)
+            return;
+        bestT = t;
+        *bestPoint = &point;
+        return;
+    }
+    queryTransformedRecursive(node.left, localRay, localTolerance,
+        worldRay, localToWorld, worldTolerance2, bestT, bestPoint);
+    queryTransformedRecursive(node.right, localRay, localTolerance,
+        worldRay, localToWorld, worldTolerance2, bestT, bestPoint);
+}
+
+std::optional<CadPartPointBVH::QueryResult>
+CadPartPointBVH::queryClosestTransformed(
+    const SbLine& localRay, float localBroadphaseTolerance,
+    const SbLine& worldRay, const SbMatrix& localToWorld,
+    float worldTolerance) const
+{
+    if (nodes_.empty())
+        return std::nullopt;
+    float bestT = std::numeric_limits<float>::infinity();
+    const PointEntry *bestPoint = nullptr;
+    queryTransformedRecursive(0, localRay, localBroadphaseTolerance,
+        worldRay, localToWorld, worldTolerance * worldTolerance,
+        bestT, &bestPoint);
+    return bestPoint ? std::optional<QueryResult>(
+        QueryResult{*bestPoint, bestT}) : std::nullopt;
+}
+
+// ===========================================================================
 // CadPickQuery
 // ===========================================================================
 
@@ -484,13 +600,14 @@ CadPickQuery::pickPoint(
     const CadInstanceBVH& instanceBvh,
     const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                              std::hash<Obol::PartId>>& partGeometries,
-    float toleranceWS)
+    float toleranceWS,
+    CadPartPointBvhCache *partBvhCache)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
-    const float tolerance2 = toleranceWS * toleranceWS;
-    const SbVec3f rayOrigin = ray.getPosition();
-    const SbVec3f rayDirection = ray.getDirection();
+    CadPartPointBvhCache localCache;
+    CadPartPointBvhCache& cache = partBvhCache ?
+        *partBvhCache : localCache;
 
     for (const auto* entry : instanceBvh.query(ray, toleranceWS)) {
         auto geometry = partGeometries.find(entry->partId);
@@ -498,22 +615,44 @@ CadPickQuery::pickPoint(
                 !geometry->second->points)
             continue;
         const Obol::PointRep& points = *geometry->second->points;
-        for (size_t i = 0; i < points.positions.size(); ++i) {
-            SbVec3f worldPoint;
-            entry->localToWorld.multVecMatrix(points.positions[i], worldPoint);
-            const float t = (worldPoint - rayOrigin).dot(rayDirection);
-            if (t < 0.0f || t >= best.t) continue;
-            const SbVec3f closest = rayOrigin + rayDirection * t;
-            if ((worldPoint - closest).sqrLength() > tolerance2) continue;
-            best.t = t;
-            best.hitPoint = worldPoint;
-            best.instanceId = entry->instanceId;
-            best.partId = entry->partId;
-            best.primType = CadPickResult::POINT;
-            best.primIndex0 = i < points.pointIds.size() ?
-                points.pointIds[i] : static_cast<uint32_t>(i);
-            best.valid = true;
+        auto cached = cache.find(entry->partId);
+        if (cached == cache.end()) {
+            CadPartPointBVH bvh;
+            bvh.build(points.positions, points.pointIds);
+            cached = cache.emplace(entry->partId, std::move(bvh)).first;
         }
+        if (!cached->second.isBuilt())
+            continue;
+
+        const SbMatrix worldToLocal = entry->localToWorld.inverse();
+        SbVec3f localOrigin;
+        SbVec3f localDirection;
+        worldToLocal.multVecMatrix(ray.getPosition(), localOrigin);
+        worldToLocal.multDirMatrix(ray.getDirection(), localDirection);
+        if (localDirection.normalize() == 0.0f)
+            continue;
+        const SbLine localRay(localOrigin, localOrigin + localDirection);
+        double inverseNorm2 = 0.0;
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column) {
+                const double component = worldToLocal[row][column];
+                inverseNorm2 += component * component;
+            }
+        const float localTolerance = static_cast<float>(
+            toleranceWS * std::sqrt(inverseNorm2));
+        const auto hit = cached->second.queryClosestTransformed(
+            localRay, localTolerance, ray, entry->localToWorld, toleranceWS);
+        if (!hit || hit->t >= best.t)
+            continue;
+        SbVec3f worldPoint;
+        entry->localToWorld.multVecMatrix(hit->point.point, worldPoint);
+        best.t = hit->t;
+        best.hitPoint = worldPoint;
+        best.instanceId = entry->instanceId;
+        best.partId = entry->partId;
+        best.primType = CadPickResult::POINT;
+        best.primIndex0 = hit->point.pointId;
+        best.valid = true;
     }
     return best;
 }
@@ -527,10 +666,14 @@ CadPickQuery::pickEdge(
     std::unordered_map<PartId, CadPartEdgeBVH,
                        std::hash<Obol::PartId>>&        partBvhCache,
     float                                               toleranceWS,
-    uint8_t                                             lodCeiling)
+    uint8_t                                             lodCeiling,
+    CadProgressiveEdgeBvhCache                         *progressiveBvhCache)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
+    CadProgressiveEdgeBvhCache localProgressiveCache;
+    CadProgressiveEdgeBvhCache& cutCache = progressiveBvhCache ?
+        *progressiveBvhCache : localProgressiveCache;
 
     const auto& candidates = instanceBvh.query(ray, toleranceWS);
     for (const auto* entry : candidates) {
@@ -542,7 +685,6 @@ CadPickQuery::pickEdge(
         if (!geom.wire.has_value()) continue;
 
         const Obol::WireRep& wire = *geom.wire;
-        CadPartEdgeBVH progressiveBvh;
         const CadPartEdgeBVH *edgeBvh = nullptr;
         if (const Obol::TriMesh *triangleEdges = wire.triangleEdges()) {
             const Obol::TriMesh& mesh = *triangleEdges;
@@ -550,98 +692,113 @@ CadPickQuery::pickEdge(
                 adaptiveProgressiveCut(mesh,
                     std::min(entry->lodCut, lodCeiling)) :
                 Obol::ProgressiveCutUnspecified;
-            std::vector<CadPartEdgeBVH::SegEntry> segs;
-            segs.reserve(mesh.isProgressive() ?
-                wire.segmentCountAtCut(level) : mesh.indices.size());
-            const auto appendRange = [&](size_t first, size_t count) {
-                const size_t end = std::min(
-                    mesh.indices.size(), first + count);
-                for (size_t index = first; index + 2 < end; index += 3) {
-                    const uint32_t source[3] = {
-                        mesh.indices[index], mesh.indices[index + 1],
-                        mesh.indices[index + 2]
-                    };
-                    if (source[0] >= mesh.positions.size() ||
-                            source[1] >= mesh.positions.size() ||
-                            source[2] >= mesh.positions.size())
-                        continue;
-                    SbVec3f point[3];
-                    for (int corner = 0; corner < 3; ++corner) {
-                        point[corner] = mesh.isProgressive() ?
-                            progressiveSnapPoint(
-                                mesh.positions[source[corner]],
-                                mesh.progressiveQuantizationMinimum,
-                                mesh.progressiveQuantizationMaximum,
-                                mesh.quantizationAtCut(level)) :
-                            mesh.positions[source[corner]];
-                    }
-                    for (uint32_t edge = 0; edge < 3; ++edge) {
-                        const size_t edgeIndex = index + edge;
-                        if (edgeIndex > UINT32_MAX)
+            const CadProgressivePickKey key{pid, level};
+            auto cached = cutCache.find(key);
+            if (cached == cutCache.end()) {
+                std::vector<CadPartEdgeBVH::SegEntry> segs;
+                segs.reserve(mesh.isProgressive() ?
+                    wire.segmentCountAtCut(level) : mesh.indices.size());
+                const auto appendRange = [&](size_t first, size_t count) {
+                    const size_t end = std::min(
+                        mesh.indices.size(), first + count);
+                    for (size_t index = first; index + 2 < end; index += 3) {
+                        const uint32_t source[3] = {
+                            mesh.indices[index], mesh.indices[index + 1],
+                            mesh.indices[index + 2]
+                        };
+                        if (source[0] >= mesh.positions.size() ||
+                                source[1] >= mesh.positions.size() ||
+                                source[2] >= mesh.positions.size())
                             continue;
-                        segs.push_back({point[edge], point[(edge + 1) % 3],
-                            static_cast<uint32_t>(edgeIndex), 0});
+                        SbVec3f point[3];
+                        for (int corner = 0; corner < 3; ++corner) {
+                            point[corner] = mesh.isProgressive() ?
+                                progressiveSnapPoint(
+                                    mesh.positions[source[corner]],
+                                    mesh.progressiveQuantizationMinimum,
+                                    mesh.progressiveQuantizationMaximum,
+                                    mesh.quantizationAtCut(level)) :
+                                mesh.positions[source[corner]];
+                        }
+                        for (uint32_t edge = 0; edge < 3; ++edge) {
+                            const size_t edgeIndex = index + edge;
+                            if (edgeIndex > UINT32_MAX)
+                                continue;
+                            segs.push_back({
+                                point[edge], point[(edge + 1) % 3],
+                                static_cast<uint32_t>(edgeIndex), 0});
+                        }
                     }
-                }
-            };
-            if (mesh.hasAdaptiveProgressiveClusters()) {
-                for (const Obol::ProgressiveTriangleCluster& cluster :
-                        mesh.progressiveClusters) {
-                    for (const Obol::ProgressiveTriangleClusterRange& range :
-                            cluster.ranges) {
-                        if (range.activationCut > level)
-                            break;
-                        appendRange(range.firstIndex, range.indexCount);
+                };
+                if (mesh.hasAdaptiveProgressiveClusters()) {
+                    for (const Obol::ProgressiveTriangleCluster& cluster :
+                            mesh.progressiveClusters) {
+                        for (const Obol::ProgressiveTriangleClusterRange& range :
+                                cluster.ranges) {
+                            if (range.activationCut > level)
+                                break;
+                            appendRange(range.firstIndex, range.indexCount);
+                        }
                     }
+                } else {
+                    appendRange(0, mesh.isProgressive() ?
+                        mesh.indexCountAtCut(level) : mesh.indices.size());
                 }
-            } else {
-                appendRange(0, mesh.isProgressive() ?
-                    mesh.indexCountAtCut(level) : mesh.indices.size());
+                CadPartEdgeBVH bvh;
+                bvh.build(std::move(segs));
+                cached = cutCache.emplace(key, std::move(bvh)).first;
             }
-            progressiveBvh.build(std::move(segs));
-            edgeBvh = &progressiveBvh;
+            edgeBvh = &cached->second;
         } else if (wire.isProgressive()) {
             const uint8_t level = adaptiveProgressiveCut(
                 wire, std::min(entry->lodCut, lodCeiling));
-            std::vector<CadPartEdgeBVH::SegEntry> segs;
-            segs.reserve(wire.segmentCountAtCut(level));
-            const auto appendRange = [&](size_t first, size_t count) {
-                const size_t end = std::min(wire.segmentCount(), first + count);
-                for (size_t sourceSegment = first;
-                        sourceSegment < end; ++sourceSegment) {
-                    const uint32_t segId =
-                        sourceSegment < wire.segmentIds.size() ?
-                        wire.segmentIds[sourceSegment] :
-                        static_cast<uint32_t>(sourceSegment);
-                    segs.push_back({
-                        progressiveSnapPoint(
-                            wire.segmentPoints[2 * sourceSegment],
-                            wire.progressiveQuantizationMinimum,
-                            wire.progressiveQuantizationMaximum,
-                            wire.quantizationAtCut(level)),
-                        progressiveSnapPoint(
-                            wire.segmentPoints[2 * sourceSegment + 1],
-                            wire.progressiveQuantizationMinimum,
-                            wire.progressiveQuantizationMaximum,
-                            wire.quantizationAtCut(level)),
-                        segId, 0 });
-                }
-            };
-            if (wire.hasAdaptiveProgressiveClusters()) {
-                for (const Obol::ProgressiveWireCluster& cluster :
-                        wire.progressiveClusters)
-                    for (const Obol::ProgressiveWireClusterRange& range :
-                            cluster.ranges) {
-                        if (range.activationCut > level)
-                            break;
-                        appendRange(range.firstSegment, range.segmentCount);
+            const CadProgressivePickKey key{pid, level};
+            auto cached = cutCache.find(key);
+            if (cached == cutCache.end()) {
+                std::vector<CadPartEdgeBVH::SegEntry> segs;
+                segs.reserve(wire.segmentCountAtCut(level));
+                const auto appendRange = [&](size_t first, size_t count) {
+                    const size_t end =
+                        std::min(wire.segmentCount(), first + count);
+                    for (size_t sourceSegment = first;
+                            sourceSegment < end; ++sourceSegment) {
+                        const uint32_t segId =
+                            sourceSegment < wire.segmentIds.size() ?
+                            wire.segmentIds[sourceSegment] :
+                            static_cast<uint32_t>(sourceSegment);
+                        segs.push_back({
+                            progressiveSnapPoint(
+                                wire.segmentPoints[2 * sourceSegment],
+                                wire.progressiveQuantizationMinimum,
+                                wire.progressiveQuantizationMaximum,
+                                wire.quantizationAtCut(level)),
+                            progressiveSnapPoint(
+                                wire.segmentPoints[2 * sourceSegment + 1],
+                                wire.progressiveQuantizationMinimum,
+                                wire.progressiveQuantizationMaximum,
+                                wire.quantizationAtCut(level)),
+                            segId, 0 });
                     }
-            } else {
-                appendRange(wire.segmentFirstAtCut(level),
-                    wire.segmentCountAtCut(level));
+                };
+                if (wire.hasAdaptiveProgressiveClusters()) {
+                    for (const Obol::ProgressiveWireCluster& cluster :
+                            wire.progressiveClusters)
+                        for (const Obol::ProgressiveWireClusterRange& range :
+                                cluster.ranges) {
+                            if (range.activationCut > level)
+                                break;
+                            appendRange(
+                                range.firstSegment, range.segmentCount);
+                        }
+                } else {
+                    appendRange(wire.segmentFirstAtCut(level),
+                        wire.segmentCountAtCut(level));
+                }
+                CadPartEdgeBVH bvh;
+                bvh.build(std::move(segs));
+                cached = cutCache.emplace(key, std::move(bvh)).first;
             }
-            progressiveBvh.build(std::move(segs));
-            edgeBvh = &progressiveBvh;
+            edgeBvh = &cached->second;
         } else {
             // Build non-progressive part edge BVH lazily.
             auto bvhIt = partBvhCache.find(pid);
@@ -928,8 +1085,11 @@ CadPartTriBVH::queryClosest(const SbLine& ray) const
     queryRecursive(0, ray, bestT, &bestTri, bestU, bestV);
 
     if (!bestTri) return std::nullopt;
+    const SbVec3f hitPoint =
+        bestTri->p0 * (1.0f - bestU - bestV) +
+        bestTri->p1 * bestU + bestTri->p2 * bestV;
     return QueryResult{bestTri->triIndex, bestTri->compactIndex,
-        bestT, bestU, bestV};
+        bestT, bestU, bestV, hitPoint};
 }
 
 // ===========================================================================
@@ -945,10 +1105,14 @@ CadPickQuery::pickTriangle(
     std::unordered_map<PartId, CadPartTriBVH,
                        std::hash<Obol::PartId>>&        partTriBvhCache,
     float                                               toleranceWS,
-    uint8_t                                             lodCeiling)
+    uint8_t                                             lodCeiling,
+    CadProgressiveTriBvhCache                          *progressiveBvhCache)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
+    CadProgressiveTriBvhCache localProgressiveCache;
+    CadProgressiveTriBvhCache& cutCache = progressiveBvhCache ?
+        *progressiveBvhCache : localProgressiveCache;
 
     const auto& candidates = instanceBvh.query(ray, toleranceWS);
     for (const auto* entry : candidates) {
@@ -960,66 +1124,72 @@ CadPickQuery::pickTriangle(
         if (!geom.shaded.has_value()) continue;
 
         const Obol::TriMesh& mesh = *geom.shaded;
-        CadPartTriBVH progressiveBvh;
         const CadPartTriBVH *triBvh = nullptr;
-        uint8_t activeLevel = 255;
-        std::vector<SbVec3f> progressivePositions;
-        std::vector<uint32_t> progressiveIndices;
-        std::vector<uint32_t> progressiveTriangleIds;
         if (mesh.isProgressive()) {
-            activeLevel = adaptiveProgressiveCut(
+            const uint8_t activeLevel = adaptiveProgressiveCut(
                 mesh, std::min(entry->lodCut, lodCeiling));
-            progressivePositions.reserve(mesh.positions.size());
-            for (const SbVec3f& point : mesh.positions) {
-                progressivePositions.push_back(progressiveSnapPoint(
-                    point, mesh.progressiveQuantizationMinimum,
-                    mesh.progressiveQuantizationMaximum,
-                    mesh.quantizationAtCut(activeLevel)));
-            }
-            if (mesh.hasAdaptiveProgressiveClusters()) {
-                bool validRanges = true;
-                for (const ProgressiveTriangleCluster& cluster :
-                        mesh.progressiveClusters) {
-                    for (const ProgressiveTriangleClusterRange& range :
-                            cluster.ranges) {
-                        if (range.activationCut > activeLevel)
-                            break;
-                        const uint64_t end =
-                            static_cast<uint64_t>(range.firstIndex) +
-                            range.indexCount;
-                        if (range.firstIndex % 3u ||
-                                range.indexCount % 3u ||
-                                end > mesh.indices.size()) {
-                            progressiveIndices.clear();
-                            progressiveTriangleIds.clear();
-                            validRanges = false;
-                            break;
-                        }
-                        progressiveIndices.insert(
-                            progressiveIndices.end(),
-                            mesh.indices.begin() + range.firstIndex,
-                            mesh.indices.begin() +
-                                static_cast<size_t>(end));
-                        const uint32_t firstTriangle = range.firstIndex / 3u;
-                        const uint32_t triangleCount = range.indexCount / 3u;
-                        for (uint32_t triangle = 0;
-                                triangle < triangleCount; ++triangle)
-                            progressiveTriangleIds.push_back(
-                                firstTriangle + triangle);
-                    }
-                    if (!validRanges)
-                        break;
+            const CadProgressivePickKey key{pid, activeLevel};
+            auto cached = cutCache.find(key);
+            if (cached == cutCache.end()) {
+                std::vector<SbVec3f> progressivePositions;
+                progressivePositions.reserve(mesh.positions.size());
+                for (const SbVec3f& point : mesh.positions) {
+                    progressivePositions.push_back(progressiveSnapPoint(
+                        point, mesh.progressiveQuantizationMinimum,
+                        mesh.progressiveQuantizationMaximum,
+                        mesh.quantizationAtCut(activeLevel)));
                 }
-            } else {
-                const size_t indexCount =
-                    mesh.indexCountAtCut(activeLevel);
-                progressiveIndices.assign(
-                    mesh.indices.begin(),
-                    mesh.indices.begin() + indexCount);
+                std::vector<uint32_t> progressiveIndices;
+                std::vector<uint32_t> progressiveTriangleIds;
+                if (mesh.hasAdaptiveProgressiveClusters()) {
+                    bool validRanges = true;
+                    for (const ProgressiveTriangleCluster& cluster :
+                            mesh.progressiveClusters) {
+                        for (const ProgressiveTriangleClusterRange& range :
+                                cluster.ranges) {
+                            if (range.activationCut > activeLevel)
+                                break;
+                            const uint64_t end =
+                                static_cast<uint64_t>(range.firstIndex) +
+                                range.indexCount;
+                            if (range.firstIndex % 3u ||
+                                    range.indexCount % 3u ||
+                                    end > mesh.indices.size()) {
+                                progressiveIndices.clear();
+                                progressiveTriangleIds.clear();
+                                validRanges = false;
+                                break;
+                            }
+                            progressiveIndices.insert(
+                                progressiveIndices.end(),
+                                mesh.indices.begin() + range.firstIndex,
+                                mesh.indices.begin() +
+                                    static_cast<size_t>(end));
+                            const uint32_t firstTriangle =
+                                range.firstIndex / 3u;
+                            const uint32_t triangleCount =
+                                range.indexCount / 3u;
+                            for (uint32_t triangle = 0;
+                                    triangle < triangleCount; ++triangle)
+                                progressiveTriangleIds.push_back(
+                                    firstTriangle + triangle);
+                        }
+                        if (!validRanges)
+                            break;
+                    }
+                } else {
+                    const size_t indexCount =
+                        mesh.indexCountAtCut(activeLevel);
+                    progressiveIndices.assign(
+                        mesh.indices.begin(),
+                        mesh.indices.begin() + indexCount);
+                }
+                CadPartTriBVH bvh;
+                bvh.build(progressivePositions, progressiveIndices,
+                    progressiveTriangleIds);
+                cached = cutCache.emplace(key, std::move(bvh)).first;
             }
-            progressiveBvh.build(progressivePositions, progressiveIndices,
-                progressiveTriangleIds);
-            triBvh = &progressiveBvh;
+            triBvh = &cached->second;
         } else {
             // Build non-progressive part triangle BVH lazily.
             auto bvhIt = partTriBvhCache.find(pid);
@@ -1047,21 +1217,8 @@ CadPickQuery::pickTriangle(
         auto hit = triBvh->queryClosest(localRay);
         if (!hit) continue;
 
-        // Compute the world-space hit point from the local-space barycentric
-        // intersection coordinates.
-        const std::vector<uint32_t>& pickIndices = mesh.isProgressive() ?
-            progressiveIndices : mesh.indices;
-        const std::vector<SbVec3f>& pickPositions = mesh.isProgressive() ?
-            progressivePositions : mesh.positions;
-        uint32_t i0 = pickIndices[hit->compactIndex * 3 + 0];
-        uint32_t i1 = pickIndices[hit->compactIndex * 3 + 1];
-        uint32_t i2 = pickIndices[hit->compactIndex * 3 + 2];
-        SbVec3f localHit =
-            pickPositions[i0] * (1.0f - hit->u - hit->v)
-          + pickPositions[i1] * hit->u
-          + pickPositions[i2] * hit->v;
         SbVec3f worldHit;
-        entry->localToWorld.multVecMatrix(localHit, worldHit);
+        entry->localToWorld.multVecMatrix(hit->hitPoint, worldHit);
 
         float t = (worldHit - ray.getPosition()).dot(ray.getDirection());
         if (t < 0.0f) continue;  // behind camera

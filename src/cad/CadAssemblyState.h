@@ -133,10 +133,45 @@ struct CadPickingIndex {
     std::mutex pickMutex_;
     Obol::picking::CadInstanceBVH instanceBvh_;
     bool bvhDirty_ = true;
+    Obol::picking::CadPartPointBvhCache partPointBvhCache_;
     std::unordered_map<Obol::PartId, Obol::picking::CadPartEdgeBVH,
         std::hash<Obol::PartId>> partEdgeBvhCache_;
     std::unordered_map<Obol::PartId, Obol::picking::CadPartTriBVH,
         std::hash<Obol::PartId>> partTriBvhCache_;
+    Obol::picking::CadProgressiveEdgeBvhCache
+        progressiveEdgeBvhCache_;
+    Obol::picking::CadProgressiveTriBvhCache
+        progressiveTriBvhCache_;
+
+    void clearPartBvhCaches()
+    {
+        partPointBvhCache_.clear();
+        partEdgeBvhCache_.clear();
+        partTriBvhCache_.clear();
+        progressiveEdgeBvhCache_.clear();
+        progressiveTriBvhCache_.clear();
+    }
+
+    void erasePartBvhCaches(Obol::PartId part)
+    {
+        partPointBvhCache_.erase(part);
+        partEdgeBvhCache_.erase(part);
+        partTriBvhCache_.erase(part);
+        for (auto it = progressiveEdgeBvhCache_.begin();
+                it != progressiveEdgeBvhCache_.end();) {
+            if (it->first.part == part)
+                it = progressiveEdgeBvhCache_.erase(it);
+            else
+                ++it;
+        }
+        for (auto it = progressiveTriBvhCache_.begin();
+                it != progressiveTriBvhCache_.end();) {
+            if (it->first.part == part)
+                it = progressiveTriBvhCache_.erase(it);
+            else
+                ++it;
+        }
+    }
 };
 
 /*
