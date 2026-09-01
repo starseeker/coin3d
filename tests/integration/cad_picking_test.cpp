@@ -337,11 +337,23 @@ TEST(CadPicking, TrianglePicksRespectProgressiveCutAndGeometryAvailability)
     ASSERT_TRUE(rich.valid);
     EXPECT_EQ(rich.instanceId, instance);
     EXPECT_EQ(rich.primType, CadPickResult::TRIANGLE);
+    EXPECT_EQ(rich.primIndex0, 1u);
+
+    /* Sparse adaptive ranges are compacted for the temporary pick BVH, but
+     * their producer-facing face identity remains the source index offset. */
+    mesh.progressiveClusters.erase(mesh.progressiveClusters.begin());
+    PartGeometryBuilder sparseGeometry;
+    sparseGeometry.shaded = mesh;
+    parts[part] = admitGeometry(std::move(sparseGeometry));
+    const CadPickResult sparse = CadPickQuery::pickTriangle(
+        ray, instances, parts, triangles, 0.05f, 2);
+    ASSERT_TRUE(sparse.valid);
+    EXPECT_EQ(sparse.primIndex0, 1u);
 
     /* A coarse resident page constrains the complete logical occurrence.
      * Picking must not expose the richer range merely because the part-wide
      * resident cut has already advanced. */
-    mesh.progressiveClusters[1].residentCut = 0;
+    mesh.progressiveClusters[0].residentCut = 0;
     PartGeometryBuilder partiallyResidentGeometry;
     partiallyResidentGeometry.shaded = mesh;
     parts[part] = admitGeometry(std::move(partiallyResidentGeometry));
