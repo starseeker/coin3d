@@ -65,6 +65,65 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
 
+void expectViewVolumesEqual(const SbViewVolume & first,
+                            const SbViewVolume & second)
+{
+    EXPECT_EQ(first.getProjectionType(), second.getProjectionType());
+    EXPECT_EQ(first.getProjectionPoint(), second.getProjectionPoint());
+    EXPECT_EQ(first.getProjectionDirection(), second.getProjectionDirection());
+    EXPECT_FLOAT_EQ(first.getNearDist(), second.getNearDist());
+    EXPECT_FLOAT_EQ(first.getWidth(), second.getWidth());
+    EXPECT_FLOAT_EQ(first.getHeight(), second.getHeight());
+    EXPECT_FLOAT_EQ(first.getDepth(), second.getDepth());
+}
+
+template <typename CameraType>
+void expectCameraUsesInputViewport()
+{
+    SoCamera * camera = new CameraType;
+    camera->ref();
+    camera->aspectRatio = 1.0f;
+
+    for (const SbViewportRegion input : {SbViewportRegion(1000, 200),
+                                         SbViewportRegion(200, 1000)}) {
+        camera->viewportMapping = SoCamera::ADJUST_CAMERA;
+        SbViewportRegion first_result(100, 100);
+        SbViewportRegion second_result(200, 1000);
+        const SbViewVolume first = camera->getViewVolume(input, first_result);
+        const SbViewVolume second = camera->getViewVolume(input, second_result);
+        expectViewVolumesEqual(first, second);
+        EXPECT_EQ(first_result, input);
+        EXPECT_EQ(second_result, input);
+
+        SbViewVolume expected = camera->getViewVolume(
+            input.getViewportAspectRatio());
+        if (input.getViewportAspectRatio() < 1.0f) {
+            expected.scale(1.0f / input.getViewportAspectRatio());
+        }
+        expectViewVolumesEqual(first, expected);
+
+        camera->viewportMapping = SoCamera::CROP_VIEWPORT_NO_FRAME;
+        first_result = SbViewportRegion(100, 100);
+        second_result = SbViewportRegion(200, 1000);
+        const SbViewVolume first_crop = camera->getViewVolume(input, first_result);
+        const SbViewVolume second_crop = camera->getViewVolume(input, second_result);
+        expectViewVolumesEqual(first_crop, second_crop);
+        EXPECT_EQ(first_result, second_result);
+
+        SbViewportRegion expected_viewport = input;
+        const float viewport_ratio = input.getViewportAspectRatio();
+        if (viewport_ratio < 1.0f) {
+            expected_viewport.scaleHeight(viewport_ratio);
+        }
+        else if (viewport_ratio > 1.0f) {
+            expected_viewport.scaleWidth(1.0f / viewport_ratio);
+        }
+        EXPECT_EQ(first_result, expected_viewport);
+    }
+
+    camera->unref();
+}
+
 } // namespace
 
 TEST(Nodes, RuntimeTypesNamesAndBasicHierarchyAreAvailable)
@@ -116,6 +175,12 @@ TEST(Nodes, InvalidCameraViewportMappingFallsBackToLeaveAlone)
     EXPECT_EQ(actual, requested);
     EXPECT_GT(volume.getDepth(), 0.0f);
     camera->unref();
+}
+
+TEST(Nodes, CameraViewVolumeUsesTheInputViewport)
+{
+    expectCameraUsesInputViewport<SoPerspectiveCamera>();
+    expectCameraUsesInputViewport<SoOrthographicCamera>();
 }
 
 TEST(Nodes, BaseReferenceCountingNamesAndTypeNamesAreStable)

@@ -422,7 +422,7 @@ SoCamera::getViewVolume(const SbViewportRegion & vp,
                         SbViewportRegion & resultvp, 
                         const SbMatrix & mm) const
 {
-  float aspectratio = resultvp.getViewportAspectRatio();
+  const float aspectratio = vp.getViewportAspectRatio();
   int vpm = this->viewportMapping.getValue();  
   SbBool adjustvp = FALSE;
   resultvp = vp;
