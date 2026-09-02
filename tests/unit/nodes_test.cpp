@@ -49,6 +49,7 @@
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/nodes/SoScale.h>
 #include <Inventor/nodes/SoSelection.h>
+#include <Inventor/nodes/SoShape.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoSpotLight.h>
 #include <Inventor/nodes/SoSwitch.h>
@@ -181,6 +182,24 @@ TEST(Nodes, CameraViewVolumeUsesTheInputViewport)
 {
     expectCameraUsesInputViewport<SoPerspectiveCamera>();
     expectCameraUsesInputViewport<SoOrthographicCamera>();
+}
+
+TEST(Nodes, EmptyBoundingBoxHasStableScreenSize)
+{
+    SoCallbackAction action;
+    action.setViewportRegion(SbViewportRegion(320, 200));
+    auto * root = new SoSeparator;
+    root->ref();
+    action.apply(root);
+
+    SbBox3f box;
+    box.makeEmpty();
+    SbVec2s screen_size(-1, -1);
+
+    SoShape::getScreenSize(action.getState(), box, screen_size);
+
+    EXPECT_EQ(screen_size, SbVec2s(160, 100));
+    root->unref();
 }
 
 TEST(Nodes, BaseReferenceCountingNamesAndTypeNamesAreStable)
