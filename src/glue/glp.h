@@ -1662,15 +1662,14 @@ struct SoGLContext {
   OBOL_PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
   OBOL_PFNGLCOPYBUFFERSUBDATAPROC glCopyBufferSubData;
 
-  const char * versionstr;
-  const char * vendorstr;
+  char * versionstr;
+  char * vendorstr;
   SbBool vendor_is_SGI;
   SbBool vendor_is_intel;
   SbBool vendor_is_ati;
   SbBool vendor_is_3dlabs;
-  const char * rendererstr;
-  const char * extensionsstr;
-  SbBool extensionsstr_owned;
+  char * rendererstr;
+  char * extensionsstr;
   int maxtextureunits;
   float max_anisotropy;
 

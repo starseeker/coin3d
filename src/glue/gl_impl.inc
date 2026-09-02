@@ -915,13 +915,24 @@ static cc_dict * gldict = NULL;
    state; recursive acquisition permits same-thread resolver callbacks. */
 static std::recursive_mutex gldict_mutex;
 
+static char *
+glglue_strdup(const char * string)
+{
+  if (!string) return NULL;
+  const size_t length = strlen(string) + 1;
+  char * copy = static_cast<char *>(malloc(length));
+  if (copy) (void)memcpy(copy, string, length);
+  return copy;
+}
+
 static void
 free_glglue_instance(uintptr_t OBOL_UNUSED_ARG(key), void * value, void * OBOL_UNUSED_ARG(closure))
 {
   SoGLContext * glue = (SoGLContext*) value;
-  if (glue->extensionsstr_owned && glue->extensionsstr) {
-    free(const_cast<char *>(glue->extensionsstr));
-  }
+  free(glue->versionstr);
+  free(glue->vendorstr);
+  free(glue->rendererstr);
+  free(glue->extensionsstr);
   cc_dict_destruct(glue->glextdict);
   if (glue->dl_handle) cc_dl_close(glue->dl_handle);
   free(value);
@@ -3231,27 +3242,36 @@ SoGLContext_instance(int contextid)
     /* NB: if you are getting a crash here, it's because an attempt at
      * setting up a SoGLContext instance was made when there is no
      * current OpenGL context. */
-    gi->versionstr = (const char *)contextGetString(GL_VERSION);
+    const char * contextversion =
+      reinterpret_cast<const char *>(contextGetString(GL_VERSION));
     
     /* Additional debugging for OSMesa context */
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance",
                              "glGetString(GL_VERSION) returned: %p",
-                             static_cast<const void *>(gi->versionstr));
-      if (gi->versionstr) {
+                             static_cast<const void *>(contextversion));
+      if (contextversion) {
         /* Try to safely check if the string is readable */
-        volatile char testchar = gi->versionstr[0];
+        volatile char testchar = contextversion[0];
         cc_debugerror_postinfo("SoGLContext_instance", "Version string first char: 0x%02x ('%c')", 
                               (unsigned char)testchar, (testchar >= 32 && testchar < 127) ? testchar : '?');
       }
     }
     
-    if (!gi->versionstr) {
+    if (!contextversion) {
       cc_debugerror_postwarning("SoGLContext_instance",
                                 "glGetString(GL_VERSION) returned NULL -- no current GL context?");
       (void)cc_dict_remove(gldict, (uintptr_t)contextid);
       if (gi->glextdict) { cc_dict_destruct(gi->glextdict); }
       free(gi);
+      return NULL;
+    }
+    gi->versionstr = glglue_strdup(contextversion);
+    if (!gi->versionstr) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "could not retain the OpenGL version string");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      free_glglue_instance(0, gi, NULL);
       return NULL;
     }
 
@@ -3266,8 +3286,16 @@ SoGLContext_instance(int contextid)
   /* Platform-specific initialization is no longer needed with callback-based contexts.
      Applications are responsible for providing complete OpenGL contexts through callbacks. */
 
-    gi->vendorstr = (const char *)contextGetString(GL_VENDOR);
-    if (!gi->vendorstr) gi->vendorstr = "Unknown";
+    const char * contextvendor =
+      reinterpret_cast<const char *>(contextGetString(GL_VENDOR));
+    gi->vendorstr = glglue_strdup(contextvendor ? contextvendor : "Unknown");
+    if (!gi->vendorstr) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "could not retain the OpenGL vendor string");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      free_glglue_instance(0, gi, NULL);
+      return NULL;
+    }
 
 #ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
@@ -3295,8 +3323,16 @@ SoGLContext_instance(int contextid)
       cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
     }
     
-    gi->rendererstr = (const char *)contextGetString(GL_RENDERER);
-    if (!gi->rendererstr) gi->rendererstr = "Unknown";
+    const char * contextrenderer =
+      reinterpret_cast<const char *>(contextGetString(GL_RENDERER));
+    gi->rendererstr = glglue_strdup(contextrenderer ? contextrenderer : "Unknown");
+    if (!gi->rendererstr) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "could not retain the OpenGL renderer string");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      free_glglue_instance(0, gi, NULL);
+      return NULL;
+    }
     
     GLenum error_after_renderer = contextGetError();
     if (error_after_renderer != GL_NO_ERROR) {
@@ -3314,7 +3350,16 @@ SoGLContext_instance(int contextid)
     }
 #endif
     
-    gi->extensionsstr = (const char *)contextGetString(GL_EXTENSIONS);
+    const char * contextextensions =
+      reinterpret_cast<const char *>(contextGetString(GL_EXTENSIONS));
+    gi->extensionsstr = glglue_strdup(contextextensions);
+    if (contextextensions && !gi->extensionsstr) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "could not retain the OpenGL extension string");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      free_glglue_instance(0, gi, NULL);
+      return NULL;
+    }
 
 #ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
@@ -3349,24 +3394,24 @@ SoGLContext_instance(int contextid)
         GLint num_strings = 0;
         contextGetIntegerv(GL_NUM_EXTENSIONS, &num_strings);
         if (num_strings > 0) {
-          int buffer_size = 1024;
-          char *ext_strings_buffer = (char *)malloc(buffer_size * sizeof (char));
-          int buffer_pos = 0;
+          std::string extensions;
           for (int i_string = 0 ; i_string < num_strings ; i_string++) {
-            const char * extension_string = (char *)glGetStringi (GL_EXTENSIONS, i_string);
-            int extension_string_length = (int)strlen(extension_string);
-            if (buffer_pos + extension_string_length + 2 > buffer_size) {
-              do { buffer_size += 1024; }
-              while (buffer_pos + extension_string_length + 2 > buffer_size);
-              ext_strings_buffer = (char *)realloc(ext_strings_buffer, buffer_size * sizeof (char));
-            }
-            strcpy(ext_strings_buffer + buffer_pos, extension_string);
-            buffer_pos += extension_string_length;
-            ext_strings_buffer[buffer_pos++] = ' '; // Space separated, overwrites NULL.
+            const char * extension_string = reinterpret_cast<const char *>(
+              glGetStringi(GL_EXTENSIONS, i_string));
+            if (!extension_string) continue;
+            if (!extensions.empty()) extensions += ' ';
+            extensions += extension_string;
           }
-          ext_strings_buffer[buffer_pos] = '\0';
-          gi->extensionsstr = ext_strings_buffer;
-          gi->extensionsstr_owned = TRUE;
+          if (!extensions.empty()) {
+            gi->extensionsstr = glglue_strdup(extensions.c_str());
+            if (!gi->extensionsstr) {
+              cc_debugerror_postwarning("SoGLContext_instance",
+                                        "could not retain indexed OpenGL extensions");
+              (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+              free_glglue_instance(0, gi, NULL);
+              return NULL;
+            }
+          }
         } else {
           cc_debugerror_postwarning ("SoGLContext_instance",
                                      "glGetIntegerv(GL_NUM_EXTENSIONS) did not return a value, "
