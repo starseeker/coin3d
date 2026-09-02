@@ -204,7 +204,6 @@ SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, 
 /* Utility functions */
 
 SbBool coin_getcwd(std::string* str);
-int coin_isinf(double value);
 int coin_isnan(double value);
 int coin_finite(double value);
 unsigned long coin_geq_prime_number(unsigned long num);

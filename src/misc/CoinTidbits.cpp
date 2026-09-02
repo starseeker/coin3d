@@ -832,11 +832,6 @@ SbBool coin_getcwd(std::string* str)
 /* ********************************************************************** */
 /* Math utility functions */
 
-int coin_isinf(double value)
-{
-    return std::isinf(value) ? 1 : 0;
-}
-
 int coin_isnan(double value)
 {
     return std::isnan(value) ? 1 : 0;

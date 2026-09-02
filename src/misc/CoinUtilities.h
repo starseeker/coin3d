@@ -42,6 +42,7 @@
  */
 
 #include <cstdint>
+#include <cmath>
 #include <string>
 #include <cstdio>
 #include <cstdarg>
@@ -270,7 +271,7 @@ inline std::uint64_t networkToHost(std::uint64_t value) noexcept { return hostTo
 /*!
  * \brief Modern C++17 math utilities
  * 
- * Replacements for coin_finite, coin_isinf, coin_isnan using std:: functions.
+ * Floating-point classification helpers using the standard library.
  */
 namespace MathUtils {
 
@@ -289,7 +290,7 @@ inline bool isFinite(double value) noexcept {
 /*!
  * \brief Check if floating point value is infinite
  * 
- * Modern C++17 replacement for coin_isinf().
+ * Reports whether a value is positive or negative infinity.
  * 
  * \param value Value to check
  * \return true if value is infinite, false otherwise
