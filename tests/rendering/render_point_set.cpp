@@ -2,6 +2,15 @@
 #include "testlib/test_scenes.h"
 #include <gtest/gtest.h>
 
+#include <Inventor/nodes/SoBaseColor.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoDrawStyle.h>
+#include <Inventor/nodes/SoIndexedPointSet.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
+#include <Inventor/nodes/SoSeparator.h>
+
+#include <array>
+
 static const int W = 256;
 static const int H = 256;
 
@@ -38,4 +47,50 @@ TEST(RenderSceneFactories, PointSetPreservesColourFamilies)
     const int families = (metrics.red > 0) + (metrics.green > 0) +
                          (metrics.blue > 0) + (metrics.bright > 0);
     EXPECT_GE(families, 3);
+}
+
+TEST(RenderPointSet, VertexArraysIgnoreNegativeIndices)
+{
+    ObolTestSupport::RenderFixture fixture(W, H);
+    ASSERT_TRUE(fixture.available());
+
+    auto * root = new SoSeparator;
+    root->ref();
+    auto * camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->height = 2.0f;
+    root->addChild(camera);
+
+    auto * style = new SoDrawStyle;
+    style->pointSize = 7.0f;
+    root->addChild(style);
+    auto * color = new SoBaseColor;
+    color->rgb.setValue(1.0f, 0.2f, 0.1f);
+    root->addChild(color);
+
+    std::array<SbVec3f, 20> points;
+    for (size_t i = 0; i < points.size(); ++i) {
+        const float x = -0.8f + 0.4f * static_cast<float>(i % 5);
+        const float y = -0.6f + 0.4f * static_cast<float>(i / 5);
+        points[i].setValue(x, y, 0.0f);
+    }
+    auto * coordinates = new SoCoordinate3;
+    coordinates->point.setValues(0, static_cast<int>(points.size()),
+                                 points.data());
+    root->addChild(coordinates);
+
+    const std::array<int32_t, 23> indices = {
+        0, 1, 2, 3, 4, -1,
+        5, 6, 7, 8, 9, -1,
+        10, 11, 12, 13, 14, -1,
+        15, 16, 17, 18, 19
+    };
+    auto * point_set = new SoIndexedPointSet;
+    point_set->coordIndex.setValues(0, static_cast<int>(indices.size()),
+                                    indices.data());
+    root->addChild(point_set);
+
+    ASSERT_TRUE(fixture.render(root));
+    EXPECT_GT(fixture.nonBackgroundPixels(), 200u);
+    root->unref();
 }
