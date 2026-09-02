@@ -34,10 +34,9 @@
  * @file test_proto.cpp
  * @brief Tests for SoProto and SoProtoInstance class infrastructure.
  *
- * Note: PROTO definition parsing from ASCII IV files is no longer supported
- * in this Obol fork (the functionality was removed from SoProto).  These
- * tests verify the class type system and construction of SoProto objects
- * that are available.
+ * Obol retains the SoProto and SoProtoInstance class infrastructure, but the
+ * SoBase reader no longer accepts ASCII PROTO declarations after removal of
+ * the VRML97 input surface.
  *
  * Covers:
  *   SoProto::getClassTypeId()       - class type registered

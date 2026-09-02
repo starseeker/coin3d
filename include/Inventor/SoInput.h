@@ -193,9 +193,6 @@ protected:
   SbBool readInteger(int32_t & l);
   SbBool readUnsignedInteger(uint32_t & l);
   SbBool readReal(double & d);
-  SbBool readUnsignedIntegerString(char * str);
-  int readDigits(char * str);
-  int readHexDigits(char * str);
   int readChar(char * str, char charToRead);
 
   void convertShort(char * from, short * s);

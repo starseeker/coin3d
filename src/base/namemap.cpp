@@ -74,14 +74,21 @@ namespace {
 
 /* ************************************************************************* */
 
-#define CHUNK_SIZE (65536-32)
+static constexpr size_t NAMEMAP_CHUNK_SIZE = 65536 - 32;
 static const unsigned int NAME_TABLE_SIZE = 1999;
 
 struct NamemapMemChunk {
-  char mem[CHUNK_SIZE];
+  explicit NamemapMemChunk(const size_t capacity,
+                           NamemapMemChunk * nextchunk)
+    : mem(new char[capacity]), curbyte(mem), bytesleft(capacity),
+      next(nextchunk) { }
+
+  ~NamemapMemChunk() { delete[] this->mem; }
+
+  char * mem;
   char * curbyte;
   size_t bytesleft;
-  struct NamemapMemChunk * next;
+  NamemapMemChunk * next;
 };
 
 struct NamemapBucketEntry {
@@ -108,7 +115,7 @@ namemap_cleanup(void)
   struct NamemapMemChunk * chunkptr = headchunk;
   while (chunkptr) {
     struct NamemapMemChunk * next = chunkptr->next;
-    free(chunkptr);
+    delete chunkptr;
     chunkptr = next;
   }
   
@@ -144,24 +151,16 @@ namemap_init(void)
 static const char *
 find_string_address(const char * s)
 {
-  size_t len = strlen(s) + 1;
-
-  /* FIXME: this is an unacceptable limitation. 20030608 mortene. */
-  assert(len < CHUNK_SIZE);
+  const size_t len = strlen(s) + 1;
 
   if (headchunk == NULL || headchunk->bytesleft < len) {
-    struct NamemapMemChunk * newchunk = static_cast<struct NamemapMemChunk *>(
-      malloc(sizeof(struct NamemapMemChunk))
-      );
-
-    newchunk->curbyte = newchunk->mem;
-    newchunk->bytesleft = CHUNK_SIZE;
-    newchunk->next = headchunk;
-
-    headchunk = newchunk;
+    const size_t capacity = len > NAMEMAP_CHUNK_SIZE
+      ? len
+      : NAMEMAP_CHUNK_SIZE;
+    headchunk = new NamemapMemChunk(capacity, headchunk);
   }
 
-  (void)strcpy(headchunk->curbyte, s);
+  (void)memcpy(headchunk->curbyte, s, len);
   s = headchunk->curbyte;
 
   headchunk->curbyte += len;
@@ -226,5 +225,3 @@ cc_namemap_peek_string(const char * str)
 {
   return namemap_find_or_add_string(str, FALSE);
 }
-
-#undef CHUNK_SIZE

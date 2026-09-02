@@ -195,11 +195,13 @@ SbName::isIdentStartChar(const char c)
 SbBool
 SbName::isIdentChar(const char c)
 {
+  const unsigned char uc = static_cast<unsigned char>(c);
+
   // FIXME: isalnum() takes the current locale into account. This can
   // lead to "interesting" artifacts. We very likely need to audit and
   // fix our isalnum() calls in the Coin sourcecode to behave in the
   // exact manner that we expect them to. 20020319 mortene.
-  return (isalnum(c) || c == '_');
+  return (isalnum(uc) || c == '_');
 }
 
 /*!

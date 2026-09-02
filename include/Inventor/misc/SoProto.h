@@ -53,10 +53,10 @@ typedef SoProto * SoFetchExternProtoCB(SoInput * in,
 
   \ingroup coin_misc
 
-  SoProto was the Open Inventor representation of a VRML97 PROTO
-  block.  VRML support has been removed from Obol (the
-  open-source fork of Coin3D); this class is retained as a
-  stub for API compatibility only.
+  SoProto was the Open Inventor representation of a VRML97 PROTO block. Its
+  programmatic representation remains available for compatibility, but the
+  Obol reader does not accept ASCII PROTO declarations and the VRML97 runtime
+  has been removed.
 
   \sa SoProtoInstance
 */

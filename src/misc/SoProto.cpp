@@ -34,12 +34,9 @@
   \class SoProto SoProto.h Inventor/misc/SoProto.h
   \brief The SoProto class handles PROTO definitions.
 
-  Obol retains the legacy PROTO definition, instantiation, IS-reference, and
-  ROUTE implementation used by Inventor input.  The broader VRML97 subsystem
-  (including SoVRML* nodes, VRML conversion actions, scripting, audio, and
-  network-backed EXTERNPROTO loading) is not part of Obol.  Applications
-  should therefore treat SoProto as a compatibility facility for supported
-  Inventor files, not as complete VRML97 support.
+  Obol retains the legacy PROTO representation and instantiation machinery for
+  programmatic compatibility.  The SoBase reader does not accept ASCII PROTO
+  declarations, and the broader VRML97 subsystem is not part of Obol.
 
 */
 

@@ -151,7 +151,9 @@ SoPath::operator=(const SoPath & rhs)
   // Add ourself as an auditor to the children lists of the path.
   if (this->isauditing) {
     for (int i = 0; i < this->getFullLength(); i++) {
-      SoChildList * cl = this->nodes[i]->getChildren();
+      SoNode * node = this->nodes[i];
+      if (!node) continue;
+      SoChildList * cl = node->getChildren();
       if (cl) cl->addPathAuditor(this);
     }
   }
@@ -374,6 +376,7 @@ SoPath::append(SoNode * const node, const int index)
 
   // Add ourself as an auditor to the node's list of children.
   if (this->isauditing) {
+    if (!node) return;
     SoChildList * cl = node->getChildren();
     if (cl) cl->addPathAuditor(this);
   }
@@ -558,7 +561,9 @@ SoPath::truncate(const int length, const SbBool donotify)
   // Remove ourself as an auditor to the nodes' children lists.
   if (this->isauditing) {
     for (int i = length; i < this->getFullLength(); i++) {
-      SoChildList * cl = this->nodes[i]->getChildren();
+      SoNode * node = this->nodes[i];
+      if (!node) continue;
+      SoChildList * cl = node->getChildren();
 #if OBOL_DEBUG && 0 // debug
       if (cl) {
         SoDebugError::postInfo("SoPath::truncate",
@@ -1121,29 +1126,45 @@ SoPath::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 {
   SoBase * baseptr;
   if (!SoBase::read(in, baseptr, SoNode::getClassTypeId())) return FALSE;
-  this->setHead((SoNode *)baseptr);
+  SoNode * head = static_cast<SoNode *>(baseptr);
+  if (!head) {
+    SoReadError::post(in, "Couldn't read path head node");
+    return FALSE;
+  }
+  head->ref();
 
-  int nrindices;
-  if (!in->read(nrindices)) {
+  int nrindices = -1;
+  if (!in->read(nrindices) || nrindices < 0) {
     SoReadError::post(in, "Couldn't read number of indices");
+    head->unref();
     return FALSE;
   }
 
-  for (int i=0; i < nrindices; i++) {
-    int index;
-    if (!in->read(index)) {
+  SbList<int> pathindices;
+  SoNode * tail = head;
+  for (int i = 0; i < nrindices; i++) {
+    int index = -1;
+    if (!in->read(index) || index < 0) {
       SoReadError::post(in, "Couldn't read index value");
+      head->unref();
       return FALSE;
     }
 
-    SoChildList * tailchildren = this->getTail()->getChildren();
-    if (!tailchildren || index < 0 || index >= tailchildren->getLength()) {
+    SoChildList * tailchildren = tail ? tail->getChildren() : NULL;
+    if (!tailchildren || index >= tailchildren->getLength()) {
       SoReadError::post(in, "Invalid index value %d", index);
+      head->unref();
       return FALSE;
     }
-
-    this->append(index);
+    pathindices.append(index);
+    tail = (*tailchildren)[index];
   }
+
+  this->setHead(head);
+  for (int i = 0; i < pathindices.getLength(); i++) {
+    this->append(pathindices[i]);
+  }
+  head->unref();
 
   return TRUE;
 }

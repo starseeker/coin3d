@@ -49,10 +49,10 @@ class SoSensor;
 
   \ingroup coin_misc
 
-  SoProtoInstance represents a live instantiation of an SoProto definition,
-  including its dynamic fields and IS connections.  It remains functional for
-  the PROTO syntax accepted by Obol's Inventor reader.  This does not imply
-  support for the removed SoVRML* node family or the complete VRML97 runtime.
+  SoProtoInstance represents a live programmatic instantiation of an SoProto
+  definition, including its dynamic fields and IS connections. The Obol reader
+  does not accept ASCII PROTO declarations, and the removed SoVRML* node family
+  and VRML97 runtime are not supported.
 
   \sa SoProto
 */

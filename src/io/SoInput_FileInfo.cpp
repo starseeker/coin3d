@@ -394,60 +394,44 @@ SoInput_FileInfo::getReader(void)
 }
 
 SbBool
-SoInput_FileInfo::readUnsignedIntegerString(char * str)
-{
-  return this->readUnsignedIntegerString(str, 512);
-}
-
-SbBool
-SoInput_FileInfo::readUnsignedIntegerString(char * str, size_t capacity)
+SoInput_FileInfo::readUnsignedIntegerString(void)
 {
   assert(!this->isBinary());
-  if (!str || capacity < 2) return FALSE;
-  int minSize = 1;
-  char * s = str;
+  const size_t initiallength = this->readstring.length();
+  size_t minlength = 1;
+  char c;
 
-  if (this->readChar(s, '0')) {
-    size_t used = 1;
-    if (this->readChar(s + used, 'x')) {
-      used++;
-      const int count = this->readHexDigits(s + used, capacity - used);
-      if (static_cast<size_t>(count) + 1 >= capacity - used) return FALSE;
-      used += static_cast<size_t>(count);
-      minSize = 3;
+  if (this->readChar(&c, '0')) {
+    this->readstring += c;
+    if (this->readChar(&c, 'x')) {
+      this->readstring += c;
+      (void)this->readHexDigits();
+      minlength = 3;
     }
     else {
-      const int count = this->readDigits(s + used, capacity - used);
-      if (static_cast<size_t>(count) + 1 >= capacity - used) return FALSE;
-      used += static_cast<size_t>(count);
+      (void)this->readDigits();
     }
-    s += used;
   }
   else {
-    const int count = this->readDigits(s, capacity);
-    if (static_cast<size_t>(count) + 1 >= capacity) return FALSE;
-    s += count;
+    (void)this->readDigits();
   }
 
-  if (s - str < minSize)
-    return FALSE;
-
-  *s = '\0';
-  return TRUE;
+  return this->readstring.length() - initiallength >= minlength;
 }
 
 SbBool
 SoInput_FileInfo::readUnsignedInteger(uint32_t & l)
 {
   assert(!this->isBinary());
-  char str[512];
-  if (! this->readUnsignedIntegerString(str))
+  this->readstring.clear();
+  if (!this->readUnsignedIntegerString())
     return FALSE;
 
   char * end = NULL;
   errno = 0;
-  const unsigned long value = std::strtoul(str, &end, 0);
-  if (errno == ERANGE || end == str || *end != '\0' ||
+  const char * begin = this->readstring.c_str();
+  const unsigned long value = std::strtoul(begin, &end, 0);
+  if (errno == ERANGE || end == begin || *end != '\0' ||
       value > static_cast<unsigned long>(std::numeric_limits<uint32_t>::max())) {
     return FALSE;
   }
@@ -460,21 +444,22 @@ SbBool
 SoInput_FileInfo::readInteger(int32_t & l)
 {
   assert(!this->isBinary());
-  char str[512];
-  char * s = str;
-  // Read optional sign character directly into the string
-  if (this->readChar(s, '-')) {
-    s++;
+  this->readstring.clear();
+  char c;
+  if (this->readChar(&c, '-')) {
+    this->readstring += c;
   }
-  else if (this->readChar(s, '+')) s++;
-  const size_t remaining = sizeof(str) - static_cast<size_t>(s - str);
-  if (! this->readUnsignedIntegerString(s, remaining))
+  else if (this->readChar(&c, '+')) {
+    this->readstring += c;
+  }
+  if (!this->readUnsignedIntegerString())
     return FALSE;
 
   char * end = NULL;
   errno = 0;
-  const long value = std::strtol(str, &end, 0);
-  if (errno == ERANGE || end == str || *end != '\0' ||
+  const char * begin = this->readstring.c_str();
+  const long value = std::strtol(begin, &end, 0);
+  if (errno == ERANGE || end == begin || *end != '\0' ||
       value < static_cast<long>(std::numeric_limits<int32_t>::min()) ||
       value > static_cast<long>(std::numeric_limits<int32_t>::max())) {
     return FALSE;
@@ -487,49 +472,48 @@ SbBool
 SoInput_FileInfo::readReal(double & d)
 {
   assert(!this->isBinary());
-  const size_t BUFSIZE = 2048;
+  this->readstring.clear();
   SbBool minus = FALSE;
   SbBool gotNum = FALSE;
-  int i, n;
-  char str[BUFSIZE];
-  char * s = str;
+  size_t n;
+  char c;
 
   double number;
   double exponent;
 
-  n = this->readChar(s, '-');
-  if (n == 0) {
-    n = this->readChar(s, '+');
+  int matched = this->readChar(&c, '-');
+  if (matched > 0) {
+    minus = TRUE;
+    this->readstring += c;
   }
-  else minus = TRUE;
-  s += n;
+  else {
+    matched = this->readChar(&c, '+');
+    if (matched > 0) this->readstring += c;
+  }
 
-  if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
-    if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
+  const size_t integerstart = this->readstring.length();
+  if ((n = this->readDigits()) > 0) {
     gotNum = TRUE;
     number = 0.0;
-    double mul = 1.0;
-    for (i = 0; i < n; i++) {
-      number += (s[(n-1)-i] - '0') * mul;
-      mul *= 10.0;
+    for (size_t i = 0; i < n; i++) {
+      number = number * 10.0 +
+        static_cast<double>(this->readstring[integerstart + i] - '0');
     }
-    s += n;
   }
   else {
     number = 0.0;
   }
-  if (this->readChar(s, '.') > 0) {
-    s++;
+  if (this->readChar(&c, '.') > 0) {
+    this->readstring += c;
 
-    if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
-      if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
+    const size_t fractionstart = this->readstring.length();
+    if ((n = this->readDigits()) > 0) {
       gotNum = TRUE;
       double mul = 0.1;
-      for (i = 0; i < n; i++) {
-        number += (s[i]-'0') * mul;
+      for (size_t i = 0; i < n; i++) {
+        number += (this->readstring[fractionstart + i] - '0') * mul;
         mul *= 0.1;
       }
-      s += n;
     }
   }
 
@@ -538,28 +522,30 @@ SoInput_FileInfo::readReal(double & d)
 
   if (minus) number = -number;
 
-  n = this->readChar(s, 'e');
-  if (n == 0)
-    n = this->readChar(s, 'E');
+  matched = this->readChar(&c, 'e');
+  if (matched == 0)
+    matched = this->readChar(&c, 'E');
 
-  if (n > 0) {
-    s += n;
+  if (matched > 0) {
+    this->readstring += c;
 
     minus = FALSE;
-    n = this->readChar(s, '-');
-    if (n == 0) {
-      n = this->readChar(s, '+');
+    matched = this->readChar(&c, '-');
+    if (matched > 0) {
+      minus = TRUE;
+      this->readstring += c;
     }
-    else minus = TRUE;
-    s += n;
+    else {
+      matched = this->readChar(&c, '+');
+      if (matched > 0) this->readstring += c;
+    }
 
-    if ((n = this->readDigits(s, BUFSIZE - static_cast<size_t>(s - str))) > 0) {
-      if (static_cast<size_t>(n) + 1 >= BUFSIZE - static_cast<size_t>(s - str)) return FALSE;
+    const size_t exponentstart = this->readstring.length();
+    if ((n = this->readDigits()) > 0) {
       exponent = 0.0;
-      double mul = 1.0;
-      for (i = 0; i < n; i++) {
-        exponent += (s[(n-1)-i]-'0') * mul;
-        mul *= 10.0;
+      for (size_t i = 0; i < n; i++) {
+        exponent = exponent * 10.0 +
+          static_cast<double>(this->readstring[exponentstart + i] - '0');
       }
       if (minus) exponent = -exponent;
 
@@ -590,51 +576,37 @@ SoInput_FileInfo::readChar(char * s, char charToRead)
   return ret;
 }
 
-int
-SoInput_FileInfo::readDigits(char * str)
-{
-  return this->readDigits(str, 512);
-}
-
-int
-SoInput_FileInfo::readDigits(char * str, size_t capacity)
+size_t
+SoInput_FileInfo::readDigits(void)
 {
   assert(!this->isBinary());
-  if (!str || capacity < 1) return 0;
-  char c, * s = str;
+  const size_t initiallength = this->readstring.length();
+  char c;
 
-  while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
+  while (this->get(c)) {
     if (std::isdigit(static_cast<unsigned char>(c)))
-      *s++ = c;
+      this->readstring += c;
     else {
       this->putBack(c);
       break;
     }
   }
-  const ptrdiff_t offset = s - str;
-  return (int)offset;
+  return this->readstring.length() - initiallength;
 }
 
-int
-SoInput_FileInfo::readHexDigits(char * str)
-{
-  return this->readHexDigits(str, 512);
-}
-
-int
-SoInput_FileInfo::readHexDigits(char * str, size_t capacity)
+size_t
+SoInput_FileInfo::readHexDigits(void)
 {
   assert(!this->isBinary());
-  if (!str || capacity < 1) return 0;
-  char c, * s = str;
-  while (static_cast<size_t>(s - str) + 1 < capacity && this->get(c)) {
+  const size_t initiallength = this->readstring.length();
+  char c;
+  while (this->get(c)) {
 
-    if (std::isxdigit(static_cast<unsigned char>(c))) *s++ = c;
+    if (std::isxdigit(static_cast<unsigned char>(c))) this->readstring += c;
     else {
       this->putBack(c);
       break;
     }
   }
-  const ptrdiff_t offset = s - str;
-  return (int)offset;
+  return this->readstring.length() - initiallength;
 }

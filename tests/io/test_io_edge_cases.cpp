@@ -51,6 +51,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/errors/SoError.h>
+#include <Inventor/errors/SoReadError.h>
 
 #include <cstring>
 #include <cstdlib>
@@ -269,4 +270,50 @@ TEST(IoEdgeCases, EmptyBufferSoDBReadAllReturnsNull)
         r->unref();
     }
     root->unref();
+}
+
+TEST(IoEdgeCases, IntegerParsingHasNoFixedTokenLimit)
+{
+    std::string digits(4096, '0');
+    digits += '7';
+
+    SoInput input;
+    input.setBuffer(digits.data(), digits.size());
+    unsigned int value = 0;
+    EXPECT_TRUE(input.read(value));
+    EXPECT_EQ(value, 7u);
+}
+
+static SoSeparator * readMalformedSceneWithoutDiagnostics(const std::string & scene)
+{
+    SoErrorCB * old_error_callback = SoError::getHandlerCallback();
+    void * old_error_data = SoError::getHandlerData();
+    SoErrorCB * old_read_callback = SoReadError::getHandlerCallback();
+    void * old_read_data = SoReadError::getHandlerData();
+    SoError::setHandlerCallback(silentErrCb, nullptr);
+    SoReadError::setHandlerCallback(silentErrCb, nullptr);
+
+    SoInput input;
+    input.setBuffer(scene.data(), scene.size());
+    SoSeparator * root = SoDB::readAll(&input);
+
+    SoReadError::setHandlerCallback(old_read_callback, old_read_data);
+    SoError::setHandlerCallback(old_error_callback, old_error_data);
+    return root;
+}
+
+TEST(IoEdgeCases, NegativePathLengthFailsGracefully)
+{
+    const std::string scene =
+        "#Inventor V2.1 ascii\n"
+        "PathSwitch {\n"
+        "  path Path { Separator { Cube {} } -1 }\n"
+        "}\n";
+
+    SoSeparator * root = readMalformedSceneWithoutDiagnostics(scene);
+    EXPECT_EQ(root, nullptr);
+    if (root) {
+        root->ref();
+        root->unref();
+    }
 }

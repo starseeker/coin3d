@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbName.h>
@@ -169,10 +170,7 @@ public:
   void connectRoutes(SoInput * in);
   void unrefProtos(void);
   int readChar(char * s, char charToRead);
-  int readDigits(char * str);
-  int readHexDigits(char * str);
 
-  SbBool readUnsignedIntegerString(char * str);
   SbBool readUnsignedInteger(uint32_t & l);
   SbBool readInteger(int32_t & l);
   SbBool readReal(double & d);
@@ -183,9 +181,9 @@ public:
 private:
 
   SoInput_Reader * getReader(void);
-  int readDigits(char * str, size_t capacity);
-  int readHexDigits(char * str, size_t capacity);
-  SbBool readUnsignedIntegerString(char * str, size_t capacity);
+  size_t readDigits(void);
+  size_t readHexDigits(void);
+  SbBool readUnsignedIntegerString(void);
   SoInput_Reader * reader;
   SbBool readHeaderInternal(SoInput * input);
 
@@ -213,6 +211,7 @@ private:
   SbString stdinname; // needed for ivFilename()
   char * deletebuffer;
   SbHash<const char *, SoBase *> references;
+  std::string readstring;
 
   // Async I/O support removed with C threading API cleanup
 };

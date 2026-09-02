@@ -484,7 +484,16 @@ SoInput::checkISReference(SoFieldContainer * container,
       readok = this->read(iname, TRUE);
       if (readok) {
         assert(container->isOfType(SoNode::getClassTypeId()));
-        proto->addISReference((SoNode*) container, fieldname, iname);
+        if (container->getField(fieldname) == NULL) {
+          SoReadError::post(this,
+                            "PROTO '%s': field '%s' does not exist in %s",
+                            proto->getProtoName().getString(),
+                            fieldname.getString(),
+                            container->getTypeId().getName().getString());
+          readok = FALSE;
+          return FALSE;
+        }
+        proto->addISReference(static_cast<SoNode *>(container), fieldname, iname);
       }
     }
     else {
@@ -2282,45 +2291,6 @@ SoInput::readReal(double & d)
   SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
   if (!fi) return FALSE;
   return fi->readReal(d);
-}
-
-/*!
-  Reads a set of bytes from the stream making up an unsigned integer and
-  puts them at \a str.
-
-  Returns \c FALSE if no string representing an unsigned integer could be
-  read.
- */
-SbBool
-SoInput::readUnsignedIntegerString(char * str)
-{
-  SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
-  if (!fi) return FALSE;
-  return fi->readUnsignedIntegerString(str);
-}
-
-/*!
-  Read decimal base digits from the current input stream into \a str and
-  returns the number of characters read.
- */
-int
-SoInput::readDigits(char * str)
-{
-  SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
-  if (!fi) return FALSE;
-  return fi->readDigits(str);
-}
-
-/*!
-  Read hexadecimal base digits from the current input stream into \a str and
-  returns the number of characters read.
- */
-int
-SoInput::readHexDigits(char * str)
-{
-  SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
-  if (!fi) return FALSE;
-  return fi->readHexDigits(str);
 }
 
 /*!

@@ -462,7 +462,14 @@ SoBase::PImpl::createInstance(SoInput * in, const SbName & classname)
     // search in global PROTO list
     proto = SoProto::findProto(classname);
   }
-  if (proto) return proto->createProtoInstance();
+  if (proto) {
+    if (in->getCurrentProto() == proto) {
+      SoReadError::post(in, "Self-referential PROTO '%s' detected",
+                        classname.getString());
+      return NULL;
+    }
+    return proto->createProtoInstance();
+  }
 
   if (type == SoType::badType())
     type = SoType::fromName(classname);

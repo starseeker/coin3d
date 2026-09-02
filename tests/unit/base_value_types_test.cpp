@@ -18,9 +18,11 @@
 #include <Inventor/SbVec4i32.h>
 
 #include <cmath>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <string>
 
 namespace {
 
@@ -78,6 +80,22 @@ TEST(BaseStrings, StringNameAndTimeExposeStableValueSemantics)
     EXPECT_DOUBLE_EQ(configured.getValue(), 7.5);
     EXPECT_GT(SbTime(65.0).format().getLength(), 0);
     EXPECT_GT(SbTime::getTimeOfDay().getValue(), 0.0);
+}
+
+TEST(BaseStrings, NamesPreserveOversizedAndHighBitInputSafely)
+{
+    std::string long_name(70000, 'a');
+    long_name.back() = 'z';
+
+    const SbName first(long_name.c_str());
+    const SbName second(long_name.c_str());
+    EXPECT_EQ(first.getLength(), static_cast<int>(long_name.length()));
+    EXPECT_STREQ(first.getString(), long_name.c_str());
+    EXPECT_EQ(first.getString(), second.getString());
+
+    const char high_bit = static_cast<char>(0xff);
+    EXPECT_EQ(SbName::isIdentChar(high_bit) != FALSE,
+              std::isalnum(static_cast<unsigned char>(high_bit)) != 0);
 }
 
 TEST(BaseTime, MillisecondConversionDefinesAllOutOfRangeInputs)
