@@ -133,6 +133,13 @@ if (!published) {
 }
 ```
 
+Admission is strict by default.  A producer whose aggregate proxy is only an
+optimization may pass `CadAggregateProxyPolicy::DiscardInvalid`; Obol then
+removes the proxy only when its exact oriented-volume check fails and validates
+the authoritative geometry again.  Other errors are never downgraded.  This
+policy avoids both publishing a non-conservative proxy and rejecting otherwise
+valid resident geometry.
+
 ### Adding a view policy
 
 `SoCADAssembly` is one view's retained presentation. Non-geometric per-view
@@ -443,6 +450,46 @@ styles, selection, or draw mode change.
 
 ---
 
+## Evidence identity contract
+
+Retained-plan revisions, classifier revisions, preparation obligations,
+execution serials, and completed resource/timing serials are authorization
+identities: consumers use equality or ordering to decide whether cached work
+is current.  They are not telemetry counters.  Zero denotes absent evidence,
+and a live identity domain must never wrap to an earlier value.
+
+`CadIdentityCounter.h` is the single private advancement policy for those
+domains.  It fail-stops at representation exhaustion before a mutation can
+publish a reused credential.  Resource teardown clears the associated sample
+but preserves externally observed upload and timer allocation sequences, so
+context recreation cannot manufacture an ABA collision.  Ordinary diagnostic
+counts remain separate and may saturate without authorizing behavior.
+
+Every `SoCADAssembly` also receives a nonzero process-lifetime identity.  A
+host aggregating evidence from several assemblies must pair that identity with
+each local serial; an object address can be reused after destruction and is
+not evidence identity.  `renderPreparationSerial()` is itself a checked
+non-reused change identity for the exact pair of assembly- and renderer-owned
+preparation serials.  It is not their sum: a sum can saturate before either
+source domain is exhausted.
+
+Derived GPU caches retain exact typed input tuples.  Aggregate-proxy batches
+compare source, attribute, presentation, draw-mode, and software-path fields;
+progressive cut buffers compare representation, lineage, source interval,
+quantization, and every packed range; flattened wire and shaded atlas ranges
+compare the instance, part, cut, immutable-source revision, transform, and
+source interval.  Their hash functions select unordered-map buckets only:
+exact key equality authorizes reuse.  A digest may accelerate a container
+lookup, but it must never be the credential which authorizes reuse.
+
+When Obol is consumed by BRL-CAD, the authoritative cross-repository formal
+contract is `doc/notes/tla/components/asset-production-residency/
+ObolIdentityExhaustion.tla` in the BRL-CAD source tree.  Its conformance ledger
+maps this producer-side policy to the libBObol consumers; do not clone that
+model here and allow the two copies to drift.
+
+---
+
 ## Limitations
 
 * **Line width**: rendered using `glLineWidth`; many drivers clamp to 1 px.
@@ -482,10 +529,12 @@ styles, selection, or draw mode change.
 | `src/cad/CadRendererGLIndirect.cpp`| Indirect command execution        |
 | `src/cad/CadRendererGLInstanced.cpp`| Instanced command execution      |
 | `src/cad/CadRendererGLExecutors.cpp`| Retained/direct execution        |
+| `src/cad/CadIdentityCounter.h`   | Fail-stop retained-evidence identity policy |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |
 | `src/cad/SoCADViewState.cpp`       | View-state element and node        |
 | `src/cad/CadFramePlan.h`           | Internal frame plan structs       |
 | `src/cad/CadGpuResources.h/.cpp`   | Per-context VBO cache (isUpToDate fast-path) |
 | `src/cad/picking/CadPicking.h/.cpp`| CPU BVH picking (edge + triangle) |
 | `tests/cad/test_cad_ids.cpp`       | Unit tests: ID generation         |
+| `tests/cad/test_cad_instance_records.cpp` | Retained transaction and identity-boundary tests |
 | `tests/cad/test_cad_picking.cpp`   | Unit tests: edge + triangle picking |

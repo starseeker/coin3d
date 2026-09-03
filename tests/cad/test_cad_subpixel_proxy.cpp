@@ -296,6 +296,7 @@ orientedAggregateProxyContract()
         diagonal[corner] = diagonal[0] +
             ((corner & 1u) ? diagonalAxis : SbVec3f(0.0f, 0.0f, 0.0f));
     nonConservative.aggregateProxyCorners = diagonal;
+    Obol::PartGeometryBuilder optionalNonConservative = nonConservative;
     const Obol::CadGeometryAdmission outsideRejected =
         Obol::cadAdmitPartGeometry(std::move(nonConservative));
     if (outsideRejected || outsideRejected.validation.error !=
@@ -303,6 +304,19 @@ orientedAggregateProxyContract()
         std::fprintf(stderr,
             "non-conservative oriented aggregate proxy had result %s\n",
             Obol::cadGeometryErrorName(outsideRejected.validation.error));
+        return false;
+    }
+
+    const Obol::CadGeometryAdmission proxyDiscarded =
+        Obol::cadAdmitPartGeometry(
+            std::move(optionalNonConservative),
+            Obol::CadAggregateProxyPolicy::DiscardInvalid);
+    if (!proxyDiscarded || !proxyDiscarded.geometry ||
+            proxyDiscarded.geometry.get()->aggregateProxyCorners ||
+            !proxyDiscarded.geometry.get()->points) {
+        std::fprintf(stderr,
+            "optional invalid aggregate proxy was not discarded: %s\n",
+            Obol::cadGeometryErrorName(proxyDiscarded.validation.error));
         return false;
     }
 

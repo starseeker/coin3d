@@ -665,8 +665,24 @@ cadValidatePartUpdates(
 CadGeometryAdmission
 cadAdmitPartGeometry(PartGeometryBuilder geometry)
 {
+    return cadAdmitPartGeometry(
+        std::move(geometry), CadAggregateProxyPolicy::Strict);
+}
+
+CadGeometryAdmission
+cadAdmitPartGeometry(PartGeometryBuilder geometry,
+                     CadAggregateProxyPolicy proxyPolicy)
+{
     CadGeometryAdmission admission;
     admission.validation = cadValidatePartGeometry(geometry);
+    if (!admission.validation &&
+            proxyPolicy == CadAggregateProxyPolicy::DiscardInvalid &&
+            admission.validation.error ==
+                CadGeometryError::InvalidAggregateProxy &&
+            geometry.aggregateProxyCorners) {
+        geometry.aggregateProxyCorners.reset();
+        admission.validation = cadValidatePartGeometry(geometry);
+    }
     if (!admission.validation)
         return admission;
     std::shared_ptr<const PartGeometry> snapshot(

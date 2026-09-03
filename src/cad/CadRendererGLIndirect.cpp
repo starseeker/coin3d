@@ -33,6 +33,7 @@
 /** @file CadRendererGLIndirect.cpp @brief Indirect CAD draw preparation. */
 
 #include "CadRendererGL.h"
+#include "CadIdentityCounter.h"
 #include "CadRendererConfiguration.h"
 #include "CadRendererGLExecutorUtils.h"
 #include "CadResolvedDraw.h"
@@ -775,9 +776,7 @@ bool CadRendererGL::patchIndirectPreparedAppend(
         pressureProxyAppendBegin_ =
             priorPressureProxyCount;
         pressureProxyAppendOnly_ = true;
-        ++pressureProxyRevision_;
-        if (!pressureProxyRevision_)
-            pressureProxyRevision_ = 1;
+        Obol::internal::cadAdvanceIdentity(pressureProxyRevision_);
     }
 
     indirectPrepared_.appendRevision =
@@ -2101,9 +2100,7 @@ bool CadRendererGL::replayIndirectShaded(
             indirectPrepared_.instanceUploadSerial = 0;
         if (pressureAttributesChanged) {
             pressureProxyAppendOnly_ = false;
-            ++pressureProxyRevision_;
-            if (!pressureProxyRevision_)
-                pressureProxyRevision_ = 1;
+            Obol::internal::cadAdvanceIdentity(pressureProxyRevision_);
         }
     }
 
@@ -3282,9 +3279,7 @@ bool CadRendererGL::renderIndirectShaded(
       }
       prepared.valid = true;
       pressureProxyAppendOnly_ = false;
-      ++pressureProxyRevision_;
-      if (!pressureProxyRevision_)
-          pressureProxyRevision_ = 1;
+      Obol::internal::cadAdvanceIdentity(pressureProxyRevision_);
       build.phase = IndirectPreparationPhase::Submit;
       publishPreparation(
           presentationPreparation_.target,

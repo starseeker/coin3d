@@ -267,25 +267,12 @@ bool CadRendererGL::renderFlatWire(
                 return false;
             visibleVertexCount += vertices;
 
-            uint64_t geometryToken = 1469598103934665603ULL;
-            geometryToken ^= binding.generation;
-            geometryToken *= 1099511628211ULL;
-            geometryToken ^= item.rep.part.w0;
-            geometryToken *= 1099511628211ULL;
-            geometryToken ^= item.rep.part.w1;
-            geometryToken *= 1099511628211ULL;
-            for (float value : instance.transform) {
-                uint32_t bits = 0;
-                std::memcpy(&bits, &value, sizeof(bits));
-                geometryToken ^= bits;
-                geometryToken *= 1099511628211ULL;
-            }
-
             Occurrence occurrence;
             occurrence.wire = &wire;
             occurrence.instance = &instance;
             occurrence.rangeKey = CadFlatWireRangeKey{
-                instance.instanceId, level, geometryToken};
+                instance.instanceId, item.rep.part, level,
+                binding.generation, instance.transform, 0, 0};
             occurrence.flatSegments = flatSegments;
             occurrence.flatSegmentFirst =
                 wire.segmentFirstAtCut(effectiveLevel);
@@ -897,8 +884,6 @@ CadRendererGL::planFlatShadedOccurrences(
 
     const ExecutorFrustumPlanes fp =
         extractExecutorFrustumPlanes(viewProj);
-    constexpr uint64_t fnvOffsetBasis = 1469598103934665603ULL;
-    constexpr uint64_t fnvPrime = 1099511628211ULL;
     const uint64_t completedAtEntry =
         flatShadedPlanning_.completedUnits;
 
@@ -967,22 +952,10 @@ CadRendererGL::planFlatShadedOccurrences(
                 executorVisibleProgressiveCut(
                     mesh, instance, fp, requested) :
                 Obol::ProgressiveCutUnspecified;
-            uint64_t geometryToken = fnvOffsetBasis;
-            geometryToken ^= mesh.isProgressive() &&
+            flatShadedPlanning_.instanceSourceRevision =
+                mesh.isProgressive() &&
                     mesh.progressiveLineage ?
                 mesh.progressiveLineage : binding.generation;
-            geometryToken *= fnvPrime;
-            geometryToken ^= item.rep.part.w0;
-            geometryToken *= fnvPrime;
-            geometryToken ^= item.rep.part.w1;
-            geometryToken *= fnvPrime;
-            for (float value : instance.transform) {
-                uint32_t bits = 0;
-                std::memcpy(&bits, &value, sizeof(bits));
-                geometryToken ^= bits;
-                geometryToken *= fnvPrime;
-            }
-            flatShadedPlanning_.instanceGeometryToken = geometryToken;
             flatShadedPlanning_.instanceOccurrenceBegin =
                 flatShadedPlanning_.occurrences.size();
             flatShadedPlanning_.instanceModel.setValue(
@@ -1009,13 +982,6 @@ CadRendererGL::planFlatShadedOccurrences(
                     flatShadedRangeIndexChunk,
                     drawableIndexCount - offset);
                 const size_t chunkFirstIndex = firstIndex + offset;
-                uint64_t rangeToken =
-                    flatShadedPlanning_.instanceGeometryToken;
-                rangeToken ^= static_cast<uint64_t>(chunkFirstIndex);
-                rangeToken *= fnvPrime;
-                rangeToken ^= static_cast<uint64_t>(chunkIndexCount);
-                rangeToken *= fnvPrime;
-
                 FlatShadedOccurrence occurrence;
                 occurrence.partIndex = item.partIndex;
                 occurrence.visibleIndex = visibleIndex;
@@ -1023,7 +989,11 @@ CadRendererGL::planFlatShadedOccurrences(
                 occurrence.indexCount = chunkIndexCount;
                 occurrence.cut = flatShadedPlanning_.instanceCut;
                 occurrence.rangeKey = CadFlatShadedRangeKey{
-                    instance.instanceId, occurrence.cut, rangeToken};
+                    instance.instanceId, item.rep.part, occurrence.cut,
+                    flatShadedPlanning_.instanceSourceRevision,
+                    instance.transform,
+                    static_cast<uint64_t>(chunkFirstIndex),
+                    static_cast<uint64_t>(chunkIndexCount)};
                 occurrence.cullBackfaces = cadProgressiveCutCullSafe(
                     item.cullBackfaces, &mesh, occurrence.cut);
                 /* A non-exact PoP cut is deliberately not culled because

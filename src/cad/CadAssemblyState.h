@@ -348,6 +348,13 @@ struct CadRendererState {
      * plan/classification.  SoCADAssembly::renderPreparationSerial() combines
      * this with renderer-owned record/upload preparation. */
     uint64_t renderPreparationSerial_ = 0;
+    /* The public preparation serial is an exact change token for the pair of
+     * assembly- and renderer-owned preparation domains.  Summing those
+     * domains can saturate before either source identity is exhausted. */
+    mutable uint64_t reportedAssemblyPreparationSerial_ = 0;
+    mutable uint64_t reportedRendererPreparationSerial_ = 0;
+    mutable uint64_t combinedPreparationIdentity_ = 0;
+    mutable uint64_t nextCombinedPreparationIdentity_ = 1;
     Obol::CadPresentationPreparationSnapshot presentationPreparation_;
     uint64_t nextPresentationPreparationRevision_ = 1;
 };

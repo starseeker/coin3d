@@ -5,6 +5,8 @@
 
 #include <Obol/cad/SoCADAssembly.h>
 #include <Obol/cad/CadViewState.h>
+#include "CadGpuResources.h"
+#include "CadIdentityCounter.h"
 #include "CadSceneMutationTestHooks.h"
 
 #include <gtest/gtest.h>
@@ -13,6 +15,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/sensors/SoNodeSensor.h>
 
+#include <atomic>
 #include <limits>
 #include <memory>
 #include <string>
@@ -26,6 +29,103 @@ static_assert(!std::is_copy_constructible<Obol::PartGeometry>::value,
     "admitted geometry snapshots must not regain mutable aliases");
 
 namespace {
+
+TEST(CadGpuCacheCredentials, RetainAllAuthoritativeInputsExactly)
+{
+    Obol::internal::CadFlatRangeKey flat;
+    flat.instance = Obol::CadIdBuilder::instanceId("flat-cache-instance");
+    flat.part = Obol::CadIdBuilder::partId("flat-cache-part");
+    flat.cut = 3;
+    flat.sourceRevision = 17;
+    flat.transform[0] = 1.0f;
+    flat.transform[5] = 1.0f;
+    flat.transform[10] = 1.0f;
+    flat.transform[15] = 1.0f;
+    flat.sourceFirst = 9;
+    flat.sourceCount = 12;
+    EXPECT_EQ(flat, flat);
+
+    Obol::internal::CadFlatRangeKey changedFlat = flat;
+    changedFlat.transform[12] = 2.0f;
+    EXPECT_FALSE(flat == changedFlat);
+    changedFlat = flat;
+    ++changedFlat.sourceFirst;
+    EXPECT_FALSE(flat == changedFlat);
+
+    Obol::internal::CadSubpixelProxyStamp proxy;
+    proxy.sourceRevision = 5;
+    proxy.attributeRevision = 6;
+    proxy.presentationRevision = 7;
+    proxy.drawMode = Obol::CadDrawMode::Shaded;
+    proxy.softwarePresentation = true;
+    Obol::internal::CadSubpixelProxyStamp changedProxy = proxy;
+    ++changedProxy.attributeRevision;
+    EXPECT_NE(proxy, changedProxy);
+
+    Obol::internal::CadProgressiveGpu::CacheKey progressive;
+    progressive.representation =
+        Obol::internal::CadProgressiveGpu::Representation::TriangleIndexed;
+    progressive.progressiveLineage = 23;
+    progressive.sourceFirst = 11;
+    progressive.sourceCount = 13;
+    progressive.quantization = {4, 5, 6};
+    Obol::internal::CadProgressiveGpu::CacheKey changedProgressive =
+        progressive;
+    ++changedProgressive.quantization.zBits;
+    EXPECT_NE(progressive, changedProgressive);
+
+    const std::vector<Obol::internal::CadProgressiveGpu::PackedRange>
+        ranges = {{1, 2, 3}};
+    const std::vector<Obol::internal::CadProgressiveGpu::PackedRange>
+        changedRanges = {{1, 2, 4}};
+    EXPECT_NE(ranges, changedRanges);
+}
+
+TEST(CadIdentityCounter, RejectsReuseAtTheRepresentationBoundary)
+{
+    uint64_t successor = 17;
+    EXPECT_TRUE(Obol::internal::cadIdentitySuccessor(
+        UINT64_C(0), successor));
+    EXPECT_EQ(successor, UINT64_C(1));
+    EXPECT_TRUE(Obol::internal::cadIdentitySuccessor(
+        UINT64_MAX - UINT64_C(1), successor));
+    EXPECT_EQ(successor, UINT64_MAX);
+    EXPECT_FALSE(Obol::internal::cadIdentitySuccessor(
+        UINT64_MAX, successor));
+    EXPECT_EQ(successor, UINT64_MAX);
+
+    uint64_t nextIdentity = 1;
+    EXPECT_EQ(Obol::internal::cadTakeNonzeroIdentity(nextIdentity),
+        UINT64_C(1));
+    EXPECT_EQ(nextIdentity, UINT64_C(2));
+
+    nextIdentity = UINT64_MAX - UINT64_C(1);
+    EXPECT_EQ(Obol::internal::cadTakeNonzeroIdentity(nextIdentity),
+        UINT64_MAX - UINT64_C(1));
+    EXPECT_EQ(nextIdentity, UINT64_MAX);
+
+    std::atomic<uint64_t> nextAtomicIdentity{41};
+    EXPECT_EQ(Obol::internal::cadAtomicTakeNonzeroIdentity(
+        nextAtomicIdentity), UINT64_C(41));
+    EXPECT_EQ(nextAtomicIdentity.load(std::memory_order_relaxed),
+        UINT64_C(42));
+}
+
+TEST(CadAssemblyIdentity, IsNonzeroAndDistinctAcrossNodes)
+{
+    SoCADAssembly::initClass();
+    SoCADAssembly *first = new SoCADAssembly;
+    SoCADAssembly *second = new SoCADAssembly;
+    first->ref();
+    second->ref();
+
+    EXPECT_NE(first->assemblyIdentity(), UINT64_C(0));
+    EXPECT_NE(second->assemblyIdentity(), UINT64_C(0));
+    EXPECT_NE(first->assemblyIdentity(), second->assemblyIdentity());
+
+    first->unref();
+    second->unref();
+}
 
 static void
 nodeChanged(void *data, SoSensor *)

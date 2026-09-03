@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "CadGpuResources.h"
+#include "CadIdentityCounter.h"
 
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
@@ -1209,7 +1210,9 @@ CadTriGpu* CadGpuResources::triFor(PartId pid)
 }
 
 const CadProgressiveGpu* CadGpuResources::progressiveFor(
-        PartId pid, bool shaded, uint8_t cut, uint64_t rangeSignature)
+        PartId pid, bool shaded, uint8_t cut,
+        const CadProgressiveGpu::CacheKey& cacheKey,
+        const std::vector<CadProgressiveGpu::PackedRange>& packedRanges)
 {
     auto it = cache_.find(pid);
     if (it == cache_.end()) return nullptr;
@@ -1217,7 +1220,7 @@ const CadProgressiveGpu* CadGpuResources::progressiveFor(
         it->second.progressiveTri : it->second.progressiveWire;
     if (cut >= cuts.size()) return nullptr;
     CadProgressiveGpu& p = cuts[cut];
-    if (p.rangeSignature != rangeSignature)
+    if (p.cacheKey != cacheKey || p.packedRanges != packedRanges)
         return nullptr;
     if (p.posBuf && p.vertexCount > 0)
         p.lastUsedFrame = progressiveFrame_;
@@ -1243,7 +1246,7 @@ void CadGpuResources::uploadProgressive(
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<uint32_t>& indices,
-        bool indexed, uint64_t rangeSignature,
+        bool indexed, const CadProgressiveGpu::CacheKey& cacheKey,
         const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
         const SoGLContext *glue)
 {
@@ -1319,7 +1322,7 @@ void CadGpuResources::uploadProgressive(
     p.vertexCount = static_cast<GLsizei>(positions.size() / 3);
     p.indexCount = static_cast<GLsizei>(indices.size());
     p.indexed = indexed;
-    p.rangeSignature = rangeSignature;
+    p.cacheKey = cacheKey;
     p.packedRanges = packedRanges;
     p.bytes = (positions.size() + normals.size()) * sizeof(float) +
         indices.size() * sizeof(uint32_t);
@@ -1329,9 +1332,7 @@ void CadGpuResources::uploadProgressive(
 
 void CadGpuResources::beginProgressiveFrame()
 {
-    ++progressiveFrame_;
-    if (progressiveFrame_ == 0)
-        progressiveFrame_ = 1;
+    Obol::internal::cadAdvanceIdentity(progressiveFrame_);
 }
 
 void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
@@ -1419,21 +1420,14 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
 
 void CadGpuResources::bumpTriangleAtlasRevision() noexcept
 {
-    ++triangleAtlasRevision_;
-    if (!triangleAtlasRevision_)
-        triangleAtlasRevision_ = 1;
+    Obol::internal::cadAdvanceIdentity(triangleAtlasRevision_);
 }
 
 void CadGpuResources::beginTriangleAtlasFrame()
 {
     triangleAtlasMaintenanceDeferred_ = false;
     triangleAtlasReclamationDeferred_ = false;
-    ++triangleAtlasFrame_;
-    if (!triangleAtlasFrame_) {
-        triangleAtlasFrame_ = 1;
-        triangleAtlasInactiveSweepFrame_ = 0;
-        triangleAtlasCompactionFrame_ = 0;
-    }
+    Obol::internal::cadAdvanceIdentity(triangleAtlasFrame_);
 }
 
 void CadGpuResources::beginTriangleAtlasExactPreparation()
@@ -2808,9 +2802,7 @@ void CadGpuResources::uploadInstanceData(const void* data, GLsizeiptr byteSize,
         GL_ARRAY_BUFFER, 0, byteSize, data);
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     instanceVboBytes_ = byteSize;
-    ++instanceUploadSerial_;
-    if (!instanceUploadSerial_)
-        instanceUploadSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(instanceUploadSerial_);
 }
 
 void CadGpuResources::uploadTransientInstanceData(
@@ -2856,9 +2848,7 @@ bool CadGpuResources::updateInstanceData(
     glue->glBindBuffer(GL_ARRAY_BUFFER, instanceVbo_);
     glue->glBufferSubData(GL_ARRAY_BUFFER, byteOffset, byteSize, data);
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-    ++instanceUploadSerial_;
-    if (!instanceUploadSerial_)
-        instanceUploadSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(instanceUploadSerial_);
     return true;
 }
 
@@ -2876,9 +2866,7 @@ bool CadGpuResources::appendInstanceData(
         GL_ARRAY_BUFFER, expectedByteOffset, byteSize, data);
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     instanceVboBytes_ += byteSize;
-    ++instanceUploadSerial_;
-    if (!instanceUploadSerial_)
-        instanceUploadSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(instanceUploadSerial_);
     return true;
 }
 
@@ -3172,7 +3160,7 @@ void CadGpuResources::releaseStandaloneTriangles(const SoGLContext *glue)
 }
 
 void CadGpuResources::uploadSubpixelProxyBatch(
-        uint64_t revision,
+        const CadSubpixelProxyStamp& stamp,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
@@ -3274,7 +3262,7 @@ void CadGpuResources::uploadSubpixelProxyBatch(
     }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    subpixelProxyPoints_.revision = revision;
+    subpixelProxyPoints_.stamp = stamp;
     subpixelProxyPoints_.count = count;
     subpixelProxyPoints_.pointCount = static_cast<GLsizei>(pointCount);
     subpixelProxyPoints_.lineVertexCount =
@@ -3283,7 +3271,7 @@ void CadGpuResources::uploadSubpixelProxyBatch(
 }
 
 void CadGpuResources::uploadPressureProxyBatch(
-        uint64_t revision,
+        const CadSubpixelProxyStamp& stamp,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
@@ -3389,7 +3377,7 @@ void CadGpuResources::uploadPressureProxyBatch(
     }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    pressureProxyPoints_.revision = revision;
+    pressureProxyPoints_.stamp = stamp;
     pressureProxyPoints_.count = count;
     pressureProxyPoints_.pointCount = static_cast<GLsizei>(pointCount);
     pressureProxyPoints_.lineVertexCount =
@@ -3398,8 +3386,8 @@ void CadGpuResources::uploadPressureProxyBatch(
 }
 
 bool CadGpuResources::appendPressureProxyPoints(
-        uint64_t expectedRevision,
-        uint64_t revision,
+        const CadSubpixelProxyStamp& expectedStamp,
+        const CadSubpixelProxyStamp& stamp,
         const std::vector<float>& positions,
         const std::vector<uint8_t>& colors,
         const SoGLContext *glue)
@@ -3411,7 +3399,7 @@ bool CadGpuResources::appendPressureProxyPoints(
                     std::numeric_limits<GLsizei>::max()) ||
             !pressureProxyPoints_.posBuf ||
             !pressureProxyPoints_.colorBuf ||
-            pressureProxyPoints_.revision != expectedRevision)
+            pressureProxyPoints_.stamp != expectedStamp)
         return false;
     const GLsizei appended =
         static_cast<GLsizei>(positions.size() / 3);
@@ -3442,7 +3430,7 @@ bool CadGpuResources::appendPressureProxyPoints(
         colors.data());
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    pressureProxyPoints_.revision = revision;
+    pressureProxyPoints_.stamp = stamp;
     pressureProxyPoints_.count += appended;
     pressureProxyPoints_.pointCount = pressureProxyPoints_.count;
     pressureProxyPoints_.lineVertexCount = 0;
@@ -3539,9 +3527,8 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
             GL_TIME_ELAPSED, GL_CURRENT_QUERY, &currentQuery);
         if (currentQuery)
             return false;
-        slot.submission = gpuTimerNextSubmission_++;
-        if (!gpuTimerNextSubmission_)
-            gpuTimerNextSubmission_ = 1;
+        slot.submission = Obol::internal::cadTakeNonzeroIdentity(
+            gpuTimerNextSubmission_);
         slot.triangleCount = 0;
         slot.pointProxyPixelThreshold = 1.0f;
         glue->glBeginQuery(GL_TIME_ELAPSED, slot.query);
@@ -3642,7 +3629,6 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     instanceVbo_ = 0;
     instanceVboBytes_ = 0;
     instanceVboCapacityBytes_ = 0;
-    instanceUploadSerial_ = 0;
     transientInstanceVbo_ = 0;
     transientInstanceVboCapacityBytes_ = 0;
     flatWire_ = CadFlatWireGpu();
@@ -3679,7 +3665,6 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     gpuTimerSupported_ = false;
     gpuTimerActiveSlot_ = -1;
     gpuTimerNextSlot_ = 0;
-    gpuTimerNextSubmission_ = 1;
     gpuTimerLastCompletedSubmission_ = 0;
     gpuTimerLastNanoseconds_ = 0;
     gpuTimerLastTriangleCount_ = 0;

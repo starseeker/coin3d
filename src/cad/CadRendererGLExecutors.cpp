@@ -579,33 +579,23 @@ ensureProgressiveWireGpuImpl(
              pointCount > wire.segmentPoints.size() - pointFirst))
         return nullptr;
 
-    /* This signature is the validity domain of the derived cut buffer.  The
+    /* This exact tuple is the validity domain of the derived cut buffer.  The
      * lineage certifies immutable prefix values and quantization bounds;
-     * first/count or the packed source ranges identify exactly which
-     * certified points were snapped.  In particular, an adaptive full stream
-     * grows uploadedPointCount as pages become resident, invalidating a
-     * shorter cached cut without invalidating other cuts or unrelated parts. */
-    uint64_t rangeSignature = 1469598103934665603ULL;
-    const auto mixSignature = [&rangeSignature](uint64_t value) {
-        rangeSignature ^= value;
-        rangeSignature *= 1099511628211ULL;
-    };
-    mixSignature(wire.progressiveLineage);
-    mixSignature(static_cast<uint64_t>(pointFirst));
-    mixSignature(static_cast<uint64_t>(uploadedPointCount));
+     * first/count and the exact packed source ranges identify which certified
+     * points were snapped.  An adaptive full stream therefore invalidates a
+     * shorter cached cut without relying on a collision-prone digest. */
     const ProgressiveQuantization quantization =
         wire.quantizationAtCut(level);
-    mixSignature(static_cast<uint64_t>(quantization.xBits) |
-        (static_cast<uint64_t>(quantization.yBits) << 8u) |
-        (static_cast<uint64_t>(quantization.zBits) << 16u));
-    for (const CadProgressiveGpu::PackedRange& range : packedRanges) {
-        mixSignature(range.sourceFirst);
-        mixSignature(range.sourceCount);
-    }
-    if (!rangeSignature) rangeSignature = 1;
+    CadProgressiveGpu::CacheKey cacheKey;
+    cacheKey.representation =
+        CadProgressiveGpu::Representation::WireSegments;
+    cacheKey.progressiveLineage = wire.progressiveLineage;
+    cacheKey.sourceFirst = static_cast<uint64_t>(pointFirst);
+    cacheKey.sourceCount = static_cast<uint64_t>(uploadedPointCount);
+    cacheKey.quantization = quantization;
     if (const CadProgressiveGpu *cached =
             resources->progressiveFor(
-                part, false, level, rangeSignature))
+                part, false, level, cacheKey, packedRanges))
         return cached;
     std::vector<float> positions;
     positions.reserve(uploadedPointCount * 3);
@@ -628,9 +618,9 @@ ensureProgressiveWireGpuImpl(
     resources->uploadProgressive(
         part, false, level, positions, std::vector<float>(),
         std::vector<uint32_t>(), false,
-        rangeSignature, packedRanges, glue);
+        cacheKey, packedRanges, glue);
     if (const CadProgressiveGpu *uploaded = resources->progressiveFor(
-            part, false, level, rangeSignature))
+            part, false, level, cacheKey, packedRanges))
         return uploaded;
     /* Allocation pressure may leave the preceding append-only prefix live.
      * The fixed executor clamps every range to this record's vertexCount, so
@@ -684,7 +674,6 @@ ensureProgressiveTriGpuImpl(
             maximumIndex = std::max(maximumIndex, mesh.indices[i]);
         }
     }
-    uint64_t rangeSignature = 0;
     std::vector<CadProgressiveGpu::PackedRange> packedRanges;
     if (!indexed && sourceRanges) {
         const CadProgressiveGpu *existing =
@@ -718,7 +707,6 @@ ensureProgressiveTriGpuImpl(
         if (existing &&
                 requested.size() == existing->packedRanges.size())
             return existing;
-        rangeSignature = 1469598103934665603ULL;
         packedRanges.reserve(requested.size());
         uint64_t packedFirst = 0;
         for (const CadProgressiveGpu::PackedRange& source : requested) {
@@ -734,17 +722,19 @@ ensureProgressiveTriGpuImpl(
             packed.packedFirst = static_cast<uint32_t>(packedFirst);
             packedRanges.push_back(packed);
             packedFirst += source.sourceCount;
-            rangeSignature ^= source.sourceFirst;
-            rangeSignature *= 1099511628211ULL;
-            rangeSignature ^= source.sourceCount;
-            rangeSignature *= 1099511628211ULL;
         }
         if (packedRanges.empty()) return nullptr;
-        if (!rangeSignature) rangeSignature = 1;
     }
+    CadProgressiveGpu::CacheKey cacheKey;
+    cacheKey.representation = indexed ?
+        CadProgressiveGpu::Representation::TriangleIndexed :
+        CadProgressiveGpu::Representation::TriangleExpanded;
+    cacheKey.progressiveLineage = mesh.progressiveLineage;
+    cacheKey.sourceCount = static_cast<uint64_t>(indexCount);
+    cacheKey.quantization = quantization;
     if (const CadProgressiveGpu *cached =
             resources->progressiveFor(
-                part, true, level, rangeSignature))
+                part, true, level, cacheKey, packedRanges))
         return cached;
 
     std::vector<float> positions;
@@ -827,10 +817,10 @@ ensureProgressiveTriGpuImpl(
     if (prepared) *prepared = true;
     resources->uploadProgressive(
         part, true, level, positions, normals, orientedIndices, indexed,
-        rangeSignature,
+        cacheKey,
         packedRanges, glue);
     return resources->progressiveFor(
-        part, true, level, rangeSignature);
+        part, true, level, cacheKey, packedRanges);
 }
 
 static const CadProgressiveGpu*
@@ -870,22 +860,17 @@ ensureProgressiveIndexedWireGpuImpl(
                 std::numeric_limits<GLsizei>::max()))
         return nullptr;
 
-    uint64_t signature = 1469598103934665603ULL;
-    const auto mix = [&signature](uint64_t value) {
-        signature ^= value;
-        signature *= 1099511628211ULL;
-    };
     const ProgressiveQuantization quantization =
         mesh.quantizationAtCut(level);
-    mix(0x696e646578656477ULL); /* "indexedw" representation tag. */
-    mix(mesh.progressiveLineage);
-    mix(positionCount);
-    mix(static_cast<uint64_t>(quantization.xBits) |
-        (static_cast<uint64_t>(quantization.yBits) << 8u) |
-        (static_cast<uint64_t>(quantization.zBits) << 16u));
-    if (!signature) signature = 1;
+    CadProgressiveGpu::CacheKey cacheKey;
+    cacheKey.representation =
+        CadProgressiveGpu::Representation::IndexedWire;
+    cacheKey.progressiveLineage = mesh.progressiveLineage;
+    cacheKey.sourceCount = static_cast<uint64_t>(positionCount);
+    cacheKey.quantization = quantization;
+    const std::vector<CadProgressiveGpu::PackedRange> noPackedRanges;
     if (const CadProgressiveGpu *cached = resources->progressiveFor(
-            part, false, level, signature))
+            part, false, level, cacheKey, noPackedRanges))
         return cached;
 
     std::vector<float> positions;
@@ -898,8 +883,9 @@ ensureProgressiveIndexedWireGpuImpl(
     resources->uploadProgressive(
         part, false, level, positions, std::vector<float>(),
         std::vector<uint32_t>(), true,
-        signature, std::vector<CadProgressiveGpu::PackedRange>(), glue);
-    return resources->progressiveFor(part, false, level, signature);
+        cacheKey, noPackedRanges, glue);
+    return resources->progressiveFor(
+        part, false, level, cacheKey, noPackedRanges);
 }
 
 static const CadProgressiveGpu*

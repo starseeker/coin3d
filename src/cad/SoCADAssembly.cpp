@@ -49,6 +49,7 @@
 #include <Obol/cad/SoCADViewState.h>
 #include "CadAssemblyImpl.h"
 #include "CadFramePlan.h"
+#include "CadIdentityCounter.h"
 #include "CadPickTolerance.h"
 #include "CadRendererGL.h"
 #include "CadSceneMutationTestHooks.h"
@@ -151,12 +152,11 @@ using PartSet = std::unordered_set<Obol::PartId,
 using InstanceSet = std::unordered_set<Obol::InstanceId,
     std::hash<Obol::InstanceId>>;
 
-void
-advanceNonzeroRevision(uint64_t& revision) noexcept
+uint64_t
+cadNextAssemblyIdentity() noexcept
 {
-    ++revision;
-    if (revision == 0)
-        revision = 1;
+    static std::atomic<uint64_t> nextIdentity{1};
+    return Obol::internal::cadAtomicTakeNonzeroIdentity(nextIdentity);
 }
 
 /* SoCADAssembly opens a private Coin state frame because it bypasses the
@@ -516,6 +516,7 @@ SoCADAssembly::initClass()
 SoCADAssembly::SoCADAssembly()
     : impl_(new SoCADAssemblyImpl)
 {
+    impl_->assemblyIdentity_ = cadNextAssemblyIdentity();
     SO_NODE_CONSTRUCTOR(SoCADAssembly);
 }
 
@@ -688,7 +689,8 @@ SoCADAssembly::clear()
      * even if no later render arrives to replace the dirty plan. */
     impl_->cachedPlan_ = Obol::internal::CadFramePlan();
     if (protectionChanged) {
-        advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
+        Obol::internal::cadAdvanceIdentity(
+            impl_->pointProxyProtectionRevision_);
         impl_->classifiedPointProxyProtectionRevision_ =
             impl_->pointProxyProtectionRevision_;
     }
@@ -1469,7 +1471,8 @@ SoCADAssembly::removeInstance(Obol::InstanceId iid)
     impl_->hidden_.erase(iid);
     impl_->unpickable_.erase(iid);
     if (impl_->pointProxyProtected_.erase(iid))
-        advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
+        Obol::internal::cadAdvanceIdentity(
+            impl_->pointProxyProtectionRevision_);
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
@@ -1634,7 +1637,8 @@ SoCADAssembly::setPointProxyProtectedInstances(
         if (!impl_->pointProxyProtected_.count(id))
             changed.push_back(id);
     impl_->pointProxyProtected_.swap(next);
-    advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
+    Obol::internal::cadAdvanceIdentity(
+        impl_->pointProxyProtectionRevision_);
     bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
     for (const Obol::InstanceId& id : changed)
         if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
@@ -1676,7 +1680,8 @@ SoCADAssembly::adoptPointProxyProtectedInstances(
         std::hash<Obol::InstanceId>>&& ids)
 {
     impl_->pointProxyProtected_.swap(ids);
-    advanceNonzeroRevision(impl_->pointProxyProtectionRevision_);
+    Obol::internal::cadAdvanceIdentity(
+        impl_->pointProxyProtectionRevision_);
     /* Protection affects only view-local point classification.  Keep the
      * immutable geometry/instance plan and its GPU resources intact.  The
      * classifier builds the new mask and aggregate point list into scratch
@@ -1943,50 +1948,43 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         Obol::internal::CadFramePlan candidatePlan =
             impl_->buildFramePlan(
                 drawMode, impl_->selected_, impl_->hidden_);
-        ++impl_->renderPreparationSerial_;
-        if (impl_->renderPreparationSerial_ == 0)
-            impl_->renderPreparationSerial_ = 1;
+        Obol::internal::cadAdvanceIdentity(
+            impl_->renderPreparationSerial_);
         impl_->cachedPlan_ = std::move(candidatePlan);
-        impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
-        if (impl_->nextPlanRevision_ == 0)
-            impl_->nextPlanRevision_ = 1;
+        impl_->cachedPlan_.revision =
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextPlanRevision_);
         impl_->cachedPlan_.shadedLayoutRevision =
-            impl_->nextShadedLayoutRevision_++;
-        if (impl_->nextShadedLayoutRevision_ == 0)
-            impl_->nextShadedLayoutRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextShadedLayoutRevision_);
         impl_->cachedPlan_.subpixelProxyInputRevision =
-            impl_->nextSubpixelProxyInputRevision_++;
-        if (impl_->nextSubpixelProxyInputRevision_ == 0)
-            impl_->nextSubpixelProxyInputRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextSubpixelProxyInputRevision_);
         impl_->cachedPlan_.shadedLodRevision =
-            impl_->nextShadedLodRevision_++;
-        if (impl_->nextShadedLodRevision_ == 0)
-            impl_->nextShadedLodRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextShadedLodRevision_);
         impl_->cachedPlan_.shadedLodDeltaFloorRevision =
             impl_->cachedPlan_.shadedLodRevision;
         impl_->cachedPlan_.appendRevision =
-            impl_->nextAppendRevision_++;
-        if (impl_->nextAppendRevision_ == 0)
-            impl_->nextAppendRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextAppendRevision_);
         impl_->cachedPlan_.appendDeltaFloorRevision =
             impl_->cachedPlan_.appendRevision;
         impl_->cachedPlan_.partGeometryRevision =
-            impl_->nextPartGeometryRevision_++;
-        if (impl_->nextPartGeometryRevision_ == 0)
-            impl_->nextPartGeometryRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextPartGeometryRevision_);
         impl_->cachedPlan_.partGeometryDeltaFloorRevision =
             impl_->cachedPlan_.partGeometryRevision;
         impl_->cachedPlan_.instanceAttributeRevision =
-            impl_->nextInstanceAttributeRevision_++;
-        if (impl_->nextInstanceAttributeRevision_ == 0)
-            impl_->nextInstanceAttributeRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextInstanceAttributeRevision_);
         impl_->cachedPlan_.instanceAttributeDeltaFloorRevision =
             impl_->cachedPlan_.instanceAttributeRevision;
         impl_->pendingInstanceAttributeIndices_.clear();
         if (geometryChanged) {
-            impl_->geometryRevision_ = impl_->nextGeometryRevision_++;
-            if (impl_->nextGeometryRevision_ == 0)
-                impl_->nextGeometryRevision_ = 1;
+            impl_->geometryRevision_ =
+                Obol::internal::cadTakeNonzeroIdentity(
+                    impl_->nextGeometryRevision_);
         }
         impl_->cachedPlan_.geometryRevision = impl_->geometryRevision_;
         impl_->cachedPlanTombstoneCount_ = 0;
@@ -2012,9 +2010,8 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
             viewState.cameraMotionFrameReuse, action,
             &subpixelPreparationPerformed);
     if (subpixelPreparationPerformed) {
-        ++impl_->renderPreparationSerial_;
-        if (impl_->renderPreparationSerial_ == 0)
-            impl_->renderPreparationSerial_ = 1;
+        Obol::internal::cadAdvanceIdentity(
+            impl_->renderPreparationSerial_);
     }
     if (!subpixelPreparationComplete) {
         return;
@@ -2049,9 +2046,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->cachedPlan_.hasVisibleTransparency();
     CadBlendStateGuard blendState(glue, hasTransparency);
 
-    ++impl_->renderExecutionSerial_;
-    if (impl_->renderExecutionSerial_ == 0)
-        impl_->renderExecutionSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(impl_->renderExecutionSerial_);
 
     // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
     // fixed-function interpreter.  AUTO is deliberately quality-first because
@@ -2503,6 +2498,12 @@ SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
 }
 
 uint64_t
+SoCADAssembly::assemblyIdentity() const noexcept
+{
+    return impl_->assemblyIdentity_;
+}
+
+uint64_t
 SoCADAssembly::renderExecutionSerial() const
 {
     std::lock_guard<std::recursive_mutex> renderLock(impl_->renderMutex_);
@@ -2515,8 +2516,17 @@ SoCADAssembly::renderPreparationSerial() const
     std::lock_guard<std::recursive_mutex> renderLock(impl_->renderMutex_);
     const uint64_t rendererSerial = impl_->renderer_ ?
         impl_->renderer_->renderPreparationSerial() : 0;
-    return rendererSerial > UINT64_MAX - impl_->renderPreparationSerial_ ?
-        UINT64_MAX : rendererSerial + impl_->renderPreparationSerial_;
+    if (impl_->reportedAssemblyPreparationSerial_ !=
+            impl_->renderPreparationSerial_ ||
+        impl_->reportedRendererPreparationSerial_ != rendererSerial) {
+        impl_->reportedAssemblyPreparationSerial_ =
+            impl_->renderPreparationSerial_;
+        impl_->reportedRendererPreparationSerial_ = rendererSerial;
+        impl_->combinedPreparationIdentity_ =
+            Obol::internal::cadTakeNonzeroIdentity(
+                impl_->nextCombinedPreparationIdentity_);
+    }
+    return impl_->combinedPreparationIdentity_;
 }
 
 Obol::CadPresentationPreparationSnapshot

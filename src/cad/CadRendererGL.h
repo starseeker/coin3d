@@ -748,7 +748,7 @@ private:
         bool instanceActive = false;
         size_t instanceOccurrenceBegin = 0;
         uint8_t instanceCut = Obol::ProgressiveCutUnspecified;
-        uint64_t instanceGeometryToken = 0;
+        uint64_t instanceSourceRevision = 0;
         SbMatrix instanceModel;
         uint64_t totalUnits = 0;
         uint64_t completedUnits = 0;

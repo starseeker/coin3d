@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "CadRendererGL.h"
+#include "CadIdentityCounter.h"
 #include "CadWireSource.h"
 #include "CadRendererConfiguration.h"
 #include "CadResolvedDraw.h"
@@ -992,9 +993,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
 
 void CadRendererGL::noteRenderPreparation(const char *reason)
 {
-    ++renderPreparationSerial_;
-    if (!renderPreparationSerial_)
-        renderPreparationSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(renderPreparationSerial_);
     if (configuration_ && configuration_->patchDebug)
         std::fprintf(stderr,
             "CadRendererGL preparation serial=%llu reason=%s\n",
@@ -1060,9 +1059,8 @@ CadRendererGL::preparationTarget(
         if (active == target)
             return presentationPreparation_.target;
     }
-    target.obligationRevision = nextPreparationRevision_++;
-    if (!nextPreparationRevision_)
-        nextPreparationRevision_ = 1;
+    target.obligationRevision = Obol::internal::cadTakeNonzeroIdentity(
+        nextPreparationRevision_);
     return target;
 }
 
@@ -1924,9 +1922,8 @@ CadRendererGL::presentationSubpixelProxyPoints(
     softwareBinnedSubpixelViewport_ = viewport;
     softwareBinnedSubpixelContextId_ = glue->contextid;
     softwareBinnedSubpixelValid_ = true;
-    ++softwareBinnedSubpixelPresentationRevision_;
-    if (!softwareBinnedSubpixelPresentationRevision_)
-        softwareBinnedSubpixelPresentationRevision_ = 1;
+    Obol::internal::cadAdvanceIdentity(
+        softwareBinnedSubpixelPresentationRevision_);
     return softwareBinnedSubpixelProxyPoints_;
 }
 
@@ -2158,38 +2155,34 @@ void CadRendererGL::renderAggregateProxies(
         }
     };
 
-    uint64_t planUploadRevision = plan.subpixelProxyRevision;
     /*
      * Aggregate points retain stable slots across selection, style, and
-     * visibility changes.  Mix the attribute revision so changed colors and
-     * hidden flags refresh this compact batch without reclassifying every
-     * occurrence.
+     * visibility changes.  Keep every authorizing input exact so changed
+     * colors, hidden flags, draw representation, or software binning cannot
+     * collide with an older GPU batch.
      */
-    planUploadRevision ^= plan.instanceAttributeRevision +
-        UINT64_C(0x9e3779b97f4a7c15) +
-        (planUploadRevision << 6) + (planUploadRevision >> 2);
-    planUploadRevision ^= static_cast<uint64_t>(drawMode) +
-        UINT64_C(0x9e3779b97f4a7c15) +
-        (planUploadRevision << 6) + (planUploadRevision >> 2);
-    if (caps_.isSoftwareRenderer && softwareBinnedSubpixelValid_)
-        planUploadRevision ^= softwareBinnedSubpixelPresentationRevision_ +
-            UINT64_C(0x9e3779b97f4a7c15) +
-            (planUploadRevision << 6) + (planUploadRevision >> 2);
-    if (!planUploadRevision)
-        planUploadRevision = 1;
-    const auto modeSpecificRevision = [drawMode](uint64_t revision) {
-        revision ^= static_cast<uint64_t>(drawMode) +
-            UINT64_C(0x9e3779b97f4a7c15) +
-            (revision << 6) + (revision >> 2);
-        return revision ? revision : UINT64_C(1);
-    };
-    const uint64_t pressureUploadRevision =
-        modeSpecificRevision(pressureProxyRevision_);
+    CadSubpixelProxyStamp planUploadStamp;
+    planUploadStamp.sourceRevision = plan.subpixelProxyRevision;
+    planUploadStamp.attributeRevision = plan.instanceAttributeRevision;
+    planUploadStamp.drawMode = drawMode;
+    planUploadStamp.softwarePresentation =
+        caps_.isSoftwareRenderer && softwareBinnedSubpixelValid_;
+    if (planUploadStamp.softwarePresentation)
+        planUploadStamp.presentationRevision =
+            softwareBinnedSubpixelPresentationRevision_;
+
+    CadSubpixelProxyStamp pressureUploadStamp;
+    pressureUploadStamp.sourceRevision = pressureProxyRevision_;
+    pressureUploadStamp.drawMode = drawMode;
+
+    CadSubpixelProxyStamp pressureAppendBaseStamp = pressureUploadStamp;
+    pressureAppendBaseStamp.sourceRevision =
+        pressureProxyAppendBaseRevision_;
 
     const CadSubpixelProxyGpu& cachedPlan =
         gpuRes_->subpixelProxyPoints();
     if (includePlan &&
-            (cachedPlan.revision != planUploadRevision ||
+            (cachedPlan.stamp != planUploadStamp ||
              !cachedPlan.posBuf || !cachedPlan.colorBuf ||
              (drawBoxFaces && !cachedPlan.normBuf))) {
         std::vector<float> positions;
@@ -2201,14 +2194,14 @@ void CadRendererGL::renderAggregateProxies(
             colors, packedPointCount, packedLineVertexCount);
         if (!positions.empty())
             gpuRes_->uploadSubpixelProxyBatch(
-                planUploadRevision, positions, normals, colors,
+                planUploadStamp, positions, normals, colors,
                 packedPointCount, packedLineVertexCount, glue, caps_);
     }
 
     const CadSubpixelProxyGpu& cachedPressure =
         gpuRes_->pressureProxyPoints();
     if (includePressure &&
-            (cachedPressure.revision != pressureUploadRevision ||
+            (cachedPressure.stamp != pressureUploadStamp ||
              !cachedPressure.posBuf || !cachedPressure.colorBuf ||
              (drawBoxFaces && !cachedPressure.normBuf))) {
         std::vector<float> positions;
@@ -2222,9 +2215,7 @@ void CadRendererGL::renderAggregateProxies(
                 pressureProxyAppendBegin_ <=
                     static_cast<size_t>(
                         std::numeric_limits<GLsizei>::max()) &&
-                cachedPressure.revision ==
-                    modeSpecificRevision(
-                        pressureProxyAppendBaseRevision_) &&
+                cachedPressure.stamp == pressureAppendBaseStamp &&
                 cachedPressure.count ==
                     static_cast<GLsizei>(
                         pressureProxyAppendBegin_)) {
@@ -2241,9 +2232,8 @@ void CadRendererGL::renderAggregateProxies(
                     pressurePoints.size() -
                         pressureProxyAppendBegin_) {
                 appended = gpuRes_->appendPressureProxyPoints(
-                    modeSpecificRevision(
-                        pressureProxyAppendBaseRevision_),
-                    pressureUploadRevision,
+                    pressureAppendBaseStamp,
+                    pressureUploadStamp,
                     positions, colors, glue);
             }
         }
@@ -2254,11 +2244,10 @@ void CadRendererGL::renderAggregateProxies(
                 packedLineVertexCount);
             if (!positions.empty())
                 gpuRes_->uploadPressureProxyBatch(
-                    pressureUploadRevision, positions, normals, colors,
+                    pressureUploadStamp, positions, normals, colors,
                     packedPointCount, packedLineVertexCount, glue, caps_);
         }
-        if (gpuRes_->pressureProxyPoints().revision ==
-                pressureUploadRevision)
+        if (gpuRes_->pressureProxyPoints().stamp == pressureUploadStamp)
             pressureProxyAppendOnly_ = false;
     }
 
@@ -2494,9 +2483,7 @@ void CadRendererGL::completeDirectSoftwareWireFrame(
     const auto resources = gpuResources_.find(contextId);
     if (resources != gpuResources_.end() && resources->second)
         snapshot = resources->second->resourceSnapshot();
-    ++completedResourceFrameSerial_;
-    if (!completedResourceFrameSerial_)
-        completedResourceFrameSerial_ = 1;
+    Obol::internal::cadAdvanceIdentity(completedResourceFrameSerial_);
     snapshot.frameSerial = completedResourceFrameSerial_;
     snapshot.pressureProxyCount = 0;
     snapshot.atlasAdmissionPressure = false;
@@ -2560,9 +2547,7 @@ void CadRendererGL::render(
     const auto publishResourceSnapshot = [&]() {
         Obol::CadGpuResourceSnapshot snapshot =
             gpuRes_->resourceSnapshot();
-        ++completedResourceFrameSerial_;
-        if (!completedResourceFrameSerial_)
-            completedResourceFrameSerial_ = 1;
+        Obol::internal::cadAdvanceIdentity(completedResourceFrameSerial_);
         snapshot.frameSerial = completedResourceFrameSerial_;
         snapshot.pressureProxyCount = lastPressureProxyCount();
         snapshot.atlasAdmissionPressure = atlasAdmissionPressure_ ||

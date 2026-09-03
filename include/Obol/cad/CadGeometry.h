@@ -57,6 +57,7 @@ namespace Obol {
 struct TriMesh;
 class PartGeometry;
 struct CadGeometryAdmission;
+enum class CadAggregateProxyPolicy;
 
 struct ProgressiveWireCut {
     uint32_t segmentFirst = 0;
@@ -375,6 +376,9 @@ private:
 
     friend OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
         PartGeometryBuilder geometry);
+    friend OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
+        PartGeometryBuilder geometry,
+        CadAggregateProxyPolicy proxyPolicy);
 };
 
 inline const TriMesh *

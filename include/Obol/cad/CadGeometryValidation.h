@@ -92,6 +92,12 @@ struct [[nodiscard]] CadGeometryValidation {
 
 struct CadGeometryAdmission;
 
+/** Treatment of an invalid optional aggregate proxy during admission. */
+enum class CadAggregateProxyPolicy {
+    Strict,
+    DiscardInvalid
+};
+
 /**
  * Validate and admit one immutable geometry snapshot.
  *
@@ -101,6 +107,17 @@ struct CadGeometryAdmission;
  */
 OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
     PartGeometryBuilder geometry);
+
+/**
+ * Validate and admit one immutable geometry snapshot with an explicit proxy
+ * policy.
+ *
+ * DiscardInvalid removes only an InvalidAggregateProxy and validates the
+ * authoritative geometry again.  Every other validation failure remains a
+ * hard rejection.
+ */
+OBOL_DLL_API CadGeometryAdmission cadAdmitPartGeometry(
+    PartGeometryBuilder geometry, CadAggregateProxyPolicy proxyPolicy);
 
 /**
  * Immutable geometry which has passed every renderer-visible invariant.

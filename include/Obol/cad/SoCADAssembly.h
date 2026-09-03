@@ -490,6 +490,10 @@ public:
     /** True when the last render used the direct software wire rasterizer. */
     bool lastRenderUsedDirectSoftwareWire() const;
 
+    /** Nonzero process-lifetime identity for this assembly object.
+     * Unlike an address, this value is not reused after node destruction. */
+    uint64_t assemblyIdentity() const noexcept;
+
     /** Monotonic token advanced immediately before CAD drawing begins.
      * A deadline-bounded host may compare this value around a traversal to
      * distinguish resumable presentation preparation from rendering load. */

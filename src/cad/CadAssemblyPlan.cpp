@@ -50,6 +50,7 @@
 #include <Obol/cad/SoCADViewState.h>
 #include "CadAssemblyState.h"
 #include "CadFramePlan.h"
+#include "CadIdentityCounter.h"
 #include "CadRendererGL.h"
 #include "CadSoftwareWire.h"
 #include "picking/CadPicking.h"
@@ -290,7 +291,8 @@ void SoCADAssemblyImpl::updatePartGeometry(
         } else if (replacing) {
             subpixelProxyCorners_.erase(pid);
         }
-        partGeneration_[pid] = nextGeneration_++;
+        partGeneration_[pid] =
+            Obol::internal::cadTakeNonzeroIdentity(nextGeneration_);
         if (replacing) {
             erasePartBvhCaches(pid);
         }
@@ -631,18 +633,15 @@ void SoCADAssemblyImpl::finishSparsePresentationPatch(bool visibilityChanged) {
         subpixelProxyBuildActive_ = false;
         if (pendingSubpixelProxyChange_) {
             cachedPlan_.subpixelProxyRevision =
-                nextSubpixelProxyRevision_++;
-            if (nextSubpixelProxyRevision_ == 0)
-                nextSubpixelProxyRevision_ = 1;
+                Obol::internal::cadTakeNonzeroIdentity(
+                    nextSubpixelProxyRevision_);
             pendingSubpixelProxyChange_ = false;
         }
-        cachedPlan_.revision = nextPlanRevision_++;
-        if (nextPlanRevision_ == 0)
-            nextPlanRevision_ = 1;
+        cachedPlan_.revision = Obol::internal::cadTakeNonzeroIdentity(
+            nextPlanRevision_);
         cachedPlan_.instanceAttributeRevision =
-            nextInstanceAttributeRevision_++;
-        if (nextInstanceAttributeRevision_ == 0)
-            nextInstanceAttributeRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextInstanceAttributeRevision_);
         std::sort(pendingInstanceAttributeIndices_.begin(),
             pendingInstanceAttributeIndices_.end());
         pendingInstanceAttributeIndices_.erase(
@@ -1548,13 +1547,11 @@ bool SoCADAssemblyImpl::partGeometryPlanCompatible(
             cachedPlan_.worldBounds.extendBy(delta.worldBounds);
 
         CadPlanAppendDelta appendDelta;
-        appendDelta.revision = nextAppendRevision_++;
-        if (nextAppendRevision_ == 0)
-            nextAppendRevision_ = 1;
+        appendDelta.revision = Obol::internal::cadTakeNonzeroIdentity(
+            nextAppendRevision_);
         appendDelta.subpixelProxyInputRevision =
-            nextSubpixelProxyInputRevision_++;
-        if (nextSubpixelProxyInputRevision_ == 0)
-            nextSubpixelProxyInputRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextSubpixelProxyInputRevision_);
         cachedPlan_.subpixelProxyInputRevision =
             appendDelta.subpixelProxyInputRevision;
         appendDelta.visibleBegin =
@@ -1842,9 +1839,8 @@ bool SoCADAssemblyImpl::patchCachedInstancePartRebind(
         const uint64_t priorSubpixelInputRevision =
             cachedPlan_.subpixelProxyInputRevision;
         cachedPlan_.subpixelProxyInputRevision =
-            nextSubpixelProxyInputRevision_++;
-        if (nextSubpixelProxyInputRevision_ == 0)
-            nextSubpixelProxyInputRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextSubpixelProxyInputRevision_);
         const bool patchedSubpixelOccurrence =
             patchSubpixelProxyGeometryForVisible(
                 oldSpan.baseInstance, priorSubpixelInputRevision);
@@ -1933,17 +1929,14 @@ bool SoCADAssemblyImpl::patchCachedInstancePartRebind(
     }
 
 void SoCADAssemblyImpl::finishSparseStructuralPatch() {
-        geometryRevision_ = nextGeometryRevision_++;
-        if (nextGeometryRevision_ == 0)
-            nextGeometryRevision_ = 1;
+        geometryRevision_ = Obol::internal::cadTakeNonzeroIdentity(
+            nextGeometryRevision_);
         cachedPlan_.geometryRevision = geometryRevision_;
-        cachedPlan_.revision = nextPlanRevision_++;
-        if (nextPlanRevision_ == 0)
-            nextPlanRevision_ = 1;
+        cachedPlan_.revision = Obol::internal::cadTakeNonzeroIdentity(
+            nextPlanRevision_);
         cachedPlan_.shadedLayoutRevision =
-            nextShadedLayoutRevision_++;
-        if (nextShadedLayoutRevision_ == 0)
-            nextShadedLayoutRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextShadedLayoutRevision_);
     }
 
 
@@ -2095,9 +2088,8 @@ void SoCADAssemblyImpl::finishPartGeometryPatch(
         const bool boundsChanged =
             geometryDelta.boundsChanged;
         geometryDelta.revision =
-            nextPartGeometryRevision_++;
-        if (nextPartGeometryRevision_ == 0)
-            nextPartGeometryRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextPartGeometryRevision_);
         cachedPlan_.partGeometryRevision =
             geometryDelta.revision;
         cachedPlan_.partGeometryDeltaEntryCount +=
@@ -2121,13 +2113,11 @@ void SoCADAssemblyImpl::finishPartGeometryPatch(
             cachedPlan_.partGeometryDeltas.pop_front();
         }
 
-        geometryRevision_ = nextGeometryRevision_++;
-        if (nextGeometryRevision_ == 0)
-            nextGeometryRevision_ = 1;
+        geometryRevision_ = Obol::internal::cadTakeNonzeroIdentity(
+            nextGeometryRevision_);
         cachedPlan_.geometryRevision = geometryRevision_;
-        cachedPlan_.revision = nextPlanRevision_++;
-        if (nextPlanRevision_ == 0)
-            nextPlanRevision_ = 1;
+        cachedPlan_.revision = Obol::internal::cadTakeNonzeroIdentity(
+            nextPlanRevision_);
         /*
          * Fixed channel/occurrence slots do not change shaded layout.  The
          * renderer consumes partGeometryRevision to patch the changed atlas
@@ -2136,9 +2126,8 @@ void SoCADAssemblyImpl::finishPartGeometryPatch(
          */
         if (subpixelProxyInputChanged) {
             cachedPlan_.subpixelProxyInputRevision =
-                nextSubpixelProxyInputRevision_++;
-            if (nextSubpixelProxyInputRevision_ == 0)
-                nextSubpixelProxyInputRevision_ = 1;
+                Obol::internal::cadTakeNonzeroIdentity(
+                    nextSubpixelProxyInputRevision_);
             subpixelProxyStateInputRevision_ = 0;
             subpixelProxyViewValid_ = false;
         }
@@ -2455,9 +2444,8 @@ void SoCADAssemblyImpl::finishProgressiveShadedPlanPatch(
                 delta.ranges.push_back(range);
             }
         }
-        cachedPlan_.revision = nextPlanRevision_++;
-        if (nextPlanRevision_ == 0)
-            nextPlanRevision_ = 1;
+        cachedPlan_.revision = Obol::internal::cadTakeNonzeroIdentity(
+            nextPlanRevision_);
         if (!changedGroups.empty()) {
             /*
              * The fixed group/item slots did not change structurally.
@@ -2477,9 +2465,8 @@ void SoCADAssemblyImpl::finishProgressiveShadedPlanPatch(
                     }),
                 delta.ranges.end());
             cachedPlan_.shadedLodRevision =
-                nextShadedLodRevision_++;
-            if (nextShadedLodRevision_ == 0)
-                nextShadedLodRevision_ = 1;
+                Obol::internal::cadTakeNonzeroIdentity(
+                    nextShadedLodRevision_);
             delta.revision = cachedPlan_.shadedLodRevision;
             cachedPlan_.shadedLodDeltaEntryCount +=
                 delta.ranges.size();

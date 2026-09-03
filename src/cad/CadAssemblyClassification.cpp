@@ -36,6 +36,7 @@
  */
 
 #include "CadAssemblyImpl.h"
+#include "CadIdentityCounter.h"
 #include <Obol/cad/CadProjectedProxy.h>
 
 #include <algorithm>
@@ -318,9 +319,8 @@ void SoCADAssemblyImpl::updateStructuralProjectionForVisible(size_t visibleIndex
             structuralProjectionHistogram_, newBucket, true);
         structuralProjectionBucketByVisible_[visibleIndex] = newBucket;
         structuralProjectionHistogram_.revision =
-            nextStructuralProjectionRevision_++;
-        if (nextStructuralProjectionRevision_ == 0)
-            nextStructuralProjectionRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextStructuralProjectionRevision_);
     }
 
 bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
@@ -386,9 +386,8 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
                 structuralProjectionHistogram_, structuralBucket, true);
             if (structuralProjectionHistogram_.exact) {
                 structuralProjectionHistogram_.revision =
-                    nextStructuralProjectionRevision_++;
-                if (nextStructuralProjectionRevision_ == 0)
-                    nextStructuralProjectionRevision_ = 1;
+                    Obol::internal::cadTakeNonzeroIdentity(
+                        nextStructuralProjectionRevision_);
             }
         } else if (visibleIndex >=
                 structuralProjectionBucketByVisible_.size() &&
@@ -439,9 +438,9 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
                 static_cast<uint32_t>(visibleIndex));
         }
 
-        plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
-        if (nextSubpixelProxyRevision_ == 0)
-            nextSubpixelProxyRevision_ = 1;
+        plan.subpixelProxyRevision =
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextSubpixelProxyRevision_);
         return true;
     }
 
@@ -760,13 +759,12 @@ bool SoCADAssemblyImpl::patchSubpixelProxyAppendPlan(
         refreshWireProxyParts(affectedParts);
         plan.subpixelProxySourceInputRevision =
             plan.subpixelProxyInputRevision;
-        plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
-        if (nextSubpixelProxyRevision_ == 0)
-            nextSubpixelProxyRevision_ = 1;
+        plan.subpixelProxyRevision =
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextSubpixelProxyRevision_);
         structuralProjectionHistogram_.revision =
-            nextStructuralProjectionRevision_++;
-        if (nextStructuralProjectionRevision_ == 0)
-            nextStructuralProjectionRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextStructuralProjectionRevision_);
         structuralProjectionHistogram_.exact = true;
         subpixelProxyClassifiedAppendRevision_ =
             plan.appendRevision;
@@ -892,9 +890,8 @@ Obol::CadPresentationPreparationTarget SoCADAssemblyImpl::subpixelPreparationTar
                 return presentationPreparation_.target;
         }
         target.obligationRevision =
-            nextPresentationPreparationRevision_++;
-        if (!nextPresentationPreparationRevision_)
-            nextPresentationPreparationRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextPresentationPreparationRevision_);
         return target;
     }
 
@@ -1403,9 +1400,8 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
         structuralProjectionHistogram_ =
             structuralProjectionScratchHistogram_;
         structuralProjectionHistogram_.revision =
-            nextStructuralProjectionRevision_++;
-        if (nextStructuralProjectionRevision_ == 0)
-            nextStructuralProjectionRevision_ = 1;
+            Obol::internal::cadTakeNonzeroIdentity(
+                nextStructuralProjectionRevision_);
         structuralProjectionHistogram_.exact = true;
 
         const bool changed = mask != plan.subpixelProxyMask ||
@@ -1420,9 +1416,9 @@ bool SoCADAssemblyImpl::updateSubpixelProxyPlan(uint64_t viewId,
             subpixelProxyPointByVisible_.swap(pointByVisible);
             plan.subpixelProxySourceInputRevision =
                 plan.subpixelProxyInputRevision;
-            plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
-            if (nextSubpixelProxyRevision_ == 0)
-                nextSubpixelProxyRevision_ = 1;
+            plan.subpixelProxyRevision =
+                Obol::internal::cadTakeNonzeroIdentity(
+                    nextSubpixelProxyRevision_);
         }
         subpixelProxyViewProj_ = viewProj;
         subpixelProxyViewportSize_ = viewportSize;

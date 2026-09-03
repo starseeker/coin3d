@@ -56,6 +56,7 @@
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
 #include <Obol/cad/CadProgressive.h>
+#include <Obol/cad/CadViewState.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -123,6 +124,44 @@ struct CadProgressiveGpu {
         uint32_t sourceFirst = 0;
         uint32_t sourceCount = 0;
         uint32_t packedFirst = 0;
+
+        bool operator==(const PackedRange& other) const noexcept
+        {
+            return sourceFirst == other.sourceFirst &&
+                sourceCount == other.sourceCount &&
+                packedFirst == other.packedFirst;
+        }
+    };
+
+    enum class Representation : uint8_t {
+        WireSegments,
+        TriangleIndexed,
+        TriangleExpanded,
+        IndexedWire
+    };
+
+    struct CacheKey {
+        Representation representation = Representation::WireSegments;
+        uint64_t progressiveLineage = 0;
+        uint64_t sourceFirst = 0;
+        uint64_t sourceCount = 0;
+        ProgressiveQuantization quantization;
+
+        bool operator==(const CacheKey& other) const noexcept
+        {
+            return representation == other.representation &&
+                progressiveLineage == other.progressiveLineage &&
+                sourceFirst == other.sourceFirst &&
+                sourceCount == other.sourceCount &&
+                quantization.xBits == other.quantization.xBits &&
+                quantization.yBits == other.quantization.yBits &&
+                quantization.zBits == other.quantization.zBits;
+        }
+
+        bool operator!=(const CacheKey& other) const noexcept
+        {
+            return !(*this == other);
+        }
     };
 
     GLuint posBuf = 0;
@@ -131,10 +170,33 @@ struct CadProgressiveGpu {
     GLsizei vertexCount = 0;
     GLsizei indexCount = 0;
     bool indexed = false;
-    uint64_t rangeSignature = 0;
+    CacheKey cacheKey;
     std::vector<PackedRange> packedRanges;
     size_t bytes = 0;
     uint64_t lastUsedFrame = 0;
+};
+
+/** Exact validity stamp for one dynamic aggregate-proxy GPU batch. */
+struct CadSubpixelProxyStamp {
+    uint64_t sourceRevision = 0;
+    uint64_t attributeRevision = 0;
+    uint64_t presentationRevision = 0;
+    Obol::CadDrawMode drawMode = Obol::CadDrawMode::Wireframe;
+    bool softwarePresentation = false;
+
+    bool operator==(const CadSubpixelProxyStamp& other) const noexcept
+    {
+        return sourceRevision == other.sourceRevision &&
+            attributeRevision == other.attributeRevision &&
+            presentationRevision == other.presentationRevision &&
+            drawMode == other.drawMode &&
+            softwarePresentation == other.softwarePresentation;
+    }
+
+    bool operator!=(const CadSubpixelProxyStamp& other) const noexcept
+    {
+        return !(*this == other);
+    }
 };
 
 /** All GPU representations for one part in one GL context. */
@@ -156,29 +218,54 @@ struct CadFlatWireGroup {
     uint8_t rgba[4] = {204, 204, 204, 255};
 };
 
-struct CadFlatWireRangeKey {
+/**
+ * Exact source identity for one retained world-space range.
+ *
+ * The hash is only an unordered_map accelerator.  Cache authorization uses
+ * operator== so a hash collision cannot replay vertices from another part,
+ * immutable source revision, transform, or source interval.
+ */
+struct CadFlatRangeKey {
     InstanceId instance;
+    PartId part;
     uint8_t cut = Obol::ProgressiveCutUnspecified;
-    uint64_t geometryToken = 0;
+    uint64_t sourceRevision = 0;
+    std::array<float, 16> transform{};
+    uint64_t sourceFirst = 0;
+    uint64_t sourceCount = 0;
 
-    bool operator==(const CadFlatWireRangeKey& other) const noexcept {
-        return instance == other.instance && cut == other.cut &&
-               geometryToken == other.geometryToken;
+    bool operator==(const CadFlatRangeKey& other) const noexcept {
+        return instance == other.instance && part == other.part &&
+               cut == other.cut && sourceRevision == other.sourceRevision &&
+               transform == other.transform &&
+               sourceFirst == other.sourceFirst &&
+               sourceCount == other.sourceCount;
     }
 };
 
-struct CadFlatWireRangeKeyHash {
-    size_t operator()(const CadFlatWireRangeKey& key) const noexcept {
+struct CadFlatRangeKeyHash {
+    size_t operator()(const CadFlatRangeKey& key) const noexcept {
         size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.cut) +
-                 static_cast<size_t>(0x9e3779b9u) +
-                 (value << 6) + (value >> 2);
-        value ^= static_cast<size_t>(key.geometryToken) +
-                 static_cast<size_t>(0x9e3779b9u) +
-                 (value << 6) + (value >> 2);
+        append(value, std::hash<PartId>()(key.part));
+        append(value, std::hash<uint8_t>()(key.cut));
+        append(value, std::hash<uint64_t>()(key.sourceRevision));
+        for (float component : key.transform)
+            append(value, std::hash<float>()(component));
+        append(value, std::hash<uint64_t>()(key.sourceFirst));
+        append(value, std::hash<uint64_t>()(key.sourceCount));
         return value;
     }
+
+private:
+    static void append(size_t& value, size_t component) noexcept {
+        constexpr size_t hashCombineSalt = 0x9e3779b9u;
+        value ^= component + hashCombineSalt +
+            (value << 6) + (value >> 2);
+    }
 };
+
+using CadFlatWireRangeKey = CadFlatRangeKey;
+using CadFlatWireRangeKeyHash = CadFlatRangeKeyHash;
 
 struct CadFlatWireRange {
     GLint first = 0;
@@ -224,34 +311,8 @@ struct CadFlatShadedGroup {
     bool twoSidedLighting = true;
 };
 
-struct CadFlatShadedRangeKey {
-    InstanceId instance;
-    uint8_t cut = Obol::ProgressiveCutUnspecified;
-    /* Identifies the certified progressive lineage (or ordinary part
-     * generation) and occurrence transform used to bake this world-space
-     * range.  A later immutable generation in the same append-only lineage
-     * preserves an existing cut byte-for-byte.  Presentation/style revisions
-     * deliberately do not participate, so selection can reuse the vertices. */
-    uint64_t geometryToken = 0;
-
-    bool operator==(const CadFlatShadedRangeKey& other) const noexcept {
-        return instance == other.instance && cut == other.cut &&
-               geometryToken == other.geometryToken;
-    }
-};
-
-struct CadFlatShadedRangeKeyHash {
-    size_t operator()(const CadFlatShadedRangeKey& key) const noexcept {
-        size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.cut) +
-                 static_cast<size_t>(0x9e3779b9u) +
-                 (value << 6) + (value >> 2);
-        value ^= static_cast<size_t>(key.geometryToken) +
-                 static_cast<size_t>(0x9e3779b9u) +
-                 (value << 6) + (value >> 2);
-        return value;
-    }
-};
+using CadFlatShadedRangeKey = CadFlatRangeKey;
+using CadFlatShadedRangeKeyHash = CadFlatRangeKeyHash;
 
 struct CadFlatShadedRange {
     GLint first = 0;
@@ -277,7 +338,7 @@ struct CadSubpixelProxyGpu {
     GLuint normBuf = 0;
     GLuint colorBuf = 0;
     GLuint vao = 0;
-    uint64_t revision = 0;
+    CadSubpixelProxyStamp stamp;
     GLsizei count = 0;
     GLsizei pointCount = 0;
     GLsizei lineVertexCount = 0;
@@ -480,7 +541,8 @@ public:
     /** Return a cached fixed-function PoP cut, or nullptr if not built. */
     const CadProgressiveGpu* progressiveFor(
         PartId pid, bool shaded, uint8_t cut,
-        uint64_t rangeSignature = 0);
+        const CadProgressiveGpu::CacheKey& cacheKey,
+        const std::vector<CadProgressiveGpu::PackedRange>& packedRanges);
     const CadProgressiveGpu* progressiveForAny(
         PartId pid, bool shaded, uint8_t cut);
 
@@ -490,7 +552,7 @@ public:
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<uint32_t>& indices,
-        bool indexed, uint64_t rangeSignature,
+        bool indexed, const CadProgressiveGpu::CacheKey& cacheKey,
         const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
         const SoGLContext *glue);
 
@@ -600,7 +662,7 @@ public:
 
     const CadFlatShadedGpu& flatShaded() const { return flatShaded_; }
 
-    void uploadSubpixelProxyBatch(uint64_t revision,
+    void uploadSubpixelProxyBatch(const CadSubpixelProxyStamp& stamp,
                                    const std::vector<float>& positions,
                                    const std::vector<float>& normals,
                                    const std::vector<uint8_t>& colors,
@@ -610,7 +672,7 @@ public:
                                    const CadGLCaps& caps);
 
     void uploadPressureProxyBatch(
-        uint64_t revision,
+        const CadSubpixelProxyStamp& stamp,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<uint8_t>& colors,
@@ -620,8 +682,8 @@ public:
         const CadGLCaps& caps);
 
     bool appendPressureProxyPoints(
-        uint64_t expectedRevision,
-        uint64_t revision,
+        const CadSubpixelProxyStamp& expectedStamp,
+        const CadSubpixelProxyStamp& stamp,
         const std::vector<float>& positions,
         const std::vector<uint8_t>& colors,
         const SoGLContext *glue);

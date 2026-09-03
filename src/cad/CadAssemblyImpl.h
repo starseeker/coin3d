@@ -81,6 +81,10 @@ struct SoCADAssemblyImpl :
     Obol::internal::CadRendererState
 {
 
+    /* Process-lifetime identity distinguishes a newly allocated assembly from
+     * a retired node which happened to occupy the same address. */
+    uint64_t assemblyIdentity_ = 0;
+
     /* Transaction framing and producer hints describe the live assembly,
      * not the retained scene payload.  Keeping them outside CadSceneDatabase
      * prevents complete-scene publication from swapping away an open update
