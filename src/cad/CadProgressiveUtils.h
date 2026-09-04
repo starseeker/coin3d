@@ -103,20 +103,23 @@ cadProgressiveSnapPoint(
 }
 
 /**
- * Return the face normal represented by displayed progressive coordinates.
+ * Return the source-surface normal for progressive geometry.
  *
- * Lossy snapping can change a triangle's plane or collapse it entirely.  In
- * the latter case the source triangle remains the only stable orientation
- * signal, so use it as a deterministic fallback.
+ * PoP snapping deliberately perturbs positions and can collapse or sharply
+ * rotate a triangle.  Lighting those temporary voxelized planes makes a
+ * smooth source surface shimmer as cuts change.  Preserve the source face as
+ * the LoD appearance attribute, using the displayed face only when the source
+ * triangle itself is degenerate.
  */
 inline SbVec3f
-cadDisplayedTriangleNormal(const SbVec3f (&displayed)[3],
-                           const SbVec3f (&source)[3])
+cadProgressiveSurfaceNormal(const SbVec3f (&displayed)[3],
+                            const SbVec3f (&source)[3])
 {
-    SbVec3f normal = (displayed[1] - displayed[0]).cross(
-        displayed[2] - displayed[0]);
+    SbVec3f normal =
+        (source[1] - source[0]).cross(source[2] - source[0]);
     if (normal.sqrLength() == 0.0f) {
-        normal = (source[1] - source[0]).cross(source[2] - source[0]);
+        normal = (displayed[1] - displayed[0]).cross(
+            displayed[2] - displayed[0]);
     }
     if (normal.sqrLength() > 0.0f)
         normal.normalize();

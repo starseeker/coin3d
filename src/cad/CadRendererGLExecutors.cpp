@@ -797,7 +797,7 @@ ensureProgressiveTriGpuImpl(
                     mesh.progressiveQuantizationMaximum,
                     quantization);
             }
-            const SbVec3f normal = cadDisplayedTriangleNormal(
+            const SbVec3f normal = cadProgressiveSurfaceNormal(
                 triangle, sourceTriangle);
             for (int k = 0; k < 3; ++k) {
                 executorAppendPackedPoint(positions, triangle[k]);
@@ -3170,7 +3170,7 @@ void CadRendererGL::renderImmediateMode(
                     }
                     if (!hasNorm) {
                         const SbVec3f faceNormal =
-                            cadDisplayedTriangleNormal(
+                            cadProgressiveSurfaceNormal(
                                 triangle, sourceTriangle);
                         glue->glNormal3f(faceNormal[0], faceNormal[1],
                                          faceNormal[2]);

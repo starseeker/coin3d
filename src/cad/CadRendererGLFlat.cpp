@@ -43,6 +43,7 @@
 #include "CadRendererGL.h"
 #include "CadRendererConfiguration.h"
 #include "CadRendererGLExecutorUtils.h"
+#include "CadProgressiveUtils.h"
 #include "CadResolvedDraw.h"
 #include "CadShaderSources.h"
 
@@ -1250,13 +1251,8 @@ bool CadRendererGL::renderFlatShaded(
                     sourceTriangle[vertex] = transformedFlatPoint(
                         sourcePoint, instance.transform);
                 }
-                SbVec3f faceNormal =
-                    (sourceTriangle[1] - sourceTriangle[0]).cross(
-                        sourceTriangle[2] - sourceTriangle[0]);
-                if (faceNormal.sqrLength() > 0.0f)
-                    faceNormal.normalize();
-                else
-                    faceNormal.setValue(0.0f, 0.0f, 1.0f);
+                const SbVec3f faceNormal = cadProgressiveSurfaceNormal(
+                    triangle, sourceTriangle);
                 for (size_t vertex = 0; vertex < 3; ++vertex) {
                     SbVec3f normal = faceNormal;
                     if (hasVertexNormals) {

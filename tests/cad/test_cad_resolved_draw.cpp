@@ -7,6 +7,8 @@
  */
 
 #include "CadResolvedDraw.h"
+#include "CadProgressiveUtils.h"
+#include "CadShaderSources.h"
 
 #include <Obol/cad/CadProgressive.h>
 
@@ -14,6 +16,7 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 namespace {
@@ -240,6 +243,70 @@ TEST(CadResolvedDraw, SharesProgressiveCpuQuantizationAndResidencyRules)
     /* A transient page below the preferred minimum remains a hard safety
      * ceiling across every CPU consumer. */
     EXPECT_EQ(cadFullyResidentProgressiveCut(wire, 4), 1u);
+}
+
+TEST(CadResolvedDraw, PreservesSourceSurfaceNormalsAcrossProgressiveCuts)
+{
+    const SbVec3f sourceTriangle[3] = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f)
+    };
+    const SbVec3f displayedTriangle[3] = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 0.0f, 1.0f)
+    };
+    const SbVec3f sourceNormal = cadProgressiveSurfaceNormal(
+        displayedTriangle, sourceTriangle);
+    EXPECT_NEAR(sourceNormal[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(sourceNormal[1], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(sourceNormal[2], 1.0f, 1.0e-6f);
+
+    const SbVec3f degenerateSource[3] = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 0.0f, 0.0f)
+    };
+    const SbVec3f displayedFallback = cadProgressiveSurfaceNormal(
+        displayedTriangle, degenerateSource);
+    EXPECT_NEAR(displayedFallback[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(displayedFallback[1], -1.0f, 1.0e-6f);
+    EXPECT_NEAR(displayedFallback[2], 0.0f, 1.0e-6f);
+}
+
+TEST(CadResolvedDraw, ProgressiveShadersSeparatePositionAndNormalSurfaces)
+{
+    EXPECT_NE(std::strstr(kShadedPopVS1,
+        "v_worldPos = (u_rootModel * wp).xyz;"), nullptr);
+    EXPECT_NE(std::strstr(kShadedPopFaceVS1,
+        "v_worldPos = wp.xyz;"), nullptr);
+    EXPECT_NE(std::strstr(kShadedPopFaceVS1,
+        "v_sourceWorldPos = sourceWp.xyz;"), nullptr);
+    EXPECT_NE(std::strstr(kShadedPopVS2,
+        "v_worldPos = (u_rootModel * wp).xyz;"), nullptr);
+    EXPECT_NE(std::strstr(kShadedIndirectVS2,
+        "v_worldPos = (u_rootModel * wp).xyz;"), nullptr);
+
+    EXPECT_EQ(std::strstr(kShadedPopVS1,
+        "v_worldPos = (u_rootModel * sourceWp).xyz;"), nullptr);
+    EXPECT_EQ(std::strstr(kShadedPopVS2,
+        "v_worldPos = (u_rootModel * sourceWp).xyz;"), nullptr);
+    EXPECT_EQ(std::strstr(kShadedIndirectVS2,
+        "v_worldPos = (u_rootModel * sourceWp).xyz;"), nullptr);
+
+    EXPECT_NE(std::strstr(kShadedFS1,
+        "cross(dFdx(v_sourceWorldPos), dFdy(v_sourceWorldPos))"),
+        nullptr);
+    EXPECT_NE(std::strstr(kShadedDirectionalFaceFS1,
+        "cross(dFdx(v_sourceWorldPos), dFdy(v_sourceWorldPos))"),
+        nullptr);
+    EXPECT_NE(std::strstr(kShadedFS2,
+        "cross(dFdx(v_sourceWorldPos), dFdy(v_sourceWorldPos))"),
+        nullptr);
+    EXPECT_NE(std::strstr(kShadedIndirectFS2,
+        "cross(dFdx(v_sourceWorldPos), dFdy(v_sourceWorldPos))"),
+        nullptr);
 }
 
 TEST(CadResolvedDraw, ReportsCachedVisibleTransparency)
