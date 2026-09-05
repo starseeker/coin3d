@@ -508,8 +508,9 @@ ensureProgressiveWireGpuImpl(
         CadGpuResources *resources, PartId part, const WireRep& wire,
         uint8_t level,
         const std::vector<CadProgressiveGpu::PackedRange> *sourceRanges,
-        const SoGLContext *glue)
+        bool *prepared, const SoGLContext *glue)
 {
+    if (prepared) *prepared = false;
     if (!resources || !glue) return nullptr;
 
     const bool packedAdaptive = wire.hasAdaptiveProgressiveClusters() &&
@@ -620,8 +621,10 @@ ensureProgressiveWireGpuImpl(
         std::vector<uint32_t>(), false,
         cacheKey, packedRanges, glue);
     if (const CadProgressiveGpu *uploaded = resources->progressiveFor(
-            part, false, level, cacheKey, packedRanges))
+            part, false, level, cacheKey, packedRanges)) {
+        if (prepared) *prepared = true;
         return uploaded;
+    }
     /* Allocation pressure may leave the preceding append-only prefix live.
      * The fixed executor clamps every range to this record's vertexCount, so
      * it remains a valid, if temporarily less complete, presentation. */
@@ -633,11 +636,11 @@ ensureProgressiveWireGpu(
         CadGpuResources *resources, PartId part, const WireRep& wire,
         uint8_t level,
         const std::vector<CadProgressiveGpu::PackedRange> *sourceRanges,
-        const SoGLContext *glue)
+        bool *prepared, const SoGLContext *glue)
 {
     try {
         return ensureProgressiveWireGpuImpl(
-            resources, part, wire, level, sourceRanges, glue);
+            resources, part, wire, level, sourceRanges, prepared, glue);
     } catch (const std::bad_alloc &) {
         /* Transient packing is optional retained acceleration.  Preserve an
          * already valid cut when process or backend pressure cannot admit
@@ -814,13 +817,14 @@ ensureProgressiveTriGpuImpl(
                     return nullptr;
         }
     }
-    if (prepared) *prepared = true;
     resources->uploadProgressive(
         part, true, level, positions, normals, orientedIndices, indexed,
         cacheKey,
         packedRanges, glue);
-    return resources->progressiveFor(
+    const CadProgressiveGpu *uploaded = resources->progressiveFor(
         part, true, level, cacheKey, packedRanges);
+    if (prepared) *prepared = uploaded != nullptr;
+    return uploaded;
 }
 
 static const CadProgressiveGpu*
@@ -879,13 +883,14 @@ ensureProgressiveIndexedWireGpuImpl(
         executorAppendPackedPoint(positions, cadProgressiveSnapPoint(
             mesh.positions[index], mesh.progressiveQuantizationMinimum,
             mesh.progressiveQuantizationMaximum, quantization));
-    if (prepared) *prepared = true;
     resources->uploadProgressive(
         part, false, level, positions, std::vector<float>(),
         std::vector<uint32_t>(), true,
         cacheKey, noPackedRanges, glue);
-    return resources->progressiveFor(
+    const CadProgressiveGpu *uploaded = resources->progressiveFor(
         part, false, level, cacheKey, noPackedRanges);
+    if (prepared) *prepared = uploaded != nullptr;
+    return uploaded;
 }
 
 static const CadProgressiveGpu*
@@ -1118,10 +1123,12 @@ bool CadRendererGL::renderIndexedTriangleWire(
         const SbMatrix& projectionMatrix)
 {
     bool haveWork = false;
+    uint64_t preparationUnits = 0;
     for (const CadDrawItem& item : plan.wireItems) {
+        preparationUnits = cadSaturatingWorkAdd(
+            preparationUnits, item.instanceCount);
         if (item.rep.type == CadRepType::Triangles) {
             haveWork = true;
-            break;
         }
     }
     if (!haveWork)
@@ -1193,7 +1200,17 @@ bool CadRendererGL::renderIndexedTriangleWire(
     }
 
     GLuint activeProgram = 0;
+    const auto preparation = preparationTarget(
+        Obol::CadPresentationPreparationKind::IndexedWireCuts,
+        glue->contextid, plan.revision, plan.geometryRevision,
+        activeViewState().progressiveCutCeiling,
+        activeViewState().progressiveCutNextFraction, viewProj,
+        &indexedWirePreparation_);
+    uint64_t preparationCursor = 0;
     for (const CadDrawItem& item : plan.wireItems) {
+        const uint64_t preparationFirst = preparationCursor;
+        preparationCursor = cadSaturatingWorkAdd(
+            preparationCursor, item.instanceCount);
         if (item.rep.type != CadRepType::Triangles ||
                 item.partIndex >= plan.partBindings.size())
             continue;
@@ -1347,9 +1364,15 @@ bool CadRendererGL::renderIndexedTriangleWire(
                             ensureProgressiveIndexedWireGpu(
                                 gpuRes_, item.rep.part, *mesh, level,
                                 &prepared, glue);
-                        if (prepared)
+                        if (prepared) {
                             noteRenderPreparation(
                                 "indexed-wire-progressive-cut");
+                            publishFixedCutPreparation(
+                                indexedWirePreparation_, preparation,
+                                preparationUnits,
+                                preparationFirst + occurrence + 1u,
+                                cut->bytes);
+                        }
                         if (cut)
                             positionBuffer = cut->posBuf;
                         else
@@ -1452,6 +1475,10 @@ bool CadRendererGL::renderIndexedTriangleWire(
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
     glue->glPolygonMode(GL_FRONT, static_cast<GLenum>(savedPolygonMode[0]));
     glue->glPolygonMode(GL_BACK, static_cast<GLenum>(savedPolygonMode[1]));
+    if (!interrupted && indexedWirePreparation_.hasTarget() &&
+            indexedWirePreparation_.target == preparation)
+        publishFixedCutPreparation(indexedWirePreparation_, preparation,
+            preparationUnits, preparationUnits, 0, true);
     return !interrupted;
 }
 
@@ -2206,7 +2233,26 @@ void CadRendererGL::renderFixedVboLoop(
     const CadWireRasterState rasterState = captureWireRasterState(
         glue, caps_.hasLineStipple);
 
+    uint64_t wirePreparationUnits = 0;
+    for (const auto& item : plan.wireItems)
+        wirePreparationUnits = cadSaturatingWorkAdd(
+            wirePreparationUnits, item.instanceCount);
+    uint64_t preparationUnits = wirePreparationUnits;
+    for (const auto& item : plan.shadedItems)
+        preparationUnits = cadSaturatingWorkAdd(
+            preparationUnits, item.instanceCount);
+    const auto preparation = preparationTarget(
+        Obol::CadPresentationPreparationKind::FixedFunctionCuts,
+        glue->contextid, plan.revision, plan.geometryRevision,
+        activeViewState().progressiveCutCeiling,
+        activeViewState().progressiveCutNextFraction, viewProj,
+        &fixedCutPreparation_);
+    uint64_t preparationCursor = 0;
+
     if (drawWire) for (const auto& item : plan.wireItems) {
+        const uint64_t preparationFirst = preparationCursor;
+        preparationCursor = cadSaturatingWorkAdd(
+            preparationCursor, item.instanceCount);
         if (renderInterruptedAfter(deadlineWork)) {
             interrupted = true;
             break;
@@ -2337,10 +2383,18 @@ void CadRendererGL::renderFixedVboLoop(
                             hasAdaptiveProgressiveClusters() &&
                             level < visibleWireRanges.size() ?
                         &visibleWireRanges[level] : nullptr;
+                    bool preparedCut = false;
                     progressiveCut = ensureProgressiveWireGpu(
                         gpuRes_, item.rep.part, *progressive, level,
-                        ranges, glue);
+                        ranges, &preparedCut, glue);
                     if (!progressiveCut) continue;
+                    if (preparedCut) {
+                        noteRenderPreparation("fixed-wire-cut-upload");
+                        publishFixedCutPreparation(
+                            fixedCutPreparation_, preparation,
+                            preparationUnits, preparationFirst + i + 1u,
+                            progressiveCut->bytes);
+                    }
                     positionBuffer = progressiveCut->posBuf;
                     availableSegmentCount =
                         progressiveCut->vertexCount / 2;
@@ -2456,7 +2510,13 @@ void CadRendererGL::renderFixedVboLoop(
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     configureFixedClientArrays(glue, false, false);
+    /* Routing may send wire drawing to another executor without changing
+     * the plan.  Its skipped slots still belong to this immutable domain. */
+    preparationCursor = wirePreparationUnits;
     if (!interrupted && drawShaded) for (const auto& item : plan.shadedItems) {
+        const uint64_t preparationFirst = preparationCursor;
+        preparationCursor = cadSaturatingWorkAdd(
+            preparationCursor, item.instanceCount);
         if (renderInterruptedAfter(deadlineWork)) {
             interrupted = true;
             break;
@@ -2654,9 +2714,14 @@ void CadRendererGL::renderFixedVboLoop(
                             &visibleSourceRanges[level] : nullptr,
                         &preparedCut, glue);
                     if (!cut) continue;
-                    if (preparedCut)
+                    if (preparedCut) {
                         noteRenderPreparation(
                             "fixed-progressive-cut-upload");
+                        publishFixedCutPreparation(
+                            fixedCutPreparation_, preparation,
+                            preparationUnits, preparationFirst + i + 1u,
+                            cut->bytes);
+                    }
                 }
             }
             setCadBackfaceCulling(glue,
@@ -2818,6 +2883,10 @@ void CadRendererGL::renderFixedVboLoop(
     lastRenderedTriangleCount_ =
         renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
             UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
+    if (!interrupted && fixedCutPreparation_.hasTarget() &&
+            fixedCutPreparation_.target == preparation)
+        publishFixedCutPreparation(fixedCutPreparation_, preparation,
+            preparationUnits, preparationUnits, 0, true);
 }
 
 // ---------------------------------------------------------------------------

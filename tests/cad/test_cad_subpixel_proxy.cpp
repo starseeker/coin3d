@@ -774,6 +774,90 @@ assemblyDestructionReleasesGpuResourcesOnLiveContext()
 }
 
 bool
+fixedCutPreparationIsFinite(bool wire)
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    setCadDrawMode(root, wire ? SoCADViewState::WIREFRAME :
+        SoCADViewState::SHADED);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    root->addChild(assembly);
+
+    Obol::PartGeometryBuilder source;
+    source.shaded.emplace();
+    auto& mesh = *source.shaded;
+    mesh.positions = {SbVec3f(-0.75f, -0.75f, 0.0f),
+        SbVec3f(0.75f, -0.75f, 0.0f), SbVec3f(0.0f, 0.75f, 0.0f)};
+    mesh.indices = {0u, 1u, 2u};
+    mesh.bounds = SbBox3f(SbVec3f(-0.75f, -0.75f, 0.0f),
+        SbVec3f(0.75f, 0.75f, 0.0f));
+    setProgressiveCuts(mesh, 3, 3, 3);
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 2;
+    mesh.progressiveLineage = 1;
+    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+    for (size_t cut = 0; cut < mesh.progressiveCuts.size(); ++cut)
+        mesh.progressiveCuts[cut].quantization = {
+            static_cast<uint8_t>(6u + cut),
+            static_cast<uint8_t>(6u + cut), 0};
+    Obol::CadGeometryAdmission admitted =
+        Obol::cadAdmitPartGeometry(std::move(source));
+    requireCadMutation(admitted, "fixed preparation mesh");
+    if (wire) {
+        Obol::PartGeometryBuilder derived;
+        derived.wire.emplace();
+        derived.wire->triangleEdgeGeometry = admitted.geometry.shared();
+        derived.wire->triangleEdgeSegmentCount = 3;
+        derived.wire->bounds = admitted.geometry.get()->shaded->bounds;
+        admitted = Obol::cadAdmitPartGeometry(std::move(derived));
+        requireCadMutation(admitted, "fixed preparation wire");
+    }
+    const auto part = Obol::CadIdBuilder::partId("fixed-preparation");
+    requireCadMutation(assembly->upsertParts({{part, admitted.geometry}}),
+        "fixed preparation part");
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.lodCut = 2;
+    requireCadMutation(assembly->upsertInstance(
+        Obol::CadIdBuilder::instanceId("fixed-preparation"), instance),
+        "fixed preparation instance");
+
+    SoOffscreenRenderer renderer(SbViewportRegion(128, 128));
+    const auto expectedKind = wire ?
+        Obol::CadPresentationPreparationKind::IndexedWireCuts :
+        Obol::CadPresentationPreparationKind::FixedFunctionCuts;
+    bool passed = true;
+    Obol::CadPresentationPreparationTarget previous;
+    /* Both finer and coarser new cuts incur preparation.  An exact replay
+     * must retain its certificate, not grant another first-frame retry. */
+    for (int cut : {0, 2, 1}) {
+        cadViewState(root)->progressiveCutCeiling.setValue(cut);
+        passed = render(renderer, root) && passed;
+        const auto prepared = assembly->presentationPreparationSnapshot();
+        passed = passed && prepared.target.kind == expectedKind &&
+            prepared.target != previous &&
+            prepared.target.progressiveCutCeiling == cut &&
+            prepared.state == Obol::CadPresentationPreparationState::Complete &&
+            prepared.totalUnits > 0 &&
+            prepared.completedUnits == prepared.totalUnits;
+        passed = render(renderer, root) && passed;
+        const auto replay = assembly->presentationPreparationSnapshot();
+        passed = passed && replay.target == prepared.target &&
+            replay.totalUnits == prepared.totalUnits &&
+            replay.completedUnits == prepared.completedUnits;
+        previous = prepared.target;
+    }
+    root->unref();
+    return passed;
+}
+
+bool
 softwareSubpixelProxyAggregationContract()
 {
     /*
@@ -3538,6 +3622,37 @@ runCadSubpixelProxyLifecycleContract()
         root->unref();
         return 1;
     }
+    /* A camera change while hidden legitimately reclassifies the occurrence
+     * as offscreen.  The subsequent sparse visibility restore must replace
+     * that hidden classifier state at the current camera; merely clearing the
+     * instance flag leaves both its geometry and aggregate proxy suppressed. */
+    assembly->setHiddenInstances({proxyInstance});
+    camera->height.setValue(1100.0f);
+    if (!render(renderer, root) ||
+            !assembly->isInstanceHidden(proxyInstance) ||
+            assembly->lastSubpixelProxyCount() != 0u) {
+        std::fprintf(stderr,
+            "hidden occurrence did not adopt the changed-camera state\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setHiddenInstances({});
+    if (!render(renderer, root) || assembly->isInstanceHidden(proxyInstance) ||
+            assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse restore retained a hidden changed-camera classification\n");
+        root->unref();
+        return 1;
+    }
+    camera->height.setValue(1000.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "restored occurrence did not follow the next camera update\n");
+        root->unref();
+        return 1;
+    }
     assembly->setSelectedInstances({proxyInstance});
     if (!render(renderer, root) || assembly->selectedInstanceCount() != 1u ||
             assembly->lastSubpixelProxyCount() != 1u ||
@@ -4257,6 +4372,70 @@ runCadSubpixelProxyLifecycleContract()
         root->unref();
         return 1;
     }
+
+    /* Sparse rebind repair touches both the append-only tombstone part and
+     * the live replacement part.  Exercise varied part hashes so frontier
+     * publication cannot accidentally depend on unordered affected-part
+     * iteration order. */
+    for (unsigned int variant = 0; variant < 16u; ++variant) {
+        char partName[64] = {};
+        std::snprintf(partName, sizeof(partName),
+            "stream-rebind-order-%u", variant);
+        const Obol::PartId variantPart =
+            Obol::CadIdBuilder::partId(partName);
+        requireCadMutation(
+            admitAndUpsertPart(assembly, variantPart, progressiveGeometry),
+            "variant rebind mesh part");
+
+        Obol::InstanceUpdate toMesh;
+        toMesh.instance = sharedBoxBId;
+        toMesh.record = sharedBoxB;
+        toMesh.record.part = variantPart;
+        toMesh.record.lodStructuralProxy = false;
+        requireCadMutation(assembly->upsertInstances({toMesh}),
+            "variant box-to-mesh rebind");
+        if (!render(renderer, root)) {
+            std::fprintf(stderr,
+                "variant box-to-mesh rebind did not render\n");
+            root->unref();
+            return 1;
+        }
+        const auto meshFrontier =
+            assembly->lastUncollapsedStructuralProxyInstances();
+        if (meshFrontier.size() !=
+                assembly->lastUncollapsedStructuralProxyCount() ||
+                std::find(meshFrontier.begin(), meshFrontier.end(),
+                    sharedBoxBId) != meshFrontier.end()) {
+            std::fprintf(stderr,
+                "box-to-mesh frontier depended on affected-part order\n");
+            root->unref();
+            return 1;
+        }
+
+        Obol::InstanceUpdate toBox;
+        toBox.instance = sharedBoxBId;
+        toBox.record = sharedBoxB;
+        requireCadMutation(assembly->upsertInstances({toBox}),
+            "variant mesh-to-box rebind");
+        if (!render(renderer, root)) {
+            std::fprintf(stderr,
+                "variant mesh-to-box rebind did not render\n");
+            root->unref();
+            return 1;
+        }
+        const auto boxFrontier =
+            assembly->lastUncollapsedStructuralProxyInstances();
+        if (boxFrontier.size() !=
+                assembly->lastUncollapsedStructuralProxyCount() ||
+                std::find(boxFrontier.begin(), boxFrontier.end(),
+                    sharedBoxBId) == boxFrontier.end()) {
+            std::fprintf(stderr,
+                "mesh-to-box frontier depended on affected-part order\n");
+            root->unref();
+            return 1;
+        }
+        assembly->removePart(variantPart);
+    }
     assembly->setHiddenInstances({offscreenBoxId});
 
     /*
@@ -4569,6 +4748,23 @@ TEST_F(CadSubpixelProxyContracts, SparseGeometryTopologyChangesRebuildPlan)
 TEST_F(CadSubpixelProxyContracts, TriangleDerivedProgressiveWireGrows)
 {
     EXPECT_TRUE(triangleDerivedProgressiveWireGrowsWithRequestedCut());
+}
+
+TEST_F(CadSubpixelProxyContracts, FixedCutPreparationDoesNotBecomeDrawCost)
+{
+    const char *backend = std::getenv("OBOL_TEST_RENDER_BACKEND");
+    if (backend && std::strcmp(backend, "system") == 0)
+        GTEST_SKIP() << "The fixed-function cut cache is a software route";
+    const char *previous = std::getenv("OBOL_CAD_FLAT_SHADED");
+    const bool hadPrevious = previous != nullptr;
+    const std::string previousValue = previous ? previous : "";
+    setTestEnvironment("OBOL_CAD_FLAT_SHADED", "0", 1);
+    EXPECT_TRUE(fixedCutPreparationIsFinite(false));
+    EXPECT_TRUE(fixedCutPreparationIsFinite(true));
+    if (hadPrevious)
+        setTestEnvironment("OBOL_CAD_FLAT_SHADED", previousValue.c_str(), 1);
+    else
+        unsetTestEnvironment("OBOL_CAD_FLAT_SHADED");
 }
 
 TEST_F(CadSubpixelProxyContracts, AssemblyDestructionReleasesGpuResources)

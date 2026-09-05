@@ -355,6 +355,8 @@ private:
     bool      lastRenderUsedPreparedReplay_ = false;
     uint64_t  renderPreparationSerial_ = 0;
     Obol::CadPresentationPreparationSnapshot presentationPreparation_;
+    Obol::CadPresentationPreparationSnapshot fixedCutPreparation_;
+    Obol::CadPresentationPreparationSnapshot indexedWirePreparation_;
     uint64_t nextPreparationRevision_ = 1;
     bool      atlasAdmissionPressure_ = false;
     Obol::CadGpuResourceSnapshot lastGpuResourceSnapshot_;
@@ -781,12 +783,18 @@ private:
         uint32_t contextId, uint64_t planRevision,
         uint64_t geometryRevision, int progressiveCutCeiling,
         float progressiveCutNextFraction,
-        const SbMatrix& viewProjection);
+        const SbMatrix& viewProjection,
+        const Obol::CadPresentationPreparationSnapshot *retained = nullptr);
     void publishPreparation(
         const Obol::CadPresentationPreparationTarget& target,
         Obol::CadPresentationPreparationState state,
         uint64_t totalUnits, uint64_t completedUnits,
         uint64_t reservedBytes);
+    void publishFixedCutPreparation(
+        Obol::CadPresentationPreparationSnapshot& retained,
+        const Obol::CadPresentationPreparationTarget& target,
+        uint64_t totalUnits, uint64_t completedUnits,
+        uint64_t reservedBytes, bool complete = false);
 
     bool renderIndirectShaded(
         const CadFramePlan& plan,

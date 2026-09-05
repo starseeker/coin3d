@@ -1036,7 +1036,8 @@ CadRendererGL::preparationTarget(
         uint32_t contextId, uint64_t planRevision,
         uint64_t geometryRevision, int progressiveCutCeiling,
         float progressiveCutNextFraction,
-        const SbMatrix& viewProjection)
+        const SbMatrix& viewProjection,
+        const Obol::CadPresentationPreparationSnapshot *retained)
 {
     Obol::CadPresentationPreparationTarget target;
     target.kind = kind;
@@ -1051,6 +1052,12 @@ CadRendererGL::preparationTarget(
     for (size_t i = 0; i < target.viewProjectionBits.size(); ++i)
         std::memcpy(&target.viewProjectionBits[i],
             viewProjection[0] + i, sizeof(target.viewProjectionBits[i]));
+    if (retained && retained->hasTarget()) {
+        Obol::CadPresentationPreparationTarget active = retained->target;
+        active.obligationRevision = 0;
+        if (active == target)
+            return retained->target;
+    }
     if (presentationPreparation_.state ==
             Obol::CadPresentationPreparationState::Preparing) {
         Obol::CadPresentationPreparationTarget active =
@@ -1092,6 +1099,34 @@ CadRendererGL::publishPreparation(
             presentationPreparation_.reservedBytes);
     }
     presentationPreparation_ = next;
+}
+
+void
+CadRendererGL::publishFixedCutPreparation(
+        Obol::CadPresentationPreparationSnapshot& retained,
+        const Obol::CadPresentationPreparationTarget& target,
+        uint64_t totalUnits, uint64_t completedUnits,
+        uint64_t reservedBytes, bool complete)
+{
+    /* Fixed-function executors prepare a finite, ordered set of occurrence
+     * requests.  Credit only successful buffer publication, not traversal or
+     * cache lookup.  Keep the frontier even after completion: eviction and
+     * re-upload of an earlier request must not mint another retry for the
+     * same camera/cut.  Other executor phases may use the public snapshot
+     * between calls, so the retained frontier owns this monotonicity. */
+    reservedBytes = cadSaturatingWorkAdd(reservedBytes,
+        gpuRes_ ? gpuRes_->resourceSnapshot().progressiveCutBufferBytes : 0);
+    if (retained.hasTarget() && retained.target == target) {
+        completedUnits = std::max(completedUnits, retained.completedUnits);
+        reservedBytes = std::max(reservedBytes, retained.reservedBytes);
+        complete = complete || retained.state ==
+            Obol::CadPresentationPreparationState::Complete;
+    }
+    publishPreparation(target, complete ?
+        Obol::CadPresentationPreparationState::Complete :
+        Obol::CadPresentationPreparationState::Preparing,
+        totalUnits, complete ? totalUnits : completedUnits, reservedBytes);
+    retained = presentationPreparation_;
 }
 
 Obol::CadPresentationPreparationSnapshot

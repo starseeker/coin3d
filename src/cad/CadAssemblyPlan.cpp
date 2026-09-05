@@ -502,12 +502,10 @@ bool SoCADAssemblyImpl::patchCachedInstanceFlags(Obol::InstanceId instance) {
             return fail("instance-not-retained");
         const uint32_t visibleIndex = indexFound->second;
         auto& record = cachedPlan_.visibleInstances[visibleIndex];
+        const uint32_t priorFlags = record.flags;
         const bool wasTransparent =
             !(record.flags & Obol::internal::CadInstanceHidden) &&
             record.rgba[3] < 255;
-        const bool wasProxyProtected =
-            (record.flags &
-                Obol::internal::CadInstancePointProxyProtected) != 0;
         uint32_t flags = record.flags &
             ~(Obol::internal::CadInstanceSelected |
               Obol::internal::CadInstanceHidden |
@@ -531,7 +529,28 @@ bool SoCADAssemblyImpl::patchCachedInstanceFlags(Obol::InstanceId instance) {
             else if (cachedPlan_.transparentVisibleInstanceCount)
                 --cachedPlan_.transparentVisibleInstanceCount;
         }
-        updateStructuralProjectionForVisible(visibleIndex);
+        constexpr uint32_t classifierFlags =
+            Obol::internal::CadInstanceHidden |
+            Obol::internal::CadInstancePointProxyProtected |
+            Obol::internal::CadInstanceLodStructuralProxy;
+        if ((priorFlags ^ record.flags) & classifierFlags) {
+            /* Hidden occurrences classify as offscreen so their mesh and
+             * aggregate proxy are both suppressed.  Restoring visibility,
+             * proxy protection, or a structural role therefore changes the
+             * retained classification even when the camera is unchanged.
+             * Patch only this stable slot; if the camera-local classifier is
+             * not current, invalidate that classifier rather than rebuilding
+             * the much larger structural frame plan. */
+            if (!patchSubpixelProxyGeometryForVisible(
+                    visibleIndex,
+                    cachedPlan_.subpixelProxyInputRevision)) {
+                subpixelProxyStateInputRevision_ = 0;
+                subpixelProxyViewValid_ = false;
+                structuralProjectionHistogram_.exact = false;
+            }
+        } else {
+            updateStructuralProjectionForVisible(visibleIndex);
+        }
         if (cadDebugEnabled()) {
             std::fprintf(stderr,
                 "SoCADAssembly patch flags instance=%016llx:%016llx "
@@ -542,13 +561,6 @@ bool SoCADAssemblyImpl::patchCachedInstanceFlags(Obol::InstanceId instance) {
                 hidden_.count(instance) ? 1 : 0,
                 static_cast<unsigned>(record.flags));
         }
-        const bool isProxyProtected =
-            (record.flags &
-                Obol::internal::CadInstancePointProxyProtected) != 0;
-        if (wasProxyProtected != isProxyProtected &&
-                updateProtectedSubpixelProxy(
-                    visibleIndex, isProxyProtected))
-            pendingSubpixelProxyChange_ = true;
         if (visibleIndex < subpixelProxyPointByVisible_.size()) {
             const uint32_t pointIndex =
                 subpixelProxyPointByVisible_[visibleIndex];
@@ -677,13 +689,9 @@ void SoCADAssemblyImpl::finishSparsePresentationPatch(bool visibilityChanged) {
             cachedPlan_.instanceAttributeDeltas.pop_front();
         }
         pendingInstanceAttributeIndices_.clear();
-        /*
-         * Visibility does not alter screen-size classification at an
-         * unchanged camera.  Existing aggregate points retain their stable
-         * slots and receive the hidden flag above; non-proxied instances use
-         * the same attribute journal in the mesh stream.  Camera or threshold
-         * changes remain responsible for recomputing proxy membership.
-         */
+        /* Visibility-sensitive classification is patched per occurrence in
+         * patchCachedInstanceFlags().  This transaction publishes its final
+         * attribute journal only after every requested slot is coherent. */
     }
 
 

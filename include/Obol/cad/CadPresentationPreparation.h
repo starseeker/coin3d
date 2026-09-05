@@ -19,7 +19,9 @@ enum class CadPresentationPreparationKind : uint8_t {
     SubpixelClassification,
     FlatShadedPlanning,
     FlatShadedAtlas,
-    RetainedIndirect
+    RetainedIndirect,
+    FixedFunctionCuts,
+    IndexedWireCuts
 };
 
 /** Terminality of one exact-target retained preparation obligation. */

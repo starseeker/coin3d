@@ -444,84 +444,19 @@ bool SoCADAssemblyImpl::patchSubpixelProxyGeometryForVisible(
         return true;
     }
 
-    /* Keep selected geometry visually inspectable even when its conservative
-     * bounds are below the ordinary small-part threshold.  Selection is a
-     * sparse presentation property, so promote/demote just this occurrence
-     * and preserve the camera-local classification for every other record. */
-    bool SoCADAssemblyImpl::updateProtectedSubpixelProxy(
-            size_t visibleIndex, bool protectedInstance) {
-        using namespace Obol::internal;
-        CadFramePlan& plan = cachedPlan_;
-        const uint32_t noPoint =
-            std::numeric_limits<uint32_t>::max();
-        if (visibleIndex >= plan.visibleInstances.size() ||
-                visibleIndex >= plan.subpixelProxyMask.size() ||
-                visibleIndex >= subpixelProxyState_.size() ||
-                visibleIndex >= subpixelProxyPointByVisible_.size())
-            return false;
-
-        const uint32_t currentPoint =
-            subpixelProxyPointByVisible_[visibleIndex];
-        if (protectedInstance) {
-            if (!plan.subpixelProxyMask[visibleIndex])
-                return false;
-            if (currentPoint == noPoint ||
-                    currentPoint >= plan.subpixelProxyPoints.size() ||
-                    currentPoint >= subpixelProxyVisibleByPoint_.size())
-                return false;
-            const uint32_t last = static_cast<uint32_t>(
-                plan.subpixelProxyPoints.size() - 1u);
-            if (currentPoint != last) {
-                plan.subpixelProxyPoints[currentPoint] =
-                    std::move(plan.subpixelProxyPoints[last]);
-                const uint32_t movedVisible =
-                    subpixelProxyVisibleByPoint_[last];
-                subpixelProxyVisibleByPoint_[currentPoint] =
-                    movedVisible;
-                if (movedVisible <
-                        subpixelProxyPointByVisible_.size())
-                    subpixelProxyPointByVisible_[movedVisible] =
-                        currentPoint;
-            }
-            plan.subpixelProxyPoints.pop_back();
-            subpixelProxyVisibleByPoint_.pop_back();
-            subpixelProxyPointByVisible_[visibleIndex] = noPoint;
-            plan.subpixelProxyMask[visibleIndex] = 0u;
-            subpixelProxyState_[visibleIndex] = 0u;
-            return true;
-        }
-
-        if (plan.subpixelProxyMask[visibleIndex] ||
-                !subpixelProxyViewValid_ ||
-                subpixelProxyViewInputRevision_ !=
-                    plan.subpixelProxyInputRevision)
-            return false;
-        CadSubpixelProxyPoint replacement;
-        const CadProxyPresentation presentation =
-            subpixelProxyPresentationForOccurrence(
-                plan, visibleIndex, subpixelProxyViewProj_,
-                subpixelProxyViewportSize_,
-                subpixelProxyPixelThreshold_,
-                CadProxyPresentation::Geometry, replacement);
-        if (presentation != CadProxyPresentation::Point &&
-                presentation != CadProxyPresentation::Box)
-            return false;
-        subpixelProxyPointByVisible_[visibleIndex] =
-            static_cast<uint32_t>(plan.subpixelProxyPoints.size());
-        plan.subpixelProxyPoints.push_back(std::move(replacement));
-        subpixelProxyVisibleByPoint_.push_back(
-            static_cast<uint32_t>(visibleIndex));
-        plan.subpixelProxyMask[visibleIndex] = 1u;
-        subpixelProxyState_[visibleIndex] =
-            static_cast<uint8_t>(presentation);
-        return true;
-    }
-
 void SoCADAssemblyImpl::refreshWireProxyParts(
             const std::unordered_set<Obol::PartId,
                                      std::hash<Obol::PartId>>& parts) {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
+
+        /* A sparse part rebind leaves the old span in the append-only plan as
+         * a tombstone and adds a span for the new part.  The same visible
+         * instance may consequently occur in both affected-part span lists.
+         * Retire every old frontier contribution before rebuilding any new
+         * one: erasing and reinserting one part at a time makes the result
+         * depend on unordered_set iteration order when an old tombstone is
+         * visited after the live replacement. */
         for (const Obol::PartId part : parts) {
             const auto previous =
                 uncollapsedStructuralProxyCountByPart_.find(part);
@@ -536,6 +471,25 @@ void SoCADAssemblyImpl::refreshWireProxyParts(
             auto presentation = plan.partPresentation.find(part);
             if (presentation != plan.partPresentation.end())
                 presentation->second.wireHasUncollapsedInstances = false;
+
+            const auto spans = cachedPlanPartSpansByPart_.find(part);
+            if (spans == cachedPlanPartSpansByPart_.end())
+                continue;
+            for (const CachedPlanPartSpan& span : spans->second) {
+                for (uint32_t offset = 0;
+                        offset < span.instanceCount; ++offset) {
+                    const size_t visibleIndex =
+                        span.baseInstance + offset;
+                    if (visibleIndex >= plan.visibleInstances.size())
+                        continue;
+                    uncollapsedStructuralProxyInstances_.erase(
+                        plan.visibleInstances[visibleIndex].instanceId);
+                }
+            }
+        }
+
+        for (const Obol::PartId part : parts) {
+            auto presentation = plan.partPresentation.find(part);
             bool hasUncollapsed = false;
             size_t structuralCount = 0u;
             const auto spans = cachedPlanPartSpansByPart_.find(part);
@@ -561,11 +515,6 @@ void SoCADAssemblyImpl::refreshWireProxyParts(
                         continue;
                     const CadVisibleInstance& occurrence =
                         plan.visibleInstances[visibleIndex];
-                    /* The published structural frontier is an occurrence
-                     * set.  Sparse box-to-mesh/selection/visibility changes
-                     * update only the affected occurrence records. */
-                    uncollapsedStructuralProxyInstances_.erase(
-                        occurrence.instanceId);
                     if (occurrence.partIndex != span.partIndex ||
                             (occurrence.flags & CadInstanceHidden) ||
                             (visibleIndex <

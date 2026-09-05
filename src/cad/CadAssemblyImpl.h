@@ -257,13 +257,6 @@ struct SoCADAssemblyImpl :
     bool patchSubpixelProxyGeometryForVisible(
             size_t visibleIndex, uint64_t priorInputRevision);
 
-    /* Keep selected geometry visually inspectable even when its conservative
-     * bounds are below the ordinary small-part threshold.  Selection is a
-     * sparse presentation property, so promote/demote just this occurrence
-     * and preserve the camera-local classification for every other record. */
-    bool updateProtectedSubpixelProxy(
-            size_t visibleIndex, bool protectedInstance);
-
     void refreshWireProxyParts(
             const std::unordered_set<Obol::PartId,
                                      std::hash<Obol::PartId>>& parts);
